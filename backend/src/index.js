@@ -115,4 +115,11 @@ const { startAiRefreshScheduler } = require("./utils/aiRefreshScheduler");
 startAiRefreshScheduler();
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`CodeArena API running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`CodeArena API running on port ${PORT}`);
+  // Best-effort: warms the OS page cache for javac/gcc/g++ right away instead of waiting for the
+  // first real student submission to pay that cost — see warmUpCompilers()'s own comment for why
+  // this matters specifically on this instance. Fire-and-forget: must never delay startup or crash
+  // the process if it fails.
+  require("./utils/judge").warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message));
+});

@@ -28,13 +28,19 @@ const CASE_CONCURRENCY = Number(process.env.JUDGE_CASE_CONCURRENCY || 2);
 const MEMORY_LIMIT_KB = Number(process.env.JUDGE_MEMORY_LIMIT_KB || 262144); // 256 MB default
 // Compilation budget — separate from and typically larger than any single test case's own
 // timeLimitMs, since it's a one-time cost per submission (not per case) and, per this file's own
-// queue.js, this instance is sized for "Render free tier: 0.1 CPU / 512MB". A cold `javac`/`gcc`
-// invocation on that little CPU — especially with JUDGE_CONCURRENCY (default 2) submissions
-// compiling at once and competing for the same fractional core — routinely took longer than the
-// previous 10s budget, which misreported perfectly valid, simple student code as "Compilation
-// timed out" (observed live during a real classroom assessment on trivially small Java code).
-// Raised to a much safer default; still configurable per-deployment without a code change.
-const COMPILE_TIMEOUT_MS = Number(process.env.JUDGE_COMPILE_TIMEOUT_MS || 30000);
+// queue.js, this instance is confirmed (Render dashboard, Settings -> Instance Type) to be running
+// on the actual Free plan: 0.1 CPU / 512MB, with no payment method on file to upgrade it. A cold
+// `javac`/`gcc` invocation on that little CPU — especially with JUDGE_CONCURRENCY (default 2)
+// submissions compiling at once and competing for the same fractional core — routinely took longer
+// than the original 10s budget, which misreported perfectly valid, simple student code as
+// "Compilation timed out" (first observed live during a real classroom assessment on trivially
+// small Java code). Raising this alone from 10s to 30s (an earlier change) did NOT fix it — the
+// same failure reproduced again on equally trivial code — because the timeout was never the actual
+// bottleneck, the instance's fractional CPU is. This second bump to 45s plus the javac JVM-startup
+// flags below (TieredStopAtLevel=1, Xshare:auto) are mitigations, not a real fix: the durable fix is
+// a paid Render instance with a real CPU allocation. Still configurable per-deployment without a
+// code change.
+const COMPILE_TIMEOUT_MS = Number(process.env.JUDGE_COMPILE_TIMEOUT_MS || 45000);
 // Caps the number of processes/threads a single submission can hold open — the concrete,
 // well-understood defense against a fork bomb (`while(1) fork();` / infinite thread spawn)
 // hanging the whole instance. Generous enough for legitimate multi-threaded submissions.
@@ -98,11 +104,23 @@ const RUNNERS = {
   },
   java: {
     srcName: "Main.java",
-    compile: (file, dir) => ({ cmd: "javac", args: [file] }),
+    // -J-XX:TieredStopAtLevel=1 and -J-Xshare:auto are passed through to javac's own JVM (the "-J"
+    // prefix is javac's documented way to forward a flag to the JVM it runs in, not to the compiled
+    // program). TieredStopAtLevel=1 skips the C2 JIT tier — pure overhead for a process as short-
+    // lived as a single-file javac invocation, since C2's optimization work never has time to pay
+    // for itself before the process exits. -Xshare:auto uses Class Data Sharing (a pre-parsed
+    // archive of the JDK's own core classes) to skip re-parsing them from disk every invocation.
+    // Neither changes compiled output — both only reduce javac's own startup cost, which matters
+    // disproportionately on the fractional-CPU instance this runs on (see COMPILE_TIMEOUT_MS above).
+    compile: (file, dir) => ({ cmd: "javac", args: ["-J-XX:TieredStopAtLevel=1", "-J-Xshare:auto", file] }),
     // -Xmx bounds the JVM's own heap to the same budget the OS-level ulimit enforces for the
     // other languages. Java runs skip that OS-level ulimit (see the enforceMemory call below) —
-    // -Xmx is the JVM's actual memory guard here, not an addition to it.
-    run: (_file, dir, memoryLimitKb) => ({ cmd: "java", args: [`-Xmx${memoryLimitKb}k`, "-cp", dir, "Main"] }),
+    // -Xmx is the JVM's actual memory guard here, not an addition to it. TieredStopAtLevel/Xshare
+    // are the same JVM-startup-cost mitigations as the compile step above — a fresh JVM launches
+    // per test case here too (CASE_CONCURRENCY runs several concurrently), and per-test-case
+    // timeLimitMs is typically far too short (2s default) for C2's extra optimization to ever pay
+    // for itself, so skipping it is a pure win here, not a tradeoff.
+    run: (_file, dir, memoryLimitKb) => ({ cmd: "java", args: [`-Xmx${memoryLimitKb}k`, "-XX:TieredStopAtLevel=1", "-Xshare:auto", "-cp", dir, "Main"] }),
   },
 };
 
@@ -319,6 +337,13 @@ async function prepare(language, code) {
     // Compilation gets a generous fixed budget, separate from the per-test-case run limit, and
     // is exempt from the execution memory ulimit (see spawnWithTimeout's enforceMemory comment).
     const compileResult = await spawnWithTimeout(cmd, args, { cwd: tmpDir }, undefined, COMPILE_TIMEOUT_MS, { enforceMemory: false });
+    // Logged unconditionally (not just on timeout) so real compile-time data accumulates in Render's
+    // logs — without this, "Compilation timed out" reports have no way to distinguish "consistently
+    // near the budget under load" from "one freak spike," which is exactly the ambiguity that made
+    // the previous 10s->30s bump a guess rather than a measurement-backed fix.
+    if (compileResult.timeMs > COMPILE_TIMEOUT_MS * 0.5) {
+      console.warn(`judge: ${language} compile took ${compileResult.timeMs}ms (budget ${COMPILE_TIMEOUT_MS}ms)${compileResult.timedOut ? " — TIMED OUT" : ""}`);
+    }
     if (!compileResult.ok) {
       fs.rm(tmpDir, { recursive: true, force: true }, () => {});
       return {
@@ -363,6 +388,34 @@ async function prepare(language, code) {
       fs.rm(tmpDir, { recursive: true, force: true }, () => {});
     },
   };
+}
+
+// Fire-and-forget warm-up: compiles a trivial program in each compiled language once, meant to be
+// called right after the server starts listening (see index.js), not awaited by any request. This
+// specifically targets Render free-tier's behavior of evicting the whole container — including the
+// OS page cache — after ~15 minutes idle, then rebuilding it cold on the next request. Without this,
+// the very first real submission after any idle period pays the full cold-disk-read cost of loading
+// javac/gcc/g++ and their shared libraries on top of the CPU cost already described in
+// COMPILE_TIMEOUT_MS's comment above — exactly the kind of compound, load-dependent slowdown that
+// makes "Compilation timed out" look random rather than systemic. This does not fix the underlying
+// fractional-CPU constraint, it only removes one of the several costs stacked on top of it. Never
+// throws — a failed warm-up must not crash startup or block real traffic.
+async function warmUpCompilers() {
+  const samples = {
+    java: "public class Main { public static void main(String[] a) {} }\n",
+    c: "int main() { return 0; }\n",
+    cpp: "int main() { return 0; }\n",
+  };
+  for (const [language, code] of Object.entries(samples)) {
+    const startedAt = Date.now();
+    try {
+      const prepared = await prepare(language, code);
+      if (prepared.ok) prepared.cleanup();
+      console.log(`judge: warm-up compile (${language}) took ${Date.now() - startedAt}ms${prepared.ok ? "" : ` — failed: ${prepared.error}`}`);
+    } catch (err) {
+      console.warn(`judge: warm-up compile (${language}) threw`, err.message);
+    }
+  }
 }
 
 /**
@@ -481,4 +534,4 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
   return { passedCases: passed, totalCases: testCases.length, verdict, details, errorSummary, maxTimeMs, maxMemoryKb: maxMemoryKb || null };
 }
 
-module.exports = { judgeSubmission };
+module.exports = { judgeSubmission, warmUpCompilers };
