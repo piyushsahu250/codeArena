@@ -925,17 +925,47 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"
   }
 });
 
+// "5"/"25" -> "5->25" style pair, joined with "||" — the same pipe-delimited hidden-test-case cell
+// format questions.js's coding bulk-import/export uses, so admins moving between the two question
+// banks see one consistent convention rather than two different spreadsheet dialects.
+function formatHiddenTestCases(cases) {
+  return cases.map((tc) => `${tc.input}->${tc.expected}`).join("||");
+}
+function parseHiddenTestCases(raw) {
+  return String(raw || "")
+    .split("||")
+    .map((pair) => pair.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const idx = pair.indexOf("->");
+      if (idx === -1) return null;
+      return { input: pair.slice(0, idx).trim(), expected: pair.slice(idx + 2).trim(), isHidden: true };
+    })
+    .filter(Boolean);
+}
+
 router.get("/admin/questions/export", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const where = { generatedForStudentId: null };
   if (req.query.category) where.category = req.query.category;
   const questions = await prisma.interviewQuestion.findMany({ where });
-  const rows = questions.map((q) => ({
-    category: q.category, subject: q.subject || "", company: q.company || "", aptitudeCategory: q.aptitudeCategory || "", difficulty: q.difficulty,
-    prompt: q.prompt, expectedKeywords: Array.isArray(q.expectedKeywords) ? q.expectedKeywords.join("|") : "",
-    modelAnswer: q.modelAnswer || "", options: Array.isArray(q.options) ? q.options.join("|") : "",
-    correctAnswer: q.correctAnswer ?? "", explanation: q.explanation || "", starterCode: q.starterCode || "",
-    testCases: Array.isArray(q.testCases) ? JSON.stringify(q.testCases) : "", language: q.language || "",
-  }));
+  const rows = questions.map((q) => {
+    const cases = Array.isArray(q.testCases) ? q.testCases : [];
+    const visible = cases.filter((tc) => !tc.isHidden);
+    const hidden = cases.filter((tc) => tc.isHidden);
+    return {
+      category: q.category, subject: q.subject || "", company: q.company || "", aptitudeCategory: q.aptitudeCategory || "", difficulty: q.difficulty,
+      prompt: q.prompt, expectedKeywords: Array.isArray(q.expectedKeywords) ? q.expectedKeywords.join("|") : "",
+      modelAnswer: q.modelAnswer || "", options: Array.isArray(q.options) ? q.options.join("|") : "",
+      correctAnswer: q.correctAnswer ?? "", explanation: q.explanation || "", starterCode: q.starterCode || "",
+      sampleInput1: visible[0]?.input || "", sampleOutput1: visible[0]?.expected || "", sampleExplanation1: visible[0]?.explanation || "",
+      sampleInput2: visible[1]?.input || "", sampleOutput2: visible[1]?.expected || "", sampleExplanation2: visible[1]?.explanation || "",
+      hiddenTestCases: hidden.length > 0 ? formatHiddenTestCases(hidden) : "",
+      // Kept for backward compatibility with files exported before the named columns above existed
+      // — re-importing an old export still works, since the import route still reads this column.
+      testCases: cases.length > 0 ? JSON.stringify(cases) : "",
+      language: q.language || "",
+    };
+  });
   const sheet = XLSX.utils.json_to_sheet(rows);
   const csv = XLSX.utils.sheet_to_csv(sheet);
   res.setHeader("Content-Type", "text/csv");
@@ -972,11 +1002,24 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF
         errors.push({ row: rowNum, reason: "Missing prompt" });
         continue;
       }
-      const parsedTestCases = row.testCases ? (() => { try { return JSON.parse(row.testCases); } catch { return null; } })() : null;
+      // Named Sample Input/Output + Hidden Test Cases columns (matching the coding question bank's
+      // own bulk-import format) take priority over the legacy raw-JSON "testCases" cell — an admin
+      // filling in the friendlier named columns shouldn't need to also know the JSON shape, and a
+      // row with both present is unambiguous about which one was actually intended.
+      const namedSample1 = row.sampleInput1 && row.sampleOutput1
+        ? [{ input: String(row.sampleInput1), expected: String(row.sampleOutput1), isHidden: false, explanation: row.sampleExplanation1 || null }]
+        : [];
+      const namedSample2 = row.sampleInput2 && row.sampleOutput2
+        ? [{ input: String(row.sampleInput2), expected: String(row.sampleOutput2), isHidden: false, explanation: row.sampleExplanation2 || null }]
+        : [];
+      const namedHidden = row.hiddenTestCases ? parseHiddenTestCases(row.hiddenTestCases) : [];
+      const usingNamedColumns = namedSample1.length > 0 || namedSample2.length > 0 || namedHidden.length > 0;
+      const legacyTestCases = row.testCases ? (() => { try { return JSON.parse(row.testCases); } catch { return null; } })() : null;
+      const parsedTestCases = usingNamedColumns ? [...namedSample1, ...namedSample2, ...namedHidden] : legacyTestCases;
       if (category === "CODING") {
         const cases = Array.isArray(parsedTestCases) ? parsedTestCases : [];
         if (cases.filter((tc) => !tc.isHidden).length < 2 || cases.filter((tc) => tc.isHidden).length < 10) {
-          errors.push({ row: rowNum, reason: "Coding questions need testCases as a JSON array with at least 2 visible and 10 hidden cases" });
+          errors.push({ row: rowNum, reason: usingNamedColumns ? "Coding questions need 2 complete sample test cases and at least 10 hidden test cases" : "Coding questions need testCases as a JSON array with at least 2 visible and 10 hidden cases" });
           continue;
         }
       }

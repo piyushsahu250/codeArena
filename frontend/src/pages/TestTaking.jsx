@@ -91,6 +91,8 @@ export default function TestTaking() {
   const [finalizing, setFinalizing] = useState(false);
   const timerRef = useRef(null);
   const deadlineRef = useRef(null); // absolute ms timestamp this candidate's answers lock at
+  const clockOffsetRef = useRef(0); // serverTime - Date.now() at test start; corrects a skewed device clock
+  const finalizingRef = useRef(false); // in-flight guard for the auto-submit tick, distinct from finalizedRef
   const attemptIdRef = useRef(null);
   const finalizedRef = useRef(false);
   // Mirrors `current?.id`, kept live via an effect below — Run/Submit are async, and a student
@@ -399,6 +401,11 @@ export default function TestTaking() {
       const startedAtMs = new Date(startRes.data.startedAt).getTime();
       const deadline = startedAtMs + testRes.data.durationMin * 60 * 1000;
       deadlineRef.current = deadline;
+      // A device clock that's fast/slow relative to the server would otherwise make the countdown
+      // hit zero (and auto-submit) too early or too late in real time — every remaining-time
+      // computation below uses (Date.now() + clockOffsetRef.current), never raw Date.now(), so the
+      // timer tracks the server's clock regardless of the student's own clock setting.
+      if (typeof startRes.data.serverTime === "number") clockOffsetRef.current = startRes.data.serverTime - Date.now();
 
       // Restore previously auto-saved answers — a page refresh mid-test shouldn't lose
       // anything already persisted server-side.
@@ -445,7 +452,7 @@ export default function TestTaking() {
         // ignore
       }
 
-      setSecondsLeft(Math.max(0, Math.floor((deadline - Date.now()) / 1000)));
+      setSecondsLeft(Math.max(0, Math.floor((deadline - (Date.now() + clockOffsetRef.current)) / 1000)));
       setStarted(true);
     } catch (err) {
       setLoadError(err.response?.data?.error || "Could not start this test");
@@ -467,10 +474,13 @@ export default function TestTaking() {
   useEffect(() => {
     if (secondsLeft === null) return;
     timerRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.floor((deadlineRef.current - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.floor((deadlineRef.current - (Date.now() + clockOffsetRef.current)) / 1000));
       setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(timerRef.current);
+      // Deliberately does NOT clearInterval here — if the auto-submit call below comes back
+      // "premature" (server disagrees time is actually up), the interval must keep ticking so it
+      // can retry once the corrected clock offset shows real time has elapsed. finalizingRef guards
+      // against firing a second call while one is still in flight.
+      if (remaining <= 0 && !finalizingRef.current) {
         finalizeAndExit(true, "time");
       }
     }, 1000);
@@ -874,22 +884,35 @@ export default function TestTaking() {
   }
 
   async function finalizeAndExit(auto = false, reason = null) {
-    if (!attemptId || finalizedRef.current) return;
+    if (!attemptId || finalizedRef.current || finalizingRef.current) return;
     if (!auto && !confirm("Are you sure you want to submit your test? After submission, you will not be able to modify your answers.")) return;
     // Flush any answer still waiting on an auto-save debounce so the very last change isn't
     // lost to a race between submitting and the pending save timer.
     if (pendingAutoSaveRef.current) await flushAutoSave();
     if (pendingCodeAutoSaveRef.current) await flushCodeAutoSave();
-    finalizedRef.current = true;
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    finalizingRef.current = true;
     setFinalizing(true);
     try {
-      const { data } = await api.post(`/submissions/finalize/${attemptId}`);
+      const { data } = await api.post(`/submissions/finalize/${attemptId}`, { reason });
+      // The server disagreed that time is actually up (this candidate's device clock ran ahead of
+      // the server's) — resync the offset and let the countdown keep running instead of locking the
+      // exam screen; do NOT set finalizedRef, exit fullscreen, or stop the media stream, since the
+      // test genuinely isn't over yet.
+      if (data.premature) {
+        if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
+        return;
+      }
+      finalizedRef.current = true;
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
       notify(data.gamification);
     } catch {
       // Best-effort — don't trap the candidate on the exam screen even if this call fails.
+      finalizedRef.current = true;
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     } finally {
+      finalizingRef.current = false;
       setFinalizing(false);
     }
     if (reason === "time") {

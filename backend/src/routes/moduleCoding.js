@@ -93,6 +93,12 @@ function deadlineOf(attempt) {
   return new Date(attempt.startedAt).getTime() + attempt.moduleCodingTest.timeLimitMin * 60 * 1000;
 }
 
+// A client-side auto-submit ("reason: time") is only trusted once the server's own clock agrees
+// the deadline has actually passed, within this grace window — see PREMATURE_FINALIZE_GRACE_MS in
+// submissions.js for the identical rationale (that one guards Formal Tests, this one Module
+// Coding Tests).
+const PREMATURE_FINALIZE_GRACE_MS = 15000;
+
 // =========================== Student-facing ===========================
 
 // STUDENT: this module's coding-test config + the student's own attempt history/eligibility.
@@ -204,6 +210,7 @@ router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), asy
           return res.json({
             attemptId: existing.id,
             deadline: deadlineOf(existing),
+            serverTime: Date.now(),
             questions: existing.questions.map((q) => sanitizeQuestion(q.question)),
             savedAnswers: Object.fromEntries(
               existing.questions.map((q) => {
@@ -271,6 +278,7 @@ router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), asy
     res.json({
       attemptId: attempt.id,
       deadline: deadlineOf({ ...attempt, moduleCodingTest: test }),
+      serverTime: Date.now(),
       questions: selected.map((q) => sanitizeQuestion(byId.get(q.id))),
       allowedLanguages: test.allowedLanguages,
     });
@@ -387,6 +395,17 @@ router.post("/attempts/:attemptId/finalize", authenticate, requireRole("STUDENT"
 
     if (attempt.status !== "IN_PROGRESS") {
       return res.json({ score: attempt.score, passed: attempt.passed, status: attempt.status });
+    }
+
+    // An automatic ("TIME_EXPIRED") finalize call is only honored once the server's own clock
+    // agrees time is actually up — same guard as Formal Tests' /submissions/finalize. A manual
+    // Submit click (reason omitted) is never blocked, since a student is always allowed to submit
+    // early.
+    if (req.body?.reason === "TIME_EXPIRED") {
+      const remainingMs = deadlineOf(attempt) - Date.now();
+      if (remainingMs > PREMATURE_FINALIZE_GRACE_MS) {
+        return res.json({ premature: true, deadline: deadlineOf(attempt), serverNow: Date.now() });
+      }
     }
 
     const reason = Date.now() > deadlineOf(attempt) ? "TIME_EXPIRED" : null;

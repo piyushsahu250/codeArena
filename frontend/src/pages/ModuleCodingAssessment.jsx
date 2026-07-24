@@ -73,6 +73,8 @@ export default function ModuleCodingAssessment() {
   const resizingRef = useRef(false);
 
   const deadlineRef = useRef(null);
+  const clockOffsetRef = useRef(0); // serverTime - Date.now() at start/resume; corrects a skewed device clock
+  const finalizingRef = useRef(false); // in-flight guard for the auto-submit tick, distinct from finalizedRef
   const attemptIdRef = useRef(null);
   const finalizedRef = useRef(false);
   // Mirrors the active question's id — Run/Submit are async, and a student can switch questions
@@ -143,6 +145,10 @@ export default function ModuleCodingAssessment() {
       setAttemptId(data.attemptId);
       attemptIdRef.current = data.attemptId;
       deadlineRef.current = data.deadline;
+      // A device clock that's fast/slow relative to the server would otherwise make the countdown
+      // hit zero (and auto-submit) too early or too late in real time — every remaining-time
+      // computation below uses (Date.now() + clockOffsetRef.current), never raw Date.now().
+      if (typeof data.serverTime === "number") clockOffsetRef.current = data.serverTime - Date.now();
       setQuestions(data.questions);
       setAllowedLanguages(Array.isArray(data.allowedLanguages) ? data.allowedLanguages : ["java"]);
 
@@ -181,7 +187,7 @@ export default function ModuleCodingAssessment() {
       setLangDrafts(initialDrafts);
       setCodeVerdicts(restoredVerdicts);
       setVisited(restoredVisited);
-      setSecondsLeft(Math.max(0, Math.floor((data.deadline - Date.now()) / 1000)));
+      setSecondsLeft(Math.max(0, Math.floor((data.deadline - (Date.now() + clockOffsetRef.current)) / 1000)));
       setPhase("active");
     } catch (err) {
       setError(err.response?.data?.error || "Could not start this assessment");
@@ -193,10 +199,13 @@ export default function ModuleCodingAssessment() {
   useEffect(() => {
     if (phase !== "active" || secondsLeft === null) return;
     timerRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.floor((deadlineRef.current - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.floor((deadlineRef.current - (Date.now() + clockOffsetRef.current)) / 1000));
       setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(timerRef.current);
+      // Deliberately does NOT clearInterval here — if the auto-submit call below comes back
+      // "premature" (server disagrees time is actually up), the interval must keep ticking so it
+      // can retry once the corrected clock offset shows real time has elapsed. finalizingRef guards
+      // against firing a second call while one is still in flight.
+      if (remaining <= 0 && !finalizingRef.current) {
         finalize("TIME_EXPIRED");
       }
     }, 1000);
@@ -417,22 +426,34 @@ export default function ModuleCodingAssessment() {
   }
 
   async function finalize(reason) {
-    if (finalizedRef.current) return;
+    if (finalizedRef.current || finalizingRef.current) return;
     if (!reason && !confirm("Submit this assessment? You won't be able to change your answers afterward.")) return;
     await flushAutosave();
-    finalizedRef.current = true;
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-    proctor.stopMedia();
+    finalizingRef.current = true;
     setFinalizing(true);
     try {
-      const { data } = await api.post(`/module-coding/attempts/${attemptId}/finalize`);
+      const { data } = await api.post(`/module-coding/attempts/${attemptId}/finalize`, { reason });
+      // The server disagreed that time is actually up (this candidate's device clock ran ahead of
+      // the server's) — resync the offset and let the countdown keep running instead of locking the
+      // assessment screen; do NOT set finalizedRef, exit fullscreen, or stop media.
+      if (data.premature) {
+        if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
+        return;
+      }
+      finalizedRef.current = true;
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      proctor.stopMedia();
       setResult(data);
       notify(data.gamification);
     } catch {
       // best-effort — still show whatever we can
+      finalizedRef.current = true;
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      proctor.stopMedia();
     } finally {
+      finalizingRef.current = false;
       setFinalizing(false);
-      setPhase("result");
+      if (finalizedRef.current) setPhase("result");
     }
   }
 

@@ -38,17 +38,19 @@ const TEMPLATE_HEADERS = [
 // `||` (e.g. "5->25||3->9||10->100") — documented in the template's own header note + sample row.
 // Constraints/Input Format/Output Format map onto Question.constraints/inputFormat/outputFormat.
 const CODING_TEMPLATE_HEADERS = [
-  "Question Title", "Problem Statement", "Difficulty", "Programming Languages",
+  "Question Title", "Topic", "Problem Statement", "Difficulty", "Programming Languages",
   "Time Limit (seconds)", "Memory Limit (MB)", "Marks", "Constraints", "Input Format", "Output Format",
   "Sample Input 1", "Sample Output 1", "Sample Explanation 1",
   "Sample Input 2", "Sample Output 2", "Sample Explanation 2",
   "Hidden Test Cases (input->output pairs, separated by ||)",
+  "Evaluation Mode (STDIO or Function)", "Function Name", "Return Type", "Parameters (name:type, comma separated)",
   "Starter Code (Java)", "Starter Code (Python)", "Starter Code (Cpp)", "Starter Code (C)",
   "Tags", "Question Bank",
 ];
 
 const CODING_IMPORT_HEADER_ALIASES = {
   title: ["question title", "title", "question name", "name"],
+  topic: ["topic"],
   description: ["problem statement", "question text", "description"],
   difficulty: ["difficulty", "difficulty level"],
   languages: ["programming languages", "languages"],
@@ -65,6 +67,10 @@ const CODING_IMPORT_HEADER_ALIASES = {
   sampleOutput2: ["sample output 2"],
   sampleExplanation2: ["sample explanation 2"],
   hiddenTestCases: ["hidden test cases input output pairs separated by", "hidden test cases"],
+  evaluationMode: ["evaluation mode stdio or function", "evaluation mode"],
+  functionName: ["function name"],
+  returnType: ["return type"],
+  functionParams: ["parameters name type comma separated", "parameters"],
   starterJava: ["starter code java"],
   starterPython: ["starter code python"],
   // "C++" and "C" would both normalize to the same string ("starter code c") once normalizeHeader
@@ -452,15 +458,29 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
     headers = CODING_TEMPLATE_HEADERS;
     sampleRows = [
       [
-        "Sum of Two Numbers", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
+        "Sum of Two Numbers", "Math", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
         2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
         "2 3", "5", "2 + 3 = 5",
         "10 20", "30", "",
         "4 6->10||100 200->300||-5 5->0",
+        "STDIO", "", "", "",
         "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
         "a, b = map(int, input().split())\nprint(a + b)",
         "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
         "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
+        "Math, Basics", "Java Coding Bank",
+      ],
+      [
+        // FUNCTION-mode test case inputs use one line per parameter (never space-separated on one
+        // line, unlike STDIO) — a two-scalar-parameter signature like add(a, b) needs "2\n3", not
+        // "2 3", matching exactly what functionHarness.js's generated driver parses per parameter.
+        "Add Two Numbers (Function)", "Math", "Implement a function that returns the sum of two integers.", "Easy", "Java, Python, C++",
+        2, 256, 10, "1 <= a, b <= 10^9", "N/A — function parameters, not stdin", "N/A — return value, not stdout",
+        "2\n3", "5", "2 + 3 = 5",
+        "10\n20", "30", "",
+        "4\n6->10||100\n200->300||-5\n5->0",
+        "Function", "add", "int", "a:int, b:int",
+        "", "", "", "",
         "Math, Basics", "Java Coding Bank",
       ],
     ];
@@ -830,9 +850,37 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       if (pyCode) starterCodeByLanguage.python = pyCode;
       if (cppCode) starterCodeByLanguage.cpp = cppCode;
       if (cCode) starterCodeByLanguage.c = cCode;
+      // The Programming Languages column previously only validated that the text was recognizable
+      // and then discarded it — the declared list now actually filters which starter-code columns
+      // get saved, so an admin's language selection has a real effect instead of silently doing
+      // nothing while whatever starter-code columns happened to be filled in got saved regardless.
+      if (requestedLanguages.length > 0) {
+        const canonical = new Set(requestedLanguages.map((l) => LANGUAGE_ALIASES[l]).filter(Boolean));
+        for (const lang of Object.keys(starterCodeByLanguage)) {
+          if (!canonical.has(lang)) delete starterCodeByLanguage[lang];
+        }
+      }
 
       const tags = field(row, "tags").split(",").map((s) => s.trim()).filter(Boolean);
       const bankName = field(row, "questionBank");
+
+      // "Function" mode: resolveCodingFields() validates the signature and auto-generates starter
+      // code for every language it supports, overriding whatever the Starter Code columns held —
+      // same guarantee CreateQuestion.jsx's admin form relies on, so a bulk-imported FUNCTION
+      // question can never drift from what its own signature actually produces.
+      const evaluationModeRaw = normalizeHeader(field(row, "evaluationMode"));
+      const isFunctionMode = evaluationModeRaw === "function" || evaluationModeRaw === "functionbased";
+      let functionSignature = null;
+      if (isFunctionMode) {
+        const paramsRaw = field(row, "functionParams");
+        const params = paramsRaw
+          ? paramsRaw.split(",").map((pair) => {
+              const [name, type] = pair.split(":").map((s) => (s || "").trim());
+              return { name, type };
+            })
+          : [];
+        functionSignature = { methodName: field(row, "functionName"), returnType: field(row, "returnType"), params };
+      }
 
       try {
         const folderId = await resolveBankFolder(bankName);
@@ -842,17 +890,26 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
           continue;
         }
 
+        const resolved = resolveCodingFields({
+          evaluationType: isFunctionMode ? "FUNCTION" : "STDIO",
+          functionSignature,
+          starterCodeByLanguage,
+        });
+
         const question = await prisma.question.create({
           data: {
             title,
+            topic: field(row, "topic") || null,
             description,
             questionType: "CODING",
             difficulty,
             points: Number(field(row, "points")) || 10,
             timeLimitMs: Math.round(timeLimitSec * 1000),
             memoryLimitKb,
-            starterCode: javaCode || pyCode || cppCode || cCode || "",
-            starterCodeByLanguage: Object.keys(starterCodeByLanguage).length > 0 ? starterCodeByLanguage : undefined,
+            evaluationType: resolved.evaluationType,
+            functionSignature: resolved.functionSignature,
+            starterCode: Object.values(resolved.starterCodeByLanguage || starterCodeByLanguage)[0] || "",
+            starterCodeByLanguage: Object.keys(resolved.starterCodeByLanguage || starterCodeByLanguage).length > 0 ? (resolved.starterCodeByLanguage || starterCodeByLanguage) : undefined,
             tags: tags.length > 0 ? tags : undefined,
             constraints: field(row, "constraints") || null,
             inputFormat: field(row, "inputFormat") || null,

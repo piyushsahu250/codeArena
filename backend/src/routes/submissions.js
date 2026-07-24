@@ -261,6 +261,12 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
   }
 });
 
+// A client-side auto-submit ("reason: time") is only trusted once the server's own clock agrees
+// the deadline has actually passed, within this grace window — the timer sync fix means a synced
+// client should never trip this in practice, but a stale/unsynced/tampered client still might, and
+// this is the last line of defense so clock skew can never truncate a student's real time.
+const PREMATURE_FINALIZE_GRACE_MS = 15000;
+
 // STUDENT: finalize the whole test attempt — grades every still-PENDING coding draft (the
 // final saved version of each) before marking the attempt SUBMITTED. Idempotent: calling it
 // again on an already-finalized attempt just returns the current state.
@@ -273,6 +279,17 @@ router.post("/finalize/:attemptId", authenticate, requireRole("STUDENT"), async 
 
     if (attempt.status !== "IN_PROGRESS") {
       return res.json(attempt);
+    }
+
+    // An automatic ("time") finalize call is only honored once the server's own clock agrees time
+    // is actually up — a manual Submit click (reason omitted) is never blocked here, since a
+    // student is always allowed to submit early on purpose. This is what makes the server, not the
+    // student's device clock, the source of truth for when the test actually ends.
+    if (req.body?.reason === "time") {
+      const remainingMs = deadlineOf(attempt) - Date.now();
+      if (remainingMs > PREMATURE_FINALIZE_GRACE_MS) {
+        return res.json({ premature: true, deadline: deadlineOf(attempt), serverNow: Date.now() });
+      }
     }
 
     await gradePendingCodingSubmissions(attempt.id);

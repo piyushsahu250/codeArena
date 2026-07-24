@@ -505,7 +505,10 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     // Include already-saved submissions (auto-saved MCQ answers, locked coding submissions)
     // so a page refresh mid-test restores exactly where the candidate left off.
     const submissions = await prisma.submission.findMany({ where: { attemptId: attempt.id } });
-    res.json({ ...attempt, submissions });
+    // serverTime lets the client compute its own clock's offset from the server's — the deadline
+    // timer then measures against (Date.now() + offset) instead of raw Date.now(), so a student
+    // whose device clock is skewed doesn't get auto-submitted early or late relative to real time.
+    res.json({ ...attempt, submissions, serverTime: Date.now() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Could not start test" });
