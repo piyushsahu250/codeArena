@@ -26,6 +26,15 @@ const { judgeSqlSubmission } = require("./sqlJudge");
 
 const CASE_CONCURRENCY = Number(process.env.JUDGE_CASE_CONCURRENCY || 2);
 const MEMORY_LIMIT_KB = Number(process.env.JUDGE_MEMORY_LIMIT_KB || 262144); // 256 MB default
+// Compilation budget — separate from and typically larger than any single test case's own
+// timeLimitMs, since it's a one-time cost per submission (not per case) and, per this file's own
+// queue.js, this instance is sized for "Render free tier: 0.1 CPU / 512MB". A cold `javac`/`gcc`
+// invocation on that little CPU — especially with JUDGE_CONCURRENCY (default 2) submissions
+// compiling at once and competing for the same fractional core — routinely took longer than the
+// previous 10s budget, which misreported perfectly valid, simple student code as "Compilation
+// timed out" (observed live during a real classroom assessment on trivially small Java code).
+// Raised to a much safer default; still configurable per-deployment without a code change.
+const COMPILE_TIMEOUT_MS = Number(process.env.JUDGE_COMPILE_TIMEOUT_MS || 30000);
 // Caps the number of processes/threads a single submission can hold open — the concrete,
 // well-understood defense against a fork bomb (`while(1) fork();` / infinite thread spawn)
 // hanging the whole instance. Generous enough for legitimate multi-threaded submissions.
@@ -309,7 +318,7 @@ async function prepare(language, code) {
     const { cmd, args } = runner.compile(file, tmpDir);
     // Compilation gets a generous fixed budget, separate from the per-test-case run limit, and
     // is exempt from the execution memory ulimit (see spawnWithTimeout's enforceMemory comment).
-    const compileResult = await spawnWithTimeout(cmd, args, { cwd: tmpDir }, undefined, 10000, { enforceMemory: false });
+    const compileResult = await spawnWithTimeout(cmd, args, { cwd: tmpDir }, undefined, COMPILE_TIMEOUT_MS, { enforceMemory: false });
     if (!compileResult.ok) {
       fs.rm(tmpDir, { recursive: true, force: true }, () => {});
       return {
