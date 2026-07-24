@@ -8,12 +8,36 @@ const { runQueued } = require("../utils/queue");
 const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("../utils/gradeModuleCodingAttempt");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
+const { resolveCodingFields } = require("../utils/functionHarness");
 
 const router = express.Router();
 
 const execLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id });
 
 function sanitizeQuestion(q) {
+  // FUNCTION-mode questions here were never created/edited through a route that calls
+  // resolveCodingFields() (the admin routes below don't even accept evaluationType/
+  // functionSignature — every FUNCTION-mode question in this module got that way via a one-off
+  // seed-conversion script) — the whole "starterCodeByLanguage always matches the signature"
+  // guarantee functionHarness.js documents never actually held here. Confirmed live: a Module 1
+  // question ("String Length") had incomplete/wrong starterCodeByLanguage, so the frontend fell
+  // back to a generic STDIO-shaped default template — structurally guaranteed to trip
+  // wrapFunctionCode()'s "looks like a full Java program" guard the moment a student filled it in
+  // and submitted, through no fault of their own. Regenerating here, unconditionally, for every
+  // FUNCTION-mode question on every read is what actually delivers that guarantee, independent of
+  // whatever drifted into the DB.
+  let starterCodeByLanguage = q.starterCodeByLanguage || null;
+  if (q.evaluationType === "FUNCTION" && q.functionSignature) {
+    try {
+      starterCodeByLanguage = resolveCodingFields({ evaluationType: q.evaluationType, functionSignature: q.functionSignature }).starterCodeByLanguage;
+    } catch (err) {
+      // A malformed functionSignature would otherwise throw here (validateSignature) and 500 the
+      // whole assessment-start request for every student — falling back to whatever's stored is
+      // strictly no worse than before this fix, and the question is broken either way; better to
+      // surface that as a bad starter template than as a hard crash blocking the entire attempt.
+      console.error(`sanitizeQuestion: failed to regenerate starterCodeByLanguage for question ${q.id}:`, err.message);
+    }
+  }
   return {
     id: q.id,
     title: q.title,
@@ -24,7 +48,7 @@ function sanitizeQuestion(q) {
     // Preferred over the single-language starterCode above when present — this is what lets the
     // editor load the actually-correct template per language instead of showing one language's
     // starter code regardless of which language the student picked.
-    starterCodeByLanguage: q.starterCodeByLanguage || null,
+    starterCodeByLanguage,
     tags: q.tags || null,
     estimatedTimeMin: q.estimatedTimeMin ?? null,
     realWorldScenario: q.realWorldScenario || null,
