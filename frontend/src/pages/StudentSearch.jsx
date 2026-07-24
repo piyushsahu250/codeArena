@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import EditStudentProfileModal from "../components/EditStudentProfileModal";
 import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
@@ -26,6 +27,7 @@ export default function StudentSearch({ basePath }) {
   const toast = useToast();
   const { user } = useAuth();
   const canRegenerate = user?.role === "ADMIN"; // matches the backend's ADMIN-only bulk-regenerate-password route
+  const canEditProfile = user?.role === "ADMIN"; // matches the backend's ADMIN-only PATCH /users/:id
   const [q, setQ] = useState("");
   const [results, setResults] = useState(null);
   const [error, setError] = useState("");
@@ -33,6 +35,40 @@ export default function StudentSearch({ basePath }) {
   const [selected, setSelected] = useState([]);
   const [regenerating, setRegenerating] = useState(false);
   const [emailCredentials, setEmailCredentials] = useState(true);
+  const [editingStudentId, setEditingStudentId] = useState(null);
+
+  // Hierarchical browse — Institute -> Department -> Section — as an alternative to typing a
+  // search term, for pulling up an entire section's roster at once instead of one student at a
+  // time. Admin picks an institute explicitly; Staff has none to pick (their own institute is
+  // applied server-side automatically, same scoping the search box above already relies on), so
+  // the picker only renders for Admin.
+  const [institutes, setInstitutes] = useState([]);
+  const [browseInstituteId, setBrowseInstituteId] = useState("");
+  const [groups, setGroups] = useState([]);
+  const [browseDepartmentId, setBrowseDepartmentId] = useState("");
+  const [browseSection, setBrowseSection] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === "ADMIN") api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
+  }, [user?.role]);
+
+  // Loads the academic-group list for whichever institute is in scope — explicitly for Admin
+  // (only once one is picked), immediately for Staff (the backend scopes it to their own
+  // institute regardless of what's passed, so no instituteId param is needed at all).
+  useEffect(() => {
+    if (user?.role === "ADMIN" && !browseInstituteId) {
+      setGroups([]);
+      return;
+    }
+    api
+      .get("/academic-groups", user?.role === "ADMIN" ? { params: { instituteId: browseInstituteId } } : {})
+      .then((res) => setGroups(res.data))
+      .catch(() => setGroups([]));
+  }, [user?.role, browseInstituteId]);
+
+  const departments = [...new Map(groups.map((g) => [g.department.id, g.department])).values()].sort((a, b) => a.name.localeCompare(b.name));
+  const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.section))].sort();
 
   async function handleSearch(e) {
     e.preventDefault();
@@ -47,6 +83,23 @@ export default function StudentSearch({ basePath }) {
       setError(err.response?.data?.error || "Search failed");
     } finally {
       setSearching(false);
+    }
+  }
+
+  async function handleFetch() {
+    if (!browseDepartmentId || !browseSection) return;
+    setBrowsing(true);
+    setError("");
+    setSelected([]);
+    try {
+      const { data } = await api.get("/users/browse", {
+        params: { instituteId: browseInstituteId || undefined, departmentId: browseDepartmentId, section: browseSection },
+      });
+      setResults(data);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to load students");
+    } finally {
+      setBrowsing(false);
     }
   }
 
@@ -113,6 +166,48 @@ export default function StudentSearch({ basePath }) {
           </button>
         </form>
 
+        {/* Hierarchical browse — an alternative to search for pulling up a whole section at once */}
+        <div className="card" style={{ padding: 16, marginTop: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Or browse by Institute · Department · Section</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            {user?.role === "ADMIN" && (
+              <div style={{ flex: "1 1 180px" }}>
+                <label style={labelStyle}>Institute</label>
+                <select
+                  style={inputStyle}
+                  value={browseInstituteId}
+                  onChange={(e) => { setBrowseInstituteId(e.target.value); setBrowseDepartmentId(""); setBrowseSection(""); }}
+                >
+                  <option value="">Select institute…</option>
+                  {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+              </div>
+            )}
+            <div style={{ flex: "1 1 180px" }}>
+              <label style={labelStyle}>Department</label>
+              <select
+                style={inputStyle}
+                value={browseDepartmentId}
+                onChange={(e) => { setBrowseDepartmentId(e.target.value); setBrowseSection(""); }}
+                disabled={user?.role === "ADMIN" && !browseInstituteId}
+              >
+                <option value="">Select department…</option>
+                {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: "1 1 160px" }}>
+              <label style={labelStyle}>Division (Section)</label>
+              <select style={inputStyle} value={browseSection} onChange={(e) => setBrowseSection(e.target.value)} disabled={!browseDepartmentId}>
+                <option value="">Select section…</option>
+                {sections.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <button className="btn btn-primary" onClick={handleFetch} disabled={!browseDepartmentId || !browseSection || browsing}>
+              {browsing ? "Fetching…" : "Fetch"}
+            </button>
+          </div>
+        </div>
+
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
 
         {results && results.length > 0 && canRegenerate && (
@@ -136,7 +231,7 @@ export default function StudentSearch({ basePath }) {
         {results && (
           <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
             {results.map((s) => (
-              <div key={s.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div key={s.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                   {canRegenerate && <input type="checkbox" checked={selected.includes(s.id)} onChange={() => toggle(s.id)} />}
                   <Link to={`${basePath}/students/${s.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
@@ -152,19 +247,40 @@ export default function StudentSearch({ basePath }) {
                     </div>
                   </Link>
                 </div>
-                <Link to={`${basePath}/students/${s.id}`} className="btn btn-ghost">View dashboard →</Link>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {canEditProfile && (
+                    <button className="btn btn-ghost" onClick={() => setEditingStudentId(s.id)}>Edit Profile</button>
+                  )}
+                  <Link to={`${basePath}/students/${s.id}`} className="btn btn-ghost">View dashboard →</Link>
+                </div>
               </div>
             ))}
             {results.length === 0 && (
               <div className="card" style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>
-                No student found matching "{q}".
+                No students found.
               </div>
             )}
           </div>
         )}
       </div>
+
+      {editingStudentId && (
+        <EditStudentProfileModal
+          studentId={editingStudentId}
+          onClose={() => setEditingStudentId(null)}
+          onSaved={() => {
+            setEditingStudentId(null);
+            toast.success("Profile updated.");
+            // Re-run whichever fetch produced the current list so the edited row reflects the
+            // save immediately instead of showing stale data until the next search/fetch.
+            if (q.trim()) handleSearch({ preventDefault() {} });
+            else if (browseDepartmentId && browseSection) handleFetch();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 const inputStyle = { padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
+const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 };

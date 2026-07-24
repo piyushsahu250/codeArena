@@ -614,6 +614,42 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
   }
 });
 
+// ADMIN/STAFF: hierarchical browse — same result shape as /search, but selected via
+// Institute -> Department -> Section instead of typed free-text, for working through an entire
+// section's students consecutively instead of searching one at a time. departmentId + section
+// are both required: a bare institute/department selection with no section would return an
+// entire institute's roster unbounded.
+router.get("/browse", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { departmentId, section } = req.query;
+    if (!departmentId || !section) return res.status(400).json({ error: "Department and Section are required" });
+    const instituteId = req.requesterInstituteId || req.query.instituteId;
+    if (!instituteId) return res.status(400).json({ error: "Institute is required" });
+
+    const groups = await prisma.academicGroup.findMany({
+      where: { instituteId, departmentId, section },
+      select: { id: true },
+    });
+    if (groups.length === 0) return res.json([]);
+
+    const students = await prisma.user.findMany({
+      where: { role: "STUDENT", academicGroupId: { in: groups.map((g) => g.id) } },
+      select: {
+        id: true, name: true, email: true, rollNumber: true,
+        institute: { select: { name: true } },
+        class: { select: { name: true, batchYear: true } },
+        academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
+      },
+      orderBy: { name: "asc" },
+      take: 500,
+    });
+    res.json(students);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Browse failed" });
+  }
+});
+
 // ADMIN/STAFF: password reset history. Staff sees only resets for students under their own
 // institute (matching the same scoping as the reset action itself); an unscoped platform Admin
 // sees every institute's history. Capped at 300 rows, most recent first — an operational log,
