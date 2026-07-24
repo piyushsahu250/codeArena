@@ -30,40 +30,83 @@ const MODULE_TESTS = {
         title: "Sum of Two Integers",
         description: "Return the sum of two integers.",
         difficulty: "EASY",
+        // 2 visible + 10 hidden, matching the platform-wide minimum enforced on every other
+        // question-creation surface — this module's original 1-visible/2-hidden data predated that
+        // standard and let a student pass with only 2 hidden cases actually checked.
+        visibleCount: 2,
         testCases: [
           { input: "3\n5", expected: "8" },
           { input: "-2\n7", expected: "5" },
           { input: "0\n0", expected: "0" },
+          { input: "10\n20", expected: "30" },
+          { input: "-10\n-20", expected: "-30" },
+          { input: "100\n-100", expected: "0" },
+          { input: "1\n-1", expected: "0" },
+          { input: "999999\n1", expected: "1000000" },
+          { input: "-999999\n-1", expected: "-1000000" },
+          { input: "7\n7", expected: "14" },
+          { input: "0\n-5", expected: "-5" },
+          { input: "123456\n654321", expected: "777777" },
         ],
       },
       {
         title: "Even or Odd",
         description: 'Return "Even" if the given integer is even, or "Odd" if it is odd.',
         difficulty: "EASY",
+        visibleCount: 2,
         testCases: [
           { input: "4", expected: "Even" },
           { input: "7", expected: "Odd" },
           { input: "0", expected: "Even" },
+          { input: "-3", expected: "Odd" },
+          { input: "-8", expected: "Even" },
+          { input: "1", expected: "Odd" },
+          { input: "100", expected: "Even" },
+          { input: "101", expected: "Odd" },
+          { input: "-1", expected: "Odd" },
+          { input: "2", expected: "Even" },
+          { input: "999999", expected: "Odd" },
+          { input: "1000000", expected: "Even" },
         ],
       },
       {
         title: "String Length",
         description: "Return the number of characters in the given string.",
         difficulty: "EASY",
+        visibleCount: 2,
         testCases: [
           { input: "hello", expected: "5" },
           { input: "Java", expected: "4" },
           { input: "a", expected: "1" },
+          { input: "OpenAI", expected: "6" },
+          { input: "Sanjivani", expected: "9" },
+          { input: "test", expected: "4" },
+          { input: "CodeArena", expected: "9" },
+          { input: "x", expected: "1" },
+          { input: "HelloWorld", expected: "10" },
+          { input: "abcdefghij", expected: "10" },
+          { input: "Programming", expected: "11" },
+          { input: "Q", expected: "1" },
         ],
       },
       {
         title: "Largest of Three",
         description: "Return the largest of three given integers.",
         difficulty: "EASY",
+        visibleCount: 2,
         testCases: [
           { input: "3\n9\n5", expected: "9" },
           { input: "1\n1\n1", expected: "1" },
           { input: "-4\n-1\n-9", expected: "-1" },
+          { input: "10\n20\n30", expected: "30" },
+          { input: "30\n20\n10", expected: "30" },
+          { input: "0\n0\n0", expected: "0" },
+          { input: "-5\n-10\n-1", expected: "-1" },
+          { input: "100\n99\n98", expected: "100" },
+          { input: "-100\n-99\n-98", expected: "-98" },
+          { input: "5\n5\n10", expected: "10" },
+          { input: "7\n3\n7", expected: "7" },
+          { input: "-1\n0\n1", expected: "1" },
         ],
       },
     ],
@@ -825,8 +868,11 @@ async function seedModuleCoding(prisma) {
             evaluationType: resolved.evaluationType,
             functionSignature: resolved.functionSignature,
             starterCodeByLanguage: resolved.starterCodeByLanguage,
+            // Defaults to 1 visible case (the original convention for every question that hasn't
+            // been backfilled to the 2-visible/10-hidden platform standard yet — see visibleCount
+            // on Module 1's questions above for the backfilled shape).
             testCases: {
-              create: q.testCases.map((tc, i) => ({ input: tc.input, expected: tc.expected, isHidden: i > 0 })),
+              create: q.testCases.map((tc, i) => ({ input: tc.input, expected: tc.expected, isHidden: i >= (q.visibleCount ?? 1) })),
             },
           },
         });
@@ -838,4 +884,4 @@ async function seedModuleCoding(prisma) {
   console.log("Seeded module coding tests:", seededCount, "new questions across", Object.keys(MODULE_TESTS).length, "modules.");
 }
 
-module.exports = { seedModuleCoding };
+module.exports = { seedModuleCoding, MODULE_TESTS };
