@@ -10,6 +10,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
+import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
@@ -31,6 +32,7 @@ export default function InterviewSession() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [phase, setPhase] = useState("preflight"); // preflight | active | terminated
+  const [readinessReady, setReadinessReady] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [drafts, setDrafts] = useState({}); // questionId -> {answerText, code, language, selected}
   // Independent autosaved code per (question, language) — { [questionId]: { [language]: code } }.
@@ -220,25 +222,15 @@ export default function InterviewSession() {
               violation.
             </p>
 
-            <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--ip-glass-border)", borderRadius: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Camera &amp; microphone check</div>
-              {proctor.mediaGranted ? (
-                <>
-                  <video ref={proctor.videoRef} autoPlay muted playsInline style={{ width: 160, height: 120, borderRadius: 8, marginTop: 10, background: "#000", objectFit: "cover" }} />
-                  <p style={{ fontSize: 12, color: "var(--mint)", marginTop: 8, fontWeight: 600 }}>✓ Camera and microphone are ready</p>
-                </>
-              ) : (
-                <>
-                  <p style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>Both are required before you can begin — they stay on for the whole interview.</p>
-                  <button className="btn btn-dark" style={{ marginTop: 10 }} onClick={proctor.requestMedia} disabled={proctor.requestingMedia}>
-                    {proctor.requestingMedia ? "Requesting access…" : "Grant camera & microphone access"}
-                  </button>
-                  {proctor.mediaError && <p style={{ fontSize: 12, color: "var(--rust)", marginTop: 8 }}>{proctor.mediaError}</p>}
-                </>
-              )}
-            </div>
+            <ReadinessChecklist
+              proctor={proctor}
+              requireWebcam
+              requireMicrophone
+              requireFullscreen
+              onReadyChange={setReadinessReady}
+            />
 
-            <button className="btn btn-primary" style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: proctor.mediaGranted ? 1 : 0.4 }} onClick={begin} disabled={!proctor.mediaGranted}>
+            <button className="btn btn-primary" style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: readinessReady ? 1 : 0.4 }} onClick={begin} disabled={!readinessReady}>
               Begin Interview (Fullscreen)
             </button>
           </div>

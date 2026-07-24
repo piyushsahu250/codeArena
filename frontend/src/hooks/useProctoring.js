@@ -271,8 +271,14 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     };
   }, [requireWebcam]);
 
+  // Gated on `mediaGranted` rather than `active` — the pre-test readiness checklist needs a live
+  // "is a face actually visible" status before the student is allowed to press Start, not just
+  // once the session is already running. `report()` itself still no-ops while `active` is false
+  // (see its own guard above), so this never produces a counted violation before the test starts
+  // — it only makes `faceStatus` a real readiness signal instead of staying stuck at "OK" (its
+  // untouched initial value) for the entire preflight phase.
   useEffect(() => {
-    if (!active || !requireWebcam) return;
+    if (!mediaGranted || !requireWebcam) return;
     const interval = setInterval(async () => {
       // Read the node fresh on every tick (not captured once outside the interval) — the
       // preflight and in-session video elements are different DOM nodes, and this effect's
@@ -296,7 +302,7 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
       }
     }, FACE_CHECK_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [active, requireWebcam, report]);
+  }, [mediaGranted, requireWebcam, report]);
 
   // Ongoing camera/microphone availability — exposed as persistent status (like faceStatus),
   // not just a one-shot violation event, so the UI can show a standing "camera/mic unavailable"

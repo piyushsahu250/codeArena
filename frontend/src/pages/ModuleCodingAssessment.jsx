@@ -10,6 +10,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
+import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
@@ -40,6 +41,7 @@ export default function ModuleCodingAssessment() {
   const [status, setStatus] = useState(null); // GET /module-coding/module/:moduleId response
   const [error, setError] = useState("");
   const [phase, setPhase] = useState("loading"); // loading | preflight | starting | active | result
+  const [readinessReady, setReadinessReady] = useState(false);
   const [result, setResult] = useState(null);
 
   const [attemptId, setAttemptId] = useState(null);
@@ -562,32 +564,21 @@ export default function ModuleCodingAssessment() {
               <Banner color="var(--rust)">You've used all allowed attempts. Contact your instructor for an additional attempt.</Banner>
             ) : !status.activeAttemptId && status.cooldownRemainingSec > 0 ? (
               <Banner color="var(--amber-dark)">Please wait {Math.ceil(status.cooldownRemainingSec / 60)} more minute(s) before retrying.</Banner>
-            ) : (t.requireWebcam || t.requireMicrophone) && !status.activeAttemptId ? (
-              <div style={{ marginTop: 16, padding: 16, border: "1px solid var(--line)", borderRadius: 10 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>
-                  {t.requireWebcam && t.requireMicrophone ? "Camera & microphone check" : t.requireMicrophone ? "Microphone check" : "Camera check"}
-                </div>
-                {proctor.mediaGranted ? (
-                  <>
-                    {t.requireWebcam && <video ref={proctor.videoRef} autoPlay muted playsInline style={{ width: 160, height: 120, borderRadius: 8, marginTop: 10, background: "#000", objectFit: "cover" }} />}
-                    <p style={{ fontSize: 12, color: "var(--mint)", marginTop: 8, fontWeight: 600 }}>✓ Ready</p>
-                  </>
-                ) : (
-                  <>
-                    <button className="btn btn-dark" style={{ marginTop: 10 }} onClick={proctor.requestMedia} disabled={proctor.requestingMedia}>
-                      {proctor.requestingMedia ? "Requesting access…" : t.requireWebcam && t.requireMicrophone ? "Grant camera & microphone access" : t.requireMicrophone ? "Grant microphone access" : "Grant camera access"}
-                    </button>
-                    {proctor.mediaError && <p style={{ fontSize: 12, color: "var(--rust)", marginTop: 8 }}>{proctor.mediaError}</p>}
-                  </>
-                )}
-              </div>
+            ) : !status.activeAttemptId ? (
+              <ReadinessChecklist
+                proctor={proctor}
+                requireWebcam={!!t.requireWebcam}
+                requireMicrophone={!!t.requireMicrophone}
+                requireFullscreen={t.requireFullscreen !== false}
+                onReadyChange={setReadinessReady}
+              />
             ) : null}
 
             <button
               className="btn btn-primary"
-              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: status.canStart && (!(t.requireWebcam || t.requireMicrophone) || proctor.mediaGranted || status.activeAttemptId) ? 1 : 0.4 }}
+              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: status.canStart && (status.activeAttemptId || readinessReady) ? 1 : 0.4 }}
               onClick={beginOrResume}
-              disabled={phase === "starting" || !status.canStart || ((t.requireWebcam || t.requireMicrophone) && !status.activeAttemptId && !proctor.mediaGranted)}
+              disabled={phase === "starting" || !status.canStart || (!status.activeAttemptId && !readinessReady)}
             >
               {phase === "starting" ? "Starting…" : status.activeAttemptId ? "Resume Assessment (Fullscreen)" : "Begin Assessment (Fullscreen)"}
             </button>
