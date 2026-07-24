@@ -173,6 +173,13 @@ router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), asy
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: "IN_PROGRESS" },
       include: { questions: { orderBy: { order: "asc" }, include: { question: { include: { testCases: true } } } } },
     });
+    // deadlineOf() reads attempt.moduleCodingTest.timeLimitMin, but the query above doesn't
+    // include that relation (it's already in scope as `test`, same row by moduleCodingTestId, so
+    // an extra join would be redundant) — without this, every attempt to resume an in-progress
+    // attempt threw "Cannot read properties of undefined (reading 'timeLimitMin')" and 500'd the
+    // whole request, which is exactly what "Failed to start assessment" was: not a fresh start at
+    // all, but a resume that could never succeed once a student navigated away and back.
+    if (existing) existing.moduleCodingTest = test;
     if (existing) {
       if (!test.allowResume) {
         await gradeModuleCodingAttempt(existing.id, { reason: "RESUME_DISABLED" });
