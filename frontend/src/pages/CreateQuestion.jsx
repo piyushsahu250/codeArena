@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import FolderPicker from "../components/FolderPicker";
 import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
+import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 
 const QUESTION_TYPES = [
@@ -189,6 +190,23 @@ export default function CreateQuestion() {
   if (loading) return <div style={{ padding: 48 }} className="mono">Loading…</div>;
 
   const isSql = form.questionType === "SQL";
+  const isCoding = form.questionType === "CODING";
+  const previewQuestion = {
+    title: form.title,
+    description: form.description,
+    difficulty: form.difficulty,
+    tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+    estimatedTimeMin: form.estimatedTimeMin,
+    realWorldScenario: form.realWorldScenario,
+    constraints: form.constraints,
+    inputFormat: form.inputFormat,
+    outputFormat: form.outputFormat,
+    notes: form.notes,
+    edgeCases: form.edgeCases,
+    problemExplanation: form.problemExplanation,
+    functionSignature: form.evaluationType === "FUNCTION" ? signature : null,
+    testCases: testCases.filter((tc) => !tc.isHidden).map((tc) => ({ input: tc.input, expected: tc.expected, explanation: tc.explanation })),
+  };
   const isQuiz = form.questionType !== "CODING" && !isSql;
   const isMulti = form.questionType === "MULTISELECT";
   const isTrueFalse = form.questionType === "TRUE_FALSE";
@@ -197,7 +215,10 @@ export default function CreateQuestion() {
     <div>
       <Navbar />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
-        <h1>{isEdit ? "Edit question" : "New question"}</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+          <h1>{isEdit ? "Edit question" : "New question"}</h1>
+          {isCoding && <QuestionPreviewToggle question={previewQuestion} />}
+        </div>
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
           <label style={labelStyle}>Question Type</label>
           <select style={inputStyle} value={form.questionType} onChange={(e) => changeType(e.target.value)}>

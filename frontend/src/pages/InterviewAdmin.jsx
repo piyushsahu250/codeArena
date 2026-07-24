@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
+import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import { CATEGORIES, APTITUDE_CATS } from "../constants/interviewCategories";
 
@@ -29,6 +30,7 @@ export default function InterviewAdmin() {
   const [form, setForm] = useState(EMPTY_Q);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
   const [pendingDraftCount, setPendingDraftCount] = useState(0);
+  const [importResult, setImportResult] = useState(null);
   const fileRef = useRef(null);
 
   function loadAll() {
@@ -107,15 +109,29 @@ export default function InterviewAdmin() {
     if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
+    setImportResult(null);
     try {
       const { data } = await api.post("/interview/admin/questions/import", formData, { headers: { "Content-Type": "multipart/form-data" } });
-      alert(`Imported ${data.created}/${data.total} questions.${data.errorCount ? ` ${data.errorCount} row(s) had errors.` : ""}`);
+      setImportResult(data);
       loadAll();
     } catch (err) {
       alert(err.response?.data?.error || "Import failed");
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
+  }
+
+  function downloadErrorReport() {
+    const rows = (importResult.errors || []).map((e) => ["Failed", e.row, e.reason]);
+    const header = ["Status", "Row", "Reason"];
+    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "interview-import-report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -155,6 +171,27 @@ export default function InterviewAdmin() {
             <button className="btn btn-primary" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add Question"}</button>
           </div>
         </div>
+
+        {importResult && (
+          <div className="card" style={{ padding: 16, marginTop: 12 }}>
+            <p style={{ fontSize: 13 }}>
+              <strong>{importResult.created}</strong> question{importResult.created === 1 ? "" : "s"} imported
+              out of {importResult.total}.{importResult.errorCount > 0 && ` ${importResult.errorCount} failed.`}
+            </p>
+            {importResult.errors?.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadErrorReport}>
+                  ⬇ Download error report
+                </button>
+                <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
+                  {importResult.errors.map((e, i) => (
+                    <div key={i} style={{ fontSize: 12, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {adding && (
           <form onSubmit={createQuestion} className="card" style={{ padding: 20, marginTop: 16 }}>
@@ -237,6 +274,17 @@ export default function InterviewAdmin() {
                 />
 
                 <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+
+                <div style={{ marginTop: 10 }}>
+                  <QuestionPreviewToggle
+                    question={{
+                      ...form,
+                      tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+                      functionSignature: form.evaluationType === "FUNCTION" ? signature : null,
+                      testCases: form.testCases.filter((tc) => !tc.isHidden),
+                    }}
+                  />
+                </div>
               </>
             )}
 

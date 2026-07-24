@@ -88,41 +88,44 @@ export default function ProblemStatement({ question }) {
       )}
 
       {(q.inputFormat || q.outputFormat) && (
-        <div style={{ display: "grid", gridTemplateColumns: q.inputFormat && q.outputFormat ? "1fr 1fr" : "1fr", gap: 12, marginTop: 16 }}>
-          {q.inputFormat && (
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>INPUT FORMAT</div>
-              <p style={{ fontSize: 13, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{q.inputFormat}</p>
-            </div>
-          )}
-          {q.outputFormat && (
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>OUTPUT FORMAT</div>
-              <p style={{ fontSize: 13, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{q.outputFormat}</p>
-            </div>
-          )}
-        </div>
+        <details open style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>INPUT / OUTPUT FORMAT</summary>
+          <div style={{ display: "grid", gridTemplateColumns: q.inputFormat && q.outputFormat ? "1fr 1fr" : "1fr", gap: 12, marginTop: 8 }}>
+            {q.inputFormat && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)" }}>INPUT</div>
+                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{q.inputFormat}</p>
+              </div>
+            )}
+            {q.outputFormat && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)" }}>OUTPUT</div>
+                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{q.outputFormat}</p>
+              </div>
+            )}
+          </div>
+        </details>
       )}
 
       {q.constraints && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>CONSTRAINTS</div>
-          <p className="mono" style={{ fontSize: 12.5, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.constraints}</p>
-        </div>
+        <details open style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>CONSTRAINTS</summary>
+          <p className="mono" style={{ fontSize: 12.5, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.constraints}</p>
+        </details>
       )}
 
       {q.edgeCases && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>EDGE CASES TO CONSIDER</div>
-          <p style={{ fontSize: 13, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.edgeCases}</p>
-        </div>
+        <details open style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>EDGE CASES TO CONSIDER</summary>
+          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.edgeCases}</p>
+        </details>
       )}
 
       {q.notes && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>NOTES</div>
-          <p style={{ fontSize: 13, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.notes}</p>
-        </div>
+        <details open style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>NOTES</summary>
+          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.notes}</p>
+        </details>
       )}
 
       {hints.length > 0 && (
@@ -142,16 +145,18 @@ export default function ProblemStatement({ question }) {
       )}
 
       {testCases.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>SAMPLE TEST CASES</div>
-          {testCases.map((tc, i) => (
-            <div key={i} className="card" style={{ padding: 12, marginTop: 8, fontSize: 13 }}>
-              <div className="mono"><strong>Input:</strong> {tc.input}</div>
-              <div className="mono"><strong>Expected:</strong> {tc.expected}</div>
-              {tc.explanation && <div style={{ marginTop: 6, color: "var(--ink-dim)" }}>{tc.explanation}</div>}
-            </div>
-          ))}
-        </div>
+        <details open style={{ marginTop: 24 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>SAMPLE TEST CASES</summary>
+          <div style={{ marginTop: 8 }}>
+            {testCases.map((tc, i) => (
+              <div key={i} className="card" style={{ padding: 12, marginTop: 8, fontSize: 13 }}>
+                <div className="mono"><strong>Input:</strong> {tc.input}</div>
+                <div className="mono"><strong>Expected:</strong> {tc.expected}</div>
+                {tc.explanation && <div style={{ marginTop: 6, color: "var(--ink-dim)" }}>{tc.explanation}</div>}
+              </div>
+            ))}
+          </div>
+        </details>
       )}
 
       {editorial && (editorial.bruteForce?.approach || editorial.betterApproach?.approach || editorial.optimal?.approach) && (
@@ -173,14 +178,14 @@ export default function ProblemStatement({ question }) {
       )}
 
       {similarQuestions.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>SIMILAR QUESTIONS</div>
+        <details open style={{ marginTop: 16 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>SIMILAR QUESTIONS</summary>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
             {similarQuestions.map((s, i) => (
               <span key={i} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 999, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)" }}>{s}</span>
             ))}
           </div>
-        </div>
+        </details>
       )}
     </div>
   );

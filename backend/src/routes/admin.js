@@ -49,6 +49,64 @@ router.get("/stats", authenticate, requireRole("ADMIN"), async (req, res) => {
   }
 });
 
+// Shared by the audit route below — same "mandatory field" set the admin CRUD routes already
+// enforce at creation time (2 visible / 10 hidden test cases, description, etc., see
+// moduleCoding.js/questions.js/learning.js/interview.js's own validation) plus a few fields those
+// routes leave optional but a genuinely complete question should still have (inputFormat,
+// outputFormat, constraints, tags, starter code). Deliberately read-only and non-destructive: this
+// only reports what's missing, it never invents content to fill the gap — an admin who hasn't
+// reviewed a question shouldn't have Claude-authored placeholder text silently attributed to them.
+function auditQuestion(q) {
+  const missing = [];
+  if (!q.title || !String(q.title).trim()) missing.push("title");
+  if (!q.description && !q.prompt) missing.push("description");
+  if (!q.inputFormat) missing.push("inputFormat");
+  if (!q.outputFormat) missing.push("outputFormat");
+  if (!q.constraints) missing.push("constraints");
+  if (!Array.isArray(q.tags) || q.tags.length === 0) missing.push("tags");
+  const testCases = Array.isArray(q.testCases) ? q.testCases : [];
+  const visible = testCases.filter((tc) => !tc.isHidden).length;
+  const hidden = testCases.filter((tc) => tc.isHidden).length;
+  if (visible < 2) missing.push(`visible test cases (has ${visible}, needs 2)`);
+  if (hidden < 10) missing.push(`hidden test cases (has ${hidden}, needs 10)`);
+  const hasStarter = (q.starterCodeByLanguage && Object.keys(q.starterCodeByLanguage).length > 0) || !!q.starterCode;
+  if (!hasStarter) missing.push("starter code");
+  if (q.evaluationType === "FUNCTION" && !q.functionSignature) missing.push("function signature");
+  return missing;
+}
+
+// ADMIN: read-only completeness report across every coding question on the platform (Question,
+// PracticeQuestion, InterviewQuestion) — flags which mandatory fields each one is missing, so an
+// admin can find and fix incomplete questions instead of discovering them one at a time when a
+// student hits a confusing gap. Never writes anything.
+router.get("/question-audit", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const [questions, practiceQuestions, interviewQuestions] = await Promise.all([
+      prisma.question.findMany({ where: { questionType: "CODING" }, include: { testCases: true } }),
+      prisma.practiceQuestion.findMany({ where: { type: "CODING" } }),
+      prisma.interviewQuestion.findMany({ where: { category: "CODING" } }),
+    ]);
+
+    const items = [];
+    for (const [rows, source] of [[questions, "Question"], [practiceQuestions, "PracticeQuestion"], [interviewQuestions, "InterviewQuestion"]]) {
+      for (const q of rows) {
+        const missingFields = auditQuestion(q);
+        if (missingFields.length > 0) {
+          items.push({ id: q.id, source, title: q.title || (q.description || q.prompt || "").slice(0, 60) || "(untitled)", missingFields });
+        }
+      }
+    }
+
+    res.json({
+      summary: { totalScanned: questions.length + practiceQuestions.length + interviewQuestions.length, incompleteCount: items.length },
+      items,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to run question audit" });
+  }
+});
+
 // ADMIN: outbound email delivery log — every welcome/password-reset send attempt, with real
 // provider-confirmed status (never inferred). Optional ?status=FAILED filter; capped at 300 rows,
 // most recent first — this is an operational log, not a paginated archive.

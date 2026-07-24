@@ -4,6 +4,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
+import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
@@ -463,6 +464,17 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
               />
 
               <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+
+              <div style={{ marginTop: 10 }}>
+                <QuestionPreviewToggle
+                  question={{
+                    ...form,
+                    tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+                    functionSignature: form.evaluationType === "FUNCTION" ? signature : null,
+                    testCases: form.testCases.filter((tc) => !tc.isHidden),
+                  }}
+                />
+              </div>
             </>
           )}
 
@@ -750,6 +762,15 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
             </div>
           ))}
           <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+          <div style={{ marginTop: 10 }}>
+            <QuestionPreviewToggle
+              question={{
+                ...form,
+                tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+                testCases: form.testCases.filter((tc) => !tc.isHidden),
+              }}
+            />
+          </div>
           <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Adding…" : "Add question"}</button>
         </form>
       )}

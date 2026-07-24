@@ -241,6 +241,19 @@ export default function QuestionBank() {
     }
   }
 
+  function downloadErrorReport() {
+    const rows = (importResult.errors || []).map((e) => ["Failed", e.row, e.reason]);
+    const header = ["Status", "Row", "Reason"];
+    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "bulk-import-report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const isRealFolder = activeFolder && activeFolder.id !== "__all__" && activeFolder.id !== "__none__";
   const childFolders = isRealFolder ? (folders || []).filter((f) => f.parentId === activeFolder.id) : [];
   const rootFolders = (folders || []).filter((f) => !f.parentId);
@@ -407,9 +420,14 @@ export default function QuestionBank() {
                     </p>
                     {importResult.errors.length > 0 && (
                       <div style={{ marginTop: 8 }}>
-                        {importResult.errors.map((e, i) => (
-                          <div key={i} style={{ fontSize: 12, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
-                        ))}
+                        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadErrorReport}>
+                          ⬇ Download error report
+                        </button>
+                        <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
+                          {importResult.errors.map((e, i) => (
+                            <div key={i} style={{ fontSize: 12, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

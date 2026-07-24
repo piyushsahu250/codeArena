@@ -81,6 +81,7 @@ const MENU = {
     ] },
     { group: "System", items: [
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },
+      { label: "Question Audit", to: "/admin/question-audit", icon: CheckSquare },
       { label: "Password Reset History", to: "/admin/password-reset-history", icon: History },
       { label: "Audit Log", to: "/admin/audit-log", icon: History },
       { label: "Certificates", to: "/admin/certificates", icon: Award },

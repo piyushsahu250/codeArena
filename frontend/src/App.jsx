@@ -72,6 +72,7 @@ import WeeklyChallenge from "./pages/WeeklyChallenge";
 import CompanyTests from "./pages/CompanyTests";
 import InterviewReportDetail from "./pages/InterviewReportDetail";
 import EmailLogs from "./pages/EmailLogs";
+import QuestionAudit from "./pages/QuestionAudit";
 import PasswordResetHistory from "./pages/PasswordResetHistory";
 import SystemMonitoring from "./pages/SystemMonitoring";
 import AuditLogPage from "./pages/AuditLogPage";
@@ -234,6 +235,7 @@ export default function App() {
           <Route path="/admin/institutes" element={<Protected roles={["ADMIN"]}><InstituteManagement /></Protected>} />
           <Route path="/admin/attendance-structure" element={<Protected roles={["ADMIN"]}><AttendanceStructure /></Protected>} />
           <Route path="/admin/email-logs" element={<Protected roles={["ADMIN"]}><EmailLogs /></Protected>} />
+          <Route path="/admin/question-audit" element={<Protected roles={["ADMIN"]}><QuestionAudit /></Protected>} />
           <Route path="/admin/password-reset-history" element={<Protected roles={["ADMIN"]}><PasswordResetHistory basePath="/admin" /></Protected>} />
           <Route path="/admin/audit-log" element={<Protected roles={["ADMIN"]}><AuditLogPage basePath="/admin" /></Protected>} />
           <Route path="/admin/certificates" element={<Protected roles={["ADMIN"]}><CertificateAdmin basePath="/admin" /></Protected>} />
