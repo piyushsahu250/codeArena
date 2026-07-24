@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
+import CodeModeWarning from "../components/CodeModeWarning";
 import ProblemStatement from "../components/ProblemStatement";
 import useAiStatus from "../hooks/useAiStatus";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
@@ -499,6 +500,7 @@ function PracticeQuestionCard({ question }) {
             </select>
             <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={submitting} />
           </div>
+          <CodeModeWarning evaluationType={question.evaluationType} language={language} code={code} />
           <div style={{ marginTop: 10, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
             <Editor
               height="240px"

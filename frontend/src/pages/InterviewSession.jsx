@@ -9,6 +9,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
+import CodeModeWarning from "../components/CodeModeWarning";
 import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
@@ -481,6 +482,7 @@ export default function InterviewSession() {
                 </select>
                 <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={saving} runDisabled={micBlocked} submitDisabled={micBlocked} />
               </div>
+              <CodeModeWarning evaluationType={q.evaluationType} language={draft.language} code={draft.code} />
               <div style={{ marginTop: 10, border: "1px solid var(--ip-glass-border)", borderRadius: 8, overflow: "hidden" }}>
                 <Editor
                   height="260px"

@@ -8,6 +8,7 @@ import { useGamification } from "../context/GamificationContext";
 import useIsMobile from "../hooks/useIsMobile";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
+import CodeModeWarning from "../components/CodeModeWarning";
 import ProblemStatement from "../components/ProblemStatement";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
@@ -1313,6 +1314,11 @@ export default function TestTaking() {
                   <RunSubmitButtons onRun={handleRun} onSubmit={handleSubmitCode} running={running} submitting={submittingCode} />
                 </div>
               </div>
+              {!isSql && (
+                <div style={{ padding: "0 16px" }}>
+                  <CodeModeWarning evaluationType={current.evaluationType} language={answer?.language} code={answer?.code} />
+                </div>
+              )}
               <div style={{ padding: "6px 16px", borderBottom: "1px solid var(--line)", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
                 <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => setEditorTheme((t) => (t === "vs-dark" ? "light" : "vs-dark"))}>
                   {editorTheme === "vs-dark" ? "☾ Dark" : "☀ Light"}

@@ -31,6 +31,29 @@ export default function ProblemStatement({ question }) {
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         {q.title && <h2 style={{ fontSize: 20 }}>{q.title}</h2>}
         {q.difficulty && <span className={`badge badge-${String(q.difficulty).toLowerCase()}`}>{q.difficulty}</span>}
+        {/* Shown for every coding question, not just FUNCTION-mode ones — the confusion this
+            fixes goes both ways (writing a bare method for a STDIO question is just as broken as
+            writing a full program for a FUNCTION one), and a student shouldn't have to infer which
+            mode applies from the starter code's shape alone. */}
+        {q.functionSignature ? (
+          <span
+            className="mono"
+            title={`Write only the ${q.functionSignature.methodName || "method"} body — no class declaration or main() of your own. See the starter code.`}
+            style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "#EAF2FF", border: "1px solid #B8D4FF", color: "#2A5DB0", fontWeight: 700 }}
+          >
+            ƒ Function-based — implement {q.functionSignature.methodName ? `${q.functionSignature.methodName}(...)` : "the method"} only
+          </span>
+        ) : (
+          q.starterCode || q.starterCodeByLanguage ? (
+            <span
+              className="mono"
+              title="Write a complete, runnable program — your own class/main() (or equivalent) that reads input and prints output."
+              style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)", color: "var(--ink-dim)", fontWeight: 700 }}
+            >
+              ▤ Full program — read input, print output yourself
+            </span>
+          ) : null
+        )}
         {q.estimatedTimeMin != null && (
           <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>⏱ ~{q.estimatedTimeMin} min</span>
         )}

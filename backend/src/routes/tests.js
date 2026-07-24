@@ -397,6 +397,8 @@ router.get("/:id", authenticate, async (req, res) => {
               timeLimitMs: true,
               starterCode: true,
               starterCodeByLanguage: true,
+              evaluationType: true,
+              functionSignature: true,
               options: true,
               correctAnswer: isStaff,
               explanation: isStaff,

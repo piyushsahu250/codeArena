@@ -49,6 +49,12 @@ function sanitizeQuestion(q) {
     // editor load the actually-correct template per language instead of showing one language's
     // starter code regardless of which language the student picked.
     starterCodeByLanguage,
+    // Was previously omitted entirely — not answer-revealing (functionSignature only names what
+    // the starter code already shows: method name, params, return type), and the frontend needs
+    // it to show students an unambiguous "this question expects a method body, not a full program"
+    // indicator before they start typing, rather than finding out only after a rejected submit.
+    evaluationType: q.evaluationType || "STDIO",
+    functionSignature: q.functionSignature || null,
     tags: q.tags || null,
     estimatedTimeMin: q.estimatedTimeMin ?? null,
     realWorldScenario: q.realWorldScenario || null,
