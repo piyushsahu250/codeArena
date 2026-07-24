@@ -134,12 +134,17 @@ function javaDriver(signature) {
     ? `        System.out.println(String.valueOf(result));`
     : `        System.out.println(result);`;
 
-  return `import java.util.*;
-import java.io.*;
-
-public class Main {
-    public static void main(String[] args) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+  // Deliberately zero import statements of its own (java.io types below are fully qualified
+  // instead) — see wrapFunctionCode()'s java case for why: the assembled file places the
+  // student's code (which always starts with its own "import java.util.*;" in the generated
+  // starter) before this driver, and Java requires every import in a file to precede all of its
+  // type declarations. Giving this driver its own imports would put them after the student's
+  // "class Solution { ... }", which is a compile error — not hypothetical, this was a real,
+  // platform-wide bug: every Java FUNCTION-mode submission that kept its starter code's import
+  // failed with javac's generic "class, interface, enum, or record expected".
+  return `public class Main {
+    public static void main(String[] args) throws java.io.IOException {
+        java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
 ${decls}
         Solution __sol = new Solution();
         ${JAVA_TYPE[returnType]} result = __sol.${methodName}(${argList});
@@ -352,14 +357,13 @@ function wrapFunctionCode(language, signature, studentCode) {
       // `public class Main` with its own `main()`) — e.g. via the platform-wide FUNCTION-mode
       // migration converting an already-live question out from under an in-progress attempt. On
       // resume, that stale code is correctly restored to the editor (autosave must never silently
-      // drop real work), but naively concatenating it after the driver's own `public class Main`
-      // produces a file with two conflicting top-level declarations — javac's actual error
-      // ("class, interface, enum, or record expected") is a generic parser message pointing at a
-      // line number that doesn't correspond to anything the student can see in their editor, since
-      // it falls inside the invisible generated driver. Detecting the shape here and failing with
-      // a clear, specific message (routed through the same COMPILE_ERROR path as any other
-      // wrapFunctionCode() throw — see judge.js's catch around this call) is far more actionable
-      // than letting the raw compiler output through.
+      // drop real work), but naively concatenating it alongside the driver's own `public class
+      // Main` produces a file with two conflicting `public class` declarations — Java allows only
+      // one per file, so javac's actual error ("class, interface, enum, or record expected" or
+      // similar) is a generic parser message that doesn't point at anything actionable for the
+      // student. Detecting the shape here and failing with a clear, specific message (routed
+      // through the same COMPILE_ERROR path as any other wrapFunctionCode() throw — see judge.js's
+      // catch around this call) is far more actionable than letting the raw compiler output through.
       if (/\bpublic\s+class\s+\w+/.test(studentCode) || /\bpublic\s+static\s+void\s+main\s*\(/.test(studentCode)) {
         throw new Error(
           "This looks like a full Java program (with its own \"public class\" and/or main() method), but this question now expects only a method body inside \"class Solution { ... }\" — no class declaration or main() of your own. " +
@@ -368,8 +372,17 @@ function wrapFunctionCode(language, signature, studentCode) {
       }
       // Student's `class Solution { ... }` (package-private) coexists with the driver's
       // `public class Main` in one file — Java only requires the public class to match the
-      // filename, so this compiles exactly like the platform's existing STDIO-mode Main.java.
-      const code = `${javaDriver(signature)}\n${studentCode}\n`;
+      // filename (checked, not position), so multiple top-level classes in either order compile
+      // identically. Order here is NOT arbitrary though: studentCode goes FIRST specifically
+      // because the generated starter code always begins with "import java.util.*;", and Java
+      // requires every import in a file to precede all of its type declarations. Putting the
+      // driver first (as this used to do) placed that import after the driver's own `public class
+      // Main { ... }`, which is a guaranteed compile error for every single Java FUNCTION-mode
+      // submission that kept its starter code's import — not a rare edge case, the default state
+      // of the editor for every student. studentCode first avoids this entirely, and as a bonus
+      // gets a free correct-by-construction studentCodeOffset of 0 (javaDriver() itself now has no
+      // imports of its own to require, see its comment).
+      const code = `${studentCode}\n\n${javaDriver(signature)}`;
       return { code, studentCodeOffset: computeStudentCodeOffset(code, studentCode) };
     }
     case "python":
