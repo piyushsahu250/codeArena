@@ -155,10 +155,17 @@ export default function ModuleCodingAssessment() {
       data.questions.forEach((q) => {
         const saved = data.savedAnswers?.[q.id];
         const lang = saved?.language || (Array.isArray(data.allowedLanguages) && data.allowedLanguages[0]) || "java";
-        // Prefers the question's own per-language template over the legacy single-language
-        // starterCode fallback — that legacy field only ever matches ONE language, so using it
-        // for every language was the actual root cause of a wrong-language template being shown.
-        const code = saved?.code ?? (q.starterCodeByLanguage?.[lang] || q.starterCode || defaultStarter(lang));
+        // Deliberately does NOT fall back to the legacy single-language q.starterCode field (unlike
+        // an earlier version of this line) — two independent problems with it: it only ever matches
+        // ONE language, so using it regardless of the selected language showed a wrong-language
+        // template; and for any question that started life in STDIO mode before being converted to
+        // FUNCTION mode, it's a full leftover program ("public class Main" + its own main()), which
+        // the FUNCTION-mode driver assembly can't safely combine with — that's exactly the shape
+        // wrapFunctionCode()'s own stale-STDIO-code guard exists to reject, so relying on this field
+        // as a fallback could hand a student starter code that's guaranteed to fail to compile the
+        // moment they submit it, through no fault of their own. setLanguage() below already made
+        // this same call for language switches; this is the matching fix for the initial load.
+        const code = saved?.code ?? (q.starterCodeByLanguage?.[lang] || defaultStarter(lang));
         initialAnswers[q.id] = { language: lang, code };
         initialDrafts[q.id] = { [lang]: code };
         if (saved) {
