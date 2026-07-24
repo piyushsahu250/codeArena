@@ -9,36 +9,11 @@ import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import useAiStatus from "../hooks/useAiStatus";
+import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 
-const LANGUAGES = [
-  { id: "java", label: "Java", monaco: "java" },
-  { id: "javascript", label: "JavaScript", monaco: "javascript" },
-  { id: "python", label: "Python", monaco: "python" },
-  { id: "c", label: "C", monaco: "c" },
-  { id: "cpp", label: "C++", monaco: "cpp" },
-];
-
 const TYPE_LABEL = { MCQ: "Multiple Choice", FILL_BLANK: "Fill in the Blank", CODING: "Coding", DEBUG: "Debugging", OUTPUT_PREDICTION: "Output Prediction" };
-
-// PracticeQuestion only has a single starterCode+language pair (no per-language template
-// support), so any language other than the question's own authored one falls back to this
-// generic-but-language-correct boilerplate instead of showing the authored language's code.
-function defaultStarter(language) {
-  switch (language) {
-    case "python":
-      return "# Read input via input(), print your answer\n";
-    case "c":
-      return '#include <stdio.h>\n\nint main() {\n    // read input with scanf, print your answer with printf\n    return 0;\n}\n';
-    case "cpp":
-      return '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // read input with cin, print your answer with cout\n    return 0;\n}\n';
-    case "java":
-      return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        // read input via sc, print your answer with System.out\n    }\n}\n';
-    default:
-      return "// Read input via require('fs').readFileSync(0, 'utf8'), console.log your answer\n";
-  }
-}
 
 export default function LessonView() {
   const aiAvailable = useAiStatus();

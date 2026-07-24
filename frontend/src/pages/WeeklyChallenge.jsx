@@ -7,24 +7,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import ProblemStatement from "../components/ProblemStatement";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import CodeResultBlock from "../components/CodeResultBlock";
-
-const LANGUAGES = [
-  { id: "java", label: "Java", monaco: "java" },
-  { id: "javascript", label: "JavaScript", monaco: "javascript" },
-  { id: "python", label: "Python", monaco: "python" },
-  { id: "c", label: "C", monaco: "c" },
-  { id: "cpp", label: "C++", monaco: "cpp" },
-];
-
-function defaultStarter(language) {
-  switch (language) {
-    case "python": return "# Read input via input(), print your answer\n";
-    case "c": return '#include <stdio.h>\n\nint main() {\n    return 0;\n}\n';
-    case "cpp": return '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    return 0;\n}\n';
-    case "java": return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n    }\n}\n';
-    default: return "// Read input via require('fs').readFileSync(0, 'utf8'), console.log your answer\n";
-  }
-}
+import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
 // Weekly Challenge — the same mechanics as DailyChallenge.jsx (see that file for the fuller
 // comment) but keyed by ISO week instead of calendar day, higher XP reward, no daily calendar

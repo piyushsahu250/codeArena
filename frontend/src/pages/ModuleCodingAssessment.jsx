@@ -10,14 +10,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
-
-const ALL_LANGUAGES = [
-  { id: "java", label: "Java", monaco: "java" },
-  { id: "python", label: "Python", monaco: "python" },
-  { id: "javascript", label: "JavaScript", monaco: "javascript" },
-  { id: "c", label: "C", monaco: "c" },
-  { id: "cpp", label: "C++", monaco: "cpp" },
-];
+import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
 
@@ -821,12 +814,3 @@ function codingDotStatus(question, verdicts, visitedMap) {
   return { color: "var(--ink-dim)", label: "Not Visited" };
 }
 
-function defaultStarter(language) {
-  switch (language) {
-    case "python": return "# Read input via input(), print your answer\n";
-    case "c": return '#include <stdio.h>\n\nint main() {\n    return 0;\n}\n';
-    case "cpp": return '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    return 0;\n}\n';
-    case "java": return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n    }\n}\n';
-    default: return "// Read input via require('fs').readFileSync(0, 'utf8'), console.log your answer\n";
-  }
-}
