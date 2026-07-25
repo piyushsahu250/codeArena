@@ -1,5 +1,6 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+const multer = require("multer");
 const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
@@ -11,6 +12,7 @@ const { processGamification } = require("../utils/gamification");
 const { resolveCodingFields } = require("../utils/functionHarness");
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const execLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id });
 
@@ -553,6 +555,222 @@ router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "ST
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to add question" });
+  }
+});
+
+const MODULE_CODING_TEMPLATE_HEADERS = [
+  "Question Title", "Problem Statement", "Difficulty",
+  "Time Limit (seconds)", "Constraints", "Input Format", "Output Format",
+  "Sample Input 1", "Sample Output 1", "Sample Explanation 1",
+  "Sample Input 2", "Sample Output 2", "Sample Explanation 2",
+  "Hidden Test Cases (input->output pairs, separated by ||)",
+  "Starter Code (Java)", "Starter Code (Python)", "Starter Code (Cpp)", "Starter Code (C)",
+  "Tags",
+];
+
+const MODULE_CODING_IMPORT_HEADER_ALIASES = {
+  title: ["question title", "title", "question name", "name"],
+  description: ["problem statement", "question text", "description"],
+  difficulty: ["difficulty", "difficulty level"],
+  timeLimitSec: ["time limit seconds", "time limit s", "time limit"],
+  constraints: ["constraints"],
+  inputFormat: ["input format"],
+  outputFormat: ["output format"],
+  sampleInput1: ["sample input 1"],
+  sampleOutput1: ["sample output 1"],
+  sampleExplanation1: ["sample explanation 1"],
+  sampleInput2: ["sample input 2"],
+  sampleOutput2: ["sample output 2"],
+  sampleExplanation2: ["sample explanation 2"],
+  hiddenTestCases: ["hidden test cases input output pairs separated by", "hidden test cases"],
+  starterJava: ["starter code java"],
+  starterPython: ["starter code python"],
+  starterCpp: ["starter code cpp", "starter code c++"],
+  starterC: ["starter code c"],
+  tags: ["tags"],
+};
+const MODULE_CODING_DIFFICULTY_ALIASES = { easy: "EASY", medium: "MEDIUM", hard: "HARD" };
+
+function normalizeModuleCodingHeader(h) {
+  return String(h || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function buildModuleCodingHeaderMap(headers) {
+  const map = {};
+  for (const header of headers) {
+    const norm = normalizeModuleCodingHeader(header);
+    for (const [field, aliases] of Object.entries(MODULE_CODING_IMPORT_HEADER_ALIASES)) {
+      if (!map[field] && aliases.includes(norm)) map[field] = header;
+    }
+  }
+  return map;
+}
+
+// "5->25||3->9" -> [{input:"5",expected:"25"},{input:"3",expected:"9"}] — same pipe-delimited
+// hidden-test-case cell format the main question bank's coding bulk-import uses (questions.js),
+// so admins moving between the two surfaces see one consistent convention.
+function parseModuleCodingHiddenTestCases(raw) {
+  return String(raw || "")
+    .split("||")
+    .map((pair) => pair.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const idx = pair.indexOf("->");
+      if (idx === -1) return null;
+      return { input: pair.slice(0, idx).trim(), expected: pair.slice(idx + 2).trim(), isHidden: true };
+    })
+    .filter(Boolean);
+}
+
+// ADMIN/STAFF: download a sample .xlsx template for bulk-importing this test's questions.
+router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+  const sampleRows = [
+    [
+      "Sum of Two Integers", "Return the sum of two integers.", "Easy",
+      2, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
+      "2 3", "5", "2 + 3 = 5",
+      "10 20", "30", "",
+      "4 6->10||100 200->300||-5 5->0",
+      "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
+      "a, b = map(int, input().split())\nprint(a + b)",
+      "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
+      "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
+      "Math, Basics",
+    ],
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet([MODULE_CODING_TEMPLATE_HEADERS, ...sampleRows]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Questions");
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename=module-coding-question-template.xlsx");
+  res.send(buffer);
+});
+
+// ADMIN/STAFF: bulk-import coding questions directly onto this Module Coding Test from an
+// uploaded .xlsx/.csv file — same column conventions as the main question bank's coding
+// bulk-import (questions.js), scoped straight to this test instead of a Question Bank folder.
+// STDIO-only, matching the single "+ Add question" form this mirrors (which doesn't offer
+// FUNCTION-mode evaluationType/functionSignature fields either).
+router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), upload.single("file"), async (req, res) => {
+  try {
+    const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
+    if (!test) return res.status(404).json({ error: "Module coding test not found" });
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    let workbook;
+    try {
+      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    } catch {
+      return res.status(400).json({ error: "Could not read this file. Please upload a valid .xlsx or .csv file." });
+    }
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
+    if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+
+    const headerMap = buildModuleCodingHeaderMap(Object.keys(rows[0]));
+    if (!headerMap.title || !headerMap.description) {
+      return res.status(400).json({ error: "Missing required columns. The file must include Question Title and Problem Statement." });
+    }
+
+    const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
+    const created = [];
+    const errors = [];
+    const seenTitles = new Set();
+    const existingTitles = new Set(
+      (await prisma.question.findMany({ where: { moduleCodingTestId: req.params.id }, select: { title: true } }))
+        .map((q) => (q.title || "").toLowerCase())
+        .filter(Boolean)
+    );
+
+    for (let i = 0; i < rows.length; i++) {
+      const rowNum = i + 2;
+      const row = rows[i];
+      const title = field(row, "title");
+      const description = field(row, "description");
+
+      if (!title && !description) continue; // blank row
+      if (!title) { errors.push({ row: rowNum, reason: "Missing Question Title" }); continue; }
+      if (!description) { errors.push({ row: rowNum, reason: "Missing Problem Statement" }); continue; }
+
+      const titleKey = title.toLowerCase();
+      if (seenTitles.has(titleKey) || existingTitles.has(titleKey)) {
+        errors.push({ row: rowNum, reason: `Duplicate title: "${title}" already exists on this test` });
+        continue;
+      }
+
+      const difficultyRaw = field(row, "difficulty");
+      if (difficultyRaw && !MODULE_CODING_DIFFICULTY_ALIASES[normalizeModuleCodingHeader(difficultyRaw)]) {
+        errors.push({ row: rowNum, reason: `Invalid Difficulty "${difficultyRaw}" — use Easy, Medium, or Hard` });
+        continue;
+      }
+      const difficulty = MODULE_CODING_DIFFICULTY_ALIASES[normalizeModuleCodingHeader(difficultyRaw)] || "EASY";
+
+      const timeLimitSecRaw = field(row, "timeLimitSec");
+      const timeLimitSec = timeLimitSecRaw ? Number(timeLimitSecRaw) : 2;
+      if (!Number.isFinite(timeLimitSec) || timeLimitSec <= 0) {
+        errors.push({ row: rowNum, reason: `Invalid Time Limit "${timeLimitSecRaw}"` });
+        continue;
+      }
+
+      const sample1In = field(row, "sampleInput1"), sample1Out = field(row, "sampleOutput1");
+      const sample2In = field(row, "sampleInput2"), sample2Out = field(row, "sampleOutput2");
+      if (!sample1In || !sample1Out || !sample2In || !sample2Out) {
+        errors.push({ row: rowNum, reason: "Each coding question needs 2 complete sample test cases (input + output)" });
+        continue;
+      }
+      const hiddenCases = parseModuleCodingHiddenTestCases(field(row, "hiddenTestCases"));
+      if (hiddenCases.length < 10) {
+        errors.push({ row: rowNum, reason: `Needs at least 10 hidden test cases — found ${hiddenCases.length} (check the "input->output||input->output" format)` });
+        continue;
+      }
+
+      const starterCodeByLanguage = {};
+      const javaCode = field(row, "starterJava");
+      const pyCode = field(row, "starterPython");
+      const cppCode = field(row, "starterCpp");
+      const cCode = field(row, "starterC");
+      if (javaCode) starterCodeByLanguage.java = javaCode;
+      if (pyCode) starterCodeByLanguage.python = pyCode;
+      if (cppCode) starterCodeByLanguage.cpp = cppCode;
+      if (cCode) starterCodeByLanguage.c = cCode;
+
+      const tags = field(row, "tags").split(",").map((s) => s.trim()).filter(Boolean);
+
+      try {
+        const question = await prisma.question.create({
+          data: {
+            title, description, questionType: "CODING", difficulty,
+            timeLimitMs: Math.round(timeLimitSec * 1000),
+            starterCode: Object.values(starterCodeByLanguage)[0] || "",
+            starterCodeByLanguage: Object.keys(starterCodeByLanguage).length > 0 ? starterCodeByLanguage : undefined,
+            tags: tags.length > 0 ? tags : undefined,
+            constraints: field(row, "constraints") || null,
+            inputFormat: field(row, "inputFormat") || null,
+            outputFormat: field(row, "outputFormat") || null,
+            moduleCodingTestId: req.params.id,
+            testCases: {
+              create: [
+                { input: sample1In, expected: sample1Out, isHidden: false, explanation: field(row, "sampleExplanation1") || null },
+                { input: sample2In, expected: sample2Out, isHidden: false, explanation: field(row, "sampleExplanation2") || null },
+                ...hiddenCases,
+              ],
+            },
+          },
+        });
+        seenTitles.add(titleKey);
+        created.push(question);
+      } catch (err) {
+        errors.push({ row: rowNum, reason: err.message || "Failed to create question" });
+      }
+    }
+
+    res.json({ total: rows.length, createdCount: created.length, errorCount: errors.length, errors, created });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Bulk import failed" });
   }
 });
 

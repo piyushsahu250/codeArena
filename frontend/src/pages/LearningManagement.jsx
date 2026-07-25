@@ -675,6 +675,52 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_CODING_Q);
   const [saving, setSaving] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+
+  async function bulkImport(e) {
+    e.preventDefault();
+    if (!bulkFile) return;
+    setBulkImporting(true);
+    setBulkResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", bulkFile);
+      const { data } = await api.post(`/module-coding/admin/tests/${testId}/questions/bulk-import`, formData);
+      setBulkResult(data);
+      setBulkFile(null);
+      onRefresh();
+    } catch (err) {
+      alert(err.response?.data?.error || "Bulk import failed");
+    } finally {
+      setBulkImporting(false);
+    }
+  }
+
+  async function downloadBulkTemplate() {
+    const res = await api.get(`/module-coding/admin/tests/${testId}/questions/bulk-template`, { responseType: "blob" });
+    const blobUrl = URL.createObjectURL(res.data);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = "module-coding-question-template.xlsx";
+    link.click();
+    URL.revokeObjectURL(blobUrl);
+  }
+
+  function downloadBulkErrorReport() {
+    const rows = (bulkResult.errors || []).map((e) => ["Failed", e.row, e.reason]);
+    const header = ["Status", "Row", "Reason"];
+    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "module-coding-bulk-import-report.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function create(e) {
     e.preventDefault();
@@ -709,10 +755,49 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
 
   return (
     <div className="card" style={{ padding: 20, marginTop: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <h3 style={{ fontSize: 15 }}>Question pool</h3>
-        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add question"}</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBulkOpen((b) => !b)}>{bulkOpen ? "Cancel" : "⬆ Bulk upload"}</button>
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add question"}</button>
+        </div>
       </div>
+
+      {bulkOpen && (
+        <div className="card" style={{ padding: 16, marginTop: 12 }}>
+          <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
+            Import multiple coding questions at once from an .xlsx/.csv file — each row needs 2 visible sample
+            test cases and at least 10 hidden test cases.{" "}
+            <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px" }} onClick={downloadBulkTemplate}>
+              ⬇ Download template
+            </button>
+          </p>
+          <form onSubmit={bulkImport} style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} />
+            <button className="btn btn-primary" disabled={!bulkFile || bulkImporting}>{bulkImporting ? "Importing…" : "Import"}</button>
+          </form>
+          {bulkResult && (
+            <div style={{ marginTop: 12 }}>
+              <p style={{ fontSize: 13 }}>
+                <strong>{bulkResult.createdCount}</strong> question{bulkResult.createdCount === 1 ? "" : "s"} created
+                out of {bulkResult.total}.{bulkResult.errorCount > 0 && ` ${bulkResult.errorCount} failed.`}
+              </p>
+              {bulkResult.errors?.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadBulkErrorReport}>
+                    ⬇ Download error report
+                  </button>
+                  <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
+                    {bulkResult.errors.map((e, i) => (
+                      <div key={i} style={{ fontSize: 12, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
         {questions.map((q) => (
