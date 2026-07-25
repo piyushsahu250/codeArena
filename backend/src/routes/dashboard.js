@@ -54,9 +54,9 @@ async function getRecentActivity(studentId) {
       text: p.lesson.isModuleTest ? `Passed the "${p.lesson.module.title}" practice test` : `Finished "${p.lesson.title}" (${p.lesson.module.title})`,
       date: p.completedAt,
     })),
-    // course is only populated for LEARNING_MODULE-type certificates — MANUAL and
-    // CODING_ASSESSMENT certs (added when Certificates were unified across types) have no
-    // course, so this falls back to the certificate's own title/programName instead of crashing.
+    // course is populated for LEARNING_MODULE and (as of the course-wide redesign) CODING_ASSESSMENT
+    // certificates — only MANUAL certs have none, so this falls back to the certificate's own
+    // title/programName instead of crashing for those.
     ...certificates.map((c) => ({ type: "certificate", text: `Earned the ${c.course?.name || c.programName || c.title} certificate`, date: c.issuedAt })),
     ...runs.map((r) => ({
       type: "coding",

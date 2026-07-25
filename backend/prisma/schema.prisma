@@ -726,7 +726,10 @@ model Certificate {
   issuedByName    String?           // MANUAL only — which staff/admin issued it; null = system-issued
   issuedAt        DateTime          @default(now())
 
-  @@unique([studentId, courseId])
+  // Includes `type` so a student can hold both a LEARNING_MODULE certificate (all lessons done)
+  // and a CODING_ASSESSMENT certificate (all module coding tests passed) for the SAME course —
+  // these are two independently-earned achievements, not one row per course.
+  @@unique([studentId, courseId, type])
   @@index([studentId])
   @@index([type])
   @@index([status])

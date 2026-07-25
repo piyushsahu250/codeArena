@@ -95,26 +95,49 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
     },
   });
 
-  // Auto-issue a CODING_ASSESSMENT certificate the first time this student passes this
-  // particular ModuleCodingTest. No DB-level unique constraint backs this (unlike the
-  // studentId+courseId one for LEARNING_MODULE certs) since a moduleCodingTestId isn't a real FK
-  // column here — findFirst is the idempotency check, and a pass is permanent per this
-  // platform's existing "no downgrade on retake" convention, so this only ever fires once.
+  // Auto-issue ONE CODING_ASSESSMENT certificate per student per COURSE, once every module in the
+  // course that has an active coding test has been passed — not one certificate per module (that
+  // used to flood a student with a separate certificate for every module they passed; a student
+  // finishing all of "Java"'s coding assessments should get a single course-wide certificate, the
+  // same way LEARNING_MODULE certificates already work for lesson completion). Idempotency is the
+  // studentId+courseId+type DB unique constraint (see schema.prisma's Certificate model) — a
+  // second issueCertificate() call for the same course is a no-op via the findUnique check below,
+  // and a pass is permanent per this platform's "no downgrade on retake" convention, so this only
+  // ever needs to fire once.
   if (passed) {
-    const already = await prisma.certificate.findFirst({
-      where: { type: "CODING_ASSESSMENT", studentId: attempt.studentId, moduleCodingTestId: attempt.moduleCodingTestId },
-    });
-    if (!already) {
-      const courseName = attempt.moduleCodingTest.module?.course?.name;
-      const title = `${attempt.moduleCodingTest.title}${courseName ? ` (${courseName})` : ""}`;
-      await issueCertificate({
-        type: "CODING_ASSESSMENT",
-        studentId: attempt.studentId,
-        moduleCodingTestId: attempt.moduleCodingTestId,
-        title,
-        instituteCode: attempt.student.institute?.code,
-        programCode: attempt.moduleCodingTest.module?.course?.slug || attempt.moduleCodingTest.title,
-      }).catch((err) => console.error("Coding-assessment certificate issuance failed:", err));
+    const course = attempt.moduleCodingTest.module?.course;
+    if (course) {
+      const gatedModules = await prisma.courseModule.findMany({
+        where: { courseId: course.id, codingTest: { isActive: true } },
+        select: { codingTest: { select: { id: true } } },
+      });
+      const testIds = gatedModules.map((m) => m.codingTest.id);
+      const passedTestIds = new Set(
+        (
+          await prisma.moduleCodingAttempt.findMany({
+            where: { studentId: attempt.studentId, moduleCodingTestId: { in: testIds }, passed: true },
+            select: { moduleCodingTestId: true },
+            distinct: ["moduleCodingTestId"],
+          })
+        ).map((a) => a.moduleCodingTestId)
+      );
+      const allModulesPassed = testIds.length > 0 && testIds.every((id) => passedTestIds.has(id));
+
+      if (allModulesPassed) {
+        const already = await prisma.certificate.findUnique({
+          where: { studentId_courseId_type: { studentId: attempt.studentId, courseId: course.id, type: "CODING_ASSESSMENT" } },
+        });
+        if (!already) {
+          await issueCertificate({
+            type: "CODING_ASSESSMENT",
+            studentId: attempt.studentId,
+            courseId: course.id,
+            title: `${course.name} Coding Assessment`,
+            instituteCode: attempt.student.institute?.code,
+            programCode: course.slug,
+          }).catch((err) => console.error("Coding-assessment certificate issuance failed:", err));
+        }
+      }
     }
   }
 

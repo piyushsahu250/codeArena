@@ -544,7 +544,7 @@ async function checkCourseCompletion(studentId, course) {
 // certificate for a fully-completed course, and returns the existing one on any later call.
 async function getOrIssueLearningCertificate(studentId, course) {
   let cert = await prisma.certificate.findUnique({
-    where: { studentId_courseId: { studentId, courseId: course.id } },
+    where: { studentId_courseId_type: { studentId, courseId: course.id, type: "LEARNING_MODULE" } },
   });
   if (!cert) {
     const student = await prisma.user.findUnique({ where: { id: studentId }, include: { institute: true } });
