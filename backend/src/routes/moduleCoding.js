@@ -447,6 +447,17 @@ router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"
   res.json(test);
 });
 
+// Generic single-test lookup by its own id — used by the Level detail UI, since a chapter-scoped
+// Level has no moduleId to look it up by (unlike the legacy route above).
+router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  const test = await prisma.moduleCodingTest.findUnique({
+    where: { id: req.params.id },
+    include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
+  });
+  if (!test) return res.status(404).json({ error: "Not found" });
+  res.json(test);
+});
+
 router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
     const { title, instructions, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;

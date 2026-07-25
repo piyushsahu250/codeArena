@@ -18,6 +18,8 @@ export default function LearningManagement() {
   const [moduleId, setModuleId] = useState(null);
   const [lessonId, setLessonId] = useState(null);
   const [codingTestModuleId, setCodingTestModuleId] = useState(null);
+  const [chaptersModuleId, setChaptersModuleId] = useState(null); // which module's Chapter list to show
+  const [chapter, setChapter] = useState(null); // selected chapter { id, moduleId, title, ... } for detail view
 
   const [courseDetail, setCourseDetail] = useState(null); // { course, modules: [{...lessons}] }
 
@@ -55,16 +57,18 @@ export default function LearningManagement() {
         </p>
 
         <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 20 }}>
-          <span style={{ cursor: "pointer", textDecoration: courseId ? "underline" : "none" }} onClick={() => { setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); }}>Courses</span>
-          {selectedCourse && <> / <span style={{ cursor: "pointer", textDecoration: (moduleId || codingTestModuleId) ? "underline" : "none" }} onClick={() => { setModuleId(null); setLessonId(null); setCodingTestModuleId(null); }}>{selectedCourse.name}</span></>}
+          <span style={{ cursor: "pointer", textDecoration: courseId ? "underline" : "none" }} onClick={() => { setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>Courses</span>
+          {selectedCourse && <> / <span style={{ cursor: "pointer", textDecoration: (moduleId || codingTestModuleId || chaptersModuleId) ? "underline" : "none" }} onClick={() => { setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>{selectedCourse.name}</span></>}
           {selectedModule && !codingTestModuleId && <> / <span style={{ cursor: "pointer", textDecoration: lessonId ? "underline" : "none" }} onClick={() => setLessonId(null)}>{selectedModule.title}</span></>}
           {selectedLesson && <> / {selectedLesson.title}</>}
           {codingTestModuleId && <> / {courseDetail?.modules.find((m) => m.id === codingTestModuleId)?.title} / Coding Assessment</>}
+          {chaptersModuleId && <> / <span style={{ cursor: "pointer", textDecoration: chapter ? "underline" : "none" }} onClick={() => setChapter(null)}>{courseDetail?.modules.find((m) => m.id === chaptersModuleId)?.title} / Chapters</span></>}
+          {chapter && <> / {chapter.title}</>}
         </div>
 
         {!courseId && <CoursePanel courses={courses} onSelect={setCourseId} onRefresh={loadCourses} />}
-        {courseId && !moduleId && !codingTestModuleId && courseDetail && (
-          <ModulePanel course={selectedCourse} modules={courseDetail.modules} onSelect={setModuleId} onManageCoding={setCodingTestModuleId} onRefresh={refresh} />
+        {courseId && !moduleId && !codingTestModuleId && !chaptersModuleId && courseDetail && (
+          <ModulePanel course={selectedCourse} modules={courseDetail.modules} onSelect={setModuleId} onManageCoding={setCodingTestModuleId} onManageChapters={setChaptersModuleId} onRefresh={refresh} />
         )}
         {moduleId && !lessonId && selectedModule && (
           <LessonPanel mod={selectedModule} onSelect={setLessonId} onRefresh={refresh} />
@@ -74,6 +78,12 @@ export default function LearningManagement() {
         )}
         {codingTestModuleId && (
           <CodingTestPanel moduleId={codingTestModuleId} />
+        )}
+        {chaptersModuleId && !chapter && (
+          <ChapterListPanel moduleId={chaptersModuleId} onSelect={setChapter} />
+        )}
+        {chapter && (
+          <ChapterDetailPanel chapter={chapter} onBack={() => setChapter(null)} />
         )}
       </div>
     </div>
@@ -139,7 +149,7 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
   );
 }
 
-function ModulePanel({ course, modules, onSelect, onManageCoding, onRefresh }) {
+function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapters, onRefresh }) {
   const [form, setForm] = useState({ title: "", description: "", order: modules.length });
   const [saving, setSaving] = useState(false);
 
@@ -193,6 +203,7 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onRefresh }) {
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, -1)}>↑</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, 1)}>↓</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(m.id)}>Manage →</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageChapters(m.id)}>Chapters</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageCoding(m.id)}>Coding Assessment</button>
               <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(m)}>Delete</button>
             </div>
@@ -907,6 +918,589 @@ function CodingAttemptsPanel({ testId }) {
         ))}
         {attempts && attempts.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No attempts yet.</p>}
       </div>
+    </div>
+  );
+}
+
+// =========================== Chapters / Learning Topics / Levels ===========================
+// A Chapter groups a Module's "Learn" content (topics — Lesson rows with chapterId set) with
+// the Coding Assessment Level(s) (ModuleCodingTest rows with chapterId set) that gate progress
+// past it. Every module predating this feature has one auto-created "General" chapter (see
+// backend/scripts/backfillChapters.js), so this panel works identically for old and new content.
+
+function ChapterListPanel({ moduleId, onSelect }) {
+  const [chapters, setChapters] = useState(null);
+  const [form, setForm] = useState({ title: "", description: "" });
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    api.get(`/learning/modules/${moduleId}/chapters`).then((res) => setChapters(res.data));
+  }
+  useEffect(load, [moduleId]);
+
+  async function create(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post(`/learning/modules/${moduleId}/chapters`, { ...form, order: chapters?.length || 0 });
+      setForm({ title: "", description: "" });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create chapter");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(c) {
+    if (!confirm(`Delete chapter "${c.title}" and all its topics/levels? This cannot be undone.`)) return;
+    await api.delete(`/learning/chapters/${c.id}`);
+    load();
+  }
+
+  async function reorder(c, delta) {
+    await api.patch(`/learning/chapters/${c.id}`, { order: c.order + delta });
+    load();
+  }
+
+  async function toggleActive(c) {
+    await api.patch(`/learning/chapters/${c.id}`, { isActive: !c.isActive });
+    load();
+  }
+
+  if (chapters === null) return <p className="mono" style={{ marginTop: 20 }}>Loading…</p>;
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div style={{ flex: "2 1 200px" }}>
+          <label style={labelStyle}>New chapter title</label>
+          <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        </div>
+        <div style={{ flex: "3 1 260px" }}>
+          <label style={labelStyle}>Description</label>
+          <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        </div>
+        <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add chapter"}</button>
+      </form>
+
+      <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+        {chapters.sort((a, b) => a.order - b.order).map((c, i) => (
+          <div key={c.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ cursor: "pointer" }} onClick={() => onSelect(c)}>
+              <div style={{ fontWeight: 600 }}>Chapter {i + 1}: {c.title}</div>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+                {c._count.topics} topic{c._count.topics === 1 ? "" : "s"} · {c._count.levels} level{c._count.levels === 1 ? "" : "s"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span className="badge" style={{ background: c.isActive ? "#E7F3EB" : "#F0EEE3", color: c.isActive ? "var(--mint)" : "var(--ink-dim)" }}>
+                {c.isActive ? "Active" : "Inactive"}
+              </span>
+              <span className="badge" style={{ background: c.countsTowardCertificate ? "#E9EEFB" : "#F0EEE3", color: c.countsTowardCertificate ? "var(--ink)" : "var(--ink-dim)" }}>
+                {c.countsTowardCertificate ? "Required" : "Optional"}
+              </span>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, -1)}>↑</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, 1)}>↓</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>{c.isActive ? "Deactivate" : "Activate"}</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c)}>Manage →</button>
+              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {chapters.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No chapters yet — add one above.</p>}
+      </div>
+    </div>
+  );
+}
+
+function ChapterDetailPanel({ chapter, onBack }) {
+  const [tab, setTab] = useState("levels");
+  const [form, setForm] = useState({
+    title: chapter.title, description: chapter.description || "",
+    isActive: chapter.isActive, countsTowardCertificate: chapter.countsTowardCertificate,
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function save(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch(`/learning/chapters/${chapter.id}`, form);
+      alert("Chapter saved.");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to save chapter");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to chapters</button>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button className={tab === "settings" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("settings")}>Settings</button>
+        <button className={tab === "learn" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("learn")}>Learn</button>
+        <button className={tab === "levels" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("levels")}>Coding Assessment Levels</button>
+      </div>
+
+      {tab === "settings" && (
+        <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 480 }}>
+          <label style={labelStyle}>Title</label>
+          <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle}>Description</label>
+          <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
+            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            Active
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
+            <input type="checkbox" checked={form.countsTowardCertificate} onChange={(e) => setForm({ ...form, countsTowardCertificate: e.target.checked })} />
+            Required for the course-wide Coding Assessment certificate
+          </label>
+          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save chapter"}</button>
+        </form>
+      )}
+
+      {tab === "learn" && <ChapterTopicsPanel chapterId={chapter.id} />}
+      {tab === "levels" && <ChapterLevelsPanel chapterId={chapter.id} />}
+    </div>
+  );
+}
+
+function ChapterTopicsPanel({ chapterId }) {
+  const [topics, setTopics] = useState(null);
+  const [topicId, setTopicId] = useState(null);
+  const [form, setForm] = useState({ title: "", estimatedMinutes: 10 });
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    api.get(`/learning/chapters/${chapterId}/lessons`).then((res) => setTopics(res.data));
+  }
+  useEffect(load, [chapterId]);
+
+  async function create(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post(`/learning/chapters/${chapterId}/lessons`, { ...form, order: topics?.length || 0 });
+      setForm({ title: "", estimatedMinutes: 10 });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create topic");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(t) {
+    if (!confirm(`Delete topic "${t.title}"?`)) return;
+    await api.delete(`/learning/lessons/${t.id}`);
+    load();
+  }
+
+  async function reorder(t, delta) {
+    await api.patch(`/learning/lessons/${t.id}`, { order: t.order + delta });
+    load();
+  }
+
+  if (topics === null) return <p className="mono" style={{ marginTop: 16 }}>Loading…</p>;
+
+  if (topicId) {
+    return <TopicDetailPanel topicId={topicId} onBack={() => { setTopicId(null); load(); }} />;
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div style={{ flex: "2 1 200px" }}>
+          <label style={labelStyle}>New topic title</label>
+          <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        </div>
+        <div style={{ flex: "1 1 120px" }}>
+          <label style={labelStyle}>Est. minutes</label>
+          <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+        </div>
+        <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add topic"}</button>
+      </form>
+
+      <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+        {topics.sort((a, b) => a.order - b.order).map((t) => (
+          <div key={t.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ cursor: "pointer" }} onClick={() => setTopicId(t.id)}>{t.title}</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, -1)}>↑</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, 1)}>↓</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setTopicId(t.id)}>Edit →</button>
+              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(t)}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {topics.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No topics yet — add one above.</p>}
+      </div>
+    </div>
+  );
+}
+
+// Reuses PracticeQuestionsPanel as-is for this topic's Knowledge Check question bank — a
+// "quiz" block in TopicBlockEditor below references specific question ids from here by id.
+function TopicDetailPanel({ topicId, onBack }) {
+  const [full, setFull] = useState(null);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    api.get(`/learning/lessons/${topicId}`).then((res) => {
+      setFull(res.data);
+      const l = res.data.lesson;
+      setForm({
+        title: l.title, content: l.content || "", blocks: Array.isArray(l.blocks) ? l.blocks : [],
+        videoUrl: l.videoUrl || "", pdfUrl: l.pdfUrl || "", estimatedMinutes: l.estimatedMinutes,
+        isActive: l.isActive !== false,
+      });
+    });
+  }
+  useEffect(load, [topicId]);
+
+  async function save(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch(`/learning/lessons/${topicId}`, form);
+      load();
+      alert("Topic saved.");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to save topic");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!full || !form) return <p className="mono" style={{ marginTop: 16 }}>Loading…</p>;
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to topics</button>
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24, marginTop: 12, alignItems: "start" }}>
+        <form onSubmit={save} className="card" style={{ padding: 20 }}>
+          <h3 style={{ fontSize: 15 }}>Edit topic</h3>
+          <label style={labelStyle}>Title</label>
+          <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle}>Video URL (optional)</label>
+          <input style={inputStyle} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
+          <label style={labelStyle}>PDF URL (optional)</label>
+          <input style={inputStyle} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
+          <label style={labelStyle}>Estimated minutes</label>
+          <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
+            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            Active
+          </label>
+
+          <div style={{ marginTop: 18, fontWeight: 700, fontSize: 14 }}>Learn content</div>
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+            Build this topic as an ordered list of blocks. If left empty, the legacy HTML field below is used instead.
+          </p>
+          <TopicBlockEditor blocks={form.blocks} onChange={(blocks) => setForm({ ...form, blocks })} />
+
+          <label style={labelStyle}>Legacy HTML content (used only when no blocks above)</label>
+          <textarea style={{ ...inputStyle, minHeight: 140, fontFamily: "var(--font-mono)", fontSize: 12 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+
+          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save topic"}</button>
+        </form>
+
+        <PracticeQuestionsPanel lesson={{ id: topicId, questions: full.questions }} onRefresh={load} />
+      </div>
+    </div>
+  );
+}
+
+const BLOCK_TYPES = [
+  { type: "text", label: "Text (HTML)" },
+  { type: "youtube", label: "YouTube video" },
+  { type: "image", label: "Image (URL)" },
+  { type: "table", label: "Table" },
+  { type: "code", label: "Code snippet" },
+  { type: "note", label: "Note / callout" },
+  { type: "file", label: "File (URL)" },
+  { type: "quiz", label: "Knowledge check (quiz)" },
+];
+
+function emptyBlock(type) {
+  switch (type) {
+    case "text": return { type, html: "" };
+    case "youtube": return { type, url: "", caption: "" };
+    case "image": return { type, url: "", caption: "" };
+    case "table": return { type, headers: ["", ""], rows: [["", ""]] };
+    case "code": return { type, language: "java", code: "" };
+    case "note": return { type, html: "" };
+    case "file": return { type, url: "", label: "" };
+    case "quiz": return { type, practiceQuestionIds: [] };
+    default: return { type };
+  }
+}
+
+// Structured block-list editor for a Learning Topic's "Learn" content — add/reorder/remove
+// typed blocks, each with a small type-specific form, instead of a full WYSIWYG canvas.
+function TopicBlockEditor({ blocks, onChange }) {
+  const [addType, setAddType] = useState("text");
+
+  function addBlock() {
+    onChange([...(blocks || []), emptyBlock(addType)]);
+  }
+  function updateBlock(i, patch) {
+    const next = [...blocks];
+    next[i] = { ...next[i], ...patch };
+    onChange(next);
+  }
+  function removeBlock(i) {
+    onChange(blocks.filter((_, idx) => idx !== i));
+  }
+  function moveBlock(i, delta) {
+    const j = i + delta;
+    if (j < 0 || j >= blocks.length) return;
+    const next = [...blocks];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <select style={{ ...inputStyle, marginTop: 0, width: "auto" }} value={addType} onChange={(e) => setAddType(e.target.value)}>
+          {BLOCK_TYPES.map((b) => <option key={b.type} value={b.type}>{b.label}</option>)}
+        </select>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={addBlock}>+ Add block</button>
+      </div>
+
+      <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+        {(blocks || []).map((b, i) => (
+          <div key={i} className="card" style={{ padding: 12, background: "var(--card-bg, #F7F7F5)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="mono" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>{b.type}</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={() => moveBlock(i, -1)}>↑</button>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={() => moveBlock(i, 1)}>↓</button>
+                <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => removeBlock(i)}>Remove</button>
+              </div>
+            </div>
+
+            {(b.type === "text" || b.type === "note") && (
+              <textarea style={{ ...inputStyle, minHeight: 80, fontFamily: "var(--font-mono)", fontSize: 12 }} placeholder="HTML content" value={b.html} onChange={(e) => updateBlock(i, { html: e.target.value })} />
+            )}
+            {b.type === "youtube" && (
+              <>
+                <input style={inputStyle} placeholder="YouTube URL" value={b.url} onChange={(e) => updateBlock(i, { url: e.target.value })} />
+                <input style={inputStyle} placeholder="Caption (optional)" value={b.caption || ""} onChange={(e) => updateBlock(i, { caption: e.target.value })} />
+              </>
+            )}
+            {b.type === "image" && (
+              <>
+                <input style={inputStyle} placeholder="Image URL" value={b.url} onChange={(e) => updateBlock(i, { url: e.target.value })} />
+                <input style={inputStyle} placeholder="Caption (optional)" value={b.caption || ""} onChange={(e) => updateBlock(i, { caption: e.target.value })} />
+              </>
+            )}
+            {b.type === "file" && (
+              <>
+                <input style={inputStyle} placeholder="File URL" value={b.url} onChange={(e) => updateBlock(i, { url: e.target.value })} />
+                <input style={inputStyle} placeholder="Link label" value={b.label || ""} onChange={(e) => updateBlock(i, { label: e.target.value })} />
+              </>
+            )}
+            {b.type === "code" && (
+              <>
+                <input style={inputStyle} placeholder="Language (e.g. java)" value={b.language} onChange={(e) => updateBlock(i, { language: e.target.value })} />
+                <textarea style={{ ...inputStyle, minHeight: 80, fontFamily: "var(--font-mono)", fontSize: 12 }} placeholder="Code" value={b.code} onChange={(e) => updateBlock(i, { code: e.target.value })} />
+              </>
+            )}
+            {b.type === "table" && (
+              <TableBlockEditor block={b} onChange={(patch) => updateBlock(i, patch)} />
+            )}
+            {b.type === "quiz" && (
+              <input style={inputStyle} placeholder="Comma-separated Practice Question IDs (see the panel on the right)" value={(b.practiceQuestionIds || []).join(",")} onChange={(e) => updateBlock(i, { practiceQuestionIds: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TableBlockEditor({ block, onChange }) {
+  const headers = block.headers || [];
+  const rows = block.rows || [];
+
+  function setHeader(i, value) {
+    const next = [...headers]; next[i] = value; onChange({ headers: next });
+  }
+  function addColumn() {
+    onChange({ headers: [...headers, ""], rows: rows.map((r) => [...r, ""]) });
+  }
+  function setCell(r, c, value) {
+    const next = rows.map((row) => [...row]); next[r][c] = value; onChange({ rows: next });
+  }
+  function addRow() {
+    onChange({ rows: [...rows, headers.map(() => "")] });
+  }
+  function removeRow(r) {
+    onChange({ rows: rows.filter((_, i) => i !== r) });
+  }
+
+  return (
+    <div style={{ marginTop: 8, overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        {headers.map((h, i) => (
+          <input key={i} style={{ ...inputStyle, marginTop: 0, width: 120 }} placeholder={`Header ${i + 1}`} value={h} onChange={(e) => setHeader(i, e.target.value)} />
+        ))}
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 11 }} onClick={addColumn}>+ Column</button>
+      </div>
+      {rows.map((row, r) => (
+        <div key={r} style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          {row.map((cell, c) => (
+            <input key={c} style={{ ...inputStyle, marginTop: 0, width: 120 }} value={cell} onChange={(e) => setCell(r, c, e.target.value)} />
+          ))}
+          <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => removeRow(r)}>Remove row</button>
+        </div>
+      ))}
+      <button type="button" className="btn btn-ghost" style={{ fontSize: 11, marginTop: 6 }} onClick={addRow}>+ Row</button>
+    </div>
+  );
+}
+
+function ChapterLevelsPanel({ chapterId }) {
+  const [levels, setLevels] = useState(null);
+  const [levelId, setLevelId] = useState(null);
+  const [creating, setCreating] = useState(false);
+
+  function load() {
+    api.get(`/module-coding/admin/chapter/${chapterId}/levels`).then((res) => setLevels(res.data));
+  }
+  useEffect(load, [chapterId]);
+
+  async function addLevel() {
+    setCreating(true);
+    try {
+      await api.post(`/module-coding/admin/chapter/${chapterId}/levels`, { title: `Level ${(levels?.length || 0) + 1}`, order: levels?.length || 0 });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create level");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (levels === null) return <p className="mono" style={{ marginTop: 16 }}>Loading…</p>;
+
+  if (levelId) {
+    return <LevelPanel levelId={levelId} onBack={() => { setLevelId(null); load(); }} />;
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <button className="btn btn-primary" disabled={creating} onClick={addLevel}>{creating ? "Adding…" : "+ Add Level"}</button>
+      <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+        {levels.sort((a, b) => a.order - b.order).map((l, i) => (
+          <div key={l.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ cursor: "pointer" }} onClick={() => setLevelId(l.id)}>
+              <div style={{ fontWeight: 600 }}>Level {i + 1}: {l.title}</div>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+                {l._count.questions} question{l._count.questions === 1 ? "" : "s"} · {l._count.attempts} attempt{l._count.attempts === 1 ? "" : "s"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span className="badge" style={{ background: l.isActive ? "#E7F3EB" : "#F0EEE3", color: l.isActive ? "var(--mint)" : "var(--ink-dim)" }}>
+                {l.isActive ? "Active" : "Inactive"}
+              </span>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setLevelId(l.id)}>Manage →</button>
+            </div>
+          </div>
+        ))}
+        {levels.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No levels yet — add one to gate progress past this chapter.</p>}
+      </div>
+    </div>
+  );
+}
+
+// Thin wrapper around the same config/questions/attempts UI CodingTestPanel uses for a legacy
+// module-direct test, parameterized by an already-created Level's own id (fetched via the
+// generic GET /admin/tests/:id route, since a chapter-scoped Level has no moduleId to key off).
+function LevelPanel({ levelId, onBack }) {
+  const [test, setTest] = useState(undefined);
+  const [form, setForm] = useState(EMPTY_TEST_FORM);
+  const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState("config");
+
+  function load() {
+    api.get(`/module-coding/admin/tests/${levelId}`).then((res) => {
+      setTest(res.data);
+      if (res.data) {
+        setForm({
+          title: res.data.title, instructions: res.data.instructions || "",
+          questionCount: res.data.questionCount, randomizeQuestions: res.data.randomizeQuestions,
+          passingPercent: res.data.passingPercent, timeLimitMin: res.data.timeLimitMin,
+          maxAttempts: res.data.maxAttempts ?? "", cooldownMinutes: res.data.cooldownMinutes,
+          maxViolations: res.data.maxViolations, requireFullscreen: res.data.requireFullscreen,
+          requireWebcam: res.data.requireWebcam, requireMicrophone: res.data.requireMicrophone, allowResume: res.data.allowResume,
+          allowedLanguages: res.data.allowedLanguages, isActive: res.data.isActive,
+        });
+      }
+    });
+  }
+  useEffect(load, [levelId]);
+
+  async function save(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch(`/module-coding/admin/tests/${levelId}`, form);
+      load();
+      alert("Saved.");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!confirm("Delete this level and ALL student attempt history for it? This cannot be undone.")) return;
+    await api.delete(`/module-coding/admin/tests/${levelId}`);
+    onBack();
+  }
+
+  function toggleLanguage(lang) {
+    setForm((f) => ({
+      ...f,
+      allowedLanguages: f.allowedLanguages.includes(lang) ? f.allowedLanguages.filter((l) => l !== lang) : [...f.allowedLanguages, lang],
+    }));
+  }
+
+  if (!test) return <p className="mono" style={{ marginTop: 16 }}>Loading…</p>;
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to levels</button>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>
+        <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
+        <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
+      </div>
+
+      {tab === "config" && (
+        <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <input type="checkbox" checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            Active (required to unlock the next module)
+          </label>
+          <ConfigFields form={form} setForm={setForm} toggleLanguage={toggleLanguage} />
+          <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
+            <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={remove}>Delete level</button>
+          </div>
+        </form>
+      )}
+
+      {tab === "questions" && <CodingQuestionsPanel testId={test.id} questions={test.questions} onRefresh={load} />}
+      {tab === "attempts" && <CodingAttemptsPanel testId={test.id} />}
     </div>
   );
 }

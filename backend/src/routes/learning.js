@@ -761,6 +761,21 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
+// Full topic list for one chapter (the chapter list route above only returns a count) — used by
+// the admin CMS's "Learn" tab.
+router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const lessons = await prisma.lesson.findMany({
+      where: { chapterId: req.params.id },
+      orderBy: { order: "asc" },
+    });
+    res.json(lessons);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load topics" });
+  }
+});
+
 router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
     const { title, description, order, isActive, countsTowardCertificate } = req.body;
