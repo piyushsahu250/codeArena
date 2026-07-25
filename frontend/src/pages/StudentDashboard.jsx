@@ -3,25 +3,37 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   PlayCircle, Code2, LineChart, Trophy, FileText, Mic, UserCircle,
   ClipboardList, CheckCircle2, Clock, BarChart3, ListChecks, BookOpen, Flame, Award, Lock, Bell, Target,
+  Activity, Sparkles,
 } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
-import { SkeletonGrid, SkeletonLine } from "../components/Skeleton";
+import { SkeletonGrid } from "../components/Skeleton";
 
-const CARD_DEFS = [
-  { key: "testsAssigned", label: "Tests Assigned", icon: ClipboardList, color: "var(--ink)" },
-  { key: "testsCompleted", label: "Tests Completed", icon: CheckCircle2, color: "var(--mint)" },
-  { key: "testsPending", label: "Tests Pending", icon: Clock, color: "var(--amber-dark)" },
-  { key: "averageScorePercent", label: "Average Score", icon: BarChart3, color: "var(--mint)", suffix: "%" },
+// Consistent vertical rhythm for every top-level block on the page — replaces what used to be
+// ad hoc 20/24/32px margins picked per-section, which is a big part of why the page read as
+// visually noisy: nothing about the spacing itself signaled which gaps mattered more than others.
+const SECTION_GAP = 28;
+
+// Split into two priority tiers instead of one flat 10-card wall — the 5 "key" stats get the
+// larger, primary treatment; the rest are real numbers a student still wants but shouldn't have
+// to weigh equally against rank/average-score/streak on first glance. Every key still maps 1:1 to
+// `dash.cards`, nothing here changes what data is fetched or shown, only how it's grouped.
+const KEY_CARD_DEFS = [
   { key: "rank", label: "Class Rank", icon: Trophy, color: "var(--amber-dark)" },
-  { key: "codingSolved", label: "Coding Solved", icon: Code2, color: "var(--ink)" },
-  { key: "mcqCorrect", label: "MCQs Correct", icon: ListChecks, color: "var(--mint)" },
+  { key: "averageScorePercent", label: "Average Score", icon: BarChart3, color: "var(--mint)", suffix: "%" },
   { key: "learningProgressPercent", label: "Learning Progress", icon: BookOpen, color: "var(--mint)", suffix: "%" },
   { key: "codingStreak", label: "Coding Streak", icon: Flame, color: "var(--rust)", suffix: " days" },
-  { key: "certificatesEarned", label: "Certificates", icon: Award, color: "var(--amber-dark)" },
+  { key: "testsCompleted", label: "Tests Completed", icon: CheckCircle2, color: "var(--mint)" },
+];
+const MORE_CARD_DEFS = [
+  { key: "testsAssigned", label: "Tests Assigned", icon: ClipboardList },
+  { key: "testsPending", label: "Tests Pending", icon: Clock },
+  { key: "codingSolved", label: "Coding Solved", icon: Code2 },
+  { key: "mcqCorrect", label: "MCQs Correct", icon: ListChecks },
+  { key: "certificatesEarned", label: "Certificates", icon: Award },
 ];
 
 export default function StudentDashboard() {
@@ -116,87 +128,115 @@ export default function StudentDashboard() {
     <div>
       <Navbar />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
-          <div>
-            <h1>Welcome back, {user.name.split(" ")[0]}</h1>
-            <ChalkUnderline />
-          </div>
-          <QuickActions learningResumeId={learning?.resumeLessonId} />
+        <div>
+          <h1>Welcome back, {user.name.split(" ")[0]}</h1>
+          <ChalkUnderline />
+          <p style={{ fontSize: 14, color: "var(--ink-dim)", marginTop: 8 }}>Here's where you stand today.</p>
         </div>
 
-        {/* Placement Readiness Score — composite of average score, learning progress, certificates,
-            resume completeness, and interview average (see comment near readinessScore above) */}
-        {readinessScore != null && (
-          <div className="card" style={{ padding: 20, marginTop: 20, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-            <div style={{ position: "relative", width: 76, height: 76, flexShrink: 0 }}>
-              <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                <circle cx="18" cy="18" r="16" fill="none" stroke="var(--line)" strokeWidth="3" />
-                <circle cx="18" cy="18" r="16" fill="none" stroke="var(--mint)" strokeWidth="3"
-                  strokeDasharray={`${readinessScore} 100`} strokeLinecap="round" />
-              </svg>
-              <div className="mono" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 17 }}>{readinessScore}</div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>Placement Readiness Score</div>
-              <p style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 4, maxWidth: 480 }}>
-                Based on your average test score, learning progress, certificates earned, resume completeness, and mock interview performance.
-              </p>
-            </div>
+        <QuickActions learningResumeId={learning?.resumeLessonId} style={{ marginTop: 20 }} />
+
+        {/* Hero: Placement Readiness Score + Level/XP side by side — these were two separate
+            full-width cards stacked on top of each other before, competing for the same "most
+            important thing on the page" attention. Pairing them as one two-column hero block
+            establishes a single clear entry point instead of two. */}
+        {(readinessScore != null || gami) && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: readinessScore != null && gami ? "1.1fr 1fr" : "1fr",
+              gap: 16,
+              marginTop: SECTION_GAP,
+            }}
+          >
+            {readinessScore != null && (
+              <div className="card" style={{ padding: 24, display: "flex", alignItems: "center", gap: 22 }}>
+                <div style={{ position: "relative", width: 92, height: 92, flexShrink: 0 }}>
+                  <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="var(--line)" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="var(--mint)" strokeWidth="3"
+                      strokeDasharray={`${readinessScore} 100`} strokeLinecap="round" />
+                  </svg>
+                  <div className="mono" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 22 }}>{readinessScore}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: "var(--ink-dim)", textTransform: "uppercase" }}>Placement Readiness</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, marginTop: 2 }}>{readinessScoreLabel(readinessScore)}</div>
+                  <p style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 6, lineHeight: 1.5 }}>
+                    From your average score, learning progress, certificates, resume, and mock interviews.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {gami && (
+              <div className="card" style={{ padding: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: "var(--ink-dim)", textTransform: "uppercase" }}>Level {gami.level.level} — {gami.level.name}</div>
+                    <div className="mono" style={{ fontSize: 28, fontWeight: 700, color: "var(--mint)", marginTop: 4 }}>{gami.level.totalXp} XP</div>
+                  </div>
+                  <Link to="/achievements" className="btn btn-ghost" style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                    <Trophy size={13} /> View
+                  </Link>
+                </div>
+                {gami.level.nextLevelName && (
+                  <div style={{ height: 6, borderRadius: 3, background: "var(--line)", marginTop: 12, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${gami.level.progressPercent}%`, background: "var(--mint)" }} />
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 24, marginTop: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Recent Badge</div>
+                    <div style={{ fontSize: 13.5, marginTop: 2 }}>{gami.badges.earned[0] ? `${gami.badges.earned[0].icon} ${gami.badges.earned[0].name}` : "None yet"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Leaderboard Rank</div>
+                    <div style={{ fontSize: 13.5, marginTop: 2 }}>{gami.leaderboardRank.rank ? `#${gami.leaderboardRank.rank} / ${gami.leaderboardRank.totalStudents}` : "—"}</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Level & XP banner */}
-        {gami && (
-          <div className="card" style={{ padding: 20, marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>Level {gami.level.level} — {gami.level.name}</div>
-              <div className="mono" style={{ fontSize: 26, fontWeight: 700, color: "var(--mint)" }}>{gami.level.totalXp} XP</div>
-              {gami.level.nextLevelName && (
-                <div style={{ height: 6, borderRadius: 3, background: "var(--line)", marginTop: 6, width: 180, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${gami.level.progressPercent}%`, background: "var(--mint)" }} />
+        {/* Key stats — the 5 numbers a student actually scans for first. Bigger cards, clearer
+            number-first hierarchy than the flat 10-card grid this replaces. */}
+        {dashError ? (
+          <DashSummaryError onRetry={retryDashSummary} retrying={dashRetrying} style={{ marginTop: SECTION_GAP }} />
+        ) : (
+          <>
+            <div style={{ marginTop: SECTION_GAP }}>
+              <div style={{ display: loading ? "block" : "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+                {loading
+                  ? <SkeletonGrid count={5} minWidth={160} />
+                  : KEY_CARD_DEFS.map((c) => (
+                      <DashboardCard
+                        key={c.key}
+                        icon={c.icon}
+                        label={c.label}
+                        color={c.color}
+                        value={
+                          c.key === "rank"
+                            ? dash.cards.rank ? `#${dash.cards.rank}/${dash.cards.totalStudentsInClass}` : "—"
+                            : `${dash.cards[c.key] ?? 0}${c.suffix || ""}`
+                        }
+                      />
+                    ))}
+              </div>
+
+              {!loading && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 20, marginTop: 14, padding: "12px 16px", borderTop: "1px solid var(--line)" }}>
+                  {MORE_CARD_DEFS.map((c) => (
+                    <MoreStat key={c.key} icon={c.icon} label={c.label} value={`${dash.cards[c.key] ?? 0}${c.suffix || ""}`} />
+                  ))}
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Recent Badge</div>
-                <div style={{ fontSize: 14 }}>{gami.badges.earned[0] ? `${gami.badges.earned[0].icon} ${gami.badges.earned[0].name}` : "None yet"}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Leaderboard Rank</div>
-                <div style={{ fontSize: 14 }}>{gami.leaderboardRank.rank ? `#${gami.leaderboardRank.rank} / ${gami.leaderboardRank.totalStudents}` : "—"}</div>
-              </div>
-              <Link to="/achievements" className="btn btn-primary" style={{ alignSelf: "center", display: "inline-flex", alignItems: "center", gap: 6 }}><Trophy size={14} /> View Achievements</Link>
-            </div>
-          </div>
-        )}
-
-        {/* Summary cards */}
-        {dashError ? (
-          <DashSummaryError onRetry={retryDashSummary} retrying={dashRetrying} style={{ marginTop: 24 }} />
-        ) : (
-          <>
-            <div style={{ display: loading ? "block" : "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 24 }}>
-              {loading
-                ? <SkeletonGrid count={10} minWidth={150} />
-                : CARD_DEFS.map((c) => (
-                    <DashboardCard
-                      key={c.key}
-                      icon={c.icon}
-                      label={c.label}
-                      color={c.color}
-                      value={
-                        c.key === "rank"
-                          ? dash.cards.rank ? `#${dash.cards.rank}/${dash.cards.totalStudentsInClass}` : "—"
-                          : `${dash.cards[c.key] ?? 0}${c.suffix || ""}`
-                      }
-                    />
-                  ))}
-            </div>
 
             {/* Recent activity + notifications */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, marginTop: 32 }}>
-              <Section title="Recent Activity">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, marginTop: SECTION_GAP }}>
+              <Section title="Recent Activity" icon={Activity}>
                 {loading ? (
                   <SkeletonLines count={4} />
                 ) : dash.recentActivity.length === 0 ? (
@@ -213,7 +253,7 @@ export default function StudentDashboard() {
                 )}
               </Section>
 
-              <Section title="Notifications">
+              <Section title="Notifications" icon={Bell}>
                 {loading ? (
                   <SkeletonLines count={4} />
                 ) : dash.notifications.length === 0 ? (
@@ -234,7 +274,7 @@ export default function StudentDashboard() {
         )}
 
         {/* Upcoming tests */}
-        <Section title="Upcoming Tests" style={{ marginTop: 24 }}>
+        <Section title="Upcoming Tests" icon={ClipboardList} style={{ marginTop: SECTION_GAP }}>
           {tests === null ? (
             <SkeletonLines count={3} />
           ) : upcomingTests.length === 0 ? (
@@ -270,7 +310,7 @@ export default function StudentDashboard() {
         </Section>
 
         {/* Learning progress */}
-        <Section title="Learning Progress" style={{ marginTop: 24 }}>
+        <Section title="Learning Progress" icon={BookOpen} style={{ marginTop: SECTION_GAP }}>
           {learning === null ? (
             <SkeletonLines count={3} />
           ) : (
@@ -280,7 +320,7 @@ export default function StudentDashboard() {
 
         {/* Recommended learning — rule-based, built from real signals already on this page (weak
             interview topics, current locked/in-progress module), not a real ML recommender */}
-        <Section title="Recommended Learning" style={{ marginTop: 24 }}>
+        <Section title="Recommended Learning" icon={Sparkles} style={{ marginTop: SECTION_GAP }}>
           {learning === null ? (
             <SkeletonLines count={2} />
           ) : (
@@ -289,7 +329,7 @@ export default function StudentDashboard() {
         </Section>
 
         {/* Performance summary */}
-        <Section title="Performance Summary" style={{ marginTop: 24 }}>
+        <Section title="Performance Summary" icon={BarChart3} style={{ marginTop: SECTION_GAP }}>
           {loading ? (
             <SkeletonLines count={2} />
           ) : dashError ? (
@@ -306,7 +346,7 @@ export default function StudentDashboard() {
         </Section>
 
         {/* Recent test results */}
-        <Section title="Recent Test Results" style={{ marginTop: 24 }}>
+        <Section title="Recent Test Results" icon={ListChecks} style={{ marginTop: SECTION_GAP }}>
           {loading ? (
             <SkeletonLines count={3} />
           ) : dashError ? (
@@ -349,6 +389,13 @@ export default function StudentDashboard() {
   );
 }
 
+function readinessScoreLabel(score) {
+  if (score >= 80) return "Placement Ready";
+  if (score >= 60) return "Almost There";
+  if (score >= 35) return "Building Momentum";
+  return "Just Getting Started";
+}
+
 const NOTIFICATION_ICON = { test_assigned: ClipboardList, test_reminder: Clock, module_unlocked: Lock, certificate: Award };
 function NotificationIcon({ type }) {
   const Icon = NOTIFICATION_ICON[type] || Bell;
@@ -357,10 +404,22 @@ function NotificationIcon({ type }) {
 
 function DashboardCard({ icon: Icon, label, value, color }) {
   return (
-    <div className="card" style={{ padding: "14px 16px" }}>
-      <Icon size={20} color={color} />
-      <div className="mono" style={{ fontSize: 20, fontWeight: 700, color, marginTop: 4 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
+    <div className="card" style={{ padding: "18px 18px" }}>
+      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--card-bg, #F7F7F5)" }}>
+        <Icon size={17} color={color} />
+      </div>
+      <div className="mono" style={{ fontSize: 24, fontWeight: 700, color, marginTop: 10 }}>{value}</div>
+      <div style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function MoreStat({ icon: Icon, label, value }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <Icon size={14} style={{ color: "var(--ink-dim)" }} />
+      <span className="mono" style={{ fontSize: 13, fontWeight: 700 }}>{value}</span>
+      <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>{label}</span>
     </div>
   );
 }
@@ -374,10 +433,12 @@ function MiniStat({ label, value }) {
   );
 }
 
-function Section({ title, children, style }) {
+function Section({ title, icon: Icon, children, style }) {
   return (
     <div style={style}>
-      <h3 style={{ fontSize: 16, marginBottom: 12 }}>{title}</h3>
+      <h3 style={{ fontSize: 15.5, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+        {Icon && <Icon size={16} style={{ color: "var(--ink-dim)" }} />} {title}
+      </h3>
       <div className="card" style={{ padding: 20 }}>{children}</div>
     </div>
   );
@@ -409,16 +470,21 @@ function SkeletonLines({ count }) {
   );
 }
 
-function QuickActions({ learningResumeId }) {
+// One clear primary CTA ("Continue Learning") plus a row of secondary icon-tiles for everything
+// else, replacing what used to be 7 pill buttons of identical visual weight — a student had no
+// way to tell at a glance which action mattered most.
+function QuickActions({ learningResumeId, style }) {
   return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <Link to={learningResumeId ? `/learning/java/lesson/${learningResumeId}` : "/learning"} className="btn btn-primary"><PlayCircle size={15} /> Continue Learning</Link>
-      <Link to="/learning" className="btn btn-ghost"><Code2 size={15} /> Practice Coding</Link>
-      <Link to="/dashboard/performance" className="btn btn-ghost"><LineChart size={15} /> My Performance</Link>
-      <Link to="/achievements" className="btn btn-ghost"><Trophy size={15} /> Achievements</Link>
-      <Link to="/resume" className="btn btn-ghost"><FileText size={15} /> Resume Builder</Link>
-      <Link to="/interview" className="btn btn-ghost"><Mic size={15} /> AI Mock Interview</Link>
-      <Link to="/account" className="btn btn-ghost"><UserCircle size={15} /> Profile</Link>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", ...style }}>
+      <Link to={learningResumeId ? `/learning/java/lesson/${learningResumeId}` : "/learning"} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <PlayCircle size={15} /> Continue Learning
+      </Link>
+      <Link to="/learning" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Code2 size={15} /> Practice Coding</Link>
+      <Link to="/dashboard/performance" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><LineChart size={15} /> My Performance</Link>
+      <Link to="/achievements" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Trophy size={15} /> Achievements</Link>
+      <Link to="/resume" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><FileText size={15} /> Resume Builder</Link>
+      <Link to="/interview" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Mic size={15} /> AI Mock Interview</Link>
+      <Link to="/account" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><UserCircle size={15} /> Profile</Link>
     </div>
   );
 }
