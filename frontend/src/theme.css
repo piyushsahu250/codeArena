@@ -172,6 +172,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   font-weight: 600;
   font-family: var(--font-mono);
 }
+.course-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.course-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+
 .badge-easy { background: #E7F3EB; color: var(--mint); }
 .badge-medium { background: #FCEFD9; color: var(--amber-dark); }
 .badge-hard { background: #F7E4E0; color: var(--rust); }
