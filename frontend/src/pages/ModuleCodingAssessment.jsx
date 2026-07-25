@@ -9,7 +9,6 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
-import CodeModeWarning from "../components/CodeModeWarning";
 import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
@@ -742,9 +741,6 @@ export default function ModuleCodingAssessment() {
               runDisabled={micBlocked}
               submitDisabled={micBlocked}
             />
-          </div>
-          <div style={{ padding: "0 16px" }}>
-            <CodeModeWarning evaluationType={current?.evaluationType} language={answer?.language} code={answer?.code} />
           </div>
           <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", padding: "6px 16px 0" }}>
             Your code is auto-saved every 10 seconds. "Run" checks against sample cases only — "Submit" grades this

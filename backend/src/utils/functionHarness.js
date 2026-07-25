@@ -341,6 +341,43 @@ function computeStudentCodeOffset(assembledCode, studentCode) {
   return (assembledCode.slice(0, idx).match(/\n/g) || []).length;
 }
 
+// FUNCTION-mode questions now accept EITHER shape of submission: a bare method/class body (the
+// starter-code convention, wrapped with the generated driver below) OR a complete, self-contained
+// program that reads its own input and prints its own output — a student shouldn't have to
+// discover which one a question wants by trial and error, or be blocked from writing the style
+// they're more comfortable with. judge.js calls this BEFORE attempting to wrap the submission;
+// when it returns true, the code is compiled/run as-is via the ordinary STDIO path instead, against
+// the exact same test cases (their `input` already has one value per line per parameter, which
+// every language's own idiomatic reading pattern here tolerates: Scanner/cin/scanf all treat any
+// whitespace — including a newline — as a token separator; a Python full program just needs to
+// read one value per input()/stdin line rather than splitting one line, which is what the sample
+// test cases displayed to the student already show).
+//
+// Deliberately conservative per language — only flags a shape that's unambiguous, mirroring the
+// same markers wrapFunctionCode()'s own java case already used to detect and reject this exact
+// shape before this feature existed. Java/C/C++ key off literal main()/class declarations that a
+// bare method body could never contain. Python keys off the ABSENCE of the required `class
+// Solution` the starter code and driver both depend on — code that doesn't define it can never be
+// valid function-mode code regardless of intent, so treating it as a full-program attempt (and
+// letting Python's own interpreter report whatever's actually wrong) is a strict improvement over
+// a confusing driver-time NameError. JavaScript keys off explicit stdin-reading calls, since its
+// FUNCTION-mode shape (`var name = function(...)`) has no class/main marker to check instead.
+function looksLikeFullProgram(language, code) {
+  switch (language) {
+    case "java":
+      return /\bpublic\s+class\s+\w+/.test(code) || /\bpublic\s+static\s+void\s+main\s*\(/.test(code);
+    case "cpp":
+    case "c":
+      return /\bint\s+main\s*\(/.test(code);
+    case "python":
+      return !/\bclass\s+Solution\b/.test(code);
+    case "javascript":
+      return /require\(\s*['"](?:fs|readline)['"]\s*\)|process\.stdin/.test(code);
+    default:
+      return false;
+  }
+}
+
 // Concatenates the student's method/class code with the auto-generated driver into one complete,
 // compilable/runnable source string. Returns { code, studentCodeOffset } — judge.js uses `code` to
 // compile/run, and subtracts `studentCodeOffset` from any compiler-reported line number so the
@@ -429,4 +466,4 @@ function resolveCodingFields({ evaluationType, functionSignature, starterCodeByL
   return { evaluationType: "FUNCTION", functionSignature, starterCodeByLanguage: generated };
 }
 
-module.exports = { SUPPORTED_TYPES, SCALAR_TYPES, ARRAY_TYPES, validateSignature, languagesSupportedBy, generateStarterCode, wrapFunctionCode, resolveCodingFields };
+module.exports = { SUPPORTED_TYPES, SCALAR_TYPES, ARRAY_TYPES, validateSignature, languagesSupportedBy, generateStarterCode, wrapFunctionCode, looksLikeFullProgram, resolveCodingFields };

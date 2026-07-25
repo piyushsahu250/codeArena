@@ -58,10 +58,12 @@ export default function EvaluationTypeFields({ evaluationType, onEvaluationTypeC
     <div>
       <div style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Evaluation Type</div>
       <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
-        Function-based: the student writes only a method body matching a signature you define here (like
+        Function-based: the student fills in a method body matching a signature you define here (like
         LeetCode) — the platform generates the starter code and the stdin-parsing/method-invocation driver
-        automatically. Full Program: the student's submitted code is the whole program, reading stdin and
-        writing stdout themselves.
+        automatically. A student can also submit their own complete program instead (it's graded directly
+        against the same test cases, no driver involved) — both shapes of submission are accepted. Full
+        Program: the student's submitted code is always the whole program, reading stdin and writing stdout
+        themselves.
       </p>
       <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>

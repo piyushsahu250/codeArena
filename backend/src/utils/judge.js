@@ -21,7 +21,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { mapWithConcurrency } = require("./queue");
-const { wrapFunctionCode } = require("./functionHarness");
+const { wrapFunctionCode, looksLikeFullProgram } = require("./functionHarness");
 const { judgeSqlSubmission } = require("./sqlJudge");
 
 const CASE_CONCURRENCY = Number(process.env.JUDGE_CASE_CONCURRENCY || 2);
@@ -431,18 +431,25 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
   let sourceCode = code;
   let studentCodeOffset = 0;
   if (evaluationType === "FUNCTION" && functionSignature) {
-    try {
-      const wrapped = wrapFunctionCode(language, functionSignature, code);
-      sourceCode = wrapped.code;
-      studentCodeOffset = wrapped.studentCodeOffset;
-    } catch (err) {
-      return {
-        passedCases: 0,
-        totalCases: testCases.length,
-        verdict: "COMPILE_ERROR",
-        details: [],
-        errorSummary: { type: "Compilation Error", line: null, message: err.message, hint: null },
-      };
+    if (looksLikeFullProgram(language, code)) {
+      // The student wrote a complete, self-contained program instead of just the method body —
+      // FUNCTION-mode questions accept both. Run it exactly like a STDIO submission (no driver
+      // wrapping) against the same test cases; sourceCode/studentCodeOffset stay at their
+      // just-run-the-code-as-is defaults.
+    } else {
+      try {
+        const wrapped = wrapFunctionCode(language, functionSignature, code);
+        sourceCode = wrapped.code;
+        studentCodeOffset = wrapped.studentCodeOffset;
+      } catch (err) {
+        return {
+          passedCases: 0,
+          totalCases: testCases.length,
+          verdict: "COMPILE_ERROR",
+          details: [],
+          errorSummary: { type: "Compilation Error", line: null, message: err.message, hint: null },
+        };
+      }
     }
   }
   const prepared = await prepare(language, sourceCode);
