@@ -11,6 +11,7 @@ const { generatePerformancePdf } = require("../utils/reportPdf");
 const { generateTempPassword, validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../utils/password");
 const { createSession } = require("../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 
 const router = express.Router();
@@ -368,6 +369,13 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
         },
       }),
     ]);
+
+    // If this student just moved to a different academic group, the OLD group may now be empty —
+    // an Academic Group is purely auto-derived (see resolveAcademicGroup() above), so once nothing
+    // is enrolled in it anymore it should never be left behind as a dangling empty row.
+    if (data.academicGroupId !== undefined && data.academicGroupId !== existing.academicGroupId) {
+      await deleteAcademicGroupIfEmpty(existing.academicGroupId);
+    }
 
     res.json(updated);
   } catch (err) {
@@ -1008,6 +1016,8 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
         prisma.testAttempt.deleteMany({ where: { studentId: req.params.id } }),
         prisma.user.delete({ where: { id: req.params.id } }),
       ]);
+      // The student's academic group may now be empty — see the matching comment in PATCH /:id.
+      await deleteAcademicGroupIfEmpty(user.academicGroupId);
     }
 
     res.json({ success: true });

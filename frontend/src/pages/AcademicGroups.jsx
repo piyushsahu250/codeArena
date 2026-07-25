@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AlertTriangle, X } from "lucide-react";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -8,10 +9,13 @@ import { useConfirm } from "../context/ConfirmContext";
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
 
-// Read-only by design — academic groups (Institute -> Batch -> Department -> Section) are derived
-// automatically from registered students (Bulk Upload/Registration, or the one-time migration from
-// the old Class system). There's no "create a group" flow here; a typo'd Department/Section is
-// corrected via the per-student edit form instead, which re-resolves the group on save.
+// Academic groups (Institute -> Batch -> Department -> Section) are derived automatically from
+// registered students (Bulk Upload/Registration, or the one-time migration from the old Class
+// system) — there's no "create a group" flow here, and empty groups are cleaned up automatically
+// server-side the moment their last student is reassigned or removed (see
+// backend/src/utils/academicGroups.js). Manual deletion (below) is the one exception: an Admin can
+// still remove a non-empty group outright, which permanently deletes every student in it too — not
+// available to Staff at all, matching this page's own ADMIN-only route gating in App.jsx.
 export default function AcademicGroups() {
   const confirmDialog = useConfirm();
   const [groups, setGroups] = useState([]);
@@ -22,6 +26,11 @@ export default function AcademicGroups() {
   const [rosterLoading, setRosterLoading] = useState(false);
   const [resettingId, setResettingId] = useState(null);
   const [resetResult, setResetResult] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // the group pending deletion, or null
+  const [deleteStep, setDeleteStep] = useState("warn"); // "warn" | "password"
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   function load(instituteId) {
     api.get("/academic-groups", { params: instituteId ? { instituteId } : {} }).then((res) => setGroups(res.data));
@@ -77,6 +86,38 @@ export default function AcademicGroups() {
       alert(err.response?.data?.error || "Failed to reset passwords");
     } finally {
       setResettingId(null);
+    }
+  }
+
+  function openDeleteDialog(group) {
+    setDeleteTarget(group);
+    setDeleteStep("warn");
+    setDeletePassword("");
+    setDeleteError("");
+  }
+
+  function closeDeleteDialog() {
+    if (deleting) return; // don't let the dialog vanish mid-request
+    setDeleteTarget(null);
+  }
+
+  async function confirmDeleteGroup() {
+    if (!deletePassword) {
+      setDeleteError("Enter your password to confirm.");
+      return;
+    }
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const { data } = await api.delete(`/academic-groups/${deleteTarget.id}`, { data: { password: deletePassword } });
+      setGroups((prev) => prev.filter((g) => g.id !== deleteTarget.id));
+      if (expandedId === deleteTarget.id) { setExpandedId(null); setRoster(null); }
+      alert(`Deleted the group and ${data.deletedStudents} student record${data.deletedStudents === 1 ? "" : "s"}.`);
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || "Failed to delete academic group");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -160,6 +201,13 @@ export default function AcademicGroups() {
                   <button className="btn btn-ghost" onClick={() => bulkResetPasswords(g)} disabled={resettingId === g.id}>
                     {resettingId === g.id ? "Resetting…" : "Reset all passwords"}
                   </button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ color: "var(--rust)" }}
+                    onClick={() => openDeleteDialog(g)}
+                  >
+                    Delete group
+                  </button>
                 </div>
               </div>
 
@@ -200,6 +248,69 @@ export default function AcademicGroups() {
           )}
         </div>
       </div>
+
+      {deleteTarget && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", justifyContent: "center", alignItems: "center", padding: 16 }}
+          onClick={closeDeleteDialog}
+        >
+          <div className="card" style={{ maxWidth: 460, width: "100%", padding: 24, position: "relative" }} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="btn btn-ghost" style={{ position: "absolute", top: 12, right: 12, padding: 6 }} onClick={closeDeleteDialog} disabled={deleting} aria-label="Close">
+              <X size={16} />
+            </button>
+
+            {deleteStep === "warn" ? (
+              <>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <AlertTriangle size={22} style={{ color: "var(--rust)", flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <h3 style={{ fontSize: 16, margin: 0 }}>Delete this academic group?</h3>
+                    <p style={{ fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
+                      <strong>{deleteTarget.department.name} · {deleteTarget.section} ({deleteTarget.batch})</strong> contains{" "}
+                      <strong style={{ color: "var(--rust)" }}>
+                        {deleteTarget._count?.users ?? 0} student record{(deleteTarget._count?.users ?? 0) === 1 ? "" : "s"}
+                      </strong>.
+                    </p>
+                    <p style={{ fontSize: 13, marginTop: 8, lineHeight: 1.6, color: "var(--rust)" }}>
+                      Deleting this group will permanently remove the group AND all {deleteTarget._count?.users ?? 0} of those
+                      student accounts — logins, submissions, certificates, everything. This action is irreversible and cannot
+                      be undone.
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+                  <button type="button" className="btn btn-ghost" onClick={closeDeleteDialog}>Cancel</button>
+                  <button type="button" className="btn btn-primary" style={{ background: "var(--rust)", color: "#fff" }} onClick={() => setDeleteStep("password")}>Continue</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 style={{ fontSize: 16, margin: 0 }}>Confirm your password</h3>
+                <p style={{ fontSize: 13, marginTop: 8, color: "var(--ink-dim)" }}>
+                  For your security, re-enter your own admin password to permanently delete this group and its{" "}
+                  {deleteTarget._count?.users ?? 0} student record{(deleteTarget._count?.users ?? 0) === 1 ? "" : "s"}.
+                </p>
+                <input
+                  type="password"
+                  autoFocus
+                  style={inputStyle}
+                  placeholder="Your password"
+                  value={deletePassword}
+                  onChange={(e) => { setDeletePassword(e.target.value); setDeleteError(""); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !deleting) confirmDeleteGroup(); }}
+                />
+                {deleteError && <p style={{ fontSize: 12, color: "var(--rust)", marginTop: 6 }}>{deleteError}</p>}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+                  <button type="button" className="btn btn-ghost" onClick={closeDeleteDialog} disabled={deleting}>Cancel</button>
+                  <button type="button" className="btn btn-primary" style={{ background: "var(--rust)", color: "#fff" }} onClick={confirmDeleteGroup} disabled={deleting}>
+                    {deleting ? "Deleting…" : "Delete permanently"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
