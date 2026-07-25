@@ -551,26 +551,63 @@ model CourseModule {
   title       String
   description String?
   order       Int      @default(0)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   lessons Lesson[]
   codingTest ModuleCodingTest?
+  chapters   Chapter[]
 
   @@unique([courseId, title])
   @@index([courseId])
+}
+
+// A Chapter groups a Module's "Learn" content (Lessons acting as Learning Topics) together
+// with the Coding Assessment Level(s) that gate progression past it. Additive on top of the
+// pre-existing flat Course->Module->Lesson tree: every pre-Chapter Module gets backfilled with
+// one "General" Chapter (see backend/scripts/backfillChapters.js) so nothing existing changes
+// behavior, while new content can be organized into multiple named Chapters per Module.
+model Chapter {
+  id                      String   @id @default(uuid())
+  module                  CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId                String
+  title                   String
+  description             String?
+  order                   Int      @default(0)
+  isActive                Boolean  @default(true)
+  // Whether this Chapter's Levels are required for the course-wide CODING_ASSESSMENT
+  // certificate (see gradeModuleCodingAttempt.js / gatingLevels.js) — lets an admin mark a
+  // Chapter as optional/bonus without it blocking certificate issuance. Does NOT affect module
+  // unlock progression, which always requires all active Levels regardless of this flag.
+  countsTowardCertificate Boolean  @default(true)
+  createdAt               DateTime @default(now())
+
+  topics Lesson[]
+  levels ModuleCodingTest[]
+
+  @@unique([moduleId, title])
+  @@index([moduleId])
 }
 
 model Lesson {
   id               String   @id @default(uuid())
   module           CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   moduleId         String
+  chapter          Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId        String?
   title            String
   order            Int      @default(0)
   content          String?  // admin-authored HTML: explanation, examples, syntax, notes, best practices
+  // Ordered array of typed blocks ({type:"text"|"youtube"|"image"|"table"|"code"|"note"|"file"|"quiz", ...})
+  // for chapter-scoped Learning Topics. When present, the frontend renders this instead of
+  // `content`; when null/empty it falls back to the legacy single-HTML-string `content` render,
+  // so pre-existing lessons need no data migration.
+  blocks           Json?
   videoUrl         String?  // external link (e.g. YouTube) — no in-house video hosting
   pdfUrl           String?  // external link to a hosted PDF — no in-house file storage
   externalLinks    Json?    // [{ label, url }]
   estimatedMinutes Int      @default(10)
+  isActive         Boolean  @default(true)
   // The gating practice test for its module — batch-submitted (not per-question), scored,
   // and required to pass before the next module unlocks. At most one per module in practice
   // (the last lesson), but not DB-enforced since nothing breaks if that changes.
@@ -582,6 +619,7 @@ model Lesson {
 
   @@unique([moduleId, title])
   @@index([moduleId])
+  @@index([chapterId])
 }
 
 model LessonProgress {
@@ -764,8 +802,16 @@ model Certificate {
 
 model ModuleCodingTest {
   id                 String   @id @default(uuid())
-  module             CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  moduleId           String   @unique
+  // Legacy path: one test directly on a Module (moduleId set, chapterId null). New path: a
+  // "Level" scoped to a Chapter (chapterId set, moduleId null) — a Chapter can have many
+  // Levels. moduleId stays @unique so at most one legacy test can exist per Module; Postgres
+  // treats NULL as distinct from every other NULL, so this constraint is a no-op for
+  // chapter-scoped rows.
+  module             CourseModule? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId           String?  @unique
+  chapter            Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId          String?
+  order              Int      @default(0)
   title              String   @default("Module Coding Assessment")
   instructions       String?
   allowedLanguages   Json     @default("[\"java\",\"python\",\"javascript\",\"c\",\"cpp\"]") // string[]
@@ -785,6 +831,8 @@ model ModuleCodingTest {
 
   questions Question[]
   attempts  ModuleCodingAttempt[]
+
+  @@index([chapterId])
 }
 
 model ModuleCodingAttempt {
