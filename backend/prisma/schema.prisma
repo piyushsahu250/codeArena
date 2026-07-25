@@ -21,6 +21,14 @@ enum Difficulty {
   HARD
 }
 
+enum CourseStatus {
+  DRAFT
+  UNDER_REVIEW
+  PUBLISHED
+  ARCHIVED
+  INACTIVE
+}
+
 enum QuestionType {
   CODING
   MCQ
@@ -60,6 +68,7 @@ model Institute {
   questionFolders QuestionFolder[]
   departments     Department[]
   academicGroups  AcademicGroup[]
+  courseAssignments CourseInstituteAssignment[]
 }
 
 model Class {
@@ -537,11 +546,87 @@ model Course {
   name        String
   description String?
   order       Int      @default(0)
-  isActive    Boolean  @default(false) // false = shown as "Coming soon", not browsable
+  isActive    Boolean  @default(false) // false = shown as "Coming soon", not browsable — kept in
+  // sync with `status === PUBLISHED` on every write, for backward compat with any read site that
+  // still checks isActive directly rather than status.
   createdAt   DateTime @default(now())
+
+  // --- lifecycle & metadata (additive) ---
+  status               CourseStatus @default(DRAFT)
+  category             String?
+  thumbnailUrl         String?  // external URL only — no object storage on this platform, same
+                                 // convention as Lesson.videoUrl/pdfUrl and Resume.photoUrl
+  bannerUrl            String?  // external URL only, same convention
+  instructorName       String?
+  skillsCovered        Json?    // string[] — e.g. ["OOP", "Collections", "Multithreading"]
+  estimatedDurationMin Int?
+  difficulty           Difficulty?
 
   modules      CourseModule[]
   certificates Certificate[]
+
+  instituteAssignments     CourseInstituteAssignment[]
+  academicGroupAssignments CourseAcademicGroupAssignment[]
+  prerequisites CoursePrerequisite[] @relation("CoursePrerequisites")  // this course's prerequisites
+  requiredFor   CoursePrerequisite[] @relation("CoursePrerequisiteOf") // courses that require this one
+
+  @@index([status])
+  @@index([category])
+}
+
+// Explicit join table (not an implicit Prisma m2m self-relation — this schema has no precedent
+// for implicit m2m, only explicit join tables like TestAcademicGroup) recording which Courses
+// must be completed (hold a LEARNING_MODULE certificate) before a given Course unlocks.
+model CoursePrerequisite {
+  id                   String   @id @default(uuid())
+  course               Course   @relation("CoursePrerequisites", fields: [courseId], references: [id], onDelete: Cascade)
+  courseId             String
+  prerequisite         Course   @relation("CoursePrerequisiteOf", fields: [prerequisiteCourseId], references: [id], onDelete: Cascade)
+  prerequisiteCourseId String
+  createdAt            DateTime @default(now())
+
+  @@unique([courseId, prerequisiteCourseId])
+  @@index([courseId])
+  @@index([prerequisiteCourseId])
+}
+
+// Broad grant: Course visible to every student in this Institute (every current+future
+// AcademicGroup under it) — mirrors the "assign X to specific groups" pattern already proven by
+// TestAcademicGroup, except INVERTED: a Course with zero rows across both assignment tables is
+// invisible to students (see courseEligibility.js), not open-to-all like TestAcademicGroup's
+// "empty = open" convention. Only a PUBLISHED course may receive a new row (enforced at the
+// route). Archiving a course leaves these rows in place so a re-published course regains
+// visibility instantly without re-assignment.
+model CourseInstituteAssignment {
+  id               String    @id @default(uuid())
+  course           Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId         String
+  institute        Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId      String
+  assignedByUserId String
+  assignedByName   String
+  createdAt        DateTime  @default(now())
+
+  @@unique([courseId, instituteId])
+  @@index([courseId])
+  @@index([instituteId])
+}
+
+// Fine-grained grant: Course visible only to this specific AcademicGroup (Institute+Batch+
+// Department+Section), independent of any CourseInstituteAssignment row for the same course.
+model CourseAcademicGroupAssignment {
+  id               String        @id @default(uuid())
+  course           Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId         String
+  academicGroup    AcademicGroup @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
+  academicGroupId  String
+  assignedByUserId String
+  assignedByName   String
+  createdAt        DateTime      @default(now())
+
+  @@unique([courseId, academicGroupId])
+  @@index([courseId])
+  @@index([academicGroupId])
 }
 
 model CourseModule {
@@ -1496,6 +1581,7 @@ model AcademicGroup {
   users            User[]
   testAssignments  TestAcademicGroup[]
   staffAssignments StaffClassAssignment[]
+  courseAssignments CourseAcademicGroupAssignment[]
 
   @@unique([instituteId, batch, departmentId, section])
   @@index([instituteId])
