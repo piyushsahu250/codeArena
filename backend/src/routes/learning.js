@@ -11,6 +11,9 @@ const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
 const { askClaude } = require("../utils/aiClient");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { attachRequesterInstitute } = require("../middleware/institute");
+const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse } = require("../utils/courseEligibility");
+const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -644,49 +647,96 @@ router.get("/courses/:slug/certificate/download", authenticate, requireRole("STU
 // audit-logged via logAudit for the same reason every other admin-changeable record on this
 // platform is: so "who deleted this course, and when" is answerable later.
 
+// Fields shared by create/edit — course metadata beyond the original slug/name/description/order.
+function extractCourseMetadata(body) {
+  const { category, thumbnailUrl, bannerUrl, instructorName, skillsCovered, estimatedDurationMin, difficulty } = body;
+  return {
+    ...(category !== undefined ? { category: category || null } : {}),
+    ...(thumbnailUrl !== undefined ? { thumbnailUrl: thumbnailUrl || null } : {}),
+    ...(bannerUrl !== undefined ? { bannerUrl: bannerUrl || null } : {}),
+    ...(instructorName !== undefined ? { instructorName: instructorName || null } : {}),
+    ...(skillsCovered !== undefined ? { skillsCovered: skillsCovered || null } : {}),
+    ...(estimatedDurationMin !== undefined ? { estimatedDurationMin: estimatedDurationMin === "" || estimatedDurationMin == null ? null : Number(estimatedDurationMin) } : {}),
+    ...(difficulty !== undefined ? { difficulty: difficulty || null } : {}),
+  };
+}
+
+// Full-replace a course's prerequisite list (delete-then-recreate, same idiom tests.js uses for
+// academicGroupIds on PATCH). Rejects self-reference and any prerequisite that would create a
+// cycle (A requires B, B transitively requires A) before writing anything.
+async function setCoursePrerequisites(courseId, prerequisiteCourseIds) {
+  const ids = (prerequisiteCourseIds || []).filter((id) => id && id !== courseId);
+  if (ids.length !== (prerequisiteCourseIds || []).filter(Boolean).length) {
+    throw Object.assign(new Error("A course cannot be its own prerequisite"), { status: 400 });
+  }
+  if (ids.length && (await wouldCreateCycle(prisma, courseId, ids))) {
+    throw Object.assign(new Error("That prerequisite list would create a cycle"), { status: 400 });
+  }
+  await prisma.$transaction([
+    prisma.coursePrerequisite.deleteMany({ where: { courseId } }),
+    ...(ids.length ? [prisma.coursePrerequisite.createMany({ data: ids.map((prerequisiteCourseId) => ({ courseId, prerequisiteCourseId })) })] : []),
+  ]);
+}
+
 router.post("/courses", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
-    const { slug, name, description, order, isActive } = req.body;
+    const { slug, name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
     if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
+    const resolvedStatus = status || "DRAFT";
     const course = await prisma.course.create({
-      data: { slug, name, description: description || null, order: Number(order) || 0, isActive: !!isActive },
+      data: {
+        slug, name, description: description || null, order: Number(order) || 0,
+        status: resolvedStatus, isActive: resolvedStatus === "PUBLISHED" || !!isActive,
+        ...extractCourseMetadata(req.body),
+      },
     });
+    if (prerequisiteCourseIds !== undefined) await setCoursePrerequisites(course.id, prerequisiteCourseIds);
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
       actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-      details: { entity: "course", operation: "create", courseId: course.id, name: course.name, slug: course.slug },
+      details: { entity: "course", operation: "create", courseId: course.id, name: course.name, slug: course.slug, status: course.status },
     });
     res.json(course);
   } catch (err) {
     console.error(err);
+    if (err.status) return res.status(err.status).json({ error: err.message });
     res.status(err.code === "P2002" ? 409 : 500).json({ error: err.code === "P2002" ? "A course with this slug already exists" : "Failed to create course" });
   }
 });
 
 router.patch("/courses/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
-    const { name, description, order, isActive } = req.body;
+    const { name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
+
+    if (status !== undefined && status === "PUBLISHED") {
+      const moduleCount = await prisma.courseModule.count({ where: { courseId: req.params.id } });
+      if (moduleCount === 0) return res.status(400).json({ error: "Add at least one module before publishing this course" });
+    }
+
     const course = await prisma.course.update({
       where: { id: req.params.id },
       data: {
         ...(name !== undefined ? { name } : {}),
         ...(description !== undefined ? { description } : {}),
         ...(order !== undefined ? { order: Number(order) } : {}),
-        ...(isActive !== undefined ? { isActive: !!isActive } : {}),
+        ...(status !== undefined ? { status, isActive: status === "PUBLISHED" } : (isActive !== undefined ? { isActive: !!isActive } : {})),
+        ...extractCourseMetadata(req.body),
       },
     });
+    if (prerequisiteCourseIds !== undefined) await setCoursePrerequisites(course.id, prerequisiteCourseIds);
+
+    let operation = "edit";
+    if (status !== undefined) operation = "status_change";
+    else if (isActive !== undefined) operation = isActive ? "activate" : "deactivate";
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
       actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-      details: {
-        entity: "course",
-        operation: isActive !== undefined ? (isActive ? "activate" : "deactivate") : "edit",
-        courseId: course.id, name: course.name, changedFields: Object.keys(req.body),
-      },
+      details: { entity: "course", operation, courseId: course.id, name: course.name, status: course.status, changedFields: Object.keys(req.body) },
     });
     res.json(course);
   } catch (err) {
     console.error(err);
+    if (err.status) return res.status(err.status).json({ error: err.message });
     res.status(500).json({ error: "Failed to update course" });
   }
 });
@@ -705,6 +755,131 @@ router.delete("/courses/:id", authenticate, requireRole("ADMIN"), async (req, re
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to delete course" });
+  }
+});
+
+// =========================== Institute / academic-group course assignment ===========================
+// Two-tier grant mirroring the Test<->AcademicGroup pattern (courseEligibility.js), except a
+// course with zero rows across both tables is invisible to students, not open. Only a PUBLISHED
+// course may be assigned. Archiving a course leaves these rows untouched — visibility is gated
+// by status, not by deleting assignments — so re-publishing restores visibility instantly.
+
+async function assertPublishedAndScoped(req, res, courseId) {
+  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  if (!course) { res.status(404).json({ error: "Course not found" }); return null; }
+  if (course.status !== "PUBLISHED") { res.status(400).json({ error: "Only Published courses can be assigned" }); return null; }
+  return course;
+}
+
+// Rejects instituteIds/academicGroupIds outside a scoped Admin's own institute (unscoped
+// Platform Admin, req.requesterInstituteId === null, is unrestricted — same convention as every
+// other attachRequesterInstitute-guarded route on this platform).
+async function assertAssignmentScope(req, res, instituteIds, academicGroupIds) {
+  if (!req.requesterInstituteId) return true;
+  if (instituteIds?.some((id) => id !== req.requesterInstituteId)) {
+    res.status(403).json({ error: "You can only assign courses within your own institute" });
+    return false;
+  }
+  if (academicGroupIds?.length) {
+    const groups = await prisma.academicGroup.findMany({ where: { id: { in: academicGroupIds } }, select: { id: true, instituteId: true } });
+    if (groups.some((g) => g.instituteId !== req.requesterInstituteId)) {
+      res.status(403).json({ error: "You can only assign courses within your own institute" });
+      return false;
+    }
+  }
+  return true;
+}
+
+router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  const [instituteRows, groupRows] = await Promise.all([
+    prisma.courseInstituteAssignment.findMany({ where: { courseId: req.params.id }, include: { institute: { select: { id: true, name: true } } } }),
+    prisma.courseAcademicGroupAssignment.findMany({ where: { courseId: req.params.id }, include: { academicGroup: { select: { id: true, batch: true, section: true, institute: { select: { name: true } }, department: { select: { name: true } } } } } }),
+  ]);
+  res.json({
+    institutes: instituteRows.map((r) => r.institute),
+    academicGroups: groupRows.map((r) => r.academicGroup),
+  });
+});
+
+router.post("/courses/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { instituteIds = [], academicGroupIds = [] } = req.body;
+    const course = await assertPublishedAndScoped(req, res, req.params.id);
+    if (!course) return;
+    if (!(await assertAssignmentScope(req, res, instituteIds, academicGroupIds))) return;
+
+    await prisma.$transaction([
+      ...(instituteIds.length ? [prisma.courseInstituteAssignment.createMany({
+        data: instituteIds.map((instituteId) => ({ courseId: course.id, instituteId, assignedByUserId: req.user.id, assignedByName: req.user.name })),
+        skipDuplicates: true,
+      })] : []),
+      ...(academicGroupIds.length ? [prisma.courseAcademicGroupAssignment.createMany({
+        data: academicGroupIds.map((academicGroupId) => ({ courseId: course.id, academicGroupId, assignedByUserId: req.user.id, assignedByName: req.user.name })),
+        skipDuplicates: true,
+      })] : []),
+    ]);
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "course_assignment", operation: "assign", courseId: course.id, courseName: course.name, instituteIds, academicGroupIds },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to assign course" });
+  }
+});
+
+router.delete("/courses/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { instituteIds = [], academicGroupIds = [] } = req.body;
+    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    if (!(await assertAssignmentScope(req, res, instituteIds, academicGroupIds))) return;
+
+    await prisma.$transaction([
+      prisma.courseInstituteAssignment.deleteMany({ where: { courseId: course.id, instituteId: { in: instituteIds } } }),
+      prisma.courseAcademicGroupAssignment.deleteMany({ where: { courseId: course.id, academicGroupId: { in: academicGroupIds } } }),
+    ]);
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "course_assignment", operation: "unassign", courseId: course.id, courseName: course.name, instituteIds, academicGroupIds },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to unassign course" });
+  }
+});
+
+// Cross-course bulk assign: many courses x many institutes/groups in one call.
+router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { courseIds = [], instituteIds = [], academicGroupIds = [] } = req.body;
+    if (!(await assertAssignmentScope(req, res, instituteIds, academicGroupIds))) return;
+
+    const courses = await prisma.course.findMany({ where: { id: { in: courseIds } } });
+    const nonPublished = courses.filter((c) => c.status !== "PUBLISHED");
+    if (nonPublished.length) {
+      return res.status(400).json({ error: `Only Published courses can be assigned: ${nonPublished.map((c) => c.name).join(", ")}` });
+    }
+
+    const instituteRows = courseIds.flatMap((courseId) => instituteIds.map((instituteId) => ({ courseId, instituteId, assignedByUserId: req.user.id, assignedByName: req.user.name })));
+    const groupRows = courseIds.flatMap((courseId) => academicGroupIds.map((academicGroupId) => ({ courseId, academicGroupId, assignedByUserId: req.user.id, assignedByName: req.user.name })));
+    await prisma.$transaction([
+      ...(instituteRows.length ? [prisma.courseInstituteAssignment.createMany({ data: instituteRows, skipDuplicates: true })] : []),
+      ...(groupRows.length ? [prisma.courseAcademicGroupAssignment.createMany({ data: groupRows, skipDuplicates: true })] : []),
+    ]);
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "course_assignment", operation: "bulk_assign", courseIds, instituteIds, academicGroupIds },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to bulk-assign courses" });
   }
 });
 
