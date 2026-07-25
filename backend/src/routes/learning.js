@@ -10,6 +10,7 @@ const { issueCertificate } = require("../utils/certificates");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
 const { askClaude } = require("../utils/aiClient");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -636,13 +637,24 @@ router.get("/courses/:slug/certificate/download", authenticate, requireRole("STU
 });
 
 // =========================== Admin/Staff content management (CMS) ===========================
+// Course and Module create/edit/delete/activate/deactivate are ADMIN-only — Staff can still view
+// everything here (the GET routes above have no role restriction beyond `authenticate`) and can
+// still manage everything nested below a Module (Chapters, Lessons, Practice Questions, Coding
+// Assessments) — only the Course/Module records themselves are restricted. Every action here is
+// audit-logged via logAudit for the same reason every other admin-changeable record on this
+// platform is: so "who deleted this course, and when" is answerable later.
 
-router.post("/courses", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/courses", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const { slug, name, description, order, isActive } = req.body;
     if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
     const course = await prisma.course.create({
       data: { slug, name, description: description || null, order: Number(order) || 0, isActive: !!isActive },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "course", operation: "create", courseId: course.id, name: course.name, slug: course.slug },
     });
     res.json(course);
   } catch (err) {
@@ -651,7 +663,7 @@ router.post("/courses", authenticate, requireRole("ADMIN", "STAFF"), async (req,
   }
 });
 
-router.patch("/courses/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/courses/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const { name, description, order, isActive } = req.body;
     const course = await prisma.course.update({
@@ -663,6 +675,15 @@ router.patch("/courses/:id", authenticate, requireRole("ADMIN", "STAFF"), async 
         ...(isActive !== undefined ? { isActive: !!isActive } : {}),
       },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: {
+        entity: "course",
+        operation: isActive !== undefined ? (isActive ? "activate" : "deactivate") : "edit",
+        courseId: course.id, name: course.name, changedFields: Object.keys(req.body),
+      },
+    });
     res.json(course);
   } catch (err) {
     console.error(err);
@@ -672,7 +693,14 @@ router.patch("/courses/:id", authenticate, requireRole("ADMIN", "STAFF"), async 
 
 router.delete("/courses/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
     await prisma.course.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "course", operation: "delete", courseId: course.id, name: course.name },
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -680,12 +708,17 @@ router.delete("/courses/:id", authenticate, requireRole("ADMIN"), async (req, re
   }
 });
 
-router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/courses/:id/modules", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const { title, description, order } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const mod = await prisma.courseModule.create({
       data: { courseId: req.params.id, title, description: description || null, order: Number(order) || 0 },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "module", operation: "create", moduleId: mod.id, courseId: req.params.id, title: mod.title },
     });
     res.json(mod);
   } catch (err) {
@@ -694,7 +727,7 @@ router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "STAFF"),
   }
 });
 
-router.patch("/modules/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/modules/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const { title, description, order, isActive } = req.body;
     const mod = await prisma.courseModule.update({
@@ -706,6 +739,15 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN", "STAFF"), async 
         ...(isActive !== undefined ? { isActive: !!isActive } : {}),
       },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: {
+        entity: "module",
+        operation: isActive !== undefined ? (isActive ? "activate" : "deactivate") : "edit",
+        moduleId: mod.id, title: mod.title, changedFields: Object.keys(req.body),
+      },
+    });
     res.json(mod);
   } catch (err) {
     console.error(err);
@@ -713,9 +755,16 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN", "STAFF"), async 
   }
 });
 
-router.delete("/modules/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.delete("/modules/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const mod = await prisma.courseModule.findUnique({ where: { id: req.params.id } });
+    if (!mod) return res.status(404).json({ error: "Module not found" });
     await prisma.courseModule.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "module", operation: "delete", moduleId: mod.id, courseId: mod.courseId, title: mod.title },
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);

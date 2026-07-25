@@ -6,6 +6,9 @@ import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
+import { useAuth } from "../context/AuthContext";
+import { useConfirm } from "../context/ConfirmContext";
+import { useToast } from "../context/ToastContext";
 
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
@@ -90,7 +93,14 @@ export default function LearningManagement() {
   );
 }
 
+// Course create/edit/delete/activate-deactivate is ADMIN-only (enforced on the backend too —
+// these actions just aren't shown to Staff here). Staff can still browse and "Manage →" into a
+// course's modules/lessons/coding assessments, all of which stay ADMIN+STAFF.
 function CoursePanel({ courses, onSelect, onRefresh }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const confirmDialog = useConfirm();
+  const toast = useToast();
   const [form, setForm] = useState({ slug: "", name: "", description: "" });
   const [saving, setSaving] = useState(false);
 
@@ -100,31 +110,56 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
     try {
       await api.post("/learning/courses", form);
       setForm({ slug: "", name: "", description: "" });
+      toast.success("Course created successfully.");
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to create course");
+      toast.error(err.response?.data?.error || "Failed to create course");
     } finally {
       setSaving(false);
     }
   }
 
   async function toggleActive(c) {
-    await api.patch(`/learning/courses/${c.id}`, { isActive: !c.isActive });
-    onRefresh();
+    try {
+      await api.patch(`/learning/courses/${c.id}`, { isActive: !c.isActive });
+      toast.success(c.isActive ? "Course deactivated." : "Course activated.");
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update course");
+    }
+  }
+
+  async function remove(c) {
+    const ok = await confirmDialog({
+      title: "Delete course?",
+      message: "Are you sure you want to permanently delete this course? This action cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/learning/courses/${c.id}`);
+      toast.success("Course deleted successfully.");
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete course");
+    }
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 24, marginTop: 20, alignItems: "start" }}>
-      <form onSubmit={create} className="card" style={{ padding: 20 }}>
-        <h3 style={{ fontSize: 15 }}>Add course</h3>
-        <label style={labelStyle}>Slug (URL id, e.g. "python")</label>
-        <input style={inputStyle} required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
-        <label style={labelStyle}>Name</label>
-        <input style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <label style={labelStyle}>Description</label>
-        <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Creating…" : "Create course"}</button>
-      </form>
+    <div style={{ display: "grid", gridTemplateColumns: isAdmin ? "1fr 1.5fr" : "1fr", gap: 24, marginTop: 20, alignItems: "start" }}>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 20 }}>
+          <h3 style={{ fontSize: 15 }}>Add course</h3>
+          <label style={labelStyle}>Slug (URL id, e.g. "python")</label>
+          <input style={inputStyle} required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+          <label style={labelStyle}>Name</label>
+          <input style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <label style={labelStyle}>Description</label>
+          <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Creating…" : "Create course"}</button>
+        </form>
+      )}
 
       <div style={{ display: "grid", gap: 10 }}>
         {courses.map((c) => (
@@ -137,10 +172,15 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
               <span className="badge" style={{ background: c.isActive ? "#E7F3EB" : "#F0EEE3", color: c.isActive ? "var(--mint)" : "var(--ink-dim)" }}>
                 {c.isActive ? "Active" : "Coming soon"}
               </span>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>
-                {c.isActive ? "Deactivate" : "Activate"}
-              </button>
+              {isAdmin && (
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>
+                  {c.isActive ? "Deactivate" : "Activate"}
+                </button>
+              )}
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c.id)}>Manage →</button>
+              {isAdmin && (
+                <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
+              )}
             </div>
           </div>
         ))}
@@ -149,7 +189,14 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
   );
 }
 
+// Module create/edit (including reorder, which is a PATCH)/delete/activate-deactivate is
+// ADMIN-only, same as Course. "Manage →" (lessons), "Chapters", and "Coding Assessment" stay
+// ADMIN+STAFF — only the Module record itself (and Course, above) is restricted.
 function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapters, onRefresh }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const confirmDialog = useConfirm();
+  const toast = useToast();
   const [form, setForm] = useState({ title: "", description: "", order: modules.length });
   const [saving, setSaving] = useState(false);
 
@@ -159,38 +206,56 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
     try {
       await api.post(`/learning/courses/${course.id}/modules`, form);
       setForm({ title: "", description: "", order: modules.length + 1 });
+      toast.success("Module created successfully.");
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to create module");
+      toast.error(err.response?.data?.error || "Failed to create module");
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(m) {
-    if (!confirm(`Delete module "${m.title}" and all its lessons?`)) return;
-    await api.delete(`/learning/modules/${m.id}`);
-    onRefresh();
+    const ok = await confirmDialog({
+      title: "Delete module?",
+      message: `Are you sure you want to permanently delete "${m.title}" and all its lessons? This action cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/learning/modules/${m.id}`);
+      toast.success("Module deleted successfully.");
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete module");
+    }
   }
 
   async function reorder(m, delta) {
-    await api.patch(`/learning/modules/${m.id}`, { order: m.order + delta });
-    onRefresh();
+    try {
+      await api.patch(`/learning/modules/${m.id}`, { order: m.order + delta });
+      onRefresh();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to reorder module");
+    }
   }
 
   return (
     <div style={{ marginTop: 20 }}>
-      <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <div style={{ flex: "2 1 200px" }}>
-          <label style={labelStyle}>New module title</label>
-          <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </div>
-        <div style={{ flex: "3 1 260px" }}>
-          <label style={labelStyle}>Description</label>
-          <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        </div>
-        <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add module"}</button>
-      </form>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 200px" }}>
+            <label style={labelStyle}>New module title</label>
+            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div style={{ flex: "3 1 260px" }}>
+            <label style={labelStyle}>Description</label>
+            <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add module"}</button>
+        </form>
+      )}
 
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
         {modules.sort((a, b) => a.order - b.order).map((m, i) => (
@@ -200,12 +265,12 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
               <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{m.totalCount} lesson{m.totalCount === 1 ? "" : "s"}</div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, -1)}>↑</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, 1)}>↓</button>
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, -1)}>↑</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, 1)}>↓</button>}
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(m.id)}>Manage →</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageChapters(m.id)}>Chapters</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageCoding(m.id)}>Coding Assessment</button>
-              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(m)}>Delete</button>
+              {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(m)}>Delete</button>}
             </div>
           </div>
         ))}
