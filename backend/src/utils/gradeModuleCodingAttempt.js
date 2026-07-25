@@ -2,6 +2,7 @@ const prisma = require("../prisma");
 const { judgeSubmission } = require("./judge");
 const { runQueued } = require("./queue");
 const { issueCertificate } = require("./certificates");
+const { getCertificateGatingTestIds } = require("./gatingLevels");
 
 // Grades one ModuleCodingSubmission row against its question's hidden test cases (falling back to
 // the full case set for a legacy question predating the admin CMS's >=2-hidden-cases requirement)
@@ -38,7 +39,12 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
   const attempt = await prisma.moduleCodingAttempt.findUnique({
     where: { id: attemptId },
     include: {
-      moduleCodingTest: { include: { module: { include: { course: true } } } },
+      moduleCodingTest: {
+        include: {
+          module: { include: { course: true } },
+          chapter: { include: { module: { include: { course: true } } } },
+        },
+      },
       questions: { include: { question: { include: { testCases: true } } } },
       submissions: true,
       student: { include: { institute: true } },
@@ -95,23 +101,21 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
     },
   });
 
-  // Auto-issue ONE CODING_ASSESSMENT certificate per student per COURSE, once every module in the
-  // course that has an active coding test has been passed — not one certificate per module (that
-  // used to flood a student with a separate certificate for every module they passed; a student
-  // finishing all of "Java"'s coding assessments should get a single course-wide certificate, the
-  // same way LEARNING_MODULE certificates already work for lesson completion). Idempotency is the
+  // Auto-issue ONE CODING_ASSESSMENT certificate per student per COURSE, once every certificate-
+  // gating test/Level in the course has been passed (see gatingLevels.js: every legacy Module-
+  // direct test, plus every Level in a Chapter marked countsTowardCertificate) — not one
+  // certificate per module (that used to flood a student with a separate certificate for every
+  // module they passed; a student finishing all of "Java"'s coding assessments should get a
+  // single course-wide certificate, the same way LEARNING_MODULE certificates already work for
+  // lesson completion). Idempotency is the
   // studentId+courseId+type DB unique constraint (see schema.prisma's Certificate model) — a
   // second issueCertificate() call for the same course is a no-op via the findUnique check below,
   // and a pass is permanent per this platform's "no downgrade on retake" convention, so this only
   // ever needs to fire once.
   if (passed) {
-    const course = attempt.moduleCodingTest.module?.course;
+    const course = attempt.moduleCodingTest.chapter?.module?.course ?? attempt.moduleCodingTest.module?.course;
     if (course) {
-      const gatedModules = await prisma.courseModule.findMany({
-        where: { courseId: course.id, codingTest: { isActive: true } },
-        select: { codingTest: { select: { id: true } } },
-      });
-      const testIds = gatedModules.map((m) => m.codingTest.id);
+      const testIds = await getCertificateGatingTestIds(prisma, course.id);
       const passedTestIds = new Set(
         (
           await prisma.moduleCodingAttempt.findMany({

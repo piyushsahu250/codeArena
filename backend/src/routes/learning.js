@@ -696,13 +696,14 @@ router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "STAFF"),
 
 router.patch("/modules/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
-    const { title, description, order } = req.body;
+    const { title, description, order, isActive } = req.body;
     const mod = await prisma.courseModule.update({
       where: { id: req.params.id },
       data: {
         ...(title !== undefined ? { title } : {}),
         ...(description !== undefined ? { description } : {}),
         ...(order !== undefined ? { order: Number(order) } : {}),
+        ...(isActive !== undefined ? { isActive: !!isActive } : {}),
       },
     });
     res.json(mod);
@@ -722,16 +723,85 @@ router.delete("/modules/:id", authenticate, requireRole("ADMIN", "STAFF"), async
   }
 });
 
+// =========================== Chapters (admin CRUD) ===========================
+// A Chapter groups a Module's "Learn" topics (Lessons) with the Coding Assessment Level(s)
+// that gate progress past it. Every pre-Chapter module gets backfilled with one "General"
+// chapter (see scripts/backfillChapters.js) so this is purely additive on top of existing data.
+
+router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const chapters = await prisma.chapter.findMany({
+      where: { moduleId: req.params.id },
+      orderBy: { order: "asc" },
+      include: { _count: { select: { topics: true, levels: true } } },
+    });
+    res.json(chapters);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load chapters" });
+  }
+});
+
+router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const { title, description, order, isActive, countsTowardCertificate } = req.body;
+    if (!title) return res.status(400).json({ error: "title is required" });
+    const chapter = await prisma.chapter.create({
+      data: {
+        moduleId: req.params.id, title, description: description || null,
+        order: Number(order) || 0,
+        isActive: isActive === undefined ? true : !!isActive,
+        countsTowardCertificate: countsTowardCertificate === undefined ? true : !!countsTowardCertificate,
+      },
+    });
+    res.json(chapter);
+  } catch (err) {
+    console.error(err);
+    res.status(err.code === "P2002" ? 409 : 500).json({ error: err.code === "P2002" ? "A chapter with this title already exists in this module" : "Failed to create chapter" });
+  }
+});
+
+router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const { title, description, order, isActive, countsTowardCertificate } = req.body;
+    const chapter = await prisma.chapter.update({
+      where: { id: req.params.id },
+      data: {
+        ...(title !== undefined ? { title } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(order !== undefined ? { order: Number(order) } : {}),
+        ...(isActive !== undefined ? { isActive: !!isActive } : {}),
+        ...(countsTowardCertificate !== undefined ? { countsTowardCertificate: !!countsTowardCertificate } : {}),
+      },
+    });
+    res.json(chapter);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update chapter" });
+  }
+});
+
+router.delete("/chapters/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    await prisma.chapter.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete chapter" });
+  }
+});
+
 router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
-    const { title, content, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest } = req.body;
+    const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const lesson = await prisma.lesson.create({
       data: {
         moduleId: req.params.id, title,
-        content: content || null, videoUrl: videoUrl || null, pdfUrl: pdfUrl || null,
+        content: content || null, blocks: blocks || undefined, videoUrl: videoUrl || null, pdfUrl: pdfUrl || null,
         externalLinks: externalLinks || undefined, order: Number(order) || 0,
         estimatedMinutes: Number(estimatedMinutes) || 10, isModuleTest: !!isModuleTest,
+        isActive: isActive === undefined ? true : !!isActive,
       },
     });
     res.json(lesson);
@@ -741,20 +811,49 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"),
   }
 });
 
+// Chapter-scoped Learning Topic creation — a Learning Topic IS a Lesson row, just with
+// chapterId set. moduleId is denormalized from the chapter's own module so every existing
+// moduleId-keyed query (isModuleNowComplete, LessonProgress counting, etc.) keeps working
+// unchanged for chapter-scoped topics too.
+router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
+    if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive } = req.body;
+    if (!title) return res.status(400).json({ error: "title is required" });
+    const lesson = await prisma.lesson.create({
+      data: {
+        moduleId: chapter.moduleId, chapterId: chapter.id, title,
+        content: content || null, blocks: blocks || undefined, videoUrl: videoUrl || null, pdfUrl: pdfUrl || null,
+        externalLinks: externalLinks || undefined, order: Number(order) || 0,
+        estimatedMinutes: Number(estimatedMinutes) || 10, isModuleTest: !!isModuleTest,
+        isActive: isActive === undefined ? true : !!isActive,
+      },
+    });
+    res.json(lesson);
+  } catch (err) {
+    console.error(err);
+    res.status(err.code === "P2002" ? 409 : 500).json({ error: err.code === "P2002" ? "A topic with this title already exists in this module" : "Failed to create topic" });
+  }
+});
+
 router.patch("/lessons/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
-    const { title, content, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest } = req.body;
+    const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive, chapterId } = req.body;
     const lesson = await prisma.lesson.update({
       where: { id: req.params.id },
       data: {
         ...(title !== undefined ? { title } : {}),
         ...(content !== undefined ? { content } : {}),
+        ...(blocks !== undefined ? { blocks } : {}),
         ...(videoUrl !== undefined ? { videoUrl } : {}),
         ...(pdfUrl !== undefined ? { pdfUrl } : {}),
         ...(externalLinks !== undefined ? { externalLinks } : {}),
         ...(order !== undefined ? { order: Number(order) } : {}),
         ...(estimatedMinutes !== undefined ? { estimatedMinutes: Number(estimatedMinutes) } : {}),
         ...(isModuleTest !== undefined ? { isModuleTest: !!isModuleTest } : {}),
+        ...(isActive !== undefined ? { isActive: !!isActive } : {}),
+        ...(chapterId !== undefined ? { chapterId: chapterId || null } : {}),
       },
     });
     res.json(lesson);

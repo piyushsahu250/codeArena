@@ -2,16 +2,23 @@
 // "module unlocked" notification) — kept in one place so the two never drift out of sync.
 
 // Sequential module locking: module N is locked unless every lesson in module N-1 is COMPLETED
-// AND (if module N-1 has an active proctored coding test configured) the student has a PASSED
-// ModuleCodingAttempt for it. A module with no coding test configured, or one marked inactive,
-// is ungated by this second condition entirely — it behaves exactly as it always has, so
-// existing modules that predate this feature keep working unchanged. Once one module is locked,
-// everything after it stays locked, regardless of that module's own state.
+// AND every one of module N-1's active coding gates is PASSED. A "gate" is either the legacy
+// Module-direct codingTest, or (new) any active Coding Assessment Level belonging to one of the
+// module's Chapters — a module with several Chapters each with several Levels requires ALL of
+// them passed, not just one. A module with no gates at all is ungated by this condition entirely
+// — it behaves exactly as it always has, so existing modules that predate this feature keep
+// working unchanged. Learning Topics (a Chapter's "Learn" content) are never part of this gate,
+// only Levels. Once one module is locked, everything after it stays locked, regardless of that
+// module's own state.
 async function getModuleLockMap(prisma, studentId, courseId) {
   const modules = await prisma.courseModule.findMany({
     where: { courseId },
     orderBy: { order: "asc" },
-    include: { lessons: { select: { id: true } }, codingTest: true },
+    include: {
+      lessons: { select: { id: true } },
+      codingTest: true,
+      chapters: { include: { levels: true } },
+    },
   });
   const allLessonIds = modules.flatMap((m) => m.lessons.map((l) => l.id));
   const progress = allLessonIds.length
@@ -22,12 +29,16 @@ async function getModuleLockMap(prisma, studentId, courseId) {
     : [];
   const completedSet = new Set(progress.map((p) => p.lessonId));
 
-  const gatedTestIds = modules.filter((m) => m.codingTest?.isActive).map((m) => m.codingTest.id);
-  const passedTestIds = gatedTestIds.length
+  function gatingTestIds(m) {
+    const ids = m.codingTest?.isActive ? [m.codingTest.id] : [];
+    return ids.concat(m.chapters.flatMap((c) => c.levels.filter((l) => l.isActive).map((l) => l.id)));
+  }
+  const allGatingTestIds = modules.flatMap(gatingTestIds);
+  const passedTestIds = allGatingTestIds.length
     ? new Set(
         (
           await prisma.moduleCodingAttempt.findMany({
-            where: { moduleCodingTestId: { in: gatedTestIds }, studentId, passed: true },
+            where: { moduleCodingTestId: { in: allGatingTestIds }, studentId, passed: true },
             select: { moduleCodingTestId: true },
           })
         ).map((a) => a.moduleCodingTestId)
@@ -39,8 +50,9 @@ async function getModuleLockMap(prisma, studentId, courseId) {
   for (const m of modules) {
     const locked = !prevSatisfied;
     const lessonsComplete = m.lessons.length > 0 && m.lessons.every((l) => completedSet.has(l.id));
-    const codingRequired = !!m.codingTest?.isActive;
-    const codingPassed = codingRequired ? passedTestIds.has(m.codingTest.id) : true;
+    const testIds = gatingTestIds(m);
+    const codingRequired = testIds.length > 0;
+    const codingPassed = codingRequired ? testIds.every((id) => passedTestIds.has(id)) : true;
     const moduleSatisfied = !locked && lessonsComplete && codingPassed;
     map.set(m.id, {
       locked,

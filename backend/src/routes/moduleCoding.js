@@ -476,11 +476,58 @@ router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF
   }
 });
 
+// Chapter-scoped Level creation — a "Level" IS a ModuleCodingTest row with chapterId set and
+// moduleId left null. A Chapter can have many Levels (unlike a legacy Module-direct test,
+// which is capped at one by ModuleCodingTest.moduleId's @unique constraint). Every downstream
+// route (question CRUD, bulk-import, attempts, export) already operates purely on test.id, so
+// none of them need any change to support this.
+router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  const levels = await prisma.moduleCodingTest.findMany({
+    where: { chapterId: req.params.chapterId },
+    orderBy: { order: "asc" },
+    include: { _count: { select: { questions: true, attempts: true } } },
+  });
+  res.json(levels);
+});
+
+router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const { title, instructions, order, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
+    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.chapterId } });
+    if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    const level = await prisma.moduleCodingTest.create({
+      data: {
+        chapterId: chapter.id,
+        order: Number(order) || 0,
+        title: title || "Coding Assessment Level",
+        instructions: instructions || null,
+        allowedLanguages: allowedLanguages ?? undefined,
+        questionCount: Number(questionCount) || 3,
+        randomizeQuestions: randomizeQuestions !== undefined ? !!randomizeQuestions : true,
+        passingPercent: Number(passingPercent) || 70,
+        timeLimitMin: Number(timeLimitMin) || 45,
+        maxAttempts: maxAttempts === "" || maxAttempts == null ? null : Number(maxAttempts),
+        cooldownMinutes: Number(cooldownMinutes) || 0,
+        maxViolations: Number(maxViolations) || 3,
+        requireFullscreen: requireFullscreen !== undefined ? !!requireFullscreen : true,
+        requireWebcam: !!requireWebcam,
+        requireMicrophone: !!requireMicrophone,
+        allowResume: allowResume !== undefined ? !!allowResume : true,
+      },
+    });
+    res.json(level);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create coding assessment level" });
+  }
+});
+
 router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
     const f = req.body;
     const data = {};
     for (const key of ["title", "instructions"]) if (f[key] !== undefined) data[key] = f[key];
+    if (f.order !== undefined) data.order = Number(f.order);
     if (f.allowedLanguages !== undefined) data.allowedLanguages = f.allowedLanguages;
     if (f.questionCount !== undefined) data.questionCount = Number(f.questionCount);
     if (f.randomizeQuestions !== undefined) data.randomizeQuestions = !!f.randomizeQuestions;
