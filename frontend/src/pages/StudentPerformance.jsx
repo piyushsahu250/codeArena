@@ -33,6 +33,7 @@ export default function StudentPerformance({ basePath }) {
   const [error, setError] = useState("");
   const [resetting, setResetting] = useState(false);
   const [downloading, setDownloading] = useState(null);
+  const [downloadingProfile, setDownloadingProfile] = useState(false);
   const [reattempting, setReattempting] = useState(null);
   const [showEdit, setShowEdit] = useState(false);
   const [sentCredential, setSentCredential] = useState(null); // { password, emailSent }
@@ -150,6 +151,25 @@ export default function StudentPerformance({ basePath }) {
     }
   }
 
+  async function downloadProfilePdf() {
+    setDownloadingProfile(true);
+    try {
+      const { data } = await api.get(`/profile/${studentId}/report.pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${perf.student.rollNumber || studentId}-profile.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download profile PDF");
+    } finally {
+      setDownloadingProfile(false);
+    }
+  }
+
   async function viewReport() {
     try {
       const { data } = await api.get(`/users/${studentId}/performance/report.pdf`, { responseType: "blob" });
@@ -251,6 +271,11 @@ export default function StudentPerformance({ basePath }) {
               {downloading === "xlsx" ? "Preparing…" : "Download Excel"}
             </button>
             {isManager && (
+              <button className="btn btn-ghost" onClick={downloadProfilePdf} disabled={downloadingProfile}>
+                {downloadingProfile ? "Preparing…" : "Download Profile PDF"}
+              </button>
+            )}
+            {isManager && (
               <button className="btn btn-ghost" onClick={resetPassword} disabled={resetting} title="Generates a new unique password and emails it to the student">
                 {resetting ? "Sending…" : "Send Credentials"}
               </button>
@@ -307,6 +332,60 @@ export default function StudentPerformance({ basePath }) {
           <Field label="Mobile" value={student.mobile} mono />
           <Field label="Status" value={student.isActive === false ? "Inactive" : "Active"} />
         </div>
+
+        {/* Profile */}
+        {isManager && placementProfile && (
+          <div className="card" style={{ padding: 20, marginTop: 20 }}>
+            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Profile</h3>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+              {placementProfile.user?.profilePhotoUrl ? (
+                <img src={placementProfile.user.profilePhotoUrl} alt="Profile" style={{ width: 84, height: 84, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 84, height: 84, borderRadius: "50%", background: "var(--surface-2, #eee)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "var(--ink-dim)" }}>
+                  No photo
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 260, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+                <Field label="Gender" value={placementProfile.user?.gender} />
+                <Field label="Personal Email" value={placementProfile.profile?.personalEmail} mono />
+                <Field label="Date of Birth" value={placementProfile.profile?.dob ? new Date(placementProfile.profile.dob).toLocaleDateString() : null} />
+                <Field label="Address" value={placementProfile.profile?.address} />
+                <Field label="State" value={placementProfile.profile?.state} />
+                <Field label="District" value={placementProfile.profile?.district} />
+                <Field label="Pincode" value={placementProfile.profile?.pincode} />
+                <Field label="Father's Name" value={placementProfile.profile?.fatherName} />
+                <Field label="Father's Contact" value={placementProfile.profile?.fatherContact} mono />
+                <Field label="Mother's Name" value={placementProfile.profile?.motherName} />
+                <Field label="Mother's Contact" value={placementProfile.profile?.motherContact} mono />
+                <Field label="LeetCode" value={placementProfile.profile?.leetcodeHandle} />
+                <Field label="HackerRank" value={placementProfile.profile?.hackerrankHandle} />
+                <Field label="StopStalk" value={placementProfile.profile?.stopstalkHandle} />
+                <Field label="AMCAT ID" value={placementProfile.profile?.amcatId} />
+                <Field label="CoCubes ID" value={placementProfile.profile?.cocubesId} />
+              </div>
+            </div>
+
+            {placementProfile.profile?.shortDescription && (
+              <p style={{ fontSize: 13, marginTop: 14, color: "var(--ink-dim)" }}>{placementProfile.profile.shortDescription}</p>
+            )}
+
+            <h4 style={{ fontSize: 14, marginTop: 18, marginBottom: 8 }}>Career History &amp; Education</h4>
+            {!placementProfile.education || placementProfile.education.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No education records added yet.</p>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {placementProfile.education.map((e, i) => (
+                  <div key={i} className="card" style={{ padding: 12 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{e.degree}{e.specialization ? ` (${e.specialization})` : ""}</div>
+                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                      {e.institution || "—"} · {e.board || "—"} · {e.startYear || "—"}–{e.endYear || "—"} · Score: {e.score || "—"} · {e.status || "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Placement */}
         {isManager && (placementProfile || placementOffers) && (

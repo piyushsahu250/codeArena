@@ -4,6 +4,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion, MOBILE_RE } = require("../utils/studentProfileCompletion");
+const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
 
 const router = express.Router();
 
@@ -150,11 +151,37 @@ router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), 
       },
       profile: studentProfile,
       hasResume: !!(resume?.fullName && resume?.email),
+      education: Array.isArray(resume?.education) ? resume.education : [],
       completion,
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load student profile" });
+  }
+});
+
+// ADMIN/STAFF/CLERK: downloadable PDF of the same profile data above, for offline record-keeping
+// (e.g. Placement Cell staff printing a student's academic-record sheet).
+router.get("/:studentId/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const student = await prisma.user.findUnique({ where: { id: req.params.studentId } });
+    if (!student || student.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
+    if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const { user, studentProfile, resume } = await loadCompletionInputs(req.params.studentId);
+    const instituteRecord = student.instituteId ? await prisma.institute.findUnique({ where: { id: student.instituteId } }) : null;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${(user.rollNumber || user.id)}-profile.pdf"`);
+    generateStudentProfilePdf({
+      user, studentProfile, instituteName: instituteRecord?.name,
+      education: Array.isArray(resume?.education) ? resume.education : [],
+    }, res);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate profile PDF" });
   }
 });
 
