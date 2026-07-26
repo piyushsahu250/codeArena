@@ -14,9 +14,20 @@ import { useToast } from "../context/ToastContext";
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
 
-// Admin/Staff content management for the Learning Module: drill down Course -> Module -> Lesson
-// -> Practice Questions, all in one page since each level is a thin CRUD list.
+// Learning Management is Admin-only content management (Course -> Module -> Lesson -> Practice
+// Questions, Coding Assessment config/questions). Staff's only permission anywhere in this module
+// is resetting a student's coding-assessment attempts (own institute only) — they get a
+// completely separate, minimal screen rather than a read-only view of the Admin tree, matching
+// the backend RBAC lockdown (every other LMS route in learning.js/moduleCoding.js is ADMIN-only).
 export default function LearningManagement() {
+  const { user } = useAuth();
+  if (user?.role !== "ADMIN") return <StaffCodingAttemptsScreen />;
+  return <AdminLearningManagement />;
+}
+
+// Admin content management for the Learning Module: drill down Course -> Module -> Lesson ->
+// Practice Questions, all in one page since each level is a thin CRUD list.
+function AdminLearningManagement() {
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
   const [moduleId, setModuleId] = useState(null);
@@ -94,6 +105,70 @@ export default function LearningManagement() {
   );
 }
 
+// Staff's entire Learning Management surface: search for a coding assessment (title/course/module
+// label only — no config, no questions, via the flat GET /module-coding/admin/tests listing),
+// then reuse the exact same CodingAttemptsPanel the Admin CMS embeds — it's already institute-
+// scoped and already has search/reset built in, so nothing about the reset workflow is duplicated.
+function StaffCodingAttemptsScreen() {
+  const [tests, setTests] = useState([]);
+  const [testId, setTestId] = useState(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    api.get("/module-coding/admin/tests").then((res) => setTests(res.data));
+  }, []);
+
+  const filtered = tests.filter((t) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [t.title, t.courseName, t.moduleTitle, t.chapterTitle].filter(Boolean).some((s) => s.toLowerCase().includes(q));
+  });
+  const selected = tests.find((t) => t.id === testId);
+
+  return (
+    <div>
+      <Navbar />
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
+        <h1>Coding Assessment — Reset Attempts</h1>
+        <ChalkUnderline />
+        <p style={{ color: "var(--ink-dim)", marginTop: 12, fontSize: 14 }}>
+          Search for a coding assessment to view and reset attempts for students in your institute.
+        </p>
+
+        {!selected ? (
+          <div className="card" style={{ padding: 20, marginTop: 24 }}>
+            <label style={labelStyle}>Search assessment (title, course, or module)</label>
+            <input style={inputStyle} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Java Module 1 Coding Assessment" autoFocus />
+            <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
+              {filtered.map((t) => (
+                <div
+                  key={t.id} className="card"
+                  style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+                  onClick={() => setTestId(t.id)}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{t.title}</div>
+                    <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 2 }}>
+                      {t.courseName}{t.moduleTitle && ` · ${t.moduleTitle}`}{t.chapterTitle && ` · ${t.chapterTitle}`}
+                    </div>
+                  </div>
+                  <span className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>View →</span>
+                </div>
+              ))}
+              {filtered.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No assessments found.</p>}
+            </div>
+          </div>
+        ) : (
+          <>
+            <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => setTestId(null)}>← Back to assessment search</button>
+            <CodingAttemptsPanel testId={selected.id} testTitle={selected.title} maxAttempts={selected.maxAttempts} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const COURSE_STATUS_OPTIONS = ["DRAFT", "UNDER_REVIEW", "PUBLISHED", "ARCHIVED", "INACTIVE"];
 const COURSE_STATUS_LABELS = { DRAFT: "Draft", UNDER_REVIEW: "Under Review", PUBLISHED: "Published", ARCHIVED: "Archived", INACTIVE: "Inactive" };
 const COURSE_STATUS_COLORS = {
@@ -109,9 +184,9 @@ const EMPTY_COURSE_FORM = {
   instructorName: "", skillsCovered: "", estimatedDurationMin: "", difficulty: "", prerequisiteCourseIds: [],
 };
 
-// Course create/edit/delete/status-lifecycle is ADMIN-only (enforced on the backend too — these
-// actions just aren't shown to Staff here). Staff can still browse and "Manage →" into a
-// course's modules/lessons/coding assessments, all of which stay ADMIN+STAFF.
+// This whole Admin content-management tree (courses/modules/chapters/lessons/coding assessments)
+// is only ever rendered for ADMIN — see LearningManagement()'s role branch at the top of this
+// file. The isAdmin check below is redundant defense-in-depth, not a Staff-visibility gate.
 function CoursePanel({ courses, onSelect, onRefresh }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
@@ -336,9 +411,9 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
   );
 }
 
-// Module create/edit (including reorder, which is a PATCH)/delete/activate-deactivate is
-// ADMIN-only, same as Course. "Manage →" (lessons), "Chapters", and "Coding Assessment" stay
-// ADMIN+STAFF — only the Module record itself (and Course, above) is restricted.
+// This panel (like the rest of the Admin content-management tree) only ever renders for ADMIN —
+// see LearningManagement()'s role branch. Module create/edit/delete is gated by isAdmin below
+// purely as defense-in-depth, matching the ADMIN-only backend routes.
 function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapters, onRefresh }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
@@ -1111,6 +1186,8 @@ const ATTEMPT_STATUS_COLORS = {
 // reason. Reused for both the legacy module-direct test panel and chapter-scoped Level panel —
 // both already fetch `test` with `title`/`maxAttempts` in scope.
 function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const confirmDialog = useConfirm();
   const toast = useToast();
   const [attempts, setAttempts] = useState(null);
@@ -1208,7 +1285,9 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
           <h3 style={{ fontSize: 15 }}>Student attempts</h3>
           {testTitle && <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>Assessment: {testTitle} · Max attempts: {maxAttempts ?? "Unlimited"}</div>}
         </div>
-        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={exportCsv}>⬇ Export CSV</button>
+        {isAdmin && (
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={exportCsv}>⬇ Export CSV</button>
+        )}
       </div>
 
       <input style={{ ...inputStyle, marginTop: 12 }} placeholder="Search by name, roll number, or email…" value={search} onChange={(e) => setSearch(e.target.value)} />

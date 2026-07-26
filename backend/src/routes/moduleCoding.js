@@ -438,10 +438,14 @@ router.post("/attempts/:attemptId/finalize", authenticate, requireRole("STUDENT"
   }
 });
 
-// =========================== Admin/Staff CMS ===========================
+// =========================== Admin CMS ===========================
+// Staff has exactly one permission in this router: view + reset student attempts (own institute
+// only, see the "ADMIN/STAFF (own institute only)" section below). Every assessment-settings /
+// question-pool route in this section is ADMIN-only — Staff must not be able to open assessment
+// config or view coding questions, not even read-only.
 
-// ADMIN/STAFF: this module's coding-test config (or null) + its full question pool.
-router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+// ADMIN: this module's coding-test config (or null) + its full question pool.
+router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { moduleId: req.params.moduleId },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
@@ -451,13 +455,33 @@ router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"
 
 // Generic single-test lookup by its own id — used by the Level detail UI, since a chapter-scoped
 // Level has no moduleId to look it up by (unlike the legacy route above).
-router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { id: req.params.id },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
   });
   if (!test) return res.status(404).json({ error: "Not found" });
   res.json(test);
+});
+
+// ADMIN/STAFF: flat list of every coding assessment (title + course/module/chapter label only —
+// no config, no questions) so Staff can search for one to reset attempts on without any course-
+// structure browsing access. This is the only "list assessments" surface Staff gets.
+router.get("/admin/tests", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  const tests = await prisma.moduleCodingTest.findMany({
+    select: {
+      id: true, title: true, maxAttempts: true, isActive: true,
+      module: { select: { title: true, course: { select: { name: true } } } },
+      chapter: { select: { title: true, module: { select: { title: true, course: { select: { name: true } } } } } },
+    },
+    orderBy: { title: "asc" },
+  });
+  res.json(tests.map((t) => ({
+    id: t.id, title: t.title, maxAttempts: t.maxAttempts, isActive: t.isActive,
+    courseName: t.module?.course?.name || t.chapter?.module?.course?.name || "",
+    moduleTitle: t.module?.title || t.chapter?.module?.title || "",
+    chapterTitle: t.chapter?.title || null,
+  })));
 });
 
 router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async (req, res) => {
@@ -496,7 +520,7 @@ router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async
 // which is capped at one by ModuleCodingTest.moduleId's @unique constraint). Every downstream
 // route (question CRUD, bulk-import, attempts, export) already operates purely on test.id, so
 // none of them need any change to support this.
-router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"), async (req, res) => {
   const levels = await prisma.moduleCodingTest.findMany({
     where: { chapterId: req.params.chapterId },
     orderBy: { order: "asc" },
@@ -987,8 +1011,11 @@ router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, req
   }
 });
 
-// ADMIN/STAFF: export all attempts on this test as a CSV (own institute only for Staff).
-router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+// ADMIN only: export all attempts on this test as a CSV — Staff's only permission in this
+// router is view + reset attempts, export is explicitly excluded from that grant.
+// attachRequesterInstitute still applies here: an institute-scoped ADMIN (as opposed to the
+// unscoped Platform Admin) must still only export their own institute's data.
+router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const attempts = await prisma.moduleCodingAttempt.findMany({
       where: {
