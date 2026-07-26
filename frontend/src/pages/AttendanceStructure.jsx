@@ -19,11 +19,27 @@ export default function AttendanceStructure() {
   const [staff, setStaff] = useState([]);
   const [error, setError] = useState("");
 
+  // The logged-in admin's own client-side user object never carries an instituteId (a
+  // platform-level Super Admin has none), and every /attendance/admin/* route requires one to
+  // scope its query. Rather than guessing whether this particular admin is institute-scoped,
+  // always show the picker — same pattern StudentSearch.jsx already uses for ADMIN — and
+  // auto-select when there's only one institute so the common case needs no extra click.
+  const [institutes, setInstitutes] = useState([]);
+  const [instituteId, setInstituteId] = useState("");
+
+  useEffect(() => {
+    api.get("/institutes").then((res) => {
+      setInstitutes(res.data);
+      if (res.data.length === 1) setInstituteId(res.data[0].id);
+    }).catch(() => setInstitutes([]));
+  }, []);
+
   function loadAll() {
-    api.get("/attendance/admin/departments").then((res) => setDepartments(res.data));
-    api.get("/attendance/admin/staff").then((res) => setStaff(res.data));
+    if (!instituteId) return;
+    api.get("/attendance/admin/departments", { params: { instituteId } }).then((res) => setDepartments(res.data));
+    api.get("/attendance/admin/staff", { params: { instituteId } }).then((res) => setStaff(res.data));
   }
-  useEffect(loadAll, []);
+  useEffect(loadAll, [instituteId]);
 
   return (
     <div>
@@ -42,27 +58,43 @@ export default function AttendanceStructure() {
           attendance only for what they're given access to.
         </p>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 24, borderBottom: "1px solid var(--line)" }}>
-          {TABS.map((t, i) => (
-            <button
-              key={t}
-              className="btn btn-ghost"
-              style={{ borderRadius: "8px 8px 0 0", borderBottom: tab === i ? "2px solid var(--ink)" : "2px solid transparent", fontWeight: tab === i ? 700 : 400 }}
-              onClick={() => setTab(i)}
-            >
-              {t}
-            </button>
-          ))}
+        <div className="card" style={{ padding: 16, marginTop: 20, maxWidth: 420 }}>
+          <label style={labelStyle}>Institute</label>
+          <select style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
+            <option value="">Select institute…</option>
+            {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </select>
         </div>
-        {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
 
-        {tab === 0 && (
-          <DepartmentsTab departments={departments} onChange={loadAll} setError={setError} />
+        {!instituteId ? (
+          <p style={{ color: "var(--ink-dim)", fontSize: 14, marginTop: 20 }}>
+            Select an institute above to manage its departments, staff assignments, and attendance rules.
+          </p>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 8, marginTop: 24, borderBottom: "1px solid var(--line)" }}>
+              {TABS.map((t, i) => (
+                <button
+                  key={t}
+                  className="btn btn-ghost"
+                  style={{ borderRadius: "8px 8px 0 0", borderBottom: tab === i ? "2px solid var(--ink)" : "2px solid transparent", fontWeight: tab === i ? 700 : 400 }}
+                  onClick={() => setTab(i)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
+
+            {tab === 0 && (
+              <DepartmentsTab departments={departments} instituteId={instituteId} onChange={loadAll} setError={setError} />
+            )}
+            {tab === 1 && (
+              <GroupAssignmentTab staff={staff} instituteId={instituteId} setError={setError} />
+            )}
+            {tab === 2 && <AttendanceRulesTab instituteId={instituteId} setError={setError} />}
+          </>
         )}
-        {tab === 1 && (
-          <GroupAssignmentTab staff={staff} setError={setError} />
-        )}
-        {tab === 2 && <AttendanceRulesTab setError={setError} />}
       </div>
     </div>
   );
@@ -71,26 +103,27 @@ export default function AttendanceStructure() {
 // Display-only warning threshold: shown on a student's own attendance view when their per-subject
 // percentage falls below it. Never blocks anything (no test/login enforcement) — purely
 // informational, per the explicit scope decided for this feature.
-function AttendanceRulesTab({ setError }) {
+function AttendanceRulesTab({ instituteId, setError }) {
   const [value, setValue] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    api.get("/attendance/admin/rules")
+    setLoaded(false);
+    api.get("/attendance/admin/rules", { params: { instituteId } })
       .then((res) => setValue(res.data.attendanceMinPercent != null ? String(res.data.attendanceMinPercent) : ""))
       .catch((err) => setError(err.response?.data?.error || "Failed to load attendance rules"))
       .finally(() => setLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [instituteId]);
 
   async function save() {
     setSaving(true);
     setSaved(false);
     setError("");
     try {
-      await api.patch("/attendance/admin/rules", { attendanceMinPercent: value === "" ? null : value });
+      await api.patch("/attendance/admin/rules", { attendanceMinPercent: value === "" ? null : value, instituteId });
       setSaved(true);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to save attendance rules");
@@ -121,7 +154,7 @@ function AttendanceRulesTab({ setError }) {
   );
 }
 
-function DepartmentsTab({ departments, onChange, setError }) {
+function DepartmentsTab({ departments, instituteId, onChange, setError }) {
   const [deptName, setDeptName] = useState("");
   const [savingDept, setSavingDept] = useState(false);
 
@@ -131,7 +164,7 @@ function DepartmentsTab({ departments, onChange, setError }) {
     setSavingDept(true);
     setError("");
     try {
-      await api.post("/attendance/admin/departments", { name: deptName.trim() });
+      await api.post("/attendance/admin/departments", { name: deptName.trim(), instituteId });
       setDeptName("");
       onChange();
     } catch (err) {
@@ -175,7 +208,7 @@ function DepartmentsTab({ departments, onChange, setError }) {
 // to this institute's staff. Assigning/re-assigning takes effect immediately — POST
 // /staff-assignments finds any existing assignment for that group and updates its staff in place
 // (one staff per group), so there's never a second row to reconcile.
-function GroupAssignmentTab({ staff, setError }) {
+function GroupAssignmentTab({ staff, instituteId, setError }) {
   const [batches, setBatches] = useState([]);
   const [batchYear, setBatchYear] = useState("");
   const [rows, setRows] = useState(null);
@@ -183,15 +216,17 @@ function GroupAssignmentTab({ staff, setError }) {
   const [searchDrafts, setSearchDrafts] = useState({}); // academicGroupId -> in-progress search text
 
   useEffect(() => {
-    api.get("/attendance/admin/batches").then((res) => setBatches(res.data)).catch(() => setBatches([]));
-  }, []);
+    setBatchYear("");
+    setRows(null);
+    api.get("/attendance/admin/batches", { params: { instituteId } }).then((res) => setBatches(res.data)).catch(() => setBatches([]));
+  }, [instituteId]);
 
   async function fetchTable() {
     if (!batchYear) return;
     setLoading(true);
     setError("");
     try {
-      const { data } = await api.get("/attendance/admin/group-table", { params: { batchYear } });
+      const { data } = await api.get("/attendance/admin/group-table", { params: { instituteId, batchYear } });
       setRows(data);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to load groups");
@@ -232,6 +267,9 @@ function GroupAssignmentTab({ staff, setError }) {
         </div>
         <button className="btn btn-primary" onClick={fetchTable} disabled={!batchYear || loading}>{loading ? "Fetching…" : "Fetch"}</button>
       </div>
+      {batches.length === 0 && (
+        <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>No academic groups exist for this institute yet — they're created automatically once students are registered.</p>
+      )}
 
       <datalist id="attendance-staff-options">
         {staff.map((s) => <option key={s.id} value={`${s.name} (${s.email})`} />)}
