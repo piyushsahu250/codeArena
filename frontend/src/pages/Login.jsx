@@ -22,7 +22,7 @@ export default function Login() {
         navigate("/change-password");
         return;
       }
-      const homeByRole = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin" };
+      const homeByRole = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
       navigate(homeByRole[data.user.role] || "/login");
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");

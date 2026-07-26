@@ -4,7 +4,7 @@ import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import ChalkUnderline from "../components/ChalkUnderline";
 
-const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin" };
+const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
 
 export default function ForceChangePassword() {
   const { user, login } = useAuth();
