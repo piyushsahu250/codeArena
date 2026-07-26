@@ -42,12 +42,17 @@ router.post("/", authenticate, requireRole("STUDENT"), async (req, res) => {
   }
 });
 
-// Editing any field of a VERIFIED/REJECTED/REUPLOAD_REQUIRED document resets it to PENDING —
-// re-verification on edit, same rule as PlacementOffer.
+// Editing any field of a REJECTED/REUPLOAD_REQUIRED document resets it to PENDING — re-verification
+// on edit, same rule as PlacementOffer. A VERIFIED document is locked: once staff/clerk/admin has
+// confirmed it, the student can no longer edit or delete it (see DELETE below) — prevents a
+// verified record from silently drifting after the fact.
 router.patch("/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const existing = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.studentId !== req.user.id) return res.status(404).json({ error: "Document not found" });
+    if (existing.verificationStatus === "VERIFIED") {
+      return res.status(403).json({ error: "This document has been verified and can no longer be edited" });
+    }
 
     const merged = { ...existing, ...req.body };
     const error = validateDocumentInput(merged);
@@ -73,6 +78,9 @@ router.delete("/:id", authenticate, requireRole("STUDENT"), async (req, res) => 
   try {
     const existing = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.studentId !== req.user.id) return res.status(404).json({ error: "Document not found" });
+    if (existing.verificationStatus === "VERIFIED") {
+      return res.status(403).json({ error: "This document has been verified and can no longer be deleted" });
+    }
     await prisma.studentDocument.delete({ where: { id: req.params.id } });
     res.json({ message: "Document deleted" });
   } catch (err) {

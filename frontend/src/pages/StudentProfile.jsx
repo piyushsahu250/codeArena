@@ -753,10 +753,12 @@ export default function StudentProfile() {
                             {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
                               <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 220 }}>{d.rejectionReason}</p>
                             )}
-                            <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-                              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => startEditDocument(d)}>Edit</button>
-                              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11 }} onClick={() => deleteDocument(d.id)}>Delete</button>
-                            </div>
+                            {d.verificationStatus !== "VERIFIED" && (
+                              <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+                                <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => startEditDocument(d)}>Edit</button>
+                                <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11 }} onClick={() => deleteDocument(d.id)}>Delete</button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
