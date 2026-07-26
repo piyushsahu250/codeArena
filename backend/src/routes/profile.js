@@ -111,29 +111,6 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       },
     });
 
-    // Write-through sync: Profile is the single source of truth for these identity fields —
-    // Resume Builder no longer collects them itself (see resume.js's narrowed ALLOWED_FIELDS), it
-    // only ever displays whatever was synced here. Runs on every profile save so the resume (and
-    // its PDF/DOCX exports, which read straight off the Resume row) never drifts out of date.
-    await prisma.resume.upsert({
-      where: { studentId: req.user.id },
-      create: {
-        studentId: req.user.id,
-        fullName: freshUser.name || "",
-        email: studentProfile?.personalEmail || freshUser.email || "",
-        mobile: freshUser.mobile || "",
-        photoUrl: freshUser.profilePhotoUrl || "",
-        address: [studentProfile?.address, studentProfile?.district, studentProfile?.state, studentProfile?.pincode].filter(Boolean).join(", "),
-      },
-      update: {
-        fullName: freshUser.name || "",
-        email: studentProfile?.personalEmail || freshUser.email || "",
-        mobile: freshUser.mobile || "",
-        photoUrl: freshUser.profilePhotoUrl || "",
-        address: [studentProfile?.address, studentProfile?.district, studentProfile?.state, studentProfile?.pincode].filter(Boolean).join(", "),
-      },
-    });
-
     await logAudit({
       req, action: AUDIT_ACTIONS.STUDENT_PROFILE_UPDATED,
       actorId: req.user.id, actorName: freshUser?.name || req.user.name, actorRole: "STUDENT",

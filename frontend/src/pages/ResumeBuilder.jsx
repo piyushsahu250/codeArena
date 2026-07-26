@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -685,11 +684,13 @@ function ConfidenceBadge({ confidence, lowConfidence }) {
   );
 }
 
-// Full Name/Photo/Email/Mobile/Address are Profile-owned — Profile is the single source of truth
-// for these, synced here read-only (write-through from PATCH /profile/me) so the student never
-// re-enters them. Only genuinely resume-specific fields (links + summary) are editable here.
+// Full Name/Photo/Email/Mobile/Address are independently editable here — Resume Builder keeps
+// its own copy of these, separate from Profile's institutional record, so a student's resume
+// contact details don't have to match their Profile exactly.
 function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
   const [form, setForm] = useState({
+    fullName: resume.fullName || "", email: resume.email || "", mobile: resume.mobile || "",
+    photoUrl: resume.photoUrl || "", address: resume.address || "",
     linkedin: resume.linkedin || "", github: resume.github || "", portfolio: resume.portfolio || "",
     summary: resume.summary || "",
   });
@@ -711,17 +712,17 @@ function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
         <ConfidenceBadge confidence={confidence} lowConfidence={lowConfidence} />
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, borderRadius: 8, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)" }}>
-        {resume.photoUrl && <img src={resume.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />}
-        <div style={{ fontSize: 12.5, lineHeight: 1.6 }}>
-          <div><strong>{resume.fullName || "Name not set"}</strong></div>
-          <div style={{ color: "var(--ink-dim)" }}>{[resume.email, resume.mobile, resume.address].filter(Boolean).join("  ·  ") || "Email, mobile, and address not set"}</div>
-        </div>
-        <Link to="/profile" className="btn btn-ghost" style={{ fontSize: 11, marginLeft: "auto", flexShrink: 0 }}>Edit in Profile →</Link>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        <Field label="Full Name" value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} />
+        <Field label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
+        <Field label="Mobile" value={form.mobile} onChange={(v) => setForm({ ...form, mobile: v })} />
+        <Field label="Profile Picture URL" value={form.photoUrl} onChange={(v) => setForm({ ...form, photoUrl: v })} />
       </div>
-      <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 6 }}>
-        Name, photo, email, mobile, and address are managed on your <Link to="/profile">Profile</Link> page and shown here automatically.
-      </p>
+      {form.photoUrl && <img src={form.photoUrl} alt="Preview" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", marginTop: 10 }} />}
+      <div style={{ marginTop: 10 }}>
+        <label style={labelStyle}>Address</label>
+        <textarea style={{ ...inputStyle, minHeight: 50 }} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginTop: 12 }}>
         <Field label="LinkedIn Profile" value={form.linkedin} onChange={(v) => setForm({ ...form, linkedin: v })} />
