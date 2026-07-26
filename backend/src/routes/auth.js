@@ -85,6 +85,9 @@ router.post("/login", async (req, res) => {
     // Student Profile Completion gating — mirrors mustChangePassword's shape exactly (a boolean
     // the frontend checks on every protected-route render). Only ever true for STUDENT accounts
     // at an institute that has opted in; every other role/institute combination is unaffected.
+    // Uses `unlocked` (>= UNLOCK_THRESHOLD_PERCENT), not `complete` (100%) — students reach the
+    // rest of the platform once most of the checklist is done rather than being blocked on the
+    // very last field or two; the missing-fields checklist keeps nudging them toward 100% anyway.
     let requireProfileCompletion = false;
     let profileComplete = true;
     if (user.role === "STUDENT" && user.institute?.requireProfileCompletion) {
@@ -93,7 +96,7 @@ router.post("/login", async (req, res) => {
         prisma.studentProfile.findUnique({ where: { studentId: user.id } }),
         prisma.resume.findUnique({ where: { studentId: user.id }, select: { education: true, fullName: true, email: true } }),
       ]);
-      profileComplete = computeMandatoryCompletion(user, studentProfile, resume).complete;
+      profileComplete = computeMandatoryCompletion(user, studentProfile, resume).unlocked;
     }
 
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, mustChangePassword, requireProfileCompletion, profileComplete } });

@@ -17,6 +17,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 const PINCODE_RE = /^[0-9]{4,10}$/;
 
+// Students are let into the rest of the platform once they've filled in most (not all) of the
+// mandatory checklist, rather than being blocked on the very last field or two — `complete` below
+// still means literally 100% (used for admin reporting and the mandatoryCompletedAt timestamp),
+// `unlocked` is the separate, looser threshold that actually gates navigation.
+const UNLOCK_THRESHOLD_PERCENT = 90;
+
 const MANDATORY_FIELD_CHECKS = [
   { key: "name", label: "Full name (first and last)", section: "PROFILE", check: (u) => !!u.name && u.name.trim().split(/\s+/).length >= 2 },
   { key: "mobile", label: "Mobile number", section: "PROFILE", check: (u) => !!u.mobile && MOBILE_RE.test(u.mobile) },
@@ -44,8 +50,9 @@ function computeMandatoryCompletion(user, studentProfile, resume) {
   const totalFields = MANDATORY_FIELD_CHECKS.length;
   const percent = Math.round(((totalFields - missingFields.length) / totalFields) * 100);
   const complete = missingFields.length === 0;
+  const unlocked = percent >= UNLOCK_THRESHOLD_PERCENT;
   const status = complete ? "COMPLETED" : percent > 0 ? "IN_PROGRESS" : "NOT_STARTED";
-  return { complete, percent, missingFields, totalFields, status };
+  return { complete, unlocked, percent, missingFields, totalFields, status };
 }
 
-module.exports = { computeMandatoryCompletion, MANDATORY_FIELD_CHECKS, EMAIL_RE, MOBILE_RE, PINCODE_RE };
+module.exports = { computeMandatoryCompletion, MANDATORY_FIELD_CHECKS, EMAIL_RE, MOBILE_RE, PINCODE_RE, UNLOCK_THRESHOLD_PERCENT };

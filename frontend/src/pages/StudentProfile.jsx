@@ -136,7 +136,7 @@ export default function StudentProfile() {
     try {
       const res = await api.patch("/profile/me", form);
       toast.success("Personal Academic & Info saved.");
-      updateUser({ profileComplete: res.data.completion.complete, name: res.data.user.name, mobile: res.data.user.mobile, gender: res.data.user.gender, profilePhotoUrl: res.data.user.profilePhotoUrl });
+      updateUser({ profileComplete: res.data.completion.unlocked, name: res.data.user.name, mobile: res.data.user.mobile, gender: res.data.user.gender, profilePhotoUrl: res.data.user.profilePhotoUrl });
       load();
     } catch (err) {
       const msg = err.response?.data?.error || "Failed to save. Please check the fields below.";
@@ -317,9 +317,10 @@ export default function StudentProfile() {
           <div className="card" style={{ padding: 16, marginTop: 16, background: "#FCEFD9", border: "1px solid var(--amber)" }}>
             <strong>Complete your Personal Academic &amp; Info to continue.</strong>
             <p style={{ fontSize: 13, marginTop: 4, marginBottom: 0 }}>
-              Every other section of CodeArena is locked until this is 100% complete. Fill in the fields below and upload
+              Every other section of CodeArena unlocks once this reaches 90% completion. Fill in the fields below and upload
               your profile picture here on Profile; add at least one education record in the{" "}
-              <Link to="/resume">Resume Builder</Link>. Both pages stay open to you until everything's done.
+              <Link to="/resume">Resume Builder</Link>. Both pages stay open to you until you're unlocked — feel free to
+              finish the rest afterward.
             </p>
           </div>
         )}
