@@ -10,6 +10,8 @@ const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("..
 const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
 const { resolveCodingFields } = require("../utils/functionHarness");
+const { attachRequesterInstitute } = require("../middleware/institute");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -458,7 +460,7 @@ router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), asyn
   res.json(test);
 });
 
-router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const { title, instructions, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
     const test = await prisma.moduleCodingTest.create({
@@ -471,7 +473,9 @@ router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF
         randomizeQuestions: randomizeQuestions !== undefined ? !!randomizeQuestions : true,
         passingPercent: Number(passingPercent) || 70,
         timeLimitMin: Number(timeLimitMin) || 45,
-        maxAttempts: maxAttempts === "" || maxAttempts == null ? null : Number(maxAttempts),
+        // Default to 3 attempts when omitted (was null/unlimited) — every coding assessment
+        // should have a real cap unless an admin deliberately overrides it.
+        maxAttempts: maxAttempts === "" || maxAttempts == null ? 3 : Number(maxAttempts),
         cooldownMinutes: Number(cooldownMinutes) || 0,
         maxViolations: Number(maxViolations) || 3,
         requireFullscreen: requireFullscreen !== undefined ? !!requireFullscreen : true,
@@ -501,7 +505,7 @@ router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"
   res.json(levels);
 });
 
-router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const { title, instructions, order, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
     const chapter = await prisma.chapter.findUnique({ where: { id: req.params.chapterId } });
@@ -517,7 +521,7 @@ router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN
         randomizeQuestions: randomizeQuestions !== undefined ? !!randomizeQuestions : true,
         passingPercent: Number(passingPercent) || 70,
         timeLimitMin: Number(timeLimitMin) || 45,
-        maxAttempts: maxAttempts === "" || maxAttempts == null ? null : Number(maxAttempts),
+        maxAttempts: maxAttempts === "" || maxAttempts == null ? 3 : Number(maxAttempts),
         cooldownMinutes: Number(cooldownMinutes) || 0,
         maxViolations: Number(maxViolations) || 3,
         requireFullscreen: requireFullscreen !== undefined ? !!requireFullscreen : true,
@@ -533,7 +537,7 @@ router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN
   }
 });
 
-router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const f = req.body;
     const data = {};
@@ -570,7 +574,7 @@ router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req
   }
 });
 
-router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const {
       title, description, difficulty, timeLimitMs, starterCode, starterCodeByLanguage, testCases,
@@ -681,7 +685,7 @@ function parseModuleCodingHiddenTestCases(raw) {
 }
 
 // ADMIN/STAFF: download a sample .xlsx template for bulk-importing this test's questions.
-router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
   const sampleRows = [
     [
       "Sum of Two Integers", "Return the sum of two integers.", "Easy",
@@ -711,7 +715,7 @@ router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole
 // bulk-import (questions.js), scoped straight to this test instead of a Question Bank folder.
 // STDIO-only, matching the single "+ Add question" form this mirrors (which doesn't offer
 // FUNCTION-mode evaluationType/functionSignature fields either).
-router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), upload.single("file"), async (req, res) => {
+router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN"), upload.single("file"), async (req, res) => {
   try {
     const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
     if (!test) return res.status(404).json({ error: "Module coding test not found" });
@@ -832,7 +836,7 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
   }
 });
 
-router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const {
       title, description, difficulty, timeLimitMs, starterCode, starterCodeByLanguage, testCases,
@@ -879,7 +883,7 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
-router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     await prisma.question.delete({ where: { id: req.params.id } });
     res.json({ success: true });
@@ -890,9 +894,15 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"
 });
 
 // ADMIN/STAFF: review every student's attempts on this test — score, status, violation count.
-router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+// A Staff member tied to a specific institute (req.requesterInstituteId set) only ever sees
+// students from their own institute; an unscoped Platform Admin sees everyone — same convention
+// attachRequesterInstitute already enforces on 40+ other routes across the platform.
+router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const attempts = await prisma.moduleCodingAttempt.findMany({
-    where: { moduleCodingTestId: req.params.id },
+    where: {
+      moduleCodingTestId: req.params.id,
+      ...(req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {}),
+    },
     include: { student: { select: { id: true, name: true, email: true, rollNumber: true } } },
     orderBy: { startedAt: "desc" },
   });
@@ -901,11 +911,11 @@ router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "STAF
 
 // ADMIN/STAFF: full detail on one attempt — submitted code per question, execution results,
 // and the proctoring violation log (event-level, not just a count).
-router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const attempt = await prisma.moduleCodingAttempt.findUnique({
     where: { id: req.params.attemptId },
     include: {
-      student: { select: { id: true, name: true, email: true, rollNumber: true } },
+      student: { select: { id: true, name: true, email: true, rollNumber: true, instituteId: true } },
       moduleCodingTest: true,
       questions: { orderBy: { order: "asc" }, include: { question: true } },
       submissions: true,
@@ -913,15 +923,63 @@ router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "STA
     },
   });
   if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+  if (req.requesterInstituteId && attempt.student.instituteId !== req.requesterInstituteId) {
+    return res.status(404).json({ error: "Attempt not found" });
+  }
   res.json(attempt);
 });
 
-// ADMIN/STAFF: reset a student's attempts on this test — the lever for "manual approval of
-// additional attempts": rather than a separate grant-workflow/model, an admin can just clear a
-// student's attempt history so they can start fresh (attempt numbering restarts at 1).
-router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+// ADMIN/STAFF (own institute only): reset a student's attempts on this test — the lever for
+// "manual approval of additional attempts". Two modes:
+// - Full (default): clears all attempt history, student gets a completely fresh maxAttempts.
+// - Custom: restores a specific number of remaining attempts by deleting only the oldest
+//   finalized attempts needed to reach that count — no schema change, and recent attempts stay
+//   visible for audit/history. Both modes are audit-logged with before/after remaining counts.
+router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    await prisma.moduleCodingAttempt.deleteMany({ where: { moduleCodingTestId: req.params.id, studentId: req.params.studentId } });
+    const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
+    if (!test) return res.status(404).json({ error: "Assessment not found" });
+    const student = await prisma.user.findUnique({
+      where: { id: req.params.studentId },
+      select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } },
+    });
+    if (!student) return res.status(404).json({ error: "Student not found" });
+    if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage students in your own institute" });
+    }
+
+    const { mode, attemptsRemaining, reason } = req.body || {};
+    const finalizedWhere = { moduleCodingTestId: req.params.id, studentId: req.params.studentId, status: { not: "IN_PROGRESS" } };
+    const finalizedBefore = await prisma.moduleCodingAttempt.count({ where: finalizedWhere });
+
+    if (mode === "custom" && test.maxAttempts != null) {
+      const desiredRemaining = Math.max(0, Math.min(Number(attemptsRemaining) || 0, test.maxAttempts));
+      const desiredFinalizedAfter = test.maxAttempts - desiredRemaining;
+      const toDelete = Math.max(0, finalizedBefore - desiredFinalizedAfter);
+      if (toDelete > 0) {
+        const oldest = await prisma.moduleCodingAttempt.findMany({
+          where: finalizedWhere, orderBy: { startedAt: "asc" }, take: toDelete, select: { id: true },
+        });
+        await prisma.moduleCodingAttempt.deleteMany({ where: { id: { in: oldest.map((a) => a.id) } } });
+      }
+    } else {
+      await prisma.moduleCodingAttempt.deleteMany({ where: { moduleCodingTestId: req.params.id, studentId: req.params.studentId } });
+    }
+
+    const finalizedAfter = await prisma.moduleCodingAttempt.count({ where: finalizedWhere });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.REATTEMPT_GRANTED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      studentId: student.id, instituteId: student.instituteId,
+      details: {
+        assessmentName: test.title, mode: mode === "custom" ? "custom" : "full",
+        studentName: student.name, instituteName: student.institute?.name || null,
+        attemptsUsedBefore: finalizedBefore, attemptsUsedAfter: finalizedAfter,
+        attemptsRemainingBefore: test.maxAttempts != null ? Math.max(0, test.maxAttempts - finalizedBefore) : null,
+        attemptsRemainingAfter: test.maxAttempts != null ? Math.max(0, test.maxAttempts - finalizedAfter) : null,
+        reason: reason || null,
+      },
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -929,11 +987,14 @@ router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, req
   }
 });
 
-// ADMIN/STAFF: export all attempts on this test as a CSV.
-router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+// ADMIN/STAFF: export all attempts on this test as a CSV (own institute only for Staff).
+router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const attempts = await prisma.moduleCodingAttempt.findMany({
-      where: { moduleCodingTestId: req.params.id },
+      where: {
+        moduleCodingTestId: req.params.id,
+        ...(req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {}),
+      },
       include: { student: { select: { name: true, email: true, rollNumber: true } } },
       orderBy: { startedAt: "desc" },
     });
