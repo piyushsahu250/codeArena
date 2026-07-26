@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
@@ -722,11 +722,15 @@ const EMPTY_TEST_FORM = {
   allowedLanguages: ["java", "python", "javascript", "c", "cpp"],
 };
 
+// Config (create/edit/delete) is ADMIN-only, matching the backend RBAC restriction — Staff still
+// see Questions and Student Attempts (including Reset), just not the Settings tab or a create form.
 function CodingTestPanel({ moduleId }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [test, setTest] = useState(undefined); // undefined = loading, null = not configured yet
   const [form, setForm] = useState(EMPTY_TEST_FORM);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState("config");
+  const [tab, setTab] = useState(isAdmin ? "config" : "questions");
 
   function load() {
     api.get(`/module-coding/admin/module/${moduleId}`).then((res) => {
@@ -789,6 +793,7 @@ function CodingTestPanel({ moduleId }) {
   if (test === undefined) return <p className="mono" style={{ marginTop: 20 }}>Loading…</p>;
 
   if (test === null) {
+    if (!isAdmin) return <p className="mono" style={{ marginTop: 20 }}>Not configured yet.</p>;
     return (
       <form onSubmit={create} className="card" style={{ padding: 20, marginTop: 20, maxWidth: 560 }}>
         <h3 style={{ fontSize: 15 }}>Configure a proctored coding assessment</h3>
@@ -805,12 +810,12 @@ function CodingTestPanel({ moduleId }) {
   return (
     <div style={{ marginTop: 20 }}>
       <div style={{ display: "flex", gap: 8 }}>
-        <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>
+        {isAdmin && <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>}
         <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
         <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
       </div>
 
-      {tab === "config" && (
+      {tab === "config" && isAdmin && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <input type="checkbox" checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
@@ -825,7 +830,7 @@ function CodingTestPanel({ moduleId }) {
       )}
 
       {tab === "questions" && <CodingQuestionsPanel testId={test.id} questions={test.questions} onRefresh={load} />}
-      {tab === "attempts" && <CodingAttemptsPanel testId={test.id} />}
+      {tab === "attempts" && <CodingAttemptsPanel testId={test.id} testTitle={test.title} maxAttempts={test.maxAttempts} />}
     </div>
   );
 }
@@ -894,7 +899,11 @@ const CODING_LANGS = [
   { id: "javascript", label: "JavaScript" },
 ];
 
+// Question pool CRUD (add/edit/delete/bulk-import) is ADMIN-only, matching the backend RBAC
+// restriction — Staff see the pool read-only.
 function CodingQuestionsPanel({ testId, questions, onRefresh }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_CODING_Q);
   const [saving, setSaving] = useState(false);
@@ -980,13 +989,15 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
     <div className="card" style={{ padding: 20, marginTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <h3 style={{ fontSize: 15 }}>Question pool</h3>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBulkOpen((b) => !b)}>{bulkOpen ? "Cancel" : "⬆ Bulk upload"}</button>
-          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add question"}</button>
-        </div>
+        {isAdmin && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBulkOpen((b) => !b)}>{bulkOpen ? "Cancel" : "⬆ Bulk upload"}</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add question"}</button>
+          </div>
+        )}
       </div>
 
-      {bulkOpen && (
+      {isAdmin && bulkOpen && (
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
             Import multiple coding questions at once from an .xlsx/.csv file — each row needs 2 visible sample
@@ -1037,7 +1048,9 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
                   : "none (generic defaults used)"}
               </div>
             </div>
-            <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+            {isAdmin && (
+              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+            )}
           </div>
         ))}
         {questions.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No questions yet — students can't start this assessment until at least one is added.</p>}
@@ -1086,18 +1099,97 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
   );
 }
 
-function CodingAttemptsPanel({ testId }) {
+const ATTEMPT_STATUS_COLORS = {
+  "Not Started": { bg: "#F0EEE3", color: "var(--ink-dim)" },
+  "In Progress": { bg: "#FCEFD9", color: "var(--amber-dark)" },
+  "Completed": { bg: "#E7F3EB", color: "var(--mint)" },
+  "Locked": { bg: "#F7E4E0", color: "var(--rust)" },
+};
+
+// Per-student aggregate attempt view — search by name/roll/email, Attempts Used/Remaining, Last
+// Attempt, a derived Status badge, and a Reset action (Full or Custom-count) with an audit-logged
+// reason. Reused for both the legacy module-direct test panel and chapter-scoped Level panel —
+// both already fetch `test` with `title`/`maxAttempts` in scope.
+function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
+  const confirmDialog = useConfirm();
+  const toast = useToast();
   const [attempts, setAttempts] = useState(null);
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resetMode, setResetMode] = useState("full");
+  const [customRemaining, setCustomRemaining] = useState(maxAttempts || 1);
+  const [reason, setReason] = useState("");
+  const [resetting, setResetting] = useState(false);
 
   function load() {
     api.get(`/module-coding/admin/tests/${testId}/attempts`).then((res) => setAttempts(res.data));
   }
   useEffect(load, [testId]);
 
-  async function resetAttempts(studentId, name) {
-    if (!confirm(`Reset all attempts for ${name}? They'll be able to start fresh — use this to grant an additional attempt beyond the configured limit.`)) return;
-    await api.delete(`/module-coding/admin/tests/${testId}/students/${studentId}/attempts`);
-    load();
+  const students = useMemo(() => {
+    if (!attempts) return [];
+    const byStudent = new Map();
+    for (const a of attempts) {
+      if (!byStudent.has(a.student.id)) byStudent.set(a.student.id, { student: a.student, attempts: [] });
+      byStudent.get(a.student.id).attempts.push(a);
+    }
+    return [...byStudent.values()].map(({ student, attempts: list }) => {
+      const finalized = list.filter((a) => a.status !== "IN_PROGRESS");
+      const inProgress = list.some((a) => a.status === "IN_PROGRESS");
+      const passed = finalized.some((a) => a.passed);
+      const attemptsUsed = finalized.length;
+      const attemptsRemaining = maxAttempts != null ? Math.max(0, maxAttempts - attemptsUsed) : null;
+      const lastAttempt = list.reduce((latest, a) => {
+        const t = new Date(a.submittedAt || a.startedAt).getTime();
+        return t > latest ? t : latest;
+      }, 0);
+      let status = "Not Started";
+      if (passed) status = "Completed";
+      else if (inProgress) status = "In Progress";
+      else if (maxAttempts != null && attemptsUsed >= maxAttempts) status = "Locked";
+      else if (attemptsUsed > 0) status = "In Progress"; // attempted, failed so far, attempts remain
+      return {
+        student, attempts: [...list].sort((a, b) => b.attemptNumber - a.attemptNumber),
+        attemptsUsed, attemptsRemaining, lastAttempt, status,
+      };
+    }).sort((a, b) => b.lastAttempt - a.lastAttempt);
+  }, [attempts, maxAttempts]);
+
+  const filtered = students.filter((s) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return s.student.name?.toLowerCase().includes(q) || s.student.email?.toLowerCase().includes(q) || s.student.rollNumber?.toLowerCase().includes(q);
+  });
+
+  function openReset(s) {
+    setResetTarget(s);
+    setResetMode("full");
+    setCustomRemaining(maxAttempts || 1);
+    setReason("");
+  }
+
+  async function doReset() {
+    const ok = await confirmDialog({
+      title: "Reset attempts?",
+      message: "Are you sure you want to reset the coding assessment attempts for this student? This will restore all available attempts.",
+      confirmLabel: "Reset",
+      danger: true,
+    });
+    if (!ok) return;
+    setResetting(true);
+    try {
+      await api.delete(`/module-coding/admin/tests/${testId}/students/${resetTarget.student.id}/attempts`, {
+        data: { mode: resetMode, attemptsRemaining: resetMode === "custom" ? Number(customRemaining) : undefined, reason: reason || undefined },
+      });
+      toast.success("Attempts reset successfully.");
+      setResetTarget(null);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to reset attempts");
+    } finally {
+      setResetting(false);
+    }
   }
 
   async function exportCsv() {
@@ -1111,25 +1203,78 @@ function CodingAttemptsPanel({ testId }) {
 
   return (
     <div className="card" style={{ padding: 20, marginTop: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ fontSize: 15 }}>Student attempts</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h3 style={{ fontSize: 15 }}>Student attempts</h3>
+          {testTitle && <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>Assessment: {testTitle} · Max attempts: {maxAttempts ?? "Unlimited"}</div>}
+        </div>
         <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={exportCsv}>⬇ Export CSV</button>
       </div>
+
+      <input style={{ ...inputStyle, marginTop: 12 }} placeholder="Search by name, roll number, or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+
       <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-        {(attempts || []).map((a) => (
-          <div key={a.id} className="card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>{a.student.name} <span className="mono" style={{ fontWeight: 400, fontSize: 11, color: "var(--ink-dim)" }}>{a.student.rollNumber || a.student.email}</span></div>
-              <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                Attempt #{a.attemptNumber} — {a.status} — {a.score}%{a.passed ? " (Passed)" : ""} — {a.violationCount} violation(s)
-                {a.autoSubmitReason ? ` — auto-submitted: ${a.autoSubmitReason}` : ""}
+        {filtered.map((s) => {
+          const colors = ATTEMPT_STATUS_COLORS[s.status] || ATTEMPT_STATUS_COLORS["Not Started"];
+          return (
+            <div key={s.student.id} className="card" style={{ padding: 12, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ cursor: "pointer" }} onClick={() => setExpanded(expanded === s.student.id ? null : s.student.id)}>
+                  <div style={{ fontWeight: 600 }}>{s.student.name} <span className="mono" style={{ fontWeight: 400, fontSize: 11, color: "var(--ink-dim)" }}>{s.student.rollNumber || s.student.email}</span></div>
+                  <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                    Used {s.attemptsUsed}{maxAttempts != null ? `/${maxAttempts}` : ""} · Remaining {s.attemptsRemaining ?? "Unlimited"} · Last attempt {s.lastAttempt ? new Date(s.lastAttempt).toLocaleString() : "—"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span className="badge" style={{ background: colors.bg, color: colors.color }}>{s.status}</span>
+                  <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => openReset(s)}>Reset attempts</button>
+                </div>
               </div>
+              {expanded === s.student.id && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)", display: "grid", gap: 6 }}>
+                  {s.attempts.map((a) => (
+                    <div key={a.id} className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                      Attempt #{a.attemptNumber} — {a.status} — {a.score}%{a.passed ? " (Passed)" : ""} — {a.violationCount} violation(s)
+                      {a.autoSubmitReason ? ` — auto-submitted: ${a.autoSubmitReason}` : ""}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => resetAttempts(a.student.id, a.student.name)}>Reset attempts</button>
-          </div>
-        ))}
-        {attempts && attempts.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No attempts yet.</p>}
+          );
+        })}
+        {attempts && filtered.length === 0 && (
+          <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>{attempts.length === 0 ? "No attempts yet." : "No students match this search."}</p>
+        )}
       </div>
+
+      {resetTarget && (
+        <div className="ca-modal-overlay" onClick={() => setResetTarget(null)}>
+          <div className="ca-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: 0 }}>Reset attempts for {resetTarget.student.name}</h3>
+            <div style={{ display: "flex", gap: 16, marginTop: 14 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                <input type="radio" checked={resetMode === "full"} onChange={() => setResetMode("full")} /> Full reset ({maxAttempts ?? "unlimited"} attempts)
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                <input type="radio" checked={resetMode === "custom"} onChange={() => setResetMode("custom")} disabled={maxAttempts == null} /> Custom
+              </label>
+            </div>
+            {resetMode === "custom" && (
+              <div style={{ marginTop: 10 }}>
+                <label style={labelStyle}>Attempts to restore</label>
+                <input type="number" min="0" max={maxAttempts || undefined} style={inputStyle} value={customRemaining} onChange={(e) => setCustomRemaining(e.target.value)} />
+              </div>
+            )}
+            <label style={labelStyle}>Reason (optional)</label>
+            <textarea style={{ ...inputStyle, minHeight: 60 }} value={reason} onChange={(e) => setReason(e.target.value)} />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+              <button className="btn btn-ghost" onClick={() => setResetTarget(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ background: "var(--rust)", color: "#fff" }} disabled={resetting} onClick={doReset}>{resetting ? "Resetting…" : "Reset attempts"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1636,10 +1781,12 @@ function ChapterLevelsPanel({ chapterId }) {
 // module-direct test, parameterized by an already-created Level's own id (fetched via the
 // generic GET /admin/tests/:id route, since a chapter-scoped Level has no moduleId to key off).
 function LevelPanel({ levelId, onBack }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [test, setTest] = useState(undefined);
   const [form, setForm] = useState(EMPTY_TEST_FORM);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState("config");
+  const [tab, setTab] = useState(isAdmin ? "config" : "questions");
 
   function load() {
     api.get(`/module-coding/admin/tests/${levelId}`).then((res) => {
@@ -1692,12 +1839,12 @@ function LevelPanel({ levelId, onBack }) {
     <div style={{ marginTop: 16 }}>
       <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to levels</button>
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>
+        {isAdmin && <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>}
         <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
         <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
       </div>
 
-      {tab === "config" && (
+      {tab === "config" && isAdmin && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <input type="checkbox" checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
@@ -1712,7 +1859,7 @@ function LevelPanel({ levelId, onBack }) {
       )}
 
       {tab === "questions" && <CodingQuestionsPanel testId={test.id} questions={test.questions} onRefresh={load} />}
-      {tab === "attempts" && <CodingAttemptsPanel testId={test.id} />}
+      {tab === "attempts" && <CodingAttemptsPanel testId={test.id} testTitle={test.title} maxAttempts={test.maxAttempts} />}
     </div>
   );
 }
