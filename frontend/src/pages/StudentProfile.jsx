@@ -41,6 +41,18 @@ const EMPTY_OFFER = {
   offeredPackage: "", offerStatus: "HOLDING", joiningStatus: "", proofLink: "",
 };
 
+// Same field shape as ResumeBuilder.jsx's EDUCATION_FIELDS — this writes to the same
+// Resume.education array (via PATCH /resume/me), so an entry added here shows up in Resume
+// Builder unchanged, and vice versa. There is only ever one Education list per student.
+const EDUCATION_FIELDS = [
+  { key: "degree", label: "Degree" }, { key: "specialization", label: "Specialization" },
+  { key: "institution", label: "College / University" }, { key: "board", label: "Board (if applicable)" },
+  { key: "startYear", label: "Start Year" }, { key: "endYear", label: "End Year" },
+  { key: "score", label: "CGPA / Percentage" },
+  { key: "status", label: "Current Status", type: "select", options: ["Pursuing", "Completed"] },
+];
+const EMPTY_EDUCATION = {};
+
 const VERIFICATION_LABEL = { PENDING: "Pending Verification", VERIFIED: "Verified", REJECTED: "Rejected" };
 const VERIFICATION_COLOR = { PENDING: "var(--amber-dark)", VERIFIED: "var(--mint)", REJECTED: "var(--rust)" };
 
@@ -79,7 +91,13 @@ export default function StudentProfile() {
   const [documentSaving, setDocumentSaving] = useState(false);
   const [documentError, setDocumentError] = useState("");
 
+  const [education, setEducation] = useState(null);
+  const [educationDraft, setEducationDraft] = useState(EMPTY_EDUCATION);
+  const [editingEducationIndex, setEditingEducationIndex] = useState(null); // -1 = adding, N = editing, null = closed
+  const [educationSaving, setEducationSaving] = useState(false);
+
   function load() {
+    api.get("/resume/me").then((res) => setEducation(res.data.resume?.education || [])).catch(() => setEducation([]));
     api.get("/profile/me").then((res) => {
       setData(res.data);
       const { user: u, profile: p } = res.data;
@@ -302,6 +320,53 @@ export default function StudentProfile() {
     }
   }
 
+  function startAddEducation() {
+    setEditingEducationIndex(-1);
+    setEducationDraft(EMPTY_EDUCATION);
+  }
+  function startEditEducation(i) {
+    setEditingEducationIndex(i);
+    setEducationDraft({ ...education[i] });
+  }
+  function cancelEducation() {
+    setEditingEducationIndex(null);
+    setEducationDraft(EMPTY_EDUCATION);
+  }
+
+  async function saveEducation() {
+    if (!educationDraft.degree?.trim() || !educationDraft.institution?.trim()) {
+      toast.error("Degree and College/University are required.");
+      return;
+    }
+    const next = editingEducationIndex === -1
+      ? [...education, educationDraft]
+      : education.map((it, i) => (i === editingEducationIndex ? educationDraft : it));
+    setEducationSaving(true);
+    try {
+      await api.patch("/resume/me", { education: next });
+      setEducation(next);
+      cancelEducation();
+      toast.success("Education record saved.");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to save education record");
+    } finally {
+      setEducationSaving(false);
+    }
+  }
+
+  async function deleteEducation(i) {
+    if (!confirm("Delete this education record?")) return;
+    const next = education.filter((_, idx) => idx !== i);
+    try {
+      await api.patch("/resume/me", { education: next });
+      setEducation(next);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete education record");
+    }
+  }
+
   const gated = user?.role === "STUDENT" && user?.requireProfileCompletion && !user?.profileComplete;
   const percent = data?.completion?.percent ?? livePercent();
 
@@ -317,9 +382,8 @@ export default function StudentProfile() {
           <div className="card" style={{ padding: 16, marginTop: 16, background: "#FCEFD9", border: "1px solid var(--amber)" }}>
             <strong>Complete your Personal Academic &amp; Info to continue.</strong>
             <p style={{ fontSize: 13, marginTop: 4, marginBottom: 0 }}>
-              Every other section of CodeArena unlocks once this reaches 90% completion. Fill in the fields below and upload
-              your profile picture here on Profile; add at least one education record in the{" "}
-              <Link to="/resume">Resume Builder</Link>. Both pages stay open to you until you're unlocked — feel free to
+              Every other section of CodeArena unlocks once this reaches 90% completion. Fill in the fields below,
+              including at least one education record under "Career History &amp; Education" — feel free to
               finish the rest afterward.
             </p>
           </div>
@@ -334,18 +398,12 @@ export default function StudentProfile() {
             <div style={{ height: "100%", width: `${percent}%`, background: percent === 100 ? "var(--mint)" : "var(--amber)", transition: "width 0.3s" }} />
           </div>
           {data?.completion && !data.completion.complete && (() => {
-            const missingProfile = data.completion.missingFields.filter((f) => f.section === "PROFILE");
-            const missingResume = data.completion.missingFields.filter((f) => f.section === "RESUME");
+            const missingProfile = data.completion.missingFields;
             return (
               <div style={{ marginTop: 8 }}>
                 {missingProfile.length > 0 && (
                   <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0" }}>
                     Missing on this page: {missingProfile.map((f) => f.label).join(", ")}
-                  </p>
-                )}
-                {missingResume.length > 0 && (
-                  <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0" }}>
-                    Missing in <Link to="/resume">Resume Builder</Link>: {missingResume.map((f) => f.label).join(", ")}
                   </p>
                 )}
               </div>
@@ -418,13 +476,42 @@ export default function StudentProfile() {
             {form.profilePhotoUrl && <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginTop: 8 }} />}
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>
-            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
-              At least one education record (SSLC, HSC, Diploma, Degree, etc.) is required.
-              {" "}Add it in the <Link to="/resume">Resume Builder</Link> — you currently have{" "}
-              <strong>{data?.educationCount ?? 0}</strong> education record{data?.educationCount === 1 ? "" : "s"}.
-              {" "}Your name, email, mobile, address, and profile picture from this page are shown there automatically —
-              no need to re-enter them.
+            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, marginBottom: 10 }}>
+              At least one education record (SSLC, HSC, Diploma, Degree, etc.) is required — this is part of your
+              institutional academic record. It also appears automatically in your <Link to="/resume">Resume Builder</Link>.
             </p>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {education === null ? (
+                <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
+              ) : (
+                education.map((e, i) =>
+                  editingEducationIndex === i ? (
+                    <EducationForm key={i} draft={educationDraft} setDraft={setEducationDraft} onSave={saveEducation} onCancel={cancelEducation} saving={educationSaving} />
+                  ) : (
+                    <div key={i} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontSize: 13 }}>
+                        <strong>{e.degree || "Untitled"}</strong>{e.specialization ? ` — ${e.specialization}` : ""}
+                        <div style={{ color: "var(--ink-dim)", fontSize: 12, marginTop: 2 }}>
+                          {[e.institution, e.board, [e.startYear, e.endYear].filter(Boolean).join("–"), e.score, e.status].filter(Boolean).join(" · ")}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => startEditEducation(i)}>Edit</button>
+                        <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11 }} onClick={() => deleteEducation(i)}>Delete</button>
+                      </div>
+                    </div>
+                  )
+                )
+              )}
+              {editingEducationIndex === -1 && (
+                <EducationForm draft={educationDraft} setDraft={setEducationDraft} onSave={saveEducation} onCancel={cancelEducation} saving={educationSaving} />
+              )}
+              {education?.length === 0 && editingEducationIndex === null && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No education records added yet.</p>}
+              {editingEducationIndex === null && (
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 12, justifySelf: "start" }} onClick={startAddEducation}>+ Add Education Record</button>
+              )}
+            </div>
 
             {errors.personal && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 10 }}>{errors.personal}</p>}
             <button className="btn btn-primary" style={{ width: "100%", marginTop: 16 }} disabled={saving}>{saving ? "Saving…" : "Save Personal Academic & Info"}</button>
@@ -716,6 +803,35 @@ function OfferCompanyField({ form, setForm, companies }) {
       {!matched && (
         <input style={{ ...inputStyle, marginTop: 6 }} placeholder="Enter company name" required value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value, companyId: null })} />
       )}
+    </div>
+  );
+}
+
+// Minimal add/edit form for one Education entry — mirrors EDUCATION_FIELDS' shape exactly so the
+// data stays interchangeable with ResumeBuilder.jsx's own (separate, more elaborate) Education
+// editor. No AI-improve/confidence/split-merge here — none of that applies to a straightforward
+// institutional academic record.
+function EducationForm({ draft, setDraft, onSave, onCancel, saving }) {
+  return (
+    <div className="card" style={{ padding: 12, background: "#FBFAF6" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+        {EDUCATION_FIELDS.map((f) => (
+          <div key={f.key}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-dim)" }}>{f.label}</label>
+            {f.type === "select" ? (
+              <select style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}>
+                {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button type="button" className="btn btn-primary" style={{ fontSize: 12 }} disabled={saving} onClick={onSave}>{saving ? "Saving…" : "Save"}</button>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onCancel}>Cancel</button>
+      </div>
     </div>
   );
 }
