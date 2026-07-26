@@ -4,9 +4,16 @@ FROM node:20-slim
 # `time` (GNU time, not the bash builtin) gives the judge real per-submission peak-memory
 # reporting via `time -v -o <file>` — writing its report to a file rather than stderr keeps it
 # cleanly separate from the submitted program's own stderr output.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#
+# default-jdk-headless (not default-jdk) — same javac/java the judge invokes by name, but skips
+# the GUI/font/print/X11 packages that default-jdk pulls in. Those packages' postinst scripts
+# (ca-certificates-java in particular) are a well-known source of intermittent "exit status 1"
+# Docker build failures under CPU/memory-constrained build hosts — the headless variant is both
+# smaller (faster build, less likely to hit a host resource ceiling) and has fewer postinst steps
+# that can flake. Acquire::Retries survives transient Debian-mirror hiccups on apt-get update.
+RUN apt-get update -o Acquire::Retries=3 && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
-    default-jdk \
+    default-jdk-headless \
     python3 \
     time \
     postgresql-client \
