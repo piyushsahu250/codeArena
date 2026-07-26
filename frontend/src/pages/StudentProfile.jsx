@@ -13,7 +13,7 @@ const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", mar
 const TABS = [
   { key: "personal", label: "Personal Academic & Info" },
   { key: "skills", label: "Skills & Capabilities" },
-  { key: "lms", label: "Talentely LMS Info" },
+  { key: "lms", label: "CodeArena LMS Info" },
   { key: "placement", label: "Placement Registration" },
   { key: "salary", label: "Salary & Performance Info" },
   { key: "documents", label: "Documents" },
@@ -105,7 +105,7 @@ export default function StudentProfile() {
   }
   useEffect(load, []);
 
-  // Talentely LMS Info is read-only and system-generated — reuses the existing Dashboard
+  // CodeArena LMS Info is read-only and system-generated — reuses the existing Dashboard
   // aggregation route rather than duplicating coding-solved/streak computation here. Deliberately
   // does not fabricate a single "Employability Index Score": no such formula exists anywhere in
   // this platform, so the real component metrics are shown as-is instead.
