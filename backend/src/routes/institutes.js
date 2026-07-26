@@ -101,4 +101,80 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   }
 });
 
+// ADMIN: per-course engagement stats for one institute — how many courses are assigned to it,
+// how many of its students are actively learning each one, certificates issued, and coding-
+// assessment performance. Course counts per institute are small, so per-course stats are computed
+// with a plain loop rather than a single aggregate query.
+router.get("/:id/course-analytics", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const instituteId = req.params.id;
+    const institute = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true, name: true } });
+    if (!institute) return res.status(404).json({ error: "Institute not found" });
+
+    const [directAssignments, groupAssignments] = await Promise.all([
+      prisma.courseInstituteAssignment.findMany({ where: { instituteId }, select: { courseId: true } }),
+      prisma.courseAcademicGroupAssignment.findMany({ where: { academicGroup: { instituteId } }, select: { courseId: true } }),
+    ]);
+    const courseIds = [...new Set([...directAssignments.map((a) => a.courseId), ...groupAssignments.map((a) => a.courseId)])];
+
+    if (courseIds.length === 0) {
+      return res.json({ institute, assignedCourseCount: 0, courses: [] });
+    }
+
+    const courses = await prisma.course.findMany({
+      where: { id: { in: courseIds } },
+      select: {
+        id: true, name: true, status: true,
+        modules: {
+          select: {
+            lessons: { select: { id: true } },
+            codingTest: { select: { id: true } },
+            chapters: { select: { levels: { select: { id: true } } } },
+          },
+        },
+      },
+    });
+
+    const courseAnalytics = await Promise.all(courses.map(async (course) => {
+      const lessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
+      const testIds = [
+        ...course.modules.filter((m) => m.codingTest).map((m) => m.codingTest.id),
+        ...course.modules.flatMap((m) => m.chapters.flatMap((c) => c.levels.map((l) => l.id))),
+      ];
+
+      const [activeLearners, certificatesIssued, attempts] = await Promise.all([
+        lessonIds.length > 0
+          ? prisma.lessonProgress.findMany({
+              where: { lessonId: { in: lessonIds }, status: { in: ["IN_PROGRESS", "COMPLETED"] }, student: { instituteId } },
+              distinct: ["studentId"], select: { studentId: true },
+            })
+          : Promise.resolve([]),
+        prisma.certificate.count({ where: { courseId: course.id, student: { instituteId } } }),
+        testIds.length > 0
+          ? prisma.moduleCodingAttempt.findMany({
+              where: { moduleCodingTestId: { in: testIds }, status: { not: "IN_PROGRESS" }, student: { instituteId } },
+              select: { score: true, passed: true },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      return {
+        courseId: course.id,
+        courseName: course.name,
+        status: course.status,
+        activeLearners: activeLearners.length,
+        certificatesIssued,
+        codingAttempts: attempts.length,
+        avgCodingScore: attempts.length > 0 ? Math.round(attempts.reduce((s, a) => s + a.score, 0) / attempts.length) : null,
+        codingSuccessRate: attempts.length > 0 ? Math.round((attempts.filter((a) => a.passed).length / attempts.length) * 100) : null,
+      };
+    }));
+
+    res.json({ institute, assignedCourseCount: courseIds.length, courses: courseAnalytics });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load course analytics" });
+  }
+});
+
 module.exports = router;

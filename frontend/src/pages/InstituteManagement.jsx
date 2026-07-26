@@ -14,6 +14,9 @@ export default function InstituteManagement() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(emptyEditForm);
+  const [analyticsOpenId, setAnalyticsOpenId] = useState(null);
+  const [analyticsById, setAnalyticsById] = useState({});
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   function load() {
     api.get("/institutes").then((res) => setInstitutes(res.data));
@@ -66,6 +69,21 @@ export default function InstituteManagement() {
       load();
     } catch (err) {
       alert(err.response?.data?.error || "Failed to delete institute");
+    }
+  }
+
+  function toggleAnalytics(inst) {
+    if (analyticsOpenId === inst.id) {
+      setAnalyticsOpenId(null);
+      return;
+    }
+    setAnalyticsOpenId(inst.id);
+    if (!analyticsById[inst.id]) {
+      setAnalyticsLoading(true);
+      api.get(`/institutes/${inst.id}/course-analytics`)
+        .then((res) => setAnalyticsById((prev) => ({ ...prev, [inst.id]: res.data })))
+        .catch(() => setAnalyticsById((prev) => ({ ...prev, [inst.id]: null })))
+        .finally(() => setAnalyticsLoading(false));
     }
   }
 
@@ -160,6 +178,9 @@ export default function InstituteManagement() {
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn btn-ghost" onClick={() => toggleAnalytics(inst)}>
+                      {analyticsOpenId === inst.id ? "Hide analytics" : "Course analytics"}
+                    </button>
                     <button className="btn btn-ghost" onClick={() => startEdit(inst)}>Edit</button>
                     <button className="btn btn-dark" onClick={() => toggleActive(inst)}>
                       {inst.isActive ? "Deactivate" : "Activate"}
@@ -168,6 +189,39 @@ export default function InstituteManagement() {
                       Delete
                     </button>
                   </div>
+                </div>
+              )}
+              {analyticsOpenId === inst.id && editingId !== inst.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+                  {analyticsLoading && !analyticsById[inst.id] ? (
+                    <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
+                  ) : !analyticsById[inst.id] ? (
+                    <p style={{ fontSize: 13, color: "var(--rust)" }}>Failed to load course analytics.</p>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, color: "var(--ink-dim)", marginBottom: 10 }}>
+                        <strong>{analyticsById[inst.id].assignedCourseCount}</strong> course{analyticsById[inst.id].assignedCourseCount === 1 ? "" : "s"} assigned to this institute.
+                      </div>
+                      {analyticsById[inst.id].courses.length === 0 ? (
+                        <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No courses assigned yet.</p>
+                      ) : (
+                        <div style={{ display: "grid", gap: 8 }}>
+                          {analyticsById[inst.id].courses.map((c) => (
+                            <div key={c.courseId} className="card" style={{ padding: 10, fontSize: 12.5 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontWeight: 600 }}>{c.courseName}</span>
+                                <span className="badge">{c.status}</span>
+                              </div>
+                              <div className="mono" style={{ color: "var(--ink-dim)", marginTop: 6 }}>
+                                {c.activeLearners} active learner{c.activeLearners === 1 ? "" : "s"} · {c.certificatesIssued} cert{c.certificatesIssued === 1 ? "" : "s"} issued
+                                {c.codingAttempts > 0 && ` · avg coding score ${c.avgCodingScore}% · ${c.codingSuccessRate}% pass rate (${c.codingAttempts} attempt${c.codingAttempts === 1 ? "" : "s"})`}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
