@@ -4,41 +4,42 @@
 // trust a client-computed completion flag; always recompute server-side from the raw data.
 //
 // Deliberately checks fields already living on User (name/mobile/gender/profilePhotoUrl) and on
-// Resume (education, resume existence) rather than duplicating them on StudentProfile — see
-// schema.prisma's StudentProfile model comment.
+// Resume (education) rather than duplicating them on StudentProfile — see schema.prisma's
+// StudentProfile model comment.
+//
+// Every check is tagged with the page ("PROFILE" or "RESUME") where the student actually fills
+// it in. Profile is the single source of truth for identity fields — Resume Builder no longer
+// collects them (it reads them via write-through sync from profile.js) — and Resume Builder owns
+// only resume-specific content (Education). The frontend uses this tag to route "complete this"
+// guidance to the correct page instead of a generic warning.
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 const PINCODE_RE = /^[0-9]{4,10}$/;
 
 const MANDATORY_FIELD_CHECKS = [
-  { key: "name", label: "Full name (first and last)", check: (u) => !!u.name && u.name.trim().split(/\s+/).length >= 2 },
-  { key: "mobile", label: "Mobile number", check: (u) => !!u.mobile && MOBILE_RE.test(u.mobile) },
-  { key: "gender", label: "Gender", check: (u) => !!u.gender },
-  { key: "profilePhotoUrl", label: "Profile picture", check: (u) => !!u.profilePhotoUrl },
-  { key: "personalEmail", label: "Personal email", check: (u, p) => !!p?.personalEmail && EMAIL_RE.test(p.personalEmail) },
-  { key: "dob", label: "Date of birth", check: (u, p) => !!p?.dob && new Date(p.dob).getTime() < Date.now() },
-  { key: "address", label: "Address", check: (u, p) => !!p?.address },
-  { key: "state", label: "State", check: (u, p) => !!p?.state },
-  { key: "district", label: "District", check: (u, p) => !!p?.district },
-  { key: "pincode", label: "Pincode", check: (u, p) => !!p?.pincode && PINCODE_RE.test(p.pincode) },
-  { key: "fatherName", label: "Father's name", check: (u, p) => !!p?.fatherName },
-  { key: "fatherContact", label: "Father's contact number", check: (u, p) => !!p?.fatherContact && MOBILE_RE.test(p.fatherContact) },
-  { key: "motherName", label: "Mother's name", check: (u, p) => !!p?.motherName },
-  { key: "motherContact", label: "Mother's contact number", check: (u, p) => !!p?.motherContact && MOBILE_RE.test(p.motherContact) },
-  { key: "shortDescription", label: "Short description (About)", check: (u, p) => !!p?.shortDescription && p.shortDescription.trim().length >= 10 },
-  { key: "education", label: "At least one education record", check: (u, p, resume) => Array.isArray(resume?.education) && resume.education.length > 0 },
-  // GET /resume/me auto-creates an empty draft row on first visit to the Resume Builder page, so a
-  // bare row-existence check would be satisfied without the student ever entering/uploading
-  // anything. Require actual populated content (set either by manual entry or by the upload+parse
-  // flow) instead of just the row existing.
-  { key: "resume", label: "Resume", check: (u, p, resume) => !!resume?.fullName && !!resume?.email },
+  { key: "name", label: "Full name (first and last)", section: "PROFILE", check: (u) => !!u.name && u.name.trim().split(/\s+/).length >= 2 },
+  { key: "mobile", label: "Mobile number", section: "PROFILE", check: (u) => !!u.mobile && MOBILE_RE.test(u.mobile) },
+  { key: "gender", label: "Gender", section: "PROFILE", check: (u) => !!u.gender },
+  { key: "profilePhotoUrl", label: "Profile picture", section: "PROFILE", check: (u) => !!u.profilePhotoUrl },
+  { key: "personalEmail", label: "Personal email", section: "PROFILE", check: (u, p) => !!p?.personalEmail && EMAIL_RE.test(p.personalEmail) },
+  { key: "dob", label: "Date of birth", section: "PROFILE", check: (u, p) => !!p?.dob && new Date(p.dob).getTime() < Date.now() },
+  { key: "address", label: "Address", section: "PROFILE", check: (u, p) => !!p?.address },
+  { key: "state", label: "State", section: "PROFILE", check: (u, p) => !!p?.state },
+  { key: "district", label: "District", section: "PROFILE", check: (u, p) => !!p?.district },
+  { key: "pincode", label: "Pincode", section: "PROFILE", check: (u, p) => !!p?.pincode && PINCODE_RE.test(p.pincode) },
+  { key: "fatherName", label: "Father's name", section: "PROFILE", check: (u, p) => !!p?.fatherName },
+  { key: "fatherContact", label: "Father's contact number", section: "PROFILE", check: (u, p) => !!p?.fatherContact && MOBILE_RE.test(p.fatherContact) },
+  { key: "motherName", label: "Mother's name", section: "PROFILE", check: (u, p) => !!p?.motherName },
+  { key: "motherContact", label: "Mother's contact number", section: "PROFILE", check: (u, p) => !!p?.motherContact && MOBILE_RE.test(p.motherContact) },
+  { key: "shortDescription", label: "Short description (About)", section: "PROFILE", check: (u, p) => !!p?.shortDescription && p.shortDescription.trim().length >= 10 },
+  { key: "education", label: "At least one education record", section: "RESUME", check: (u, p, resume) => Array.isArray(resume?.education) && resume.education.length > 0 },
 ];
 
 function computeMandatoryCompletion(user, studentProfile, resume) {
   const missingFields = [];
   for (const f of MANDATORY_FIELD_CHECKS) {
-    if (!f.check(user, studentProfile, resume)) missingFields.push({ key: f.key, label: f.label });
+    if (!f.check(user, studentProfile, resume)) missingFields.push({ key: f.key, label: f.label, section: f.section });
   }
   const totalFields = MANDATORY_FIELD_CHECKS.length;
   const percent = Math.round(((totalFields - missingFields.length) / totalFields) * 100);

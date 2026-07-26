@@ -93,7 +93,7 @@ export default function StudentProfile() {
       !!form.address.trim(), !!form.state.trim(), !!form.district.trim(), !!form.pincode.trim(),
       !!form.fatherName.trim(), !!form.fatherContact.trim(), !!form.motherName.trim(), !!form.motherContact.trim(),
       form.shortDescription.trim().length >= 10,
-      (data?.educationCount || 0) > 0, !!data?.hasResume,
+      (data?.educationCount || 0) > 0,
     ];
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }
@@ -163,8 +163,9 @@ export default function StudentProfile() {
           <div className="card" style={{ padding: 16, marginTop: 16, background: "#FCEFD9", border: "1px solid var(--amber)" }}>
             <strong>Complete your Personal Academic &amp; Info to continue.</strong>
             <p style={{ fontSize: 13, marginTop: 4, marginBottom: 0 }}>
-              Every other section of CodeArena is locked until this section is 100% complete. Fill in the fields below,
-              upload your profile picture and resume, and add at least one education record.
+              Every other section of CodeArena is locked until this is 100% complete. Fill in the fields below and upload
+              your profile picture here on Profile; add at least one education record in the{" "}
+              <Link to="/resume">Resume Builder</Link>. Both pages stay open to you until everything's done.
             </p>
           </div>
         )}
@@ -177,11 +178,24 @@ export default function StudentProfile() {
           <div style={{ height: 8, borderRadius: 4, background: "var(--line)", marginTop: 8, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${percent}%`, background: percent === 100 ? "var(--mint)" : "var(--amber)", transition: "width 0.3s" }} />
           </div>
-          {data?.completion && !data.completion.complete && (
-            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
-              Missing: {data.completion.missingFields.map((f) => f.label).join(", ")}
-            </p>
-          )}
+          {data?.completion && !data.completion.complete && (() => {
+            const missingProfile = data.completion.missingFields.filter((f) => f.section === "PROFILE");
+            const missingResume = data.completion.missingFields.filter((f) => f.section === "RESUME");
+            return (
+              <div style={{ marginTop: 8 }}>
+                {missingProfile.length > 0 && (
+                  <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0" }}>
+                    Missing on this page: {missingProfile.map((f) => f.label).join(", ")}
+                  </p>
+                )}
+                {missingResume.length > 0 && (
+                  <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0" }}>
+                    Missing in <Link to="/resume">Resume Builder</Link>: {missingResume.map((f) => f.label).join(", ")}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 20 }}>
@@ -248,12 +262,13 @@ export default function StudentProfile() {
             <input style={inputStyle} required value={form.profilePhotoUrl} onChange={(e) => setForm({ ...form, profilePhotoUrl: e.target.value })} placeholder="https://…" />
             {form.profilePhotoUrl && <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginTop: 8 }} />}
 
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History & Education, and Resume</div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>
             <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
-              At least one education record (SSLC, HSC, Diploma, Degree, etc.) and a resume are required.
-              {" "}Manage both in the <Link to="/resume">Resume Builder</Link> — you currently have{" "}
-              <strong>{data?.educationCount ?? 0}</strong> education record{data?.educationCount === 1 ? "" : "s"}
-              {" "}and {data?.hasResume ? "a resume on file" : "no resume yet"}.
+              At least one education record (SSLC, HSC, Diploma, Degree, etc.) is required.
+              {" "}Add it in the <Link to="/resume">Resume Builder</Link> — you currently have{" "}
+              <strong>{data?.educationCount ?? 0}</strong> education record{data?.educationCount === 1 ? "" : "s"}.
+              {" "}Your name, email, mobile, address, and profile picture from this page are shown there automatically —
+              no need to re-enter them.
             </p>
 
             {errors.personal && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 10 }}>{errors.personal}</p>}

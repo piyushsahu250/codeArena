@@ -120,13 +120,14 @@ export default function Sidebar({ role, profileGateActive = false }) {
 
   useEffect(() => { closeMobile(); }, [location.pathname, closeMobile]);
 
-  // While the mandatory Personal Academic & Info section is incomplete, only Profile remains in
-  // the sidebar — matching "Only allow: Profile Page, Logout" (Logout stays reachable via the
-  // Navbar's account dropdown regardless, so it doesn't need a sidebar entry here).
+  // While the mandatory Personal Academic & Info section is incomplete, only Profile and Resume
+  // Builder remain in the sidebar — mandatory info spans both pages (personal/academic fields on
+  // Profile, Education on Resume Builder). Logout stays reachable via the Navbar's account
+  // dropdown regardless, so it doesn't need a sidebar entry here.
   const rawGroups = MENU[role] || [];
   const groups = profileGateActive
     ? rawGroups
-        .map((g) => ({ ...g, items: g.items.filter((item) => item.to === "/profile") }))
+        .map((g) => ({ ...g, items: g.items.filter((item) => item.to === "/profile" || item.to === "/resume") }))
         .filter((g) => g.items.length > 0)
     : rawGroups;
 

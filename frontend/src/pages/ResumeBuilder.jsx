@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -684,11 +685,13 @@ function ConfidenceBadge({ confidence, lowConfidence }) {
   );
 }
 
+// Full Name/Photo/Email/Mobile/Address are Profile-owned — Profile is the single source of truth
+// for these, synced here read-only (write-through from PATCH /profile/me) so the student never
+// re-enters them. Only genuinely resume-specific fields (links + summary) are editable here.
 function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
   const [form, setForm] = useState({
-    fullName: resume.fullName || "", photoUrl: resume.photoUrl || "", email: resume.email || "", mobile: resume.mobile || "",
     linkedin: resume.linkedin || "", github: resume.github || "", portfolio: resume.portfolio || "",
-    address: resume.address || "", summary: resume.summary || "",
+    summary: resume.summary || "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -707,15 +710,23 @@ function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
         <div style={{ fontSize: 13, fontWeight: 600 }}>Personal Details</div>
         <ConfidenceBadge confidence={confidence} lowConfidence={lowConfidence} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-        <Field label="Full Name" value={form.fullName} onChange={(v) => setForm({ ...form, fullName: v })} />
-        <Field label="Profile Photo URL (optional)" value={form.photoUrl} onChange={(v) => setForm({ ...form, photoUrl: v })} />
-        <Field label="Email Address" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-        <Field label="Mobile Number" value={form.mobile} onChange={(v) => setForm({ ...form, mobile: v })} />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, borderRadius: 8, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)" }}>
+        {resume.photoUrl && <img src={resume.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />}
+        <div style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+          <div><strong>{resume.fullName || "Name not set"}</strong></div>
+          <div style={{ color: "var(--ink-dim)" }}>{[resume.email, resume.mobile, resume.address].filter(Boolean).join("  ·  ") || "Email, mobile, and address not set"}</div>
+        </div>
+        <Link to="/profile" className="btn btn-ghost" style={{ fontSize: 11, marginLeft: "auto", flexShrink: 0 }}>Edit in Profile →</Link>
+      </div>
+      <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 6 }}>
+        Name, photo, email, mobile, and address are managed on your <Link to="/profile">Profile</Link> page and shown here automatically.
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginTop: 12 }}>
         <Field label="LinkedIn Profile" value={form.linkedin} onChange={(v) => setForm({ ...form, linkedin: v })} />
         <Field label="GitHub Profile" value={form.github} onChange={(v) => setForm({ ...form, github: v })} />
         <Field label="Portfolio Website (optional)" value={form.portfolio} onChange={(v) => setForm({ ...form, portfolio: v })} />
-        <Field label="Address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
       </div>
       <div style={{ marginTop: 10 }}>
         <label style={labelStyle}>Career Objective / Professional Summary</label>

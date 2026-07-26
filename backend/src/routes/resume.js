@@ -19,8 +19,11 @@ const router = express.Router();
 const aiReviewLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// fullName/photoUrl/email/mobile/address are deliberately excluded — those are Profile-owned
+// identity fields, written only via profile.js's write-through sync on every Profile save. This
+// list is what the student can edit from Resume Builder itself: links + resume-specific content.
 const ALLOWED_FIELDS = [
-  "template", "fullName", "photoUrl", "email", "mobile", "linkedin", "github", "portfolio", "address", "summary",
+  "template", "linkedin", "github", "portfolio", "summary",
   "education", "skills", "projects", "experience", "certifications", "achievements", "languages",
 ];
 const DEFAULT_MANDATORY = ["personal", "summary", "education", "skills", "projects", "certifications"];
@@ -162,14 +165,13 @@ router.post(
       // Version History manually.
       const previousVersionId = existing ? await saveVersion(existing.id, existing) : null;
 
+      // fullName/email/mobile/address are intentionally not written here even though the parser
+      // extracts them — those fields are Profile-owned (see ALLOWED_FIELDS above) and always
+      // reflect Profile's data via write-through sync, never the uploaded file's content.
       const data = {
-        fullName: parsed.fullName || existing?.fullName || "",
-        email: parsed.email || existing?.email || "",
-        mobile: parsed.mobile || existing?.mobile || "",
         linkedin: parsed.linkedin || existing?.linkedin || "",
         github: parsed.github || existing?.github || "",
         portfolio: parsed.portfolio || existing?.portfolio || "",
-        address: parsed.address || existing?.address || "",
         summary: parsed.summary || existing?.summary || "",
         education: parsed.education.length ? parsed.education : existing?.education || [],
         skills: parsed.skills.length ? parsed.skills : existing?.skills || [],
@@ -217,8 +219,10 @@ router.post("/me/clear-all", authenticate, requireRole("STUDENT"), async (req, r
     if (!existing) return res.status(404).json({ error: "No resume found" });
     await saveVersion(existing.id, existing);
 
+    // fullName/photoUrl/email/mobile/address are deliberately left untouched — they're
+    // Profile-owned (write-through synced), not something a Resume-scoped "clear all" should wipe.
     const blank = {
-      fullName: "", photoUrl: "", email: "", mobile: "", linkedin: "", github: "", portfolio: "", address: "", summary: "",
+      linkedin: "", github: "", portfolio: "", summary: "",
       education: [], skills: [], projects: [], experience: [], certifications: [], achievements: [], languages: [],
       targetRole: null,
     };
@@ -455,10 +459,9 @@ router.post("/me/autofill", authenticate, requireRole("STUDENT"), async (req, re
     if (!auto) return res.status(404).json({ error: "Student not found" });
     const existing = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
 
+    // fullName/email/mobile are Profile-owned (write-through synced from profile.js) — autofill
+    // never touches them here, only genuinely resume-specific content.
     const data = {};
-    if (!existing?.fullName && auto.fullName) data.fullName = auto.fullName;
-    if (!existing?.email && auto.email) data.email = auto.email;
-    if (!existing?.mobile && auto.mobile) data.mobile = auto.mobile;
     if ((!existing?.education || existing.education.length === 0) && auto.education.length) data.education = auto.education;
     if ((!existing?.skills || existing.skills.length === 0) && auto.skills.length) data.skills = auto.skills;
     if ((!existing?.certifications || existing.certifications.length === 0) && auto.certifications.length) data.certifications = auto.certifications;

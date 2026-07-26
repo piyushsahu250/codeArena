@@ -102,11 +102,14 @@ function Protected({ roles, children, noChrome = false }) {
   const { user } = useAuth();
   const location = useLocation();
   const toast = useToast();
-  const blocked = !!user && profileGateActive(user) && location.pathname !== "/profile";
+  // Both Profile and Resume Builder stay reachable while gated — mandatory info spans both pages
+  // (personal/academic fields on Profile, Education on Resume Builder), so locking the student to
+  // just one of them would make it impossible to finish the other half.
+  const blocked = !!user && profileGateActive(user) && location.pathname !== "/profile" && location.pathname !== "/resume";
   // Toast is a side effect, so it fires from an effect (once per blocked navigation attempt) even
   // though the actual redirect below is a synchronous <Navigate> in the same render.
   useEffect(() => {
-    if (blocked) toast.error("Please complete your Personal Academic & Info before continuing.");
+    if (blocked) toast.error("Please complete your Profile and Resume Builder (Education) before continuing.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocked, location.pathname]);
 
