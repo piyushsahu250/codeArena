@@ -108,9 +108,15 @@ const ENTITIES = {
 
 // ADMIN/STAFF (institute-scoped for Staff and institute-scoped Admins; unscoped for platform-level
 // Super Admin — same convention as certificates.js's /admin route). ?format=csv|xlsx|json, default csv.
-router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+// CLERK is scoped further still — Placement Cell access is "download student records" only, not
+// staff/results/reports/certificates/questions, so it's restricted to the "students" entity below
+// rather than opening this whole generic multi-entity route to the role.
+router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   const builder = ENTITIES[req.params.entity];
   if (!builder) return res.status(404).json({ error: `Unknown export entity "${req.params.entity}"` });
+  if (req.user.role === "CLERK" && req.params.entity !== "students") {
+    return res.status(403).json({ error: "Insufficient permissions" });
+  }
 
   try {
     const rows = await builder(req.requesterInstituteId);

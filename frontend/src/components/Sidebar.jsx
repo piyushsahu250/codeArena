@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck, Share2,
+  CalendarCheck, Share2, UserCircle, Building,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 
@@ -15,6 +15,7 @@ const MENU = {
   STUDENT: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
+      { label: "Profile", to: "/profile", icon: UserCircle },
       { label: "Learning", to: "/learning", icon: BookOpen },
       { label: "My Performance", to: "/dashboard/performance", icon: BarChart3 },
       { label: "My Attendance", to: "/attendance", icon: CalendarCheck },
@@ -28,6 +29,14 @@ const MENU = {
       { label: "Interview History", to: "/interview/history", icon: History },
       { label: "Certificates", to: "/certificates", icon: Award },
       { label: "Achievements", to: "/achievements", icon: Trophy },
+    ] },
+    { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
+  ],
+  CLERK: [
+    { group: "Main", items: [
+      { label: "Dashboard", to: "/clerk", icon: LayoutDashboard },
+      { label: "Student Search", to: "/clerk/students", icon: Users },
+      { label: "Company Master", to: "/clerk/companies", icon: Building },
     ] },
     { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
   ],
@@ -94,7 +103,7 @@ const MENU = {
   ],
 };
 
-export default function Sidebar({ role }) {
+export default function Sidebar({ role, profileGateActive = false }) {
   const location = useLocation();
   const { mobileOpen, closeMobile } = useSidebarUI();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("caSidebarCollapsed") === "1");
@@ -111,7 +120,15 @@ export default function Sidebar({ role }) {
 
   useEffect(() => { closeMobile(); }, [location.pathname, closeMobile]);
 
-  const groups = MENU[role] || [];
+  // While the mandatory Personal Academic & Info section is incomplete, only Profile remains in
+  // the sidebar — matching "Only allow: Profile Page, Logout" (Logout stays reachable via the
+  // Navbar's account dropdown regardless, so it doesn't need a sidebar entry here).
+  const rawGroups = MENU[role] || [];
+  const groups = profileGateActive
+    ? rawGroups
+        .map((g) => ({ ...g, items: g.items.filter((item) => item.to === "/profile") }))
+        .filter((g) => g.items.length > 0)
+    : rawGroups;
 
   return (
     <>

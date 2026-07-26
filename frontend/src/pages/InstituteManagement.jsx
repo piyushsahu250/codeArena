@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 
 const emptyForm = { name: "", code: "", address: "", contact: "" };
-const emptyEditForm = { name: "", code: "", address: "", contact: "", passwordExpiryDays: "", passwordHistoryDepth: 3, singleSessionOnly: false, aiHintsEnabled: false };
+const emptyEditForm = { name: "", code: "", address: "", contact: "", passwordExpiryDays: "", passwordHistoryDepth: 3, singleSessionOnly: false, aiHintsEnabled: false, requireProfileCompletion: false };
 
 export default function InstituteManagement() {
   const [institutes, setInstitutes] = useState([]);
@@ -17,6 +17,9 @@ export default function InstituteManagement() {
   const [analyticsOpenId, setAnalyticsOpenId] = useState(null);
   const [analyticsById, setAnalyticsById] = useState({});
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [profileStatsOpenId, setProfileStatsOpenId] = useState(null);
+  const [profileStatsById, setProfileStatsById] = useState({});
+  const [profileStatsLoading, setProfileStatsLoading] = useState(false);
 
   function load() {
     api.get("/institutes").then((res) => setInstitutes(res.data));
@@ -45,6 +48,7 @@ export default function InstituteManagement() {
       name: inst.name, code: inst.code || "", address: inst.address || "", contact: inst.contact || "",
       passwordExpiryDays: inst.passwordExpiryDays ?? "", passwordHistoryDepth: inst.passwordHistoryDepth ?? 3,
       singleSessionOnly: !!inst.singleSessionOnly, aiHintsEnabled: !!inst.aiHintsEnabled,
+      requireProfileCompletion: !!inst.requireProfileCompletion,
     });
   }
 
@@ -84,6 +88,21 @@ export default function InstituteManagement() {
         .then((res) => setAnalyticsById((prev) => ({ ...prev, [inst.id]: res.data })))
         .catch(() => setAnalyticsById((prev) => ({ ...prev, [inst.id]: null })))
         .finally(() => setAnalyticsLoading(false));
+    }
+  }
+
+  function toggleProfileStats(inst) {
+    if (profileStatsOpenId === inst.id) {
+      setProfileStatsOpenId(null);
+      return;
+    }
+    setProfileStatsOpenId(inst.id);
+    if (!profileStatsById[inst.id]) {
+      setProfileStatsLoading(true);
+      api.get(`/institutes/${inst.id}/profile-completion-stats`)
+        .then((res) => setProfileStatsById((prev) => ({ ...prev, [inst.id]: res.data })))
+        .catch(() => setProfileStatsById((prev) => ({ ...prev, [inst.id]: null })))
+        .finally(() => setProfileStatsLoading(false));
     }
   }
 
@@ -158,6 +177,14 @@ export default function InstituteManagement() {
                     </label>
                   </div>
 
+                  <div style={{ gridColumn: "1 / -1", marginTop: 8, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--ink-dim)", marginBottom: 8 }}>Student Profile</div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                      <input type="checkbox" checked={editForm.requireProfileCompletion} onChange={(e) => setEditForm({ ...editForm, requireProfileCompletion: e.target.checked })} />
+                      Require Student Profile Completion (blocks all other access until Personal Academic &amp; Info is complete)
+                    </label>
+                  </div>
+
                   <div style={{ display: "flex", gap: 8, gridColumn: "1 / -1" }}>
                     <button className="btn btn-primary" onClick={() => saveEdit(inst.id)}>Save</button>
                     <button className="btn btn-ghost" onClick={() => setEditingId(null)}>Cancel</button>
@@ -177,9 +204,12 @@ export default function InstituteManagement() {
                       {inst.contact && ` · ${inst.contact}`}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button className="btn btn-ghost" onClick={() => toggleAnalytics(inst)}>
                       {analyticsOpenId === inst.id ? "Hide analytics" : "Course analytics"}
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => toggleProfileStats(inst)}>
+                      {profileStatsOpenId === inst.id ? "Hide profile stats" : "Profile completion"}
                     </button>
                     <button className="btn btn-ghost" onClick={() => startEdit(inst)}>Edit</button>
                     <button className="btn btn-dark" onClick={() => toggleActive(inst)}>
@@ -216,6 +246,40 @@ export default function InstituteManagement() {
                                 {c.activeLearners} active learner{c.activeLearners === 1 ? "" : "s"} · {c.certificatesIssued} cert{c.certificatesIssued === 1 ? "" : "s"} issued
                                 {c.codingAttempts > 0 && ` · avg coding score ${c.avgCodingScore}% · ${c.codingSuccessRate}% pass rate (${c.codingAttempts} attempt${c.codingAttempts === 1 ? "" : "s"})`}
                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              {profileStatsOpenId === inst.id && editingId !== inst.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+                  {profileStatsLoading && !profileStatsById[inst.id] ? (
+                    <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
+                  ) : !profileStatsById[inst.id] ? (
+                    <p style={{ fontSize: 13, color: "var(--rust)" }}>Failed to load profile completion stats.</p>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
+                        <span><strong>{profileStatsById[inst.id].total}</strong> total students</span>
+                        <span style={{ color: "var(--mint)" }}><strong>{profileStatsById[inst.id].completed}</strong> completed</span>
+                        <span style={{ color: "var(--amber)" }}><strong>{profileStatsById[inst.id].incomplete}</strong> incomplete</span>
+                        <span><strong>{profileStatsById[inst.id].percentComplete}%</strong> complete</span>
+                      </div>
+                      {profileStatsById[inst.id].pending.length > 0 && (
+                        <div style={{ display: "grid", gap: 6, marginTop: 10, maxHeight: 260, overflowY: "auto" }}>
+                          {profileStatsById[inst.id].pending.map((s) => (
+                            <div key={s.id} className="card" style={{ padding: 10, fontSize: 12.5 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span style={{ fontWeight: 600 }}>{s.name}</span>
+                                <span className="badge">{s.percent}%</span>
+                              </div>
+                              <div className="mono" style={{ color: "var(--ink-dim)", marginTop: 4 }}>
+                                {s.email}{s.department && ` · ${s.department}`}
+                              </div>
+                              <div style={{ color: "var(--ink-dim)", marginTop: 4 }}>Missing: {s.missingFields.join(", ")}</div>
                             </div>
                           ))}
                         </div>

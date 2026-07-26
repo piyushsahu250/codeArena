@@ -15,6 +15,19 @@ export function AuthProvider({ children }) {
     setUser(userData);
   }
 
+  // Merges a partial patch into the persisted user object — used after PATCH /profile/me so
+  // profileComplete (and any changed name/mobile/etc.) reflects immediately without a fresh
+  // login, since this app has no /auth/me refresh endpoint and treats localStorage as the source
+  // of truth for the session's user object (see login() above).
+  function updateUser(patch) {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem("user", JSON.stringify(next));
+      return next;
+    });
+  }
+
   function logout() {
     // Best-effort — closes the server-side LoginSession row so an admin's "active sessions" view
     // and the audit log reflect a real logout, not just the token going stale after 12h. Local
@@ -26,7 +39,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

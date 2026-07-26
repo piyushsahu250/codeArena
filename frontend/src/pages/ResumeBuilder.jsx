@@ -37,7 +37,7 @@ const PROJECT_FIELDS = [
   { key: "githubUrl", label: "GitHub Repository Link" }, { key: "liveUrl", label: "Live Demo Link (optional)" },
 ];
 const EXPERIENCE_FIELDS = [
-  { key: "company", label: "Company Name" }, { key: "title", label: "Job Title" },
+  { key: "company", label: "Company Name", type: "company" }, { key: "title", label: "Job Title" },
   { key: "employmentType", label: "Employment Type", type: "select", options: ["Internship", "Full-Time", "Freelance", "Research Project"] },
   { key: "startDate", label: "Start Date" }, { key: "endDate", label: "End Date" },
   { key: "responsibilities", label: "Responsibilities", type: "textarea", wide: true, improvable: "experience" },
@@ -81,6 +81,7 @@ export default function ResumeBuilder() {
   const [aiReview, setAiReview] = useState(null);
   const [aiReviewing, setAiReviewing] = useState(false);
   const [aiReviewError, setAiReviewError] = useState("");
+  const [companies, setCompanies] = useState([]);
   const fileInputRef = useRef(null);
 
   async function getAiReview() {
@@ -100,6 +101,7 @@ export default function ResumeBuilder() {
     api.get("/resume/me").then((res) => setData(res.data)).catch(() => setError("Failed to load resume"));
   }
   useEffect(load, []);
+  useEffect(() => { api.get("/companies").then((res) => setCompanies(res.data)).catch(() => setCompanies([])); }, []);
 
   async function save(patch) {
     const { data: res } = await api.patch("/resume/me", patch);
@@ -618,6 +620,7 @@ export default function ResumeBuilder() {
               lowConfidence={lowConfidenceFields.includes("experience")}
               confidence={confidenceScores.experience}
               allowSplitMerge
+              companies={companies}
               renderSummary={(e) => `${e.title || "—"} at ${e.company || "—"} (${e.employmentType || "—"})`} />
 
             <ArraySectionEditor title="Certifications" items={resume.certifications || []} fields={CERT_FIELDS}
@@ -733,7 +736,7 @@ function Field({ label, value, onChange }) {
   );
 }
 
-function ArraySectionEditor({ title, items, fields, onChange, renderSummary, onClear, lowConfidence, confidence, allowSplitMerge, groupBy }) {
+function ArraySectionEditor({ title, items, fields, onChange, renderSummary, onClear, lowConfidence, confidence, allowSplitMerge, groupBy, companies }) {
   const [editingIndex, setEditingIndex] = useState(null); // -1 = adding, N = editing index N, null = closed
   const [draft, setDraft] = useState({});
 
@@ -795,7 +798,7 @@ function ArraySectionEditor({ title, items, fields, onChange, renderSummary, onC
 
   function renderRow(item, i) {
     return editingIndex === i ? (
-      <ItemForm key={i} fields={fields} draft={draft} setDraft={setDraft} onSave={saveItem} onCancel={cancel} />
+      <ItemForm key={i} fields={fields} draft={draft} setDraft={setDraft} onSave={saveItem} onCancel={cancel} companies={companies} />
     ) : (
       <div key={i} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div style={{ fontSize: 13, flex: 1 }}>{renderSummary(item)}</div>
@@ -848,14 +851,14 @@ function ArraySectionEditor({ title, items, fields, onChange, renderSummary, onC
               </div>
             ))
           : items.map((item, i) => renderRow(item, i))}
-        {editingIndex === -1 && <ItemForm fields={fields} draft={draft} setDraft={setDraft} onSave={saveItem} onCancel={cancel} />}
+        {editingIndex === -1 && <ItemForm fields={fields} draft={draft} setDraft={setDraft} onSave={saveItem} onCancel={cancel} companies={companies} />}
         {items.length === 0 && editingIndex === null && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>None added yet.</p>}
       </div>
     </div>
   );
 }
 
-function ItemForm({ fields, draft, setDraft, onSave, onCancel }) {
+function ItemForm({ fields, draft, setDraft, onSave, onCancel, companies }) {
   return (
     <div className="card" style={{ padding: 12, background: "#FBFAF6" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
@@ -873,6 +876,8 @@ function ItemForm({ fields, draft, setDraft, onSave, onCancel }) {
               <select style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}>
                 {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
+            ) : f.type === "company" ? (
+              <CompanyField field={f} draft={draft} setDraft={setDraft} companies={companies || []} />
             ) : (
               <input style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
             )}
@@ -884,6 +889,41 @@ function ItemForm({ fields, draft, setDraft, onSave, onCancel }) {
         <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onCancel}>Cancel</button>
       </div>
     </div>
+  );
+}
+
+// Searchable Company Master dropdown + "Other" free-text fallback — draft[field.key] always holds
+// the display name (shown in previews/PDF unchanged); draft.companyId is set only when a real
+// Company Master entry is picked, and cleared back to null for "Other" so the resume doesn't carry
+// a stale link to a company the student didn't actually select.
+function CompanyField({ field, draft, setDraft, companies }) {
+  const matched = draft.companyId && companies.some((c) => c.id === draft.companyId);
+  return (
+    <>
+      <select
+        style={inputStyle}
+        value={matched ? draft.companyId : "OTHER"}
+        onChange={(e) => {
+          if (e.target.value === "OTHER") {
+            setDraft({ ...draft, companyId: null });
+          } else {
+            const c = companies.find((c) => c.id === e.target.value);
+            setDraft({ ...draft, companyId: c.id, [field.key]: c.name });
+          }
+        }}
+      >
+        <option value="OTHER">Other (type company name below)</option>
+        {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      {!matched && (
+        <input
+          style={{ ...inputStyle, marginTop: 6 }}
+          placeholder="Enter company name"
+          value={draft[field.key] || ""}
+          onChange={(e) => setDraft({ ...draft, [field.key]: e.target.value, companyId: null })}
+        />
+      )}
+    </>
   );
 }
 

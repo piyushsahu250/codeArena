@@ -215,8 +215,8 @@ router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
       return res.status(400).json({ error: "name, email, and role are required" });
     }
     if (!EMAIL_RE.test(String(email).trim())) return res.status(400).json({ error: "Invalid email address" });
-    if (!["STUDENT", "STAFF", "ADMIN"].includes(role)) {
-      return res.status(400).json({ error: "role must be STUDENT, STAFF, or ADMIN" });
+    if (!["STUDENT", "STAFF", "ADMIN", "CLERK"].includes(role)) {
+      return res.status(400).json({ error: "role must be STUDENT, STAFF, ADMIN, or CLERK" });
     }
     if (!instituteId) return res.status(400).json({ error: "An institute is required" });
     if (role === "STUDENT" && !String(mobile || "").trim()) return res.status(400).json({ error: "A mobile number is required for students" });
@@ -591,7 +591,7 @@ router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequester
 // ADMIN/STAFF: search students by ID, roll number, name, or official email — institute-scoped
 // accounts only ever match students under their own institute. Powers the Student Performance
 // Dashboard's search box; results are capped and meant for picking one student, not browsing.
-router.get("/search", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const q = String(req.query.q || "").trim();
     if (!q) return res.json([]);
@@ -627,7 +627,7 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
 // section's students consecutively instead of searching one at a time. departmentId + section
 // are both required: a bare institute/department selection with no section would return an
 // entire institute's roster unbounded.
-router.get("/browse", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { departmentId, section } = req.query;
     if (!departmentId || !section) return res.status(400).json({ error: "Department and Section are required" });
@@ -796,7 +796,7 @@ router.get("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
 // ADMIN/STAFF/STUDENT(self): full performance dashboard — summary stats, test history, and
 // chart-ready analytics. A student's own view masks scores for any test whose results aren't
 // published yet, same principle as the single-test result page.
-router.get("/:id/performance", authenticate, requireRole("ADMIN", "STAFF", "STUDENT"), async (req, res) => {
+router.get("/:id/performance", authenticate, requireRole("ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
   try {
     const target = await authorizeStudentPerformanceAccess(req, res);
     if (!target) return;
@@ -809,7 +809,7 @@ router.get("/:id/performance", authenticate, requireRole("ADMIN", "STAFF", "STUD
 });
 
 // Same access rule as above: downloadable Excel report.
-router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "STAFF", "STUDENT"), async (req, res) => {
+router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
   try {
     const target = await authorizeStudentPerformanceAccess(req, res);
     if (!target) return;
@@ -868,7 +868,7 @@ router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "S
 });
 
 // Same access rule as above: downloadable PDF report.
-router.get("/:id/performance/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "STUDENT"), async (req, res) => {
+router.get("/:id/performance/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
   try {
     const target = await authorizeStudentPerformanceAccess(req, res);
     if (!target) return;

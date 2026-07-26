@@ -1,8 +1,10 @@
 const express = require("express");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
+const { attachRequesterInstitute } = require("../middleware/institute");
 const { cached, invalidate } = require("../utils/cache");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { computeMandatoryCompletion } = require("../utils/studentProfileCompletion");
 
 const router = express.Router();
 
@@ -46,7 +48,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
     const existing = await prisma.institute.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Institute not found" });
 
-    const { name, code, address, contact, isActive, logoUrl, passwordExpiryDays, passwordHistoryDepth, singleSessionOnly, aiHintsEnabled } = req.body;
+    const { name, code, address, contact, isActive, logoUrl, passwordExpiryDays, passwordHistoryDepth, singleSessionOnly, aiHintsEnabled, requireProfileCompletion } = req.body;
     if (name && name.trim() !== existing.name) {
       const dup = await prisma.institute.findUnique({ where: { name: name.trim() } });
       if (dup) return res.status(409).json({ error: "An institute with this name already exists" });
@@ -71,6 +73,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
         passwordHistoryDepth: passwordHistoryDepth !== undefined ? Number(passwordHistoryDepth) : existing.passwordHistoryDepth,
         singleSessionOnly: singleSessionOnly !== undefined ? !!singleSessionOnly : existing.singleSessionOnly,
         aiHintsEnabled: aiHintsEnabled !== undefined ? !!aiHintsEnabled : existing.aiHintsEnabled,
+        requireProfileCompletion: requireProfileCompletion !== undefined ? !!requireProfileCompletion : existing.requireProfileCompletion,
       },
     });
     invalidate("institutes:");
@@ -174,6 +177,69 @@ router.get("/:id/course-analytics", authenticate, requireRole("ADMIN"), async (r
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load course analytics" });
+  }
+});
+
+// ADMIN/STAFF/CLERK: Student Profile Completion stats for one institute — total/completed/
+// incomplete/percent plus the list of students still pending, optionally filtered by department.
+// Institute-scoped for Staff/Clerk (attachRequesterInstitute) the same way every other Placement
+// Cell/analytics route on this platform is; an unscoped Platform Admin can query any institute.
+router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = req.params.id;
+    if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {
+      return res.status(403).json({ error: "You can only view your own institute's data" });
+    }
+    const institute = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true, name: true, requireProfileCompletion: true } });
+    if (!institute) return res.status(404).json({ error: "Institute not found" });
+
+    const { departmentId } = req.query;
+    const students = await prisma.user.findMany({
+      where: {
+        instituteId, role: "STUDENT",
+        ...(departmentId ? { academicGroup: { departmentId } } : {}),
+      },
+      select: {
+        id: true, name: true, email: true, rollNumber: true, mobile: true, gender: true, profilePhotoUrl: true,
+        academicGroup: { select: { department: { select: { id: true, name: true } } } },
+      },
+    });
+
+    if (students.length === 0) {
+      return res.json({ institute, total: 0, completed: 0, incomplete: 0, percentComplete: 0, pending: [] });
+    }
+
+    const studentIds = students.map((s) => s.id);
+    const [profiles, resumes] = await Promise.all([
+      prisma.studentProfile.findMany({ where: { studentId: { in: studentIds } } }),
+      prisma.resume.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, education: true, fullName: true, email: true } }),
+    ]);
+    const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
+    const resumeByStudent = new Map(resumes.map((r) => [r.studentId, r]));
+
+    let completed = 0;
+    const pending = [];
+    for (const student of students) {
+      const completion = computeMandatoryCompletion(student, profileByStudent.get(student.id), resumeByStudent.get(student.id));
+      if (completion.complete) {
+        completed++;
+      } else {
+        pending.push({
+          id: student.id, name: student.name, email: student.email, rollNumber: student.rollNumber,
+          department: student.academicGroup?.department?.name || null,
+          percent: completion.percent, missingFields: completion.missingFields.map((f) => f.label),
+        });
+      }
+    }
+
+    res.json({
+      institute, total: students.length, completed, incomplete: students.length - completed,
+      percentComplete: Math.round((completed / students.length) * 100),
+      pending: pending.sort((a, b) => a.percent - b.percent),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load profile completion stats" });
   }
 });
 

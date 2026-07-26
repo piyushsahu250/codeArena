@@ -13,6 +13,11 @@ enum Role {
   STUDENT
   STAFF
   ADMIN
+  // Placement Clerk — always institute-scoped (User.instituteId required for this role), focused
+  // on Placement Cell operations (student search/export, Company Master). Never gains Learning
+  // Management or Test Management access — those routes stay ADMIN/ADMIN+STAFF and simply don't
+  // list CLERK, so it's excluded by default rather than needing an explicit block.
+  CLERK
 }
 
 enum Difficulty {
@@ -61,6 +66,12 @@ model Institute {
   // view when their per-subject percentage falls below it. Null = no threshold configured, no
   // warning shown — this never blocks anything (tests, login, etc.), purely informational.
   attendanceMinPercent Int?
+
+  // Student Profile Completion: when true, a STUDENT at this institute is blocked from
+  // everything except the Profile page + logout until their Personal Academic & Info section is
+  // complete (see backend/src/utils/studentProfileCompletion.js). Off by default — existing
+  // students are never retroactively locked out unless an admin opts their institute in.
+  requireProfileCompletion Boolean @default(false)
 
   classes         Class[]
   users           User[]
@@ -147,6 +158,7 @@ model User {
   streak          StudentStreak?
   resume          Resume?
   resumeFeedback  ResumeFeedback[]
+  studentProfile  StudentProfile?
 
   interviewSessions    InterviewSession[]
   interviewReports     InterviewReport[]
@@ -1213,6 +1225,71 @@ model ResumeFeedback {
   createdAt DateTime @default(now())
 
   @@index([studentId, createdAt])
+}
+
+// ===================================================================
+// Student Profile Completion. Holds only the identity/academic fields not already modeled
+// elsewhere — name/email/mobile/gender/profilePhotoUrl live on User, education history and the
+// mandatory resume upload are satisfied by the student already having a Resume row with >=1
+// education entry (see backend/src/utils/studentProfileCompletion.js, the single source of truth
+// for what "complete" means — reused by the save route, the login payload, and admin stats so
+// nothing ever trusts a client-computed completion flag).
+// ===================================================================
+model StudentProfile {
+  id        String @id @default(uuid())
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String @unique
+
+  personalEmail String?
+  dob           DateTime?
+  address       String?
+  state         String?
+  district      String?
+  pincode       String?
+  fatherName    String?
+  fatherContact String?
+  motherName    String?
+  motherContact String?
+  shortDescription String?
+
+  // Optional "Skills & Capabilities" handles not already covered by the Resume model's
+  // github/linkedin/portfolio fields.
+  leetcodeHandle   String?
+  hackerrankHandle String?
+  stopstalkHandle  String?
+  amcatId          String?
+  cocubesId        String?
+
+  // Placement Registration (Placement Cell foundations) — a student's explicit opt-in/out,
+  // visible to Staff/Clerk/Admin, editable by the student at any time.
+  placementParticipation String?   // "INTERESTED" | "NOT_INTERESTED"
+  placementDeclineReason String?   // HIGHER_STUDIES | GOVT_EXAM | ENTREPRENEURSHIP | FAMILY_BUSINESS | EMPLOYED | NOT_INTERESTED | OTHER
+  placementDeclineOther  String?
+  placementUpdatedAt     DateTime?
+
+  mandatoryStatus      String    @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | COMPLETED
+  mandatoryCompletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Company Master (Placement Cell foundations) — a shared, admin/clerk-maintained list of
+// employers, reused wherever a student would otherwise type a free-text company name (currently:
+// Resume.experience entries, which gain an optional companyId key inside their existing JSON
+// shape — no schema change needed there).
+model Company {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  logoUrl         String?
+  companyType     String?
+  website         String?
+  isActive        Boolean  @default(true)
+  createdByUserId String
+  createdByName   String
+  createdAt       DateTime @default(now())
+
+  @@index([name])
 }
 
 // ===================================================================

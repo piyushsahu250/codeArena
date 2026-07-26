@@ -7,6 +7,7 @@ const { createSession, endSession } = require("../utils/sessions");
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange, isPasswordExpired } = require("../utils/password");
 const { authenticate } = require("../middleware/auth");
+const { computeMandatoryCompletion } = require("../utils/studentProfileCompletion");
 
 const router = express.Router();
 
@@ -81,7 +82,21 @@ router.post("/login", async (req, res) => {
     await logAudit({ req, action: AUDIT_ACTIONS.LOGIN, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.role === "STUDENT" ? user.id : null, instituteId: user.instituteId, details: { isFirstLogin, isNewDevice } });
     maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice); // fire-and-forget — see comment above
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, mustChangePassword } });
+    // Student Profile Completion gating — mirrors mustChangePassword's shape exactly (a boolean
+    // the frontend checks on every protected-route render). Only ever true for STUDENT accounts
+    // at an institute that has opted in; every other role/institute combination is unaffected.
+    let requireProfileCompletion = false;
+    let profileComplete = true;
+    if (user.role === "STUDENT" && user.institute?.requireProfileCompletion) {
+      requireProfileCompletion = true;
+      const [studentProfile, resume] = await Promise.all([
+        prisma.studentProfile.findUnique({ where: { studentId: user.id } }),
+        prisma.resume.findUnique({ where: { studentId: user.id }, select: { education: true, fullName: true, email: true } }),
+      ]);
+      profileComplete = computeMandatoryCompletion(user, studentProfile, resume).complete;
+    }
+
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, mustChangePassword, requireProfileCompletion, profileComplete } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Login failed" });

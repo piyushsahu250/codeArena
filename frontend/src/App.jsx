@@ -1,9 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GamificationProvider } from "./context/GamificationContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { ToastProvider } from "./context/ToastContext";
+import { ToastProvider, useToast } from "./context/ToastContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { SidebarUIProvider } from "./context/SidebarContext";
 import LoadingScreen from "./components/LoadingScreen";
@@ -82,8 +82,18 @@ import CertificateVerify from "./pages/CertificateVerify";
 import CertificateAdmin from "./pages/CertificateAdmin";
 import Backups from "./pages/Backups";
 import ExportCenter from "./pages/ExportCenter";
+import StudentProfile from "./pages/StudentProfile";
+import ClerkDashboard from "./pages/ClerkDashboard";
+import CompanyMaster from "./pages/CompanyMaster";
 
-const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin" };
+const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
+
+// Student Profile Completion gating — true only for a STUDENT whose institute has the toggle on
+// and who hasn't finished the mandatory Personal Academic & Info section yet. Mirrors
+// mustChangePassword's exact shape (a boolean the frontend already knows how to force-redirect on).
+function profileGateActive(user) {
+  return user.role === "STUDENT" && user.requireProfileCompletion && !user.profileComplete;
+}
 
 // noChrome skips the persistent Sidebar — used for the three fullscreen/proctored routes
 // (timed exam, mock interview session, module coding assessment) where offering navigation away
@@ -91,12 +101,22 @@ const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin" }
 function Protected({ roles, children, noChrome = false }) {
   const { user } = useAuth();
   const location = useLocation();
+  const toast = useToast();
+  const blocked = !!user && profileGateActive(user) && location.pathname !== "/profile";
+  // Toast is a side effect, so it fires from an effect (once per blocked navigation attempt) even
+  // though the actual redirect below is a synchronous <Navigate> in the same render.
+  useEffect(() => {
+    if (blocked) toast.error("Please complete your Personal Academic & Info before continuing.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocked, location.pathname]);
+
   if (!user) return <Navigate to="/login" replace />;
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
+  if (blocked) return <Navigate to="/profile" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return (
     <>
-      {!noChrome && <Sidebar role={user.role} />}
+      {!noChrome && <Sidebar role={user.role} profileGateActive={profileGateActive(user)} />}
       {/* Keyed by path so this remounts (and re-triggers the fade-in) on every navigation,
           instead of silently reusing the same DOM node with stale animation state. */}
       <div key={location.pathname} className="ca-page-enter">
@@ -113,6 +133,7 @@ function Home() {
   // their role's dashboard, same as before.
   if (!user) return <Landing />;
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
+  if (profileGateActive(user)) return <Navigate to="/profile" replace />;
   return <Navigate to={HOME_BY_ROLE[user.role] || "/login"} replace />;
 }
 
@@ -140,6 +161,7 @@ export default function App() {
           <Route path="/attendance" element={<Protected roles={["STUDENT"]}><MyAttendance /></Protected>} />
 
           {/* Student */}
+          <Route path="/profile" element={<Protected roles={["STUDENT"]}><StudentProfile /></Protected>} />
           <Route path="/dashboard" element={<Protected roles={["STUDENT"]}><StudentDashboard /></Protected>} />
           <Route
             path="/test/:id"
@@ -246,6 +268,14 @@ export default function App() {
           <Route path="/admin/monitoring" element={<Protected roles={["ADMIN"]}><SystemMonitoring /></Protected>} />
           <Route path="/admin/students" element={<Protected roles={["ADMIN"]}><StudentSearch basePath="/admin" /></Protected>} />
           <Route path="/admin/students/:id" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/admin" /></Suspense></Protected>} />
+          <Route path="/admin/companies" element={<Protected roles={["ADMIN"]}><CompanyMaster /></Protected>} />
+
+          {/* Placement Clerk — always institute-scoped, Placement Cell operations only (no
+              Learning/Test Management access — those routes above simply never list CLERK). */}
+          <Route path="/clerk" element={<Protected roles={["CLERK"]}><ClerkDashboard /></Protected>} />
+          <Route path="/clerk/students" element={<Protected roles={["CLERK"]}><StudentSearch basePath="/clerk" /></Protected>} />
+          <Route path="/clerk/students/:id" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/clerk" /></Suspense></Protected>} />
+          <Route path="/clerk/companies" element={<Protected roles={["CLERK"]}><CompanyMaster /></Protected>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

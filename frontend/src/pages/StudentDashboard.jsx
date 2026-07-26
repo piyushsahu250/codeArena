@@ -484,7 +484,7 @@ function QuickActions({ learningResumeId, style }) {
       <Link to="/achievements" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Trophy size={15} /> Achievements</Link>
       <Link to="/resume" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><FileText size={15} /> Resume Builder</Link>
       <Link to="/interview" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Mic size={15} /> AI Mock Interview</Link>
-      <Link to="/account" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><UserCircle size={15} /> Profile</Link>
+      <Link to="/profile" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><UserCircle size={15} /> Profile</Link>
     </div>
   );
 }
