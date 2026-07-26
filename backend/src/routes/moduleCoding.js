@@ -438,14 +438,12 @@ router.post("/attempts/:attemptId/finalize", authenticate, requireRole("STUDENT"
   }
 });
 
-// =========================== Admin CMS ===========================
-// Staff has exactly one permission in this router: view + reset student attempts (own institute
-// only, see the "ADMIN/STAFF (own institute only)" section below). Every assessment-settings /
-// question-pool route in this section is ADMIN-only — Staff must not be able to open assessment
-// config or view coding questions, not even read-only.
+// =========================== Admin/Staff CMS ===========================
+// Staff gets read-only access to everything in this section (view test config + question pool)
+// but every mutating route (create/edit/delete/bulk-import) below is ADMIN-only.
 
-// ADMIN: this module's coding-test config (or null) + its full question pool.
-router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async (req, res) => {
+// ADMIN/STAFF: this module's coding-test config (or null) + its full question pool.
+router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { moduleId: req.params.moduleId },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
@@ -455,7 +453,7 @@ router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async 
 
 // Generic single-test lookup by its own id — used by the Level detail UI, since a chapter-scoped
 // Level has no moduleId to look it up by (unlike the legacy route above).
-router.get("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { id: req.params.id },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
@@ -520,7 +518,7 @@ router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async
 // which is capped at one by ModuleCodingTest.moduleId's @unique constraint). Every downstream
 // route (question CRUD, bulk-import, attempts, export) already operates purely on test.id, so
 // none of them need any change to support this.
-router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const levels = await prisma.moduleCodingTest.findMany({
     where: { chapterId: req.params.chapterId },
     orderBy: { order: "asc" },

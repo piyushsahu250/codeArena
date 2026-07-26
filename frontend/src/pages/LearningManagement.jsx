@@ -14,20 +14,17 @@ import { useToast } from "../context/ToastContext";
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
 
-// Learning Management is Admin-only content management (Course -> Module -> Lesson -> Practice
-// Questions, Coding Assessment config/questions). Staff's only permission anywhere in this module
-// is resetting a student's coding-assessment attempts (own institute only) — they get a
-// completely separate, minimal screen rather than a read-only view of the Admin tree, matching
-// the backend RBAC lockdown (every other LMS route in learning.js/moduleCoding.js is ADMIN-only).
+// Content management for the Learning Module: drill down Course -> Module -> Lesson -> Practice
+// Questions, all in one page since each level is a thin CRUD list. Admin gets full read/write;
+// Staff gets the exact same navigable tree read-only (every panel below gates its own
+// create/edit/delete/publish/reorder/import controls on isAdmin) with one exception — Reset
+// Attempts inside CodingAttemptsPanel stays enabled for Staff, own institute only. This is one
+// shared tree rather than a separate Staff screen so there's no duplicate browsing workflow to
+// maintain; the backend enforces the same split (every mutating route is ADMIN-only, every GET
+// route in this module is ADMIN+STAFF, except the reset route which is ADMIN+STAFF by design).
 export default function LearningManagement() {
   const { user } = useAuth();
-  if (user?.role !== "ADMIN") return <StaffCodingAttemptsScreen />;
-  return <AdminLearningManagement />;
-}
-
-// Admin content management for the Learning Module: drill down Course -> Module -> Lesson ->
-// Practice Questions, all in one page since each level is a thin CRUD list.
-function AdminLearningManagement() {
+  const isAdmin = user?.role === "ADMIN";
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
   const [moduleId, setModuleId] = useState(null);
@@ -65,10 +62,17 @@ function AdminLearningManagement() {
     <div>
       <Navbar />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
-        <h1>Learning Management</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h1>Learning Management</h1>
+          {!isAdmin && (
+            <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 12 }}>Read-Only Access</span>
+          )}
+        </div>
         <ChalkUnderline />
         <p style={{ color: "var(--ink-dim)", marginTop: 12, fontSize: 14 }}>
-          Manage courses, modules, lessons, and practice questions for the Learning module.
+          {isAdmin
+            ? "Manage courses, modules, lessons, and practice questions for the Learning module."
+            : "Browse courses, modules, lessons, and coding assessments. You can search and view everything here — editing is Admin-only, except resetting a student's coding assessment attempts."}
         </p>
 
         <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 20 }}>
@@ -99,70 +103,6 @@ function AdminLearningManagement() {
         )}
         {chapter && (
           <ChapterDetailPanel chapter={chapter} onBack={() => setChapter(null)} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Staff's entire Learning Management surface: search for a coding assessment (title/course/module
-// label only — no config, no questions, via the flat GET /module-coding/admin/tests listing),
-// then reuse the exact same CodingAttemptsPanel the Admin CMS embeds — it's already institute-
-// scoped and already has search/reset built in, so nothing about the reset workflow is duplicated.
-function StaffCodingAttemptsScreen() {
-  const [tests, setTests] = useState([]);
-  const [testId, setTestId] = useState(null);
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    api.get("/module-coding/admin/tests").then((res) => setTests(res.data));
-  }, []);
-
-  const filtered = tests.filter((t) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return [t.title, t.courseName, t.moduleTitle, t.chapterTitle].filter(Boolean).some((s) => s.toLowerCase().includes(q));
-  });
-  const selected = tests.find((t) => t.id === testId);
-
-  return (
-    <div>
-      <Navbar />
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
-        <h1>Coding Assessment — Reset Attempts</h1>
-        <ChalkUnderline />
-        <p style={{ color: "var(--ink-dim)", marginTop: 12, fontSize: 14 }}>
-          Search for a coding assessment to view and reset attempts for students in your institute.
-        </p>
-
-        {!selected ? (
-          <div className="card" style={{ padding: 20, marginTop: 24 }}>
-            <label style={labelStyle}>Search assessment (title, course, or module)</label>
-            <input style={inputStyle} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. Java Module 1 Coding Assessment" autoFocus />
-            <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
-              {filtered.map((t) => (
-                <div
-                  key={t.id} className="card"
-                  style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
-                  onClick={() => setTestId(t.id)}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{t.title}</div>
-                    <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 2 }}>
-                      {t.courseName}{t.moduleTitle && ` · ${t.moduleTitle}`}{t.chapterTitle && ` · ${t.chapterTitle}`}
-                    </div>
-                  </div>
-                  <span className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>View →</span>
-                </div>
-              ))}
-              {filtered.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No assessments found.</p>}
-            </div>
-          </div>
-        ) : (
-          <>
-            <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => setTestId(null)}>← Back to assessment search</button>
-            <CodingAttemptsPanel testId={selected.id} testTitle={selected.title} maxAttempts={selected.maxAttempts} />
-          </>
         )}
       </div>
     </div>
@@ -489,7 +429,7 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
             <div style={{ display: "flex", gap: 6 }}>
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, -1)}>↑</button>}
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, 1)}>↓</button>}
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(m.id)}>Manage →</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(m.id)}>{isAdmin ? "Manage →" : "View →"}</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageChapters(m.id)}>Chapters</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageCoding(m.id)}>Coding Assessment</button>
               {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(m)}>Delete</button>}
@@ -502,6 +442,8 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
 }
 
 function LessonPanel({ mod, onSelect, onRefresh }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [form, setForm] = useState({ title: "", estimatedMinutes: 10, order: mod.lessons.length });
   const [saving, setSaving] = useState(false);
 
@@ -532,27 +474,29 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <div style={{ flex: "2 1 200px" }}>
-          <label style={labelStyle}>New lesson title</label>
-          <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </div>
-        <div style={{ flex: "1 1 120px" }}>
-          <label style={labelStyle}>Est. minutes</label>
-          <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
-        </div>
-        <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add lesson"}</button>
-      </form>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 200px" }}>
+            <label style={labelStyle}>New lesson title</label>
+            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={labelStyle}>Est. minutes</label>
+            <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+          </div>
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add lesson"}</button>
+        </form>
+      )}
 
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
         {mod.lessons.sort((a, b) => a.order - b.order).map((l) => (
           <div key={l.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ cursor: "pointer" }} onClick={() => onSelect(l.id)}>{l.title}</div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(l, -1)}>↑</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(l, 1)}>↓</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(l.id)}>Edit →</button>
-              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(l)}>Delete</button>
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(l, -1)}>↑</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(l, 1)}>↓</button>}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(l.id)}>{isAdmin ? "Edit →" : "View →"}</button>
+              {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(l)}>Delete</button>}
             </div>
           </div>
         ))}
@@ -565,6 +509,8 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
 // questions) since the course-tree summary the parent holds only has title/order/estimate —
 // the CMS needs the real content to edit, which /learning/courses/:slug intentionally omits.
 function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [full, setFull] = useState(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -598,22 +544,25 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24, marginTop: 20, alignItems: "start" }}>
       <form onSubmit={save} className="card" style={{ padding: 20 }}>
-        <h3 style={{ fontSize: 15 }}>Edit lesson</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <h3 style={{ fontSize: 15 }}>{isAdmin ? "Edit lesson" : "Lesson"}</h3>
+          {!isAdmin && <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only</span>}
+        </div>
         <label style={labelStyle}>Title</label>
-        <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         <label style={labelStyle}>Content (HTML — headings, &lt;p&gt;, &lt;pre&gt;&lt;code&gt;, &lt;ul&gt;)</label>
-        <textarea style={{ ...inputStyle, minHeight: 260, fontFamily: "var(--font-mono)", fontSize: 12 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+        <textarea style={{ ...inputStyle, minHeight: 260, fontFamily: "var(--font-mono)", fontSize: 12 }} disabled={!isAdmin} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
         <label style={labelStyle}>Video URL (optional)</label>
-        <input style={inputStyle} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
+        <input style={inputStyle} disabled={!isAdmin} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
         <label style={labelStyle}>PDF URL (optional)</label>
-        <input style={inputStyle} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
+        <input style={inputStyle} disabled={!isAdmin} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
         <label style={labelStyle}>Estimated minutes</label>
-        <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+        <input style={inputStyle} type="number" min="1" disabled={!isAdmin} value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
-          <input type="checkbox" checked={!!form.isModuleTest} onChange={(e) => setForm({ ...form, isModuleTest: e.target.checked })} />
+          <input type="checkbox" disabled={!isAdmin} checked={!!form.isModuleTest} onChange={(e) => setForm({ ...form, isModuleTest: e.target.checked })} />
           This is the module's gating practice test (batch-submitted, must pass to unlock the next module)
         </label>
-        <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save lesson"}</button>
+        {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save lesson"}</button>}
       </form>
 
       <PracticeQuestionsPanel lesson={{ id: lessonId, questions: full.questions }} onRefresh={load} />
@@ -629,6 +578,8 @@ const EMPTY_Q = {
 };
 
 function PracticeQuestionsPanel({ lesson, onRefresh }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_Q);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
@@ -675,7 +626,9 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
     <div className="card" style={{ padding: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h3 style={{ fontSize: 15 }}>Practice questions</h3>
-        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add"}</button>
+        {isAdmin && (
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add"}</button>
+        )}
       </div>
 
       <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
@@ -691,13 +644,15 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
               )}
               <div style={{ marginTop: 4 }}>{q.prompt}</div>
             </div>
-            <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+            {isAdmin && (
+              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+            )}
           </div>
         ))}
         {(!lesson.questions || lesson.questions.length === 0) && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No practice questions yet.</p>}
       </div>
 
-      {adding && (
+      {isAdmin && adding && (
         <form onSubmit={create} style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
           <label style={labelStyle}>Type</label>
           <select style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
@@ -797,15 +752,16 @@ const EMPTY_TEST_FORM = {
   allowedLanguages: ["java", "python", "javascript", "c", "cpp"],
 };
 
-// Config (create/edit/delete) is ADMIN-only, matching the backend RBAC restriction — Staff still
-// see Questions and Student Attempts (including Reset), just not the Settings tab or a create form.
+// Staff gets read-only access to the whole panel (Settings tab included, fields disabled) except
+// there's nothing to create if no assessment exists yet — only Admin sees the create form. Create/
+// edit/delete stay ADMIN-only, matching the backend RBAC restriction.
 function CodingTestPanel({ moduleId }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const [test, setTest] = useState(undefined); // undefined = loading, null = not configured yet
   const [form, setForm] = useState(EMPTY_TEST_FORM);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState(isAdmin ? "config" : "questions");
+  const [tab, setTab] = useState("config");
 
   function load() {
     api.get(`/module-coding/admin/module/${moduleId}`).then((res) => {
@@ -884,23 +840,28 @@ function CodingTestPanel({ moduleId }) {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <div style={{ display: "flex", gap: 8 }}>
-        {isAdmin && <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>}
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>
         <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
         <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
+        {!isAdmin && (
+          <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only Access</span>
+        )}
       </div>
 
-      {tab === "config" && isAdmin && (
+      {tab === "config" && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-            <input type="checkbox" checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            <input type="checkbox" disabled={!isAdmin} checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
             Active (required to unlock the next module)
           </label>
-          <ConfigFields form={form} setForm={setForm} toggleLanguage={toggleLanguage} />
-          <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
-            <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={remove}>Delete assessment</button>
-          </div>
+          <ConfigFields form={form} setForm={setForm} toggleLanguage={toggleLanguage} readOnly={!isAdmin} />
+          {isAdmin && (
+            <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
+              <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={remove}>Delete assessment</button>
+            </div>
+          )}
         </form>
       )}
 
@@ -910,45 +871,45 @@ function CodingTestPanel({ moduleId }) {
   );
 }
 
-function ConfigFields({ form, setForm, toggleLanguage }) {
+function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
   return (
     <>
       <label style={labelStyle}>Title</label>
-      <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+      <input style={inputStyle} disabled={readOnly} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
       <label style={labelStyle}>Instructions</label>
-      <textarea style={{ ...inputStyle, minHeight: 50 }} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+      <textarea style={{ ...inputStyle, minHeight: 50 }} disabled={readOnly} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
-        <div><label style={labelStyle}>Questions per attempt</label><input style={inputStyle} type="number" min="1" value={form.questionCount} onChange={(e) => setForm({ ...form, questionCount: e.target.value })} /></div>
-        <div><label style={labelStyle}>Time limit (min)</label><input style={inputStyle} type="number" min="1" value={form.timeLimitMin} onChange={(e) => setForm({ ...form, timeLimitMin: e.target.value })} /></div>
-        <div><label style={labelStyle}>Passing %</label><input style={inputStyle} type="number" min="0" max="100" value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
-        <div><label style={labelStyle}>Max attempts (blank = unlimited)</label><input style={inputStyle} type="number" min="1" value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
-        <div><label style={labelStyle}>Cooldown between attempts (min)</label><input style={inputStyle} type="number" min="0" value={form.cooldownMinutes} onChange={(e) => setForm({ ...form, cooldownMinutes: e.target.value })} /></div>
-        <div><label style={labelStyle}>Max violations before auto-submit</label><input style={inputStyle} type="number" min="1" value={form.maxViolations} onChange={(e) => setForm({ ...form, maxViolations: e.target.value })} /></div>
+        <div><label style={labelStyle}>Questions per attempt</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.questionCount} onChange={(e) => setForm({ ...form, questionCount: e.target.value })} /></div>
+        <div><label style={labelStyle}>Time limit (min)</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.timeLimitMin} onChange={(e) => setForm({ ...form, timeLimitMin: e.target.value })} /></div>
+        <div><label style={labelStyle}>Passing %</label><input style={inputStyle} type="number" min="0" max="100" disabled={readOnly} value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
+        <div><label style={labelStyle}>Max attempts (blank = unlimited)</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
+        <div><label style={labelStyle}>Cooldown between attempts (min)</label><input style={inputStyle} type="number" min="0" disabled={readOnly} value={form.cooldownMinutes} onChange={(e) => setForm({ ...form, cooldownMinutes: e.target.value })} /></div>
+        <div><label style={labelStyle}>Max violations before auto-submit</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.maxViolations} onChange={(e) => setForm({ ...form, maxViolations: e.target.value })} /></div>
       </div>
       <label style={labelStyle}>Allowed languages</label>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
         {["java", "python", "javascript", "c", "cpp"].map((lang) => (
           <label key={lang} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="checkbox" checked={form.allowedLanguages.includes(lang)} onChange={() => toggleLanguage(lang)} />
+            <input type="checkbox" disabled={readOnly} checked={form.allowedLanguages.includes(lang)} onChange={() => toggleLanguage(lang)} />
             {lang}
           </label>
         ))}
       </div>
       <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="checkbox" checked={!!form.randomizeQuestions} onChange={(e) => setForm({ ...form, randomizeQuestions: e.target.checked })} /> Randomize question selection
+          <input type="checkbox" disabled={readOnly} checked={!!form.randomizeQuestions} onChange={(e) => setForm({ ...form, randomizeQuestions: e.target.checked })} /> Randomize question selection
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="checkbox" checked={!!form.requireFullscreen} onChange={(e) => setForm({ ...form, requireFullscreen: e.target.checked })} /> Require fullscreen
+          <input type="checkbox" disabled={readOnly} checked={!!form.requireFullscreen} onChange={(e) => setForm({ ...form, requireFullscreen: e.target.checked })} /> Require fullscreen
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="checkbox" checked={!!form.requireWebcam} onChange={(e) => setForm({ ...form, requireWebcam: e.target.checked })} /> Require webcam (face detection)
+          <input type="checkbox" disabled={readOnly} checked={!!form.requireWebcam} onChange={(e) => setForm({ ...form, requireWebcam: e.target.checked })} /> Require webcam (face detection)
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="checkbox" checked={!!form.requireMicrophone} onChange={(e) => setForm({ ...form, requireMicrophone: e.target.checked })} /> Require microphone
+          <input type="checkbox" disabled={readOnly} checked={!!form.requireMicrophone} onChange={(e) => setForm({ ...form, requireMicrophone: e.target.checked })} /> Require microphone
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="checkbox" checked={!!form.allowResume} onChange={(e) => setForm({ ...form, allowResume: e.target.checked })} /> Allow resume after crash/refresh
+          <input type="checkbox" disabled={readOnly} checked={!!form.allowResume} onChange={(e) => setForm({ ...form, allowResume: e.target.checked })} /> Allow resume after crash/refresh
         </label>
       </div>
     </>
@@ -1365,6 +1326,8 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
 // backend/scripts/backfillChapters.js), so this panel works identically for old and new content.
 
 function ChapterListPanel({ moduleId, onSelect }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [chapters, setChapters] = useState(null);
   const [form, setForm] = useState({ title: "", description: "" });
   const [saving, setSaving] = useState(false);
@@ -1408,17 +1371,19 @@ function ChapterListPanel({ moduleId, onSelect }) {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <div style={{ flex: "2 1 200px" }}>
-          <label style={labelStyle}>New chapter title</label>
-          <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </div>
-        <div style={{ flex: "3 1 260px" }}>
-          <label style={labelStyle}>Description</label>
-          <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        </div>
-        <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add chapter"}</button>
-      </form>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 200px" }}>
+            <label style={labelStyle}>New chapter title</label>
+            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div style={{ flex: "3 1 260px" }}>
+            <label style={labelStyle}>Description</label>
+            <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add chapter"}</button>
+        </form>
+      )}
 
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
         {chapters.sort((a, b) => a.order - b.order).map((c, i) => (
@@ -1436,11 +1401,11 @@ function ChapterListPanel({ moduleId, onSelect }) {
               <span className="badge" style={{ background: c.countsTowardCertificate ? "#E9EEFB" : "#F0EEE3", color: c.countsTowardCertificate ? "var(--ink)" : "var(--ink-dim)" }}>
                 {c.countsTowardCertificate ? "Required" : "Optional"}
               </span>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, -1)}>↑</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, 1)}>↓</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>{c.isActive ? "Deactivate" : "Activate"}</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c)}>Manage →</button>
-              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, -1)}>↑</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, 1)}>↓</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>{c.isActive ? "Deactivate" : "Activate"}</button>}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c)}>{isAdmin ? "Manage →" : "View →"}</button>
+              {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>}
             </div>
           </div>
         ))}
@@ -1451,6 +1416,8 @@ function ChapterListPanel({ moduleId, onSelect }) {
 }
 
 function ChapterDetailPanel({ chapter, onBack }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [tab, setTab] = useState("levels");
   const [form, setForm] = useState({
     title: chapter.title, description: chapter.description || "",
@@ -1482,19 +1449,22 @@ function ChapterDetailPanel({ chapter, onBack }) {
 
       {tab === "settings" && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 480 }}>
+          {!isAdmin && (
+            <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</span>
+          )}
           <label style={labelStyle}>Title</label>
-          <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label style={labelStyle}>Description</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <textarea style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
-            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            <input type="checkbox" disabled={!isAdmin} checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
             Active
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
-            <input type="checkbox" checked={form.countsTowardCertificate} onChange={(e) => setForm({ ...form, countsTowardCertificate: e.target.checked })} />
+            <input type="checkbox" disabled={!isAdmin} checked={form.countsTowardCertificate} onChange={(e) => setForm({ ...form, countsTowardCertificate: e.target.checked })} />
             Required for the course-wide Coding Assessment certificate
           </label>
-          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save chapter"}</button>
+          {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save chapter"}</button>}
         </form>
       )}
 
@@ -1505,6 +1475,8 @@ function ChapterDetailPanel({ chapter, onBack }) {
 }
 
 function ChapterTopicsPanel({ chapterId }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [topics, setTopics] = useState(null);
   const [topicId, setTopicId] = useState(null);
   const [form, setForm] = useState({ title: "", estimatedMinutes: 10 });
@@ -1548,27 +1520,29 @@ function ChapterTopicsPanel({ chapterId }) {
 
   return (
     <div style={{ marginTop: 16 }}>
-      <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-        <div style={{ flex: "2 1 200px" }}>
-          <label style={labelStyle}>New topic title</label>
-          <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        </div>
-        <div style={{ flex: "1 1 120px" }}>
-          <label style={labelStyle}>Est. minutes</label>
-          <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
-        </div>
-        <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add topic"}</button>
-      </form>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 200px" }}>
+            <label style={labelStyle}>New topic title</label>
+            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={labelStyle}>Est. minutes</label>
+            <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+          </div>
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add topic"}</button>
+        </form>
+      )}
 
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
         {topics.sort((a, b) => a.order - b.order).map((t) => (
           <div key={t.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ cursor: "pointer" }} onClick={() => setTopicId(t.id)}>{t.title}</div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, -1)}>↑</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, 1)}>↓</button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setTopicId(t.id)}>Edit →</button>
-              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(t)}>Delete</button>
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, -1)}>↑</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, 1)}>↓</button>}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setTopicId(t.id)}>{isAdmin ? "Edit →" : "View →"}</button>
+              {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(t)}>Delete</button>}
             </div>
           </div>
         ))}
@@ -1581,6 +1555,8 @@ function ChapterTopicsPanel({ chapterId }) {
 // Reuses PracticeQuestionsPanel as-is for this topic's Knowledge Check question bank — a
 // "quiz" block in TopicBlockEditor below references specific question ids from here by id.
 function TopicDetailPanel({ topicId, onBack }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [full, setFull] = useState(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -1619,30 +1595,37 @@ function TopicDetailPanel({ topicId, onBack }) {
       <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to topics</button>
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24, marginTop: 12, alignItems: "start" }}>
         <form onSubmit={save} className="card" style={{ padding: 20 }}>
-          <h3 style={{ fontSize: 15 }}>Edit topic</h3>
-          <label style={labelStyle}>Title</label>
-          <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <label style={labelStyle}>Video URL (optional)</label>
-          <input style={inputStyle} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
-          <label style={labelStyle}>PDF URL (optional)</label>
-          <input style={inputStyle} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
-          <label style={labelStyle}>Estimated minutes</label>
-          <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
-            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-            Active
-          </label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h3 style={{ fontSize: 15 }}>{isAdmin ? "Edit topic" : "Topic"}</h3>
+            {!isAdmin && <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only</span>}
+          </div>
+          {/* fieldset's disabled attribute cascades to every nested input/textarea/button — including
+              inside TopicBlockEditor/TableBlockEditor — without gating each field individually. */}
+          <fieldset disabled={!isAdmin} style={{ border: "none", padding: 0, margin: 0 }}>
+            <label style={labelStyle}>Title</label>
+            <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label style={labelStyle}>Video URL (optional)</label>
+            <input style={inputStyle} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
+            <label style={labelStyle}>PDF URL (optional)</label>
+            <input style={inputStyle} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
+            <label style={labelStyle}>Estimated minutes</label>
+            <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
+              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+              Active
+            </label>
 
-          <div style={{ marginTop: 18, fontWeight: 700, fontSize: 14 }}>Learn content</div>
-          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
-            Build this topic as an ordered list of blocks. If left empty, the legacy HTML field below is used instead.
-          </p>
-          <TopicBlockEditor blocks={form.blocks} onChange={(blocks) => setForm({ ...form, blocks })} />
+            <div style={{ marginTop: 18, fontWeight: 700, fontSize: 14 }}>Learn content</div>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+              Build this topic as an ordered list of blocks. If left empty, the legacy HTML field below is used instead.
+            </p>
+            <TopicBlockEditor blocks={form.blocks} onChange={(blocks) => setForm({ ...form, blocks })} />
 
-          <label style={labelStyle}>Legacy HTML content (used only when no blocks above)</label>
-          <textarea style={{ ...inputStyle, minHeight: 140, fontFamily: "var(--font-mono)", fontSize: 12 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+            <label style={labelStyle}>Legacy HTML content (used only when no blocks above)</label>
+            <textarea style={{ ...inputStyle, minHeight: 140, fontFamily: "var(--font-mono)", fontSize: 12 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+          </fieldset>
 
-          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save topic"}</button>
+          {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save topic"}</button>}
         </form>
 
         <PracticeQuestionsPanel lesson={{ id: topicId, questions: full.questions }} onRefresh={load} />
@@ -1803,6 +1786,8 @@ function TableBlockEditor({ block, onChange }) {
 }
 
 function ChapterLevelsPanel({ chapterId }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [levels, setLevels] = useState(null);
   const [levelId, setLevelId] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -1832,7 +1817,7 @@ function ChapterLevelsPanel({ chapterId }) {
 
   return (
     <div style={{ marginTop: 16 }}>
-      <button className="btn btn-primary" disabled={creating} onClick={addLevel}>{creating ? "Adding…" : "+ Add Level"}</button>
+      {isAdmin && <button className="btn btn-primary" disabled={creating} onClick={addLevel}>{creating ? "Adding…" : "+ Add Level"}</button>}
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
         {levels.sort((a, b) => a.order - b.order).map((l, i) => (
           <div key={l.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1865,7 +1850,7 @@ function LevelPanel({ levelId, onBack }) {
   const [test, setTest] = useState(undefined);
   const [form, setForm] = useState(EMPTY_TEST_FORM);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState(isAdmin ? "config" : "questions");
+  const [tab, setTab] = useState("config");
 
   function load() {
     api.get(`/module-coding/admin/tests/${levelId}`).then((res) => {
@@ -1917,23 +1902,28 @@ function LevelPanel({ levelId, onBack }) {
   return (
     <div style={{ marginTop: 16 }}>
       <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to levels</button>
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        {isAdmin && <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>}
+      <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+        <button className={tab === "config" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("config")}>Settings</button>
         <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
         <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
+        {!isAdmin && (
+          <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only Access</span>
+        )}
       </div>
 
-      {tab === "config" && isAdmin && (
+      {tab === "config" && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-            <input type="checkbox" checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
+            <input type="checkbox" disabled={!isAdmin} checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
             Active (required to unlock the next module)
           </label>
-          <ConfigFields form={form} setForm={setForm} toggleLanguage={toggleLanguage} />
-          <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
-            <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={remove}>Delete level</button>
-          </div>
+          <ConfigFields form={form} setForm={setForm} toggleLanguage={toggleLanguage} readOnly={!isAdmin} />
+          {isAdmin && (
+            <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? "Saving…" : "Save settings"}</button>
+              <button type="button" style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={remove}>Delete level</button>
+            </div>
+          )}
         </form>
       )}
 

@@ -793,7 +793,7 @@ async function assertAssignmentScope(req, res, instituteIds, academicGroupIds) {
   return true;
 }
 
-router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const [instituteRows, groupRows] = await Promise.all([
     prisma.courseInstituteAssignment.findMany({ where: { courseId: req.params.id }, include: { institute: { select: { id: true, name: true } } } }),
     prisma.courseAcademicGroupAssignment.findMany({ where: { courseId: req.params.id }, include: { academicGroup: { select: { id: true, batch: true, section: true, institute: { select: { name: true } }, department: { select: { name: true } } } } } }),
@@ -955,7 +955,7 @@ router.delete("/modules/:id", authenticate, requireRole("ADMIN"), async (req, re
 // that gate progress past it. Every pre-Chapter module gets backfilled with one "General"
 // chapter (see scripts/backfillChapters.js) so this is purely additive on top of existing data.
 
-router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
     const chapters = await prisma.chapter.findMany({
       where: { moduleId: req.params.id },
@@ -990,7 +990,7 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN"), async (
 
 // Full topic list for one chapter (the chapter list route above only returns a count) — used by
 // the admin CMS's "Learn" tab.
-router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
     const lessons = await prisma.lesson.findMany({
       where: { chapterId: req.params.id },
@@ -1258,7 +1258,7 @@ router.delete("/practice/:id", authenticate, requireRole("ADMIN"), async (req, r
 
 // ADMIN/STAFF: full question detail (with correctAnswer/explanation) for the CMS edit form —
 // distinct from the sanitized shape /lessons/:id returns to students.
-router.get("/practice/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/practice/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
   if (!q) return res.status(404).json({ error: "Question not found" });
   res.json(q);

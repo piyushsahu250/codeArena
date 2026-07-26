@@ -34,7 +34,7 @@ const MENU = {
   STAFF: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/staff", icon: LayoutDashboard },
-      { label: "Coding Assessment Reset", to: "/staff/learning", icon: BookOpen },
+      { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion },
       { label: "Gamification", to: "/staff/gamification", icon: Trophy },
       { label: "Coding Challenges", to: "/staff/challenges", icon: CalendarDays },
