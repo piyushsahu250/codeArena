@@ -8,7 +8,7 @@ import { useConfirm } from "../context/ConfirmContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 
-const ROLES = ["STUDENT", "STAFF", "ADMIN"];
+const ROLES = ["STUDENT", "STAFF", "ADMIN", "CLERK"];
 const emptyForm = {
   name: "", email: "", role: "STUDENT", instituteId: "",
   rollNumber: "", registrationNumber: "", department: "", mobile: "", gender: "",
