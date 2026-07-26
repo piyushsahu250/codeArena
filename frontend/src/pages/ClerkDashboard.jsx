@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building, Search, Users, GraduationCap } from "lucide-react";
+import { Building, Search, Users, GraduationCap, FileDown, FileText } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+
+const PIE_COLORS = ["#4F9D6E", "#C7852A", "#B0473F", "#5B7DB1"];
 
 export default function ClerkDashboard() {
   const { user } = useAuth();
@@ -12,8 +15,10 @@ export default function ClerkDashboard() {
   const [registration, setRegistration] = useState(null);
   const [offerStats, setOfferStats] = useState(null);
   const [department, setDepartment] = useState(null);
+  const [documentStats, setDocumentStats] = useState(null);
   const [batchFilter, setBatchFilter] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     api.get("/companies").then((res) => setCompanyCount(res.data.length)).catch(() => setCompanyCount(null));
@@ -31,6 +36,33 @@ export default function ClerkDashboard() {
       .then((res) => setOfferStats(res.data)).catch(() => setOfferStats(null));
   }, [verifiedOnly]);
 
+  useEffect(() => {
+    api.get("/placement/analytics/documents").then((res) => setDocumentStats(res.data)).catch(() => setDocumentStats(null));
+  }, []);
+
+  async function downloadPdfReport() {
+    setDownloadingPdf(true);
+    try {
+      const { data } = await api.get("/placement/analytics/report.pdf", { params: { batch: batchFilter || undefined }, responseType: "blob" });
+      const blob = new Blob([data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `placement-summary-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
+  const offerSourceData = offerStats ? [
+    { name: "On-Campus", value: offerStats.onCampus },
+    { name: "Off-Campus", value: offerStats.offCampus },
+  ].filter((d) => d.value > 0) : [];
+
   return (
     <div>
       <Navbar />
@@ -44,6 +76,7 @@ export default function ClerkDashboard() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link to="/clerk/students" className="btn btn-primary"><Search size={15} /> Student Search</Link>
             <Link to="/clerk/companies" className="btn btn-ghost"><Building size={15} /> Company Master</Link>
+            <button className="btn btn-ghost" disabled={downloadingPdf} onClick={downloadPdfReport}><FileDown size={15} /> {downloadingPdf ? "Downloading…" : "Download PDF Report"}</button>
           </div>
         </div>
 
@@ -69,6 +102,11 @@ export default function ClerkDashboard() {
               <StatCard icon={GraduationCap} label="Not Registered" value={registration.notRegistered} />
               <StatCard icon={Building} label="Companies" value={companyCount ?? "—"} />
               <StatCard icon={Users} label="% Registered" value={`${registration.percentRegistered}%`} />
+              {documentStats && (
+                <Link to="/clerk/students" style={{ textDecoration: "none", color: "inherit" }}>
+                  <StatCard icon={FileText} label="Documents Pending Verification" value={documentStats.pending} />
+                </Link>
+              )}
             </div>
             {registration.declineBreakdown.length > 0 && (
               <div className="card" style={{ padding: 16, marginTop: 12 }}>
@@ -95,20 +133,51 @@ export default function ClerkDashboard() {
           </label>
         </div>
         {offerStats && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-            <StatCard icon={Users} label="Placed" value={offerStats.placed} />
-            <StatCard icon={Users} label="Unplaced" value={offerStats.unplaced} />
-            <StatCard icon={Users} label="Active Offers" value={offerStats.activeOffers} />
-            <StatCard icon={Users} label="Multiple Offers" value={offerStats.multipleOffers} />
-            <StatCard icon={Users} label="Total Offers" value={offerStats.totalOffers} />
-            <StatCard icon={Users} label="Avg Offers / Student" value={offerStats.averageOffersPerStudent} />
-            <StatCard icon={Building} label="On-Campus" value={offerStats.onCampus} />
-            <StatCard icon={Building} label="Off-Campus" value={offerStats.offCampus} />
-          </div>
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+              <StatCard icon={Users} label="Placed" value={offerStats.placed} />
+              <StatCard icon={Users} label="Unplaced" value={offerStats.unplaced} />
+              <StatCard icon={Users} label="Active Offers" value={offerStats.activeOffers} />
+              <StatCard icon={Users} label="Multiple Offers" value={offerStats.multipleOffers} />
+              <StatCard icon={Users} label="Total Offers" value={offerStats.totalOffers} />
+              <StatCard icon={Users} label="Avg Offers / Student" value={offerStats.averageOffersPerStudent} />
+              <StatCard icon={Building} label="Highest Package (LPA)" value={offerStats.highestPackage} />
+              <StatCard icon={Building} label="Average Package (LPA)" value={offerStats.averagePackage} />
+            </div>
+
+            {offerSourceData.length > 0 && (
+              <div className="card" style={{ padding: 16, marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>On-Campus vs Off-Campus Offers</div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={offerSourceData} dataKey="value" nameKey="name" outerRadius={80} label>
+                      {offerSourceData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip /><Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </>
         )}
 
         {/* Department-wise */}
         <h3 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Department-wise Placement Status</h3>
+        {department && department.length > 0 && (
+          <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={department}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="department" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="registered" name="Registered" fill="#4F9D6E" />
+                <Bar dataKey="notRegistered" name="Not Registered" fill="#B0473F" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
         <div className="card" style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>

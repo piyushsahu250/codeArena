@@ -602,8 +602,10 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
         OR: [
           { id: q },
           { rollNumber: { contains: q, mode: "insensitive" } },
+          { registrationNumber: { contains: q, mode: "insensitive" } },
           { name: { contains: q, mode: "insensitive" } },
           { email: { contains: q, mode: "insensitive" } },
+          { mobile: { contains: q, mode: "insensitive" } },
         ],
       },
       select: {

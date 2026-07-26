@@ -16,6 +16,7 @@ const TABS = [
   { key: "lms", label: "Talentely LMS Info" },
   { key: "placement", label: "Placement Registration" },
   { key: "salary", label: "Salary & Performance Info" },
+  { key: "documents", label: "Documents" },
   { key: "jobs", label: "Job Preference" },
 ];
 
@@ -43,6 +44,11 @@ const EMPTY_OFFER = {
 const VERIFICATION_LABEL = { PENDING: "Pending Verification", VERIFIED: "Verified", REJECTED: "Rejected" };
 const VERIFICATION_COLOR = { PENDING: "var(--amber-dark)", VERIFIED: "var(--mint)", REJECTED: "var(--rust)" };
 
+const DOC_VERIFICATION_LABEL = { PENDING: "Pending Verification", VERIFIED: "Verified", REJECTED: "Rejected", REUPLOAD_REQUIRED: "Re-upload Required" };
+const DOC_VERIFICATION_COLOR = { PENDING: "var(--amber-dark)", VERIFIED: "var(--mint)", REJECTED: "var(--rust)", REUPLOAD_REQUIRED: "var(--rust)" };
+const LABEL_REQUIRED_DOC_TYPES = ["MARKSHEET", "OTHER"];
+const EMPTY_DOCUMENT = { documentType: "", label: "", documentLink: "" };
+
 export default function StudentProfile() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
@@ -64,6 +70,14 @@ export default function StudentProfile() {
   const [showOfferForm, setShowOfferForm] = useState(false);
   const [offerSaving, setOfferSaving] = useState(false);
   const [offerError, setOfferError] = useState("");
+
+  const [docTypes, setDocTypes] = useState([]);
+  const [documents, setDocuments] = useState(null);
+  const [documentForm, setDocumentForm] = useState(EMPTY_DOCUMENT);
+  const [editingDocId, setEditingDocId] = useState(null);
+  const [showDocumentForm, setShowDocumentForm] = useState(false);
+  const [documentSaving, setDocumentSaving] = useState(false);
+  const [documentError, setDocumentError] = useState("");
 
   function load() {
     api.get("/profile/me").then((res) => {
@@ -226,6 +240,65 @@ export default function StudentProfile() {
       loadOffers();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to delete offer");
+    }
+  }
+
+  // Documents — lazy-loaded on first visit to the "documents" tab, same pattern as offers.
+  useEffect(() => {
+    if (tab !== "documents" || documents) return;
+    api.get("/documents/types").then((res) => setDocTypes(res.data)).catch(() => setDocTypes([]));
+    loadDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  function loadDocuments() {
+    api.get("/documents/me").then((res) => setDocuments(res.data)).catch(() => setDocuments([]));
+  }
+
+  function startAddDocument() {
+    setEditingDocId(null);
+    setDocumentForm(EMPTY_DOCUMENT);
+    setDocumentError("");
+    setShowDocumentForm(true);
+  }
+
+  function startEditDocument(d) {
+    setEditingDocId(d.id);
+    setDocumentForm({ documentType: d.documentType, label: d.label || "", documentLink: d.documentLink });
+    setDocumentError("");
+    setShowDocumentForm(true);
+  }
+
+  async function saveDocument(e) {
+    e.preventDefault();
+    if (!documentForm.documentType) { setDocumentError("Select a document type."); return; }
+    if (LABEL_REQUIRED_DOC_TYPES.includes(documentForm.documentType) && !documentForm.label.trim()) {
+      setDocumentError("A label is required for this document type (e.g. 'Semester 5 Mark Sheet').");
+      return;
+    }
+    if (!documentForm.documentLink.trim()) { setDocumentError("A document link is required."); return; }
+    setDocumentSaving(true);
+    setDocumentError("");
+    try {
+      if (editingDocId) await api.patch(`/documents/${editingDocId}`, documentForm);
+      else await api.post("/documents", documentForm);
+      toast.success(editingDocId ? "Document updated — pending re-verification." : "Document added.");
+      setShowDocumentForm(false);
+      loadDocuments();
+    } catch (err) {
+      setDocumentError(err.response?.data?.error || "Failed to save document");
+    } finally {
+      setDocumentSaving(false);
+    }
+  }
+
+  async function deleteDocument(id) {
+    if (!confirm("Delete this document?")) return;
+    try {
+      await api.delete(`/documents/${id}`);
+      loadDocuments();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete document");
     }
   }
 
@@ -528,6 +601,79 @@ export default function StudentProfile() {
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "documents" && (
+          <div style={{ marginTop: 16 }}>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Documents</div>
+                {!showDocumentForm && <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={startAddDocument}>+ Add Document</button>}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                Add a shareable link (Google Drive, OneDrive, Dropbox, or PDF link) for each supporting document.
+                Staff, Clerk, and Admin verify documents against this link — editing a verified document resets it to Pending.
+              </p>
+
+              {showDocumentForm && (
+                <form onSubmit={saveDocument} className="card" style={{ padding: 16, marginTop: 12, background: "#FBFAF6" }}>
+                  <label style={labelStyle}>Document Type *</label>
+                  <select style={inputStyle} required value={documentForm.documentType} onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}>
+                    <option value="">Select…</option>
+                    {docTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+
+                  {LABEL_REQUIRED_DOC_TYPES.includes(documentForm.documentType) && (
+                    <>
+                      <label style={labelStyle}>Label *</label>
+                      <input style={inputStyle} required placeholder="e.g. Semester 5 Mark Sheet" value={documentForm.label} onChange={(e) => setDocumentForm({ ...documentForm, label: e.target.value })} />
+                    </>
+                  )}
+
+                  <label style={labelStyle}>Document Link *</label>
+                  <input style={inputStyle} required type="url" placeholder="https://drive.google.com/… or document PDF link" value={documentForm.documentLink} onChange={(e) => setDocumentForm({ ...documentForm, documentLink: e.target.value })} />
+
+                  {documentError && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{documentError}</p>}
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={documentSaving}>{documentSaving ? "Saving…" : "Save Document"}</button>
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowDocumentForm(false)}>Cancel</button>
+                  </div>
+                </form>
+              )}
+
+              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                {documents === null ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
+                ) : documents.length === 0 ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No documents added yet.</p>
+                ) : (
+                  documents.map((d) => {
+                    const typeLabel = docTypes.find((t) => t.value === d.documentType)?.label || d.documentType;
+                    return (
+                      <div key={d.id} className="card" style={{ padding: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: 13.5 }}>{typeLabel}{d.label ? ` — ${d.label}` : ""}</div>
+                            <a href={d.documentLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View document →</a>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <span className="badge" style={{ color: DOC_VERIFICATION_COLOR[d.verificationStatus], fontWeight: 700 }}>{DOC_VERIFICATION_LABEL[d.verificationStatus]}</span>
+                            {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
+                              <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 220 }}>{d.rejectionReason}</p>
+                            )}
+                            <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+                              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => startEditDocument(d)}>Edit</button>
+                              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11 }} onClick={() => deleteDocument(d.id)}>Delete</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

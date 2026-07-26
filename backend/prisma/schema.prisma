@@ -160,6 +160,7 @@ model User {
   resumeFeedback  ResumeFeedback[]
   studentProfile  StudentProfile?
   placementOffers PlacementOffer[]
+  studentDocuments StudentDocument[]
 
   interviewSessions    InterviewSession[]
   interviewReports     InterviewReport[]
@@ -1335,6 +1336,43 @@ model PlacementOffer {
   // Editing any field of a VERIFIED or REJECTED offer resets it to PENDING (re-verification on
   // edit) — see placementOffers.js's PATCH /offers/:id.
   verificationStatus OfferVerificationStatus @default(PENDING)
+  verifiedByUserId   String?
+  verifiedByName     String?
+  verifiedAt         DateTime?
+  rejectionReason    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+enum DocumentVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  REUPLOAD_REQUIRED
+}
+
+// Placement document management — a student-submitted shareable link for one supporting document
+// (Resume, Aadhaar, mark sheet, etc.), verified by Staff/Clerk/Admin the same way PlacementOffer
+// is. No in-house file storage exists on this platform (see PlacementOffer.proofLink) so this is
+// a link, not an uploaded file. Offer letters are deliberately not a documentType here — they're
+// already covered by PlacementOffer.proofLink. Multiple rows per (studentId, documentType) are
+// allowed on purpose: MARKSHEET and OTHER naturally need several, and it keeps this model simple
+// (no special-cased uniqueness) for the fixed types too, where the frontend just shows the latest.
+model StudentDocument {
+  id        String @id @default(uuid())
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  documentType String
+  label        String?
+  documentLink String
+
+  // Editing a VERIFIED/REJECTED/REUPLOAD_REQUIRED document resets it to PENDING (re-verification
+  // on edit) — same rule as PlacementOffer.
+  verificationStatus DocumentVerificationStatus @default(PENDING)
   verifiedByUserId   String?
   verifiedByName     String?
   verifiedAt         DateTime?

@@ -44,6 +44,11 @@ export default function StudentPerformance({ basePath }) {
   const [verifyingOfferId, setVerifyingOfferId] = useState(null);
   const [rejectReasonDraft, setRejectReasonDraft] = useState({}); // offerId -> text
 
+  const [docTypes, setDocTypes] = useState([]);
+  const [documents, setDocuments] = useState(null); // from GET /documents/student/:studentId
+  const [verifyingDocId, setVerifyingDocId] = useState(null);
+  const [docReasonDraft, setDocReasonDraft] = useState({}); // documentId -> text
+
   function load() {
     api.get(`/users/${studentId}/performance`)
       .then((res) => setPerf(res.data))
@@ -59,8 +64,14 @@ export default function StudentPerformance({ basePath }) {
     if (!isManager) return;
     api.get(`/profile/${studentId}`).then((res) => setPlacementProfile(res.data)).catch(() => setPlacementProfile(null));
     api.get(`/placement/offers/student/${studentId}`).then((res) => setPlacementOffers(res.data)).catch(() => setPlacementOffers(null));
+    api.get("/documents/types").then((res) => setDocTypes(res.data)).catch(() => setDocTypes([]));
+    loadDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, isManager]);
+
+  function loadDocuments() {
+    api.get(`/documents/student/${studentId}`).then((res) => setDocuments(res.data)).catch(() => setDocuments(null));
+  }
 
   async function setDepartmentEligibility(status) {
     setEligibilitySaving(true);
@@ -101,6 +112,19 @@ export default function StudentPerformance({ basePath }) {
       toast.error(err.response?.data?.error || "Failed to update verification");
     } finally {
       setVerifyingOfferId(null);
+    }
+  }
+
+  async function verifyDocument(docId, status) {
+    setVerifyingDocId(docId);
+    try {
+      await api.patch(`/documents/${docId}/verify`, { status, reason: status !== "VERIFIED" ? (docReasonDraft[docId] || "") : undefined });
+      toast.success(status === "VERIFIED" ? "Document verified." : status === "REJECTED" ? "Document rejected." : "Re-upload requested.");
+      loadDocuments();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update verification");
+    } finally {
+      setVerifyingDocId(null);
     }
   }
 
@@ -360,6 +384,51 @@ export default function StudentPerformance({ basePath }) {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Documents */}
+        {isManager && documents && documents.length > 0 && (
+          <div className="card" style={{ padding: 20, marginTop: 20 }}>
+            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Documents</h3>
+            <div style={{ display: "grid", gap: 8 }}>
+              {documents.map((d) => {
+                const typeLabel = docTypes.find((t) => t.value === d.documentType)?.label || d.documentType;
+                return (
+                  <div key={d.id} className="card" style={{ padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{typeLabel}{d.label ? ` — ${d.label}` : ""}</div>
+                        <a href={d.documentLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View document →</a>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span className="badge" style={{ color: VERIFICATION_COLOR[d.verificationStatus] || "var(--rust)", fontWeight: 700 }}>
+                          {d.verificationStatus === "REUPLOAD_REQUIRED" ? "Re-upload Required" : VERIFICATION_LABEL[d.verificationStatus]}
+                        </span>
+                        {d.verificationStatus === "PENDING" && (
+                          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                            <button className="btn btn-primary" style={{ fontSize: 11, padding: "3px 8px" }} disabled={verifyingDocId === d.id} onClick={() => verifyDocument(d.id, "VERIFIED")}>Verify</button>
+                            <input
+                              placeholder="Reason (for reject / re-upload)"
+                              style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--line)", width: 180 }}
+                              value={docReasonDraft[d.id] || ""}
+                              onChange={(e) => setDocReasonDraft({ ...docReasonDraft, [d.id]: e.target.value })}
+                            />
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }} disabled={verifyingDocId === d.id} onClick={() => verifyDocument(d.id, "REJECTED")}>Reject</button>
+                              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} disabled={verifyingDocId === d.id} onClick={() => verifyDocument(d.id, "REUPLOAD_REQUIRED")}>Request Re-upload</button>
+                            </div>
+                          </div>
+                        )}
+                        {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
+                          <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 200 }}>{d.rejectionReason}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
