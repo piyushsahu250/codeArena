@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -93,46 +94,92 @@ export default function LearningManagement() {
   );
 }
 
-// Course create/edit/delete/activate-deactivate is ADMIN-only (enforced on the backend too —
-// these actions just aren't shown to Staff here). Staff can still browse and "Manage →" into a
+const COURSE_STATUS_OPTIONS = ["DRAFT", "UNDER_REVIEW", "PUBLISHED", "ARCHIVED", "INACTIVE"];
+const COURSE_STATUS_LABELS = { DRAFT: "Draft", UNDER_REVIEW: "Under Review", PUBLISHED: "Published", ARCHIVED: "Archived", INACTIVE: "Inactive" };
+const COURSE_STATUS_COLORS = {
+  DRAFT: { bg: "#F0EEE3", color: "var(--ink-dim)" },
+  UNDER_REVIEW: { bg: "#FCEFD9", color: "var(--amber-dark)" },
+  PUBLISHED: { bg: "#E7F3EB", color: "var(--mint)" },
+  ARCHIVED: { bg: "#F7E4E0", color: "var(--rust)" },
+  INACTIVE: { bg: "#F0EEE3", color: "var(--ink-dim)" },
+};
+const DIFFICULTY_OPTIONS = ["EASY", "MEDIUM", "HARD"];
+const EMPTY_COURSE_FORM = {
+  slug: "", name: "", description: "", status: "DRAFT", category: "", thumbnailUrl: "", bannerUrl: "",
+  instructorName: "", skillsCovered: "", estimatedDurationMin: "", difficulty: "", prerequisiteCourseIds: [],
+};
+
+// Course create/edit/delete/status-lifecycle is ADMIN-only (enforced on the backend too — these
+// actions just aren't shown to Staff here). Staff can still browse and "Manage →" into a
 // course's modules/lessons/coding assessments, all of which stay ADMIN+STAFF.
 function CoursePanel({ courses, onSelect, onRefresh }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const confirmDialog = useConfirm();
   const toast = useToast();
-  const [form, setForm] = useState({ slug: "", name: "", description: "" });
+  const navigate = useNavigate();
+  const [form, setForm] = useState(EMPTY_COURSE_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
-  async function create(e) {
+  function startEdit(c) {
+    setEditingId(c.id);
+    setForm({
+      slug: c.slug, name: c.name, description: c.description || "", status: c.status || "DRAFT",
+      category: c.category || "", thumbnailUrl: c.thumbnailUrl || "", bannerUrl: c.bannerUrl || "",
+      instructorName: c.instructorName || "", skillsCovered: Array.isArray(c.skillsCovered) ? c.skillsCovered.join(", ") : "",
+      estimatedDurationMin: c.estimatedDurationMin ?? "", difficulty: c.difficulty || "",
+      prerequisiteCourseIds: (c.prerequisites || []).map((p) => p.prerequisiteCourseId),
+    });
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(EMPTY_COURSE_FORM);
+  }
+
+  async function save(e) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post("/learning/courses", form);
-      setForm({ slug: "", name: "", description: "" });
-      toast.success("Course created successfully.");
+      const payload = {
+        ...form,
+        skillsCovered: form.skillsCovered ? form.skillsCovered.split(",").map((s) => s.trim()).filter(Boolean) : null,
+        estimatedDurationMin: form.estimatedDurationMin === "" ? null : Number(form.estimatedDurationMin),
+        difficulty: form.difficulty || null,
+      };
+      if (editingId) {
+        await api.patch(`/learning/courses/${editingId}`, payload);
+        toast.success("Course saved.");
+      } else {
+        await api.post("/learning/courses", payload);
+        toast.success("Course created successfully.");
+      }
+      cancelEdit();
       onRefresh();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to create course");
+      toast.error(err.response?.data?.error || (editingId ? "Failed to save course" : "Failed to create course"));
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggleActive(c) {
+  async function changeStatus(c, status) {
     try {
-      await api.patch(`/learning/courses/${c.id}`, { isActive: !c.isActive });
-      toast.success(c.isActive ? "Course deactivated." : "Course activated.");
+      await api.patch(`/learning/courses/${c.id}`, { status });
+      toast.success(`Course marked ${COURSE_STATUS_LABELS[status]}.`);
       onRefresh();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to update course");
+      toast.error(err.response?.data?.error || "Failed to update course status");
     }
   }
 
   async function remove(c) {
     const ok = await confirmDialog({
       title: "Delete course?",
-      message: "Are you sure you want to permanently delete this course? This action cannot be undone.",
+      message: "This permanently deletes the course and all student progress/certificates under it. To retire a live course without losing data, use Archive (status) instead.\n\nAre you sure you want to permanently delete this course? This action cannot be undone.",
       confirmLabel: "Delete",
       danger: true,
     });
@@ -146,44 +193,144 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
     }
   }
 
+  const categories = [...new Set(courses.map((c) => c.category).filter(Boolean))];
+  const filtered = courses.filter((c) => {
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.slug.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter && c.status !== statusFilter) return false;
+    if (categoryFilter && c.category !== categoryFilter) return false;
+    return true;
+  });
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: isAdmin ? "1fr 1.5fr" : "1fr", gap: 24, marginTop: 20, alignItems: "start" }}>
       {isAdmin && (
-        <form onSubmit={create} className="card" style={{ padding: 20 }}>
-          <h3 style={{ fontSize: 15 }}>Add course</h3>
+        <form onSubmit={save} className="card" style={{ padding: 20, maxHeight: "80vh", overflowY: "auto" }}>
+          <h3 style={{ fontSize: 15 }}>{editingId ? "Edit course" : "Add course"}</h3>
           <label style={labelStyle}>Slug (URL id, e.g. "python")</label>
-          <input style={inputStyle} required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+          <input style={inputStyle} required disabled={!!editingId} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
           <label style={labelStyle}>Name</label>
           <input style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <label style={labelStyle}>Description</label>
           <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Creating…" : "Create course"}</button>
+
+          <label style={labelStyle}>Status</label>
+          <select style={inputStyle} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+            {COURSE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{COURSE_STATUS_LABELS[s]}</option>)}
+          </select>
+          <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Only Published courses can be assigned to institutes or academic groups.</p>
+
+          <label style={labelStyle}>Category</label>
+          <input style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Programming, Aptitude" />
+
+          <label style={labelStyle}>Thumbnail URL (external image, optional)</label>
+          <input style={inputStyle} value={form.thumbnailUrl} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} />
+          <label style={labelStyle}>Banner URL (external image, optional)</label>
+          <input style={inputStyle} value={form.bannerUrl} onChange={(e) => setForm({ ...form, bannerUrl: e.target.value })} />
+
+          <label style={labelStyle}>Instructor name</label>
+          <input style={inputStyle} value={form.instructorName} onChange={(e) => setForm({ ...form, instructorName: e.target.value })} />
+          <label style={labelStyle}>Skills covered (comma-separated)</label>
+          <input style={inputStyle} value={form.skillsCovered} onChange={(e) => setForm({ ...form, skillsCovered: e.target.value })} placeholder="OOP, Collections, Multithreading" />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={labelStyle}>Est. duration (min)</label>
+              <input style={inputStyle} type="number" min="0" value={form.estimatedDurationMin} onChange={(e) => setForm({ ...form, estimatedDurationMin: e.target.value })} />
+            </div>
+            <div>
+              <label style={labelStyle}>Difficulty</label>
+              <select style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+                <option value="">—</option>
+                {DIFFICULTY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <label style={labelStyle}>Prerequisites (must be completed first)</label>
+          <div style={{ display: "grid", gap: 4, maxHeight: 120, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 8, padding: 8, marginTop: 6 }}>
+            {courses.filter((c) => c.id !== editingId).map((c) => (
+              <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={form.prerequisiteCourseIds.includes(c.id)}
+                  onChange={(e) => setForm({
+                    ...form,
+                    prerequisiteCourseIds: e.target.checked
+                      ? [...form.prerequisiteCourseIds, c.id]
+                      : form.prerequisiteCourseIds.filter((id) => id !== c.id),
+                  })}
+                />
+                {c.name}
+              </label>
+            ))}
+            {courses.length === 0 && <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>No other courses yet.</span>}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>{saving ? "Saving…" : editingId ? "Save changes" : "Create course"}</button>
+            {editingId && <button type="button" className="btn btn-ghost" onClick={cancelEdit}>Cancel</button>}
+          </div>
         </form>
       )}
 
-      <div style={{ display: "grid", gap: 10 }}>
-        {courses.map((c) => (
-          <div key={c.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ cursor: "pointer" }} onClick={() => onSelect(c.id)}>
-              <div style={{ fontWeight: 600 }}>{c.name} <span className="mono" style={{ fontWeight: 400, fontSize: 12, color: "var(--ink-dim)" }}>/{c.slug}</span></div>
-              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{c.description}</div>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span className="badge" style={{ background: c.isActive ? "#E7F3EB" : "#F0EEE3", color: c.isActive ? "var(--mint)" : "var(--ink-dim)" }}>
-                {c.isActive ? "Active" : "Coming soon"}
-              </span>
-              {isAdmin && (
-                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>
-                  {c.isActive ? "Deactivate" : "Activate"}
-                </button>
-              )}
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c.id)}>Manage →</button>
-              {isAdmin && (
-                <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
-              )}
-            </div>
-          </div>
-        ))}
+      <div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <input style={{ ...inputStyle, marginTop: 0, flex: "2 1 180px" }} placeholder="Search by name or slug…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <select style={{ ...inputStyle, marginTop: 0, flex: "1 1 130px" }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="">All statuses</option>
+            {COURSE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{COURSE_STATUS_LABELS[s]}</option>)}
+          </select>
+          {categories.length > 0 && (
+            <select style={{ ...inputStyle, marginTop: 0, flex: "1 1 130px" }} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              <option value="">All categories</option>
+              {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          {filtered.map((c) => {
+            const statusColor = COURSE_STATUS_COLORS[c.status] || COURSE_STATUS_COLORS.DRAFT;
+            return (
+              <div key={c.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                <div style={{ cursor: "pointer" }} onClick={() => onSelect(c.id)}>
+                  <div style={{ fontWeight: 600 }}>{c.name} <span className="mono" style={{ fontWeight: 400, fontSize: 12, color: "var(--ink-dim)" }}>/{c.slug}</span></div>
+                  <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{c.description}</div>
+                  {c.category && <span className="badge" style={{ marginTop: 4, display: "inline-block", background: "#EAF1FB", color: "var(--ink)" }}>{c.category}</span>}
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {isAdmin ? (
+                    <select
+                      style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)", background: statusColor.bg, color: statusColor.color, fontWeight: 600 }}
+                      value={c.status || "DRAFT"}
+                      onChange={(e) => changeStatus(c, e.target.value)}
+                    >
+                      {COURSE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{COURSE_STATUS_LABELS[s]}</option>)}
+                    </select>
+                  ) : (
+                    <span className="badge" style={{ background: statusColor.bg, color: statusColor.color }}>{COURSE_STATUS_LABELS[c.status] || "Draft"}</span>
+                  )}
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c.id)}>Manage →</button>
+                  {isAdmin && (
+                    <button
+                      className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}
+                      disabled={c.status !== "PUBLISHED"}
+                      title={c.status !== "PUBLISHED" ? "Only Published courses can be assigned" : undefined}
+                      onClick={() => navigate(`/admin/course-assignments?courseId=${c.id}`)}
+                    >
+                      Assign →
+                    </button>
+                  )}
+                  {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => startEdit(c)}>Edit</button>}
+                  {isAdmin && (
+                    <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No courses match this filter.</p>}
+        </div>
       </div>
     </div>
   );

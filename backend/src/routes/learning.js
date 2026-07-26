@@ -70,7 +70,10 @@ const PASS_THRESHOLD = 70; // % correct required on a module's practice test to 
 // Any authenticated user: list all courses (inactive ones show as "coming soon" — the
 // frontend greys them out rather than hiding them, so the roadmap itself is visible).
 router.get("/courses", authenticate, async (req, res) => {
-  const courses = await prisma.course.findMany({ orderBy: { order: "asc" } });
+  const courses = await prisma.course.findMany({
+    orderBy: { order: "asc" },
+    include: { prerequisites: { select: { prerequisiteCourseId: true } } },
+  });
   res.json(courses);
 });
 

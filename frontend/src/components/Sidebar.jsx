@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck,
+  CalendarCheck, Share2,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 
@@ -71,6 +71,7 @@ const MENU = {
     ] },
     { group: "Content", items: [
       { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
+      { label: "Course Assignments", to: "/admin/course-assignments", icon: Share2 },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion },
       { label: "Gamification", to: "/staff/gamification", icon: Trophy },
       { label: "Coding Challenges", to: "/staff/challenges", icon: CalendarDays },

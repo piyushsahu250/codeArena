@@ -37,6 +37,7 @@ import TestPreview from "./pages/TestPreview";
 import AccountSettings from "./pages/AccountSettings";
 import BulkUpload from "./pages/BulkUpload";
 import AcademicGroups from "./pages/AcademicGroups";
+import CourseAssignments from "./pages/CourseAssignments";
 import InstituteManagement from "./pages/InstituteManagement";
 import AttendanceStructure from "./pages/AttendanceStructure";
 import AttendanceHome from "./pages/AttendanceHome";
@@ -232,6 +233,7 @@ export default function App() {
           <Route path="/admin" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><AdminDashboard /></Suspense></Protected>} />
           <Route path="/admin/bulk-upload" element={<Protected roles={["ADMIN"]}><BulkUpload /></Protected>} />
           <Route path="/admin/academic-groups" element={<Protected roles={["ADMIN"]}><AcademicGroups /></Protected>} />
+          <Route path="/admin/course-assignments" element={<Protected roles={["ADMIN"]}><CourseAssignments /></Protected>} />
           <Route path="/admin/institutes" element={<Protected roles={["ADMIN"]}><InstituteManagement /></Protected>} />
           <Route path="/admin/attendance-structure" element={<Protected roles={["ADMIN"]}><AttendanceStructure /></Protected>} />
           <Route path="/admin/email-logs" element={<Protected roles={["ADMIN"]}><EmailLogs /></Protected>} />
