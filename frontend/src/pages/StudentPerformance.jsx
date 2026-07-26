@@ -15,6 +15,8 @@ import EditStudentProfileModal from "../components/EditStudentProfileModal";
 
 const STATUS_LABEL = { IN_PROGRESS: "In Progress", SUBMITTED: "Completed", AUTO_SUBMITTED: "Auto-submitted" };
 const STATUS_COLOR = { IN_PROGRESS: "var(--amber-dark)", SUBMITTED: "var(--mint)", AUTO_SUBMITTED: "var(--rust)" };
+const VERIFICATION_LABEL = { PENDING: "Pending Verification", VERIFIED: "Verified", REJECTED: "Rejected" };
+const VERIFICATION_COLOR = { PENDING: "var(--amber-dark)", VERIFIED: "var(--mint)", REJECTED: "var(--rust)" };
 
 // Renders at /admin/students/:id, /staff/students/:id (basePath set, full management actions)
 // and /dashboard/performance (no :id — self-view, read-only actions only).
@@ -36,6 +38,12 @@ export default function StudentPerformance({ basePath }) {
   const [sentCredential, setSentCredential] = useState(null); // { password, emailSent }
   const [copied, setCopied] = useState(false);
 
+  const [placementProfile, setPlacementProfile] = useState(null); // { user, profile, ... } from GET /profile/:studentId
+  const [placementOffers, setPlacementOffers] = useState(null); // { offers, summary } from GET /placement/offers/student/:studentId
+  const [eligibilitySaving, setEligibilitySaving] = useState(false);
+  const [verifyingOfferId, setVerifyingOfferId] = useState(null);
+  const [rejectReasonDraft, setRejectReasonDraft] = useState({}); // offerId -> text
+
   function load() {
     api.get(`/users/${studentId}/performance`)
       .then((res) => setPerf(res.data))
@@ -43,6 +51,58 @@ export default function StudentPerformance({ basePath }) {
   }
 
   useEffect(load, [studentId]);
+
+  // Placement data is manager-only (ADMIN/STAFF/CLERK viewing a specific student) — a student's
+  // own self-view never sees eligibility flags, matching this platform's "internal tracking only,
+  // never shown to the student" design for both eligibility evaluations.
+  useEffect(() => {
+    if (!isManager) return;
+    api.get(`/profile/${studentId}`).then((res) => setPlacementProfile(res.data)).catch(() => setPlacementProfile(null));
+    api.get(`/placement/offers/student/${studentId}`).then((res) => setPlacementOffers(res.data)).catch(() => setPlacementOffers(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, isManager]);
+
+  async function setDepartmentEligibility(status) {
+    setEligibilitySaving(true);
+    try {
+      await api.patch(`/placement/students/${studentId}/department-eligibility`, { status });
+      toast.success("Department eligibility updated.");
+      const res = await api.get(`/profile/${studentId}`);
+      setPlacementProfile(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update department eligibility");
+    } finally {
+      setEligibilitySaving(false);
+    }
+  }
+
+  async function setClerkEligibility(status) {
+    setEligibilitySaving(true);
+    try {
+      await api.patch(`/placement/students/${studentId}/clerk-eligibility`, { status });
+      toast.success("Placement Cell eligibility updated.");
+      const res = await api.get(`/profile/${studentId}`);
+      setPlacementProfile(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update eligibility");
+    } finally {
+      setEligibilitySaving(false);
+    }
+  }
+
+  async function verifyOffer(offerId, status) {
+    setVerifyingOfferId(offerId);
+    try {
+      await api.patch(`/placement/offers/${offerId}/verify`, { status, rejectionReason: status === "REJECTED" ? (rejectReasonDraft[offerId] || "") : undefined });
+      toast.success(status === "VERIFIED" ? "Offer verified." : "Offer rejected.");
+      const res = await api.get(`/placement/offers/student/${studentId}`);
+      setPlacementOffers(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update verification");
+    } finally {
+      setVerifyingOfferId(null);
+    }
+  }
 
   async function downloadReport(format) {
     setDownloading(format);
@@ -223,6 +283,85 @@ export default function StudentPerformance({ basePath }) {
           <Field label="Mobile" value={student.mobile} mono />
           <Field label="Status" value={student.isActive === false ? "Inactive" : "Active"} />
         </div>
+
+        {/* Placement */}
+        {isManager && (placementProfile || placementOffers) && (
+          <div className="card" style={{ padding: 20, marginTop: 20 }}>
+            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Placement</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+              <Field
+                label="Registration Status"
+                value={
+                  placementProfile?.profile?.placementParticipation === "INTERESTED" ? "Registered"
+                    : placementProfile?.profile?.placementParticipation === "NOT_INTERESTED" ? "Not Registered"
+                    : "Not set yet"
+                }
+              />
+              <div>
+                <div style={{ fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Department Eligibility</div>
+                {(user.role === "STAFF" || user.role === "ADMIN") ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                    <button className={placementProfile?.profile?.departmentEligibility === "ELIGIBLE" ? "btn btn-dark" : "btn btn-ghost"} style={{ fontSize: 11, padding: "3px 8px" }} disabled={eligibilitySaving} onClick={() => setDepartmentEligibility("ELIGIBLE")}>Eligible</button>
+                    <button className={placementProfile?.profile?.departmentEligibility === "NOT_ELIGIBLE" ? "btn btn-dark" : "btn btn-ghost"} style={{ fontSize: 11, padding: "3px 8px" }} disabled={eligibilitySaving} onClick={() => setDepartmentEligibility("NOT_ELIGIBLE")}>Not Eligible</button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, marginTop: 2 }}>{placementProfile?.profile?.departmentEligibility || "—"}</div>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Placement Cell Eligibility</div>
+                {(user.role === "CLERK" || user.role === "ADMIN") ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                    <button className={placementProfile?.profile?.clerkEligibility === "ELIGIBLE" ? "btn btn-dark" : "btn btn-ghost"} style={{ fontSize: 11, padding: "3px 8px" }} disabled={eligibilitySaving} onClick={() => setClerkEligibility("ELIGIBLE")}>Eligible</button>
+                    <button className={placementProfile?.profile?.clerkEligibility === "NOT_ELIGIBLE" ? "btn btn-dark" : "btn btn-ghost"} style={{ fontSize: 11, padding: "3px 8px" }} disabled={eligibilitySaving} onClick={() => setClerkEligibility("NOT_ELIGIBLE")}>Not Eligible</button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, marginTop: 2 }}>{placementProfile?.profile?.clerkEligibility || "—"}</div>
+                )}
+              </div>
+            </div>
+
+            <h4 style={{ fontSize: 14, marginTop: 18, marginBottom: 8 }}>Placement Offers</h4>
+            {!placementOffers || placementOffers.offers.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No offers submitted yet.</p>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {placementOffers.offers.map((o) => (
+                  <div key={o.id} className="card" style={{ padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{o.companyName} — {o.offerType === "INTERNSHIP" ? "Internship" : "Placement"}</div>
+                        <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                          {o.offeredPackage} {o.offerType === "INTERNSHIP" ? "/month" : "LPA"} · {o.source === "ON_CAMPUS" ? "On-Campus" : "Off-Campus"} · {o.offerStatus}
+                          {o.joiningStatus && ` · ${o.joiningStatus}`}
+                        </div>
+                        <a href={o.proofLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View proof document →</a>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span className="badge" style={{ color: VERIFICATION_COLOR[o.verificationStatus], fontWeight: 700 }}>{VERIFICATION_LABEL[o.verificationStatus]}</span>
+                        {o.verificationStatus === "PENDING" && (
+                          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                            <button className="btn btn-primary" style={{ fontSize: 11, padding: "3px 8px" }} disabled={verifyingOfferId === o.id} onClick={() => verifyOffer(o.id, "VERIFIED")}>Verify</button>
+                            <input
+                              placeholder="Rejection reason (optional)"
+                              style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--line)", width: 180 }}
+                              value={rejectReasonDraft[o.id] || ""}
+                              onChange={(e) => setRejectReasonDraft({ ...rejectReasonDraft, [o.id]: e.target.value })}
+                            />
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }} disabled={verifyingOfferId === o.id} onClick={() => verifyOffer(o.id, "REJECTED")}>Reject</button>
+                          </div>
+                        )}
+                        {o.verificationStatus === "REJECTED" && o.rejectionReason && (
+                          <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 200 }}>{o.rejectionReason}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Summary stats */}
         <h3 style={{ fontSize: 16, marginTop: 32, marginBottom: 12 }}>Overall performance</h3>

@@ -16,9 +16,17 @@ const MAX_ROWS = 5000;
 // institute — same convention as attachRequesterInstitute everywhere else) and returns an array
 // of flat, already-labeled objects; sendExport turns that into CSV/XLSX/JSON.
 const ENTITIES = {
-  students: async (instituteId) => {
+  // Second arg (query) is only meaningful for this entity — every other builder below ignores it.
+  // Placement columns + filters live here (not a separate export entity) so Clerk — whose export
+  // access is restricted to "students" only, see the route handler below — can already reach them.
+  students: async (instituteId, query = {}) => {
+    const { departmentId, batch, placementParticipation, offerVerificationStatus } = query;
+    const academicGroupFilter = { ...(departmentId ? { departmentId } : {}), ...(batch ? { batch } : {}) };
     const rows = await prisma.user.findMany({
-      where: { role: "STUDENT", ...(instituteId ? { instituteId } : {}) },
+      where: {
+        role: "STUDENT", ...(instituteId ? { instituteId } : {}),
+        ...(Object.keys(academicGroupFilter).length ? { academicGroup: academicGroupFilter } : {}),
+      },
       take: MAX_ROWS,
       orderBy: { createdAt: "desc" },
       include: {
@@ -26,13 +34,46 @@ const ENTITIES = {
         academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
       },
     });
-    return rows.map((u) => ({
-      Name: u.name, Email: u.email, "Roll Number": u.rollNumber || "", "Registration Number": u.registrationNumber || "",
-      Department: u.academicGroup?.department?.name || u.department || "", Mobile: u.mobile || "", Program: u.program || "",
-      "Batch Year": u.academicGroup?.batch || u.batchYear || "", Section: u.academicGroup?.section || u.section || "",
-      Institute: u.institute?.name || "",
-      Active: u.isActive ? "Yes" : "No", "Created At": u.createdAt.toISOString(),
-    }));
+
+    const studentIds = rows.map((u) => u.id);
+    const [profiles, offers] = await Promise.all([
+      prisma.studentProfile.findMany({ where: { studentId: { in: studentIds } } }),
+      prisma.placementOffer.findMany({ where: { studentId: { in: studentIds } } }),
+    ]);
+    const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
+    const offersByStudent = new Map();
+    for (const o of offers) {
+      if (!offersByStudent.has(o.studentId)) offersByStudent.set(o.studentId, []);
+      offersByStudent.get(o.studentId).push(o);
+    }
+
+    let mapped = rows.map((u) => {
+      const p = profileByStudent.get(u.id);
+      const studentOffers = offersByStudent.get(u.id) || [];
+      const verifiedCount = studentOffers.filter((o) => o.verificationStatus === "VERIFIED").length;
+      const pendingCount = studentOffers.filter((o) => o.verificationStatus === "PENDING").length;
+      const highest = studentOffers.reduce((max, o) => (!max || o.offeredPackage > max.offeredPackage ? o : max), null);
+      return {
+        Name: u.name, Email: u.email, "Roll Number": u.rollNumber || "", "Registration Number": u.registrationNumber || "",
+        Department: u.academicGroup?.department?.name || u.department || "", Mobile: u.mobile || "", Program: u.program || "",
+        "Batch Year": u.academicGroup?.batch || u.batchYear || "", Section: u.academicGroup?.section || u.section || "",
+        Institute: u.institute?.name || "",
+        Active: u.isActive ? "Yes" : "No", "Created At": u.createdAt.toISOString(),
+        "Placement Registration": p?.placementParticipation === "INTERESTED" ? "Registered" : p?.placementParticipation === "NOT_INTERESTED" ? "Not Registered" : "Not Set",
+        "Department Eligibility": p?.departmentEligibility || "Not Set",
+        "Placement Cell Eligibility": p?.clerkEligibility || "Not Set",
+        "Offer Count": studentOffers.length,
+        "Highest Package": highest ? highest.offeredPackage : "",
+        "Offer Verification": studentOffers.length ? `${verifiedCount} verified / ${pendingCount} pending` : "",
+        _placementParticipation: p?.placementParticipation, _pendingCount: pendingCount, _verifiedCount: verifiedCount,
+      };
+    });
+
+    if (placementParticipation) mapped = mapped.filter((r) => r._placementParticipation === placementParticipation);
+    if (offerVerificationStatus === "PENDING") mapped = mapped.filter((r) => r._pendingCount > 0);
+    if (offerVerificationStatus === "VERIFIED") mapped = mapped.filter((r) => r._verifiedCount > 0);
+
+    return mapped.map(({ _placementParticipation, _pendingCount, _verifiedCount, ...rest }) => rest);
   },
 
   staff: async (instituteId) => {
@@ -119,7 +160,7 @@ router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), att
   }
 
   try {
-    const rows = await builder(req.requesterInstituteId);
+    const rows = await builder(req.requesterInstituteId, req.query);
     await logAudit({
       req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: req.requesterInstituteId, details: { entity: req.params.entity, format: req.query.format || "csv", rowCount: rows.length },

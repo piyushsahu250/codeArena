@@ -48,6 +48,10 @@ export default function StudentSearch({ basePath }) {
   const [browseDepartmentId, setBrowseDepartmentId] = useState("");
   const [browseSection, setBrowseSection] = useState("");
   const [browsing, setBrowsing] = useState(false);
+  const [browseBatch, setBrowseBatch] = useState("");
+  const [browsePlacementParticipation, setBrowsePlacementParticipation] = useState("");
+  const [browseVerificationStatus, setBrowseVerificationStatus] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (user?.role === "ADMIN") api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
@@ -69,6 +73,7 @@ export default function StudentSearch({ basePath }) {
 
   const departments = [...new Map(groups.map((g) => [g.department.id, g.department])).values()].sort((a, b) => a.name.localeCompare(b.name));
   const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.section))].sort();
+  const batches = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.batch))].filter(Boolean).sort();
 
   async function handleSearch(e) {
     e.preventDefault();
@@ -93,13 +98,46 @@ export default function StudentSearch({ basePath }) {
     setSelected([]);
     try {
       const { data } = await api.get("/users/browse", {
-        params: { instituteId: browseInstituteId || undefined, departmentId: browseDepartmentId, section: browseSection },
+        params: {
+          instituteId: browseInstituteId || undefined, departmentId: browseDepartmentId, section: browseSection,
+          batch: browseBatch || undefined, placementParticipation: browsePlacementParticipation || undefined,
+          offerVerificationStatus: browseVerificationStatus || undefined,
+        },
       });
       setResults(data);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to load students");
     } finally {
       setBrowsing(false);
+    }
+  }
+
+  // Reuses the generic Export Center's "students" entity (already the only one CLERK can reach)
+  // with the same filters as the browse panel above, rather than building a separate export path.
+  async function exportFiltered() {
+    setExporting(true);
+    try {
+      const { data } = await api.get("/export/students", {
+        params: {
+          departmentId: browseDepartmentId || undefined, batch: browseBatch || undefined,
+          placementParticipation: browsePlacementParticipation || undefined, offerVerificationStatus: browseVerificationStatus || undefined,
+          format: "xlsx",
+        },
+        responseType: "blob",
+      });
+      const blob = new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "students-export.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Export failed");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -202,8 +240,34 @@ export default function StudentSearch({ basePath }) {
                 {sections.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            <div style={{ flex: "1 1 140px" }}>
+              <label style={labelStyle}>Batch</label>
+              <select style={inputStyle} value={browseBatch} onChange={(e) => setBrowseBatch(e.target.value)} disabled={!browseDepartmentId}>
+                <option value="">All batches</option>
+                {batches.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: "1 1 170px" }}>
+              <label style={labelStyle}>Placement Registration</label>
+              <select style={inputStyle} value={browsePlacementParticipation} onChange={(e) => setBrowsePlacementParticipation(e.target.value)}>
+                <option value="">All students</option>
+                <option value="INTERESTED">Registered</option>
+                <option value="NOT_INTERESTED">Not Registered</option>
+              </select>
+            </div>
+            <div style={{ flex: "1 1 170px" }}>
+              <label style={labelStyle}>Offer Verification</label>
+              <select style={inputStyle} value={browseVerificationStatus} onChange={(e) => setBrowseVerificationStatus(e.target.value)}>
+                <option value="">All students</option>
+                <option value="VERIFIED">Has Verified Offer</option>
+                <option value="PENDING">Has Pending Offer</option>
+              </select>
+            </div>
             <button className="btn btn-primary" onClick={handleFetch} disabled={!browseDepartmentId || !browseSection || browsing}>
               {browsing ? "Fetching…" : "Fetch"}
+            </button>
+            <button className="btn btn-ghost" onClick={exportFiltered} disabled={exporting}>
+              {exporting ? "Exporting…" : "Export to Excel"}
             </button>
           </div>
         </div>

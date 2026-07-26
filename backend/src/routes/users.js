@@ -629,18 +629,18 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
 // entire institute's roster unbounded.
 router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
-    const { departmentId, section } = req.query;
+    const { departmentId, section, batch, placementParticipation, offerVerificationStatus } = req.query;
     if (!departmentId || !section) return res.status(400).json({ error: "Department and Section are required" });
     const instituteId = req.requesterInstituteId || req.query.instituteId;
     if (!instituteId) return res.status(400).json({ error: "Institute is required" });
 
     const groups = await prisma.academicGroup.findMany({
-      where: { instituteId, departmentId, section },
+      where: { instituteId, departmentId, section, ...(batch ? { batch } : {}) },
       select: { id: true },
     });
     if (groups.length === 0) return res.json([]);
 
-    const students = await prisma.user.findMany({
+    let students = await prisma.user.findMany({
       where: { role: "STUDENT", academicGroupId: { in: groups.map((g) => g.id) } },
       select: {
         id: true, name: true, email: true, rollNumber: true,
@@ -651,6 +651,31 @@ router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
       orderBy: { name: "asc" },
       take: 500,
     });
+
+    // Placement Registration Status is stored on StudentProfile, not User — filtered as a second
+    // pass rather than a Prisma relation-filter so a student with no StudentProfile row yet (never
+    // opened Profile) is correctly excluded from either "INTERESTED"/"NOT_INTERESTED" filter.
+    if (placementParticipation) {
+      const profiles = await prisma.studentProfile.findMany({
+        where: { studentId: { in: students.map((s) => s.id) }, placementParticipation },
+        select: { studentId: true },
+      });
+      const allowed = new Set(profiles.map((p) => p.studentId));
+      students = students.filter((s) => allowed.has(s.id));
+    }
+
+    // Verification Status here means "has at least one placement offer with this verification
+    // status" — offer-level verification is this pass's scope (see studentProfileCompletion.js /
+    // placementOffers.js), not a whole-profile status.
+    if (offerVerificationStatus) {
+      const offers = await prisma.placementOffer.findMany({
+        where: { studentId: { in: students.map((s) => s.id) }, verificationStatus: offerVerificationStatus },
+        select: { studentId: true },
+      });
+      const allowed = new Set(offers.map((o) => o.studentId));
+      students = students.filter((s) => allowed.has(s.id));
+    }
+
     res.json(students);
   } catch (err) {
     console.error(err);

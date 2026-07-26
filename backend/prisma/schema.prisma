@@ -159,6 +159,7 @@ model User {
   resume          Resume?
   resumeFeedback  ResumeFeedback[]
   studentProfile  StudentProfile?
+  placementOffers PlacementOffer[]
 
   interviewSessions    InterviewSession[]
   interviewReports     InterviewReport[]
@@ -1267,6 +1268,18 @@ model StudentProfile {
   placementDeclineOther  String?
   placementUpdatedAt     DateTime?
 
+  // Two independent placement-eligibility evaluations (Placement Clerk Analytics pass) — Staff's
+  // academic/department judgement and the Placement Cell's own judgement never overwrite each
+  // other. Internal tracking only: never read by any LMS/course-access gate, never shown to the
+  // student. "SetBy" stores the evaluator's name (not a FK) — same audit-trail convention as
+  // Certificate.revokedByName.
+  departmentEligibility      String?   // "ELIGIBLE" | "NOT_ELIGIBLE"
+  departmentEligibilitySetBy String?
+  departmentEligibilitySetAt DateTime?
+  clerkEligibility           String?   // "ELIGIBLE" | "NOT_ELIGIBLE"
+  clerkEligibilitySetBy      String?
+  clerkEligibilitySetAt      DateTime?
+
   mandatoryStatus      String    @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | COMPLETED
   mandatoryCompletedAt DateTime?
 
@@ -1290,6 +1303,47 @@ model Company {
   createdAt       DateTime @default(now())
 
   @@index([name])
+}
+
+enum OfferVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// Placement Clerk Analytics pass — a student-submitted record of one placement/internship offer.
+// A documentary proof link is mandatory (validated at creation in placementOffers.js, not just
+// here) so every persisted row already satisfies the platform's "completion criteria" — there is
+// no separate incomplete/draft state to track. companyName is always populated (mirrored from
+// Company.name or the student's free-text "Other" entry) so company-wise analytics never need a
+// join; companyId is kept only for linking back to Company Master when available.
+model PlacementOffer {
+  id        String @id @default(uuid())
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+
+  companyId   String?
+  companyName String
+
+  offerType      String // "INTERNSHIP" | "PLACEMENT"
+  source         String // "ON_CAMPUS" | "OFF_CAMPUS"
+  offeredPackage Float  // LPA for PLACEMENT, monthly stipend for INTERNSHIP — unit implied by offerType
+  offerStatus    String  @default("HOLDING") // "HOLDING" | "ACCEPTED" | "REJECTED"
+  joiningStatus  String? // "Joined" | "Not Yet Joined" | "Deferred"
+  proofLink      String
+
+  // Editing any field of a VERIFIED or REJECTED offer resets it to PENDING (re-verification on
+  // edit) — see placementOffers.js's PATCH /offers/:id.
+  verificationStatus OfferVerificationStatus @default(PENDING)
+  verifiedByUserId   String?
+  verifiedByName     String?
+  verifiedAt         DateTime?
+  rejectionReason    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
 }
 
 // ===================================================================

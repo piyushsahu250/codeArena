@@ -35,6 +35,14 @@ const EMPTY_PERSONAL = {
   fatherName: "", fatherContact: "", motherName: "", motherContact: "", shortDescription: "",
 };
 
+const EMPTY_OFFER = {
+  companyId: null, companyName: "", offerType: "PLACEMENT", source: "ON_CAMPUS",
+  offeredPackage: "", offerStatus: "HOLDING", joiningStatus: "", proofLink: "",
+};
+
+const VERIFICATION_LABEL = { PENDING: "Pending Verification", VERIFIED: "Verified", REJECTED: "Rejected" };
+const VERIFICATION_COLOR = { PENDING: "var(--amber-dark)", VERIFIED: "var(--mint)", REJECTED: "var(--rust)" };
+
 export default function StudentProfile() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
@@ -47,6 +55,15 @@ export default function StudentProfile() {
   const [errors, setErrors] = useState({});
   const [lmsData, setLmsData] = useState(null);
   const [showModal, setShowModal] = useState(() => user?.role === "STUDENT" && user?.requireProfileCompletion && !user?.profileComplete);
+
+  const [companies, setCompanies] = useState([]);
+  const [offers, setOffers] = useState(null);
+  const [offerSummary, setOfferSummary] = useState(null);
+  const [offerForm, setOfferForm] = useState(EMPTY_OFFER);
+  const [editingOfferId, setEditingOfferId] = useState(null);
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [offerError, setOfferError] = useState("");
 
   function load() {
     api.get("/profile/me").then((res) => {
@@ -145,6 +162,70 @@ export default function StudentProfile() {
       toast.error(err.response?.data?.error || "Failed to save");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Placement Offers — lazy-loaded on first visit to the "salary" tab, same pattern as lmsData.
+  useEffect(() => {
+    if (tab !== "salary" || offers) return;
+    api.get("/companies").then((res) => setCompanies(res.data)).catch(() => setCompanies([]));
+    loadOffers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  function loadOffers() {
+    Promise.all([api.get("/placement/offers/me"), api.get("/placement/offers/summary/me")])
+      .then(([offersRes, summaryRes]) => {
+        setOffers(offersRes.data);
+        setOfferSummary(summaryRes.data);
+      })
+      .catch(() => { setOffers([]); setOfferSummary(null); });
+  }
+
+  function startAddOffer() {
+    setEditingOfferId(null);
+    setOfferForm(EMPTY_OFFER);
+    setOfferError("");
+    setShowOfferForm(true);
+  }
+
+  function startEditOffer(o) {
+    setEditingOfferId(o.id);
+    setOfferForm({
+      companyId: o.companyId, companyName: o.companyName, offerType: o.offerType, source: o.source,
+      offeredPackage: String(o.offeredPackage), offerStatus: o.offerStatus, joiningStatus: o.joiningStatus || "", proofLink: o.proofLink,
+    });
+    setOfferError("");
+    setShowOfferForm(true);
+  }
+
+  async function saveOffer(e) {
+    e.preventDefault();
+    if (!offerForm.companyName.trim()) { setOfferError("Company name is required."); return; }
+    if (!offerForm.proofLink.trim()) { setOfferError("A document proof link is required to save this offer."); return; }
+    setOfferSaving(true);
+    setOfferError("");
+    try {
+      const payload = { ...offerForm, joiningStatus: offerForm.joiningStatus || null };
+      if (editingOfferId) await api.patch(`/placement/offers/${editingOfferId}`, payload);
+      else await api.post("/placement/offers", payload);
+      toast.success(editingOfferId ? "Offer updated — pending re-verification." : "Offer added.");
+      setShowOfferForm(false);
+      loadOffers();
+    } catch (err) {
+      setOfferError(err.response?.data?.error || "Failed to save offer");
+    } finally {
+      setOfferSaving(false);
+    }
+  }
+
+  async function deleteOffer(id) {
+    if (!confirm("Delete this offer?")) return;
+    try {
+      await api.delete(`/placement/offers/${id}`);
+      loadOffers();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete offer");
     }
   }
 
@@ -344,8 +425,112 @@ export default function StudentProfile() {
         )}
 
         {tab === "salary" && (
-          <div className="card" style={{ padding: 20, marginTop: 16 }}>
-            <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Placement history and work experience tracking are coming soon.</p>
+          <div style={{ marginTop: 16 }}>
+            {offerSummary && (
+              <div className="card" style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+                <StatTile label="Total Offers" value={offerSummary.totalOffers} />
+                <StatTile label="Internship Offers" value={offerSummary.internshipOffers} />
+                <StatTile label="Placement Offers" value={offerSummary.placementOffers} />
+                <StatTile label="Accepted" value={offerSummary.acceptedOffers} />
+                <StatTile label="Holding" value={offerSummary.holdingOffers} />
+                <StatTile label="Highest Offer" value={offerSummary.highestOffer ? `${offerSummary.highestOffer.offeredPackage} — ${offerSummary.highestOffer.companyName}` : "—"} />
+                <StatTile label="Current Status" value={offerSummary.currentlyWorking ? `Working at ${offerSummary.currentEmployer}` : "Not currently working"} />
+              </div>
+            )}
+
+            <div className="card" style={{ padding: 20, marginTop: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Placement Offers</div>
+                {!showOfferForm && <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={startAddOffer}>+ Add Offer</button>}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                A document proof link (offer letter PDF, Google Drive, OneDrive, Dropbox, etc.) is required for every offer.
+                Staff, Clerk, and Admin verify offers against this link — editing a verified offer resets it to Pending.
+              </p>
+
+              {showOfferForm && (
+                <form onSubmit={saveOffer} className="card" style={{ padding: 16, marginTop: 12, background: "#FBFAF6" }}>
+                  <OfferCompanyField form={offerForm} setForm={setOfferForm} companies={companies} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
+                    <div>
+                      <label style={labelStyle}>Offer Type</label>
+                      <select style={inputStyle} value={offerForm.offerType} onChange={(e) => setOfferForm({ ...offerForm, offerType: e.target.value })}>
+                        <option value="PLACEMENT">Placement</option>
+                        <option value="INTERNSHIP">Internship</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Source</label>
+                      <select style={inputStyle} value={offerForm.source} onChange={(e) => setOfferForm({ ...offerForm, source: e.target.value })}>
+                        <option value="ON_CAMPUS">On-Campus</option>
+                        <option value="OFF_CAMPUS">Off-Campus</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>{offerForm.offerType === "INTERNSHIP" ? "Stipend (per month)" : "Offered Package (LPA)"}</label>
+                      <input style={inputStyle} type="number" step="0.01" min="0" required value={offerForm.offeredPackage} onChange={(e) => setOfferForm({ ...offerForm, offeredPackage: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Offer Status</label>
+                      <select style={inputStyle} value={offerForm.offerStatus} onChange={(e) => setOfferForm({ ...offerForm, offerStatus: e.target.value })}>
+                        <option value="HOLDING">Holding</option>
+                        <option value="ACCEPTED">Accepted</option>
+                        <option value="REJECTED">Rejected</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Joining Status (optional)</label>
+                      <select style={inputStyle} value={offerForm.joiningStatus} onChange={(e) => setOfferForm({ ...offerForm, joiningStatus: e.target.value })}>
+                        <option value="">Not set</option>
+                        <option value="Joined">Joined</option>
+                        <option value="Not Yet Joined">Not Yet Joined</option>
+                        <option value="Deferred">Deferred</option>
+                      </select>
+                    </div>
+                  </div>
+                  <label style={labelStyle}>Document Proof Link *</label>
+                  <input style={inputStyle} required type="url" placeholder="https://drive.google.com/… or offer letter PDF link" value={offerForm.proofLink} onChange={(e) => setOfferForm({ ...offerForm, proofLink: e.target.value })} />
+                  {offerError && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{offerError}</p>}
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={offerSaving}>{offerSaving ? "Saving…" : "Save Offer"}</button>
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowOfferForm(false)}>Cancel</button>
+                  </div>
+                </form>
+              )}
+
+              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                {offers === null ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
+                ) : offers.length === 0 ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No offers added yet.</p>
+                ) : (
+                  offers.map((o) => (
+                    <div key={o.id} className="card" style={{ padding: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{o.companyName} — {o.offerType === "INTERNSHIP" ? "Internship" : "Placement"}</div>
+                          <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                            {o.offeredPackage} {o.offerType === "INTERNSHIP" ? "/month" : "LPA"} · {o.source === "ON_CAMPUS" ? "On-Campus" : "Off-Campus"} · {o.offerStatus}
+                            {o.joiningStatus && ` · ${o.joiningStatus}`}
+                          </div>
+                          <a href={o.proofLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View proof document →</a>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <span className="badge" style={{ color: VERIFICATION_COLOR[o.verificationStatus], fontWeight: 700 }}>{VERIFICATION_LABEL[o.verificationStatus]}</span>
+                          {o.verificationStatus === "REJECTED" && o.rejectionReason && (
+                            <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 220 }}>{o.rejectionReason}</p>
+                          )}
+                          <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => startEditOffer(o)}>Edit</button>
+                            <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 11 }} onClick={() => deleteOffer(o.id)}>Delete</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -355,6 +540,35 @@ export default function StudentProfile() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Same select-or-"Other" pattern as ResumeBuilder.jsx's CompanyField, sourced from the same
+// GET /companies Company Master list — companyName always holds a value (mirrored from the
+// selected Company or typed free-text), companyId only when a real Company Master row was picked.
+function OfferCompanyField({ form, setForm, companies }) {
+  const matched = form.companyId && companies.some((c) => c.id === form.companyId);
+  return (
+    <div>
+      <label style={labelStyle}>Company Name *</label>
+      <select
+        style={inputStyle}
+        value={matched ? form.companyId : "OTHER"}
+        onChange={(e) => {
+          if (e.target.value === "OTHER") setForm({ ...form, companyId: null });
+          else {
+            const c = companies.find((c) => c.id === e.target.value);
+            setForm({ ...form, companyId: c.id, companyName: c.name });
+          }
+        }}
+      >
+        <option value="OTHER">Other (type company name below)</option>
+        {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      {!matched && (
+        <input style={{ ...inputStyle, marginTop: 6 }} placeholder="Enter company name" required value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value, companyId: null })} />
+      )}
     </div>
   );
 }

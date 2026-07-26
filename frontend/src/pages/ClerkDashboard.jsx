@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building, Search } from "lucide-react";
+import { Building, Search, Users, GraduationCap } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -9,36 +9,146 @@ import ChalkUnderline from "../components/ChalkUnderline";
 export default function ClerkDashboard() {
   const { user } = useAuth();
   const [companyCount, setCompanyCount] = useState(null);
+  const [registration, setRegistration] = useState(null);
+  const [offerStats, setOfferStats] = useState(null);
+  const [department, setDepartment] = useState(null);
+  const [batchFilter, setBatchFilter] = useState("");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   useEffect(() => {
     api.get("/companies").then((res) => setCompanyCount(res.data.length)).catch(() => setCompanyCount(null));
   }, []);
 
+  useEffect(() => {
+    api.get("/placement/analytics/registration", { params: { batch: batchFilter || undefined } })
+      .then((res) => setRegistration(res.data)).catch(() => setRegistration(null));
+    api.get("/placement/analytics/department", { params: { batch: batchFilter || undefined } })
+      .then((res) => setDepartment(res.data)).catch(() => setDepartment(null));
+  }, [batchFilter]);
+
+  useEffect(() => {
+    api.get("/placement/analytics/offers", { params: { verifiedOnly: verifiedOnly || undefined } })
+      .then((res) => setOfferStats(res.data)).catch(() => setOfferStats(null));
+  }, [verifiedOnly]);
+
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
-        <div>
-          <h1>Placement Cell — {user?.name}</h1>
-          <ChalkUnderline />
-          <p style={{ color: "var(--ink-dim)", marginTop: 8 }}>Institute-scoped placement operations: student directory and Company Master.</p>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <h1>Placement Cell — {user?.name}</h1>
+            <ChalkUnderline />
+            <p style={{ color: "var(--ink-dim)", marginTop: 8 }}>Institute-scoped placement operations, registration, and offer analytics.</p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link to="/clerk/students" className="btn btn-primary"><Search size={15} /> Student Search</Link>
+            <Link to="/clerk/companies" className="btn btn-ghost"><Building size={15} /> Company Master</Link>
+          </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 24 }}>
-          <StatCard icon={Building} label="Companies" value={companyCount ?? "—"} />
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginTop: 24 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Batch (optional)</label>
+            <input
+              style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }}
+              placeholder="e.g. 2022-2026"
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginTop: 32 }}>
-          <Link to="/clerk/students" className="card" style={{ padding: 20, textDecoration: "none", color: "inherit" }}>
-            <Search size={20} />
-            <h3 style={{ fontSize: 16, marginTop: 10 }}>Student Search</h3>
-            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>Search and view student profiles in your institute.</p>
-          </Link>
-          <Link to="/clerk/companies" className="card" style={{ padding: 20, textDecoration: "none", color: "inherit" }}>
-            <Building size={20} />
-            <h3 style={{ fontSize: 16, marginTop: 10 }}>Company Master</h3>
-            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>Maintain the shared company directory used across placement records.</p>
-          </Link>
+        {/* Registration Overview */}
+        <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 10 }}>Placement Registration Overview</h3>
+        {registration && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+              <StatCard icon={Users} label="Total Students" value={registration.total} />
+              <StatCard icon={GraduationCap} label="Registered" value={registration.registered} />
+              <StatCard icon={GraduationCap} label="Not Registered" value={registration.notRegistered} />
+              <StatCard icon={Building} label="Companies" value={companyCount ?? "—"} />
+              <StatCard icon={Users} label="% Registered" value={`${registration.percentRegistered}%`} />
+            </div>
+            {registration.declineBreakdown.length > 0 && (
+              <div className="card" style={{ padding: 16, marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Not-Registered — by reason</div>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {registration.declineBreakdown.map((r) => (
+                    <div key={r.reason} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                      <span>{r.label}</span>
+                      <span className="mono">{r.count} ({r.percent}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Offer Analytics */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, marginBottom: 10 }}>
+          <h3 style={{ fontSize: 16 }}>Placement Offer Analytics</h3>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+            <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} />
+            Verified offers only
+          </label>
+        </div>
+        {offerStats && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+            <StatCard icon={Users} label="Placed" value={offerStats.placed} />
+            <StatCard icon={Users} label="Unplaced" value={offerStats.unplaced} />
+            <StatCard icon={Users} label="Active Offers" value={offerStats.activeOffers} />
+            <StatCard icon={Users} label="Multiple Offers" value={offerStats.multipleOffers} />
+            <StatCard icon={Users} label="Total Offers" value={offerStats.totalOffers} />
+            <StatCard icon={Users} label="Avg Offers / Student" value={offerStats.averageOffersPerStudent} />
+            <StatCard icon={Building} label="On-Campus" value={offerStats.onCampus} />
+            <StatCard icon={Building} label="Off-Campus" value={offerStats.offCampus} />
+          </div>
+        )}
+
+        {/* Department-wise */}
+        <h3 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Department-wise Placement Status</h3>
+        <div className="card" style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
+                <th style={{ padding: "10px 12px" }}>Department</th>
+                <th style={{ padding: "10px 12px" }}>Total</th>
+                <th style={{ padding: "10px 12px" }}>Registered</th>
+                <th style={{ padding: "10px 12px" }}>Not Registered</th>
+                <th style={{ padding: "10px 12px" }}>Dept Eligible</th>
+                <th style={{ padding: "10px 12px" }}>Dept Ineligible</th>
+                <th style={{ padding: "10px 12px" }}>Cell Eligible</th>
+                <th style={{ padding: "10px 12px" }}>Cell Ineligible</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(department || []).map((d) => (
+                <tr key={d.departmentId} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                  <td style={{ padding: "10px 12px" }}>{d.department}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.total}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.registered}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.notRegistered}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.deptEligible}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.deptIneligible}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.clerkEligible}</td>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{d.clerkIneligible}</td>
+                </tr>
+              ))}
+              {(!department || department.length === 0) && (
+                <tr><td colSpan={8} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No students yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="card" style={{ padding: 16, marginTop: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Need a filtered list?</div>
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+            Use <Link to="/clerk/students">Student Search</Link>'s Batch, Placement Registration, and Offer Verification filters
+            to find students pending registration or pending offer verification, and export the results to Excel.
+          </p>
         </div>
       </div>
     </div>
