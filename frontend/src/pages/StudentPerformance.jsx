@@ -149,6 +149,29 @@ export default function StudentPerformance({ basePath }) {
     }
   }
 
+  async function downloadDocument(doc) {
+    setVerifyingDocId(doc.id);
+    try {
+      const { data, headers } = await api.get(`/documents/${doc.id}/download`, { responseType: "blob" });
+      const typeLabel = docTypes.find((t) => t.value === doc.documentType)?.label || doc.documentType;
+      const cd = headers["content-disposition"] || "";
+      const match = cd.match(/filename="([^"]+)"/);
+      const filename = match ? match[1] : `${typeLabel}${doc.label ? `-${doc.label}` : ""}`;
+      const url = URL.createObjectURL(new Blob([data], { type: headers["content-type"] || "application/octet-stream" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download document");
+    } finally {
+      setVerifyingDocId(null);
+    }
+  }
+
   async function downloadReport(format) {
     setDownloading(format);
     try {
@@ -522,7 +545,17 @@ export default function StudentPerformance({ basePath }) {
                         {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
                           <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 200 }}>{d.rejectionReason}</p>
                         )}
-                        <div style={{ marginTop: 6 }}>
+                        <div style={{ marginTop: 6, display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          {d.verificationStatus === "VERIFIED" && (
+                            <button
+                              className="btn btn-ghost"
+                              style={{ fontSize: 11, padding: "3px 8px" }}
+                              disabled={verifyingDocId === d.id}
+                              onClick={() => downloadDocument(d)}
+                            >
+                              {verifyingDocId === d.id ? "…" : "Download"}
+                            </button>
+                          )}
                           <button
                             className="btn btn-ghost"
                             style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }}
