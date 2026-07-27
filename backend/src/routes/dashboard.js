@@ -5,6 +5,7 @@ const { computeStudentPerformance } = require("../utils/studentPerformance");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { computeGroupRank } = require("../utils/groupRank");
 const { testEligibilityWhere } = require("../utils/testEligibility");
+const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 
 const router = express.Router();
 
@@ -77,11 +78,12 @@ async function getNotifications(student) {
   const in48h = new Date(now.getTime() + 48 * 3600 * 1000);
   const last7d = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
 
+  const memberPoolIds = await getStudentPoolIds(prisma, student.id);
   const [assignedTests, myAttempts] = await Promise.all([
     prisma.test.findMany({
       where: {
         isPublished: true,
-        ...testEligibilityWhere(student.academicGroupId, student.classId),
+        ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds]),
       },
       select: { id: true, title: true, startTime: true, createdAt: true },
     }),

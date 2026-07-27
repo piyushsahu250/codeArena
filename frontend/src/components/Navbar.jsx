@@ -22,22 +22,40 @@ export default function Navbar() {
   function closeMenus() { setNotifOpen(false); setHelpOpen(false); setProfileOpen(false); }
 
   // Lazy-fetched only when the bell is actually opened (not on every page load) — this hook
-  // renders on ~30 pages, so an eager fetch here would run a dashboard-aggregate query on every
-  // navigation across the whole app, which is exactly the "unnecessary API request" the redesign
-  // spec asks to avoid. Real notification data only exists for students today (GET
-  // /dashboard/student's `notifications` field); staff/admin see an honest "no notifications"
-  // state rather than fabricated data, since no backend notification source exists for them yet.
+  // renders on ~30 pages, so an eager fetch here would run these queries on every navigation
+  // across the whole app, which is exactly the "unnecessary API request" the redesign spec asks
+  // to avoid. GET /notifications is the persisted source added for the Talent Pool module — the
+  // first real notification source for ADMIN/STAFF, who previously always saw a hard-coded "no
+  // notifications" stub here since none existed. Students additionally get the older live-computed
+  // dashboard items (test reminders, module unlocks, etc.) merged in alongside the persisted ones.
   function openNotifications() {
     const opening = !notifOpen;
     closeMenus();
     setNotifOpen(opening);
-    if (opening && notifications === null && user?.role === "STUDENT") {
+    if (opening && notifications === null) {
       setLoadingNotif(true);
-      api.get("/dashboard/student")
-        .then((res) => setNotifications(res.data.notifications || []))
+      const requests = [api.get("/notifications", { params: { pageSize: 8 } })];
+      if (user?.role === "STUDENT") requests.push(api.get("/dashboard/student"));
+      Promise.all(requests)
+        .then(([notifRes, dashRes]) => {
+          const persisted = (notifRes.data.notifications || []).map((n) => ({ id: n.id, message: n.message, date: n.createdAt, read: n.read }));
+          const live = dashRes ? (dashRes.data.notifications || []).map((n) => ({ message: n.text, date: n.date, read: true })) : [];
+          setNotifications([...persisted, ...live].sort((a, b) => new Date(b.date) - new Date(a.date)));
+        })
         .catch(() => setNotifications([]))
         .finally(() => setLoadingNotif(false));
     }
+  }
+
+  function markRead(n) {
+    if (!n.id || n.read) return;
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    api.patch(`/notifications/${n.id}/read`).catch(() => {});
+  }
+
+  function markAllRead() {
+    setNotifications((prev) => prev?.map((x) => ({ ...x, read: true })) ?? prev);
+    api.post("/notifications/mark-all-read").catch(() => {});
   }
 
   return (
@@ -61,16 +79,28 @@ export default function Navbar() {
             <div style={{ position: "relative" }}>
               <button className="ca-topbar-icon-btn" onClick={openNotifications} aria-label="Notifications">
                 <Bell size={17} />
-                {user.role === "STUDENT" && notifications?.length > 0 && <span className="ca-topbar-dot" />}
+                {notifications?.some((n) => !n.read) && <span className="ca-topbar-dot" />}
               </button>
               {notifOpen && (
                 <div className="ca-dropdown">
-                  <div style={{ padding: "10px 14px", fontWeight: 700, fontSize: 12, borderBottom: "1px solid var(--line)" }}>Notifications</div>
+                  <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--line)" }}>
+                    <span style={{ fontWeight: 700, fontSize: 12 }}>Notifications</span>
+                    {notifications?.some((n) => n.id && !n.read) && (
+                      <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={markAllRead}>Mark all read</button>
+                    )}
+                  </div>
                   {loadingNotif && <div className="ca-dropdown-item">Loading…</div>}
                   {!loadingNotif && (
-                    user.role === "STUDENT" && notifications?.length
-                      ? notifications.slice(0, 6).map((n, i) => (
-                        <div key={i} className="ca-dropdown-item" style={{ cursor: "default" }}>{n.message || n.text || String(n)}</div>
+                    notifications?.length
+                      ? notifications.slice(0, 8).map((n, i) => (
+                        <div
+                          key={n.id || i}
+                          className="ca-dropdown-item"
+                          style={{ cursor: n.id ? "pointer" : "default", opacity: n.read ? 0.6 : 1 }}
+                          onClick={() => markRead(n)}
+                        >
+                          {n.message}
+                        </div>
                       ))
                       : <div className="ca-dropdown-item" style={{ opacity: 0.7, cursor: "default" }}>No new notifications</div>
                   )}

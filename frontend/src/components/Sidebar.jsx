@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck, Share2, UserCircle, Building,
+  CalendarCheck, Share2, UserCircle, Building, Star,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 
@@ -21,6 +21,7 @@ const MENU = {
       { label: "My Attendance", to: "/attendance", icon: CalendarCheck },
     ] },
     { group: "Placement Prep", items: [
+      { label: "My Talent Pools", to: "/talent-pools", icon: Star },
       { label: "Daily Challenge", to: "/challenges/daily", icon: CalendarDays },
       { label: "Weekly Challenge", to: "/challenges/weekly", icon: CalendarRange },
       { label: "Company Tests", to: "/company-tests", icon: Briefcase },
@@ -50,6 +51,7 @@ const MENU = {
     ] },
     { group: "Students", items: [
       { label: "Student Search", to: "/staff/students", icon: Users },
+      { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
       { label: "Password Reset History", to: "/staff/password-reset-history", icon: History },
       { label: "Audit Log", to: "/staff/audit-log", icon: History },
       { label: "Certificates", to: "/staff/certificates", icon: Award },
@@ -72,6 +74,7 @@ const MENU = {
       { label: "Academic Groups", to: "/admin/academic-groups", icon: School },
       { label: "Bulk Upload", to: "/admin/bulk-upload", icon: Upload },
       { label: "Students", to: "/admin/students", icon: Users },
+      { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
     ] },
     { group: "Attendance", items: [
       { label: "Attendance Setup", to: "/admin/attendance-structure", icon: Layers },

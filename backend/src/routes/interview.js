@@ -18,6 +18,7 @@ const { sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { askClaudeJson } = require("../utils/aiClient");
 const { cached } = require("../utils/cache");
 const { COMPANIES } = require("../utils/companies");
+const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -158,19 +159,38 @@ router.get("/summary", authenticate, requireRole("STUDENT"), async (req, res) =>
 // STUDENT: start (or resume, if one's already in progress with the same shape) a session.
 router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const { category, isMock, isResumeBased, isCompanyRound, config } = req.body;
-    if (!isMock && !isResumeBased && !isCompanyRound && !VALID_CATEGORIES.includes(category)) {
+    const { category, isMock, isResumeBased, isCompanyRound, talentPoolConfigId, config } = req.body;
+    if (!isMock && !isResumeBased && !isCompanyRound && !talentPoolConfigId && !VALID_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: "Invalid category" });
     }
     if (isCompanyRound && !config?.company) {
       return res.status(400).json({ error: "A company must be selected for a Company Round interview" });
     }
 
+    // Talent Pool exclusivity gate: this is the ONE thing that differs from every other branch
+    // below — everything else here just picks a question mix, this one first has to confirm the
+    // student is actually allowed to start a session against this config at all. Sibling to the
+    // isMock/isCompanyRound branches, not a parallel eligibility engine — reuses the same
+    // company/difficulty question-mix logic those already have.
+    let talentPoolConfig = null;
+    if (talentPoolConfigId) {
+      talentPoolConfig = await prisma.talentPoolInterviewConfig.findUnique({
+        where: { id: talentPoolConfigId },
+        include: { pool: { select: { id: true, name: true, isActive: true } } },
+      });
+      if (!talentPoolConfig || !talentPoolConfig.isActive || !talentPoolConfig.pool.isActive) {
+        return res.status(404).json({ error: "This interview config is no longer available" });
+      }
+      const isMember = await isStudentTalentPoolMember(prisma, req.user.id, talentPoolConfig.poolId);
+      if (!isMember) return res.status(403).json({ error: "You're not a member of this Talent Pool" });
+    }
+
     const existing = await prisma.interviewSession.findFirst({
       where: {
         studentId: req.user.id, status: "IN_PROGRESS",
-        category: isMock || isResumeBased || isCompanyRound ? null : category,
+        category: isMock || isResumeBased || isCompanyRound || talentPoolConfigId ? null : category,
         isMock: !!isMock, isResumeBased: !!isResumeBased, isCompanyRound: !!isCompanyRound,
+        talentPoolConfigId: talentPoolConfigId || null,
       },
       include: { answers: true },
     });
@@ -222,6 +242,16 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       questions = [...hr, ...tech, ...coding, ...managerial];
       if (questions.length === 0) return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
       sessionData = { ...sessionData, isCompanyRound: true, category: null, config: { ...config, durationMin: COMPANY_ROUND_DURATION_MIN } };
+    } else if (talentPoolConfigId) {
+      const poolCfg = talentPoolConfig.config || {};
+      const roundCfg = { company: poolCfg.company, difficulty: poolCfg.difficulty };
+      const [hr, tech, coding, managerial] = await Promise.all([
+        pickQuestions("HR", roundCfg, 2), pickQuestions("TECHNICAL", roundCfg, 3),
+        pickQuestions("CODING", roundCfg, 2), pickQuestions("MANAGERIAL", roundCfg, 2),
+      ]);
+      questions = [...hr, ...tech, ...coding, ...managerial];
+      if (questions.length === 0) return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+      sessionData = { ...sessionData, category: null, talentPoolConfigId, config: { ...poolCfg, durationMin: poolCfg.durationMin || COMPANY_ROUND_DURATION_MIN } };
     } else {
       questions = await pickQuestions(category, config || {});
       if (questions.length === 0) return res.status(400).json({ error: "No questions available for this selection yet — try a different subject/difficulty or ask an admin to add more." });

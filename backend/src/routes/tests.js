@@ -5,6 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { gradePendingCodingSubmissions } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
 const { isTestVisibleToStudent, studentCanAccessTest } = require("../utils/testEligibility");
+const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 
 const router = express.Router();
 
@@ -341,6 +342,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
           },
         },
       },
+      talentPools: { select: { poolId: true } },
       createdBy: { select: { id: true, name: true } },
     },
   });
@@ -358,7 +360,8 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
   }
 
   const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true } });
-  const visible = tests.filter((t) => isTestVisibleToStudent(t, student.academicGroupId, student.classId));
+  const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
+  const visible = tests.filter((t) => isTestVisibleToStudent(t, student.academicGroupId, student.classId, memberPoolIds));
 
   // Surface the student's own attempt status per test so the dashboard can show "Completed"
   // upfront, rather than only after they click Attend and get bounced by a 403.
@@ -381,6 +384,7 @@ router.get("/:id", authenticate, async (req, res) => {
     include: {
       classes: { select: { classId: true } },
       academicGroups: { select: { academicGroupId: true } },
+      talentPools: { select: { poolId: true } },
       questions: {
         include: {
           question: {
@@ -414,7 +418,8 @@ router.get("/:id", authenticate, async (req, res) => {
 
   if (!isStaff) {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true } });
-    const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId);
+    const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
+    const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId, memberPoolIds);
     if (!allowed) return res.status(404).json({ error: "Test not found" });
 
     // Apply this student's one-time-generated order (set at attempt creation, see POST
@@ -462,7 +467,8 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     if (!test || !test.isPublished) return res.status(404).json({ error: "Test not available" });
 
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true } });
-    const allowed = await studentCanAccessTest(prisma, test.id, student.academicGroupId, student.classId);
+    const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
+    const allowed = await studentCanAccessTest(prisma, test.id, student.academicGroupId, student.classId, memberPoolIds);
     if (!allowed) return res.status(404).json({ error: "Test not available" });
 
     const existing = await prisma.testAttempt.findUnique({

@@ -35,6 +35,8 @@ const profileRoutes = require("./routes/profile");
 const companyRoutes = require("./routes/companies");
 const placementOfferRoutes = require("./routes/placementOffers");
 const studentDocumentRoutes = require("./routes/studentDocuments");
+const talentPoolRoutes = require("./routes/talentPools");
+const notificationRoutes = require("./routes/notifications");
 
 const app = express();
 // Render sits in front of this service behind a reverse proxy — without trusting it, req.ip
@@ -109,6 +111,8 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/placement", placementOfferRoutes);
 app.use("/api/documents", studentDocumentRoutes);
+app.use("/api/talent-pools", talentPoolRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 process.on("uncaughtException", (err) => {
   console.error("[uncaughtException]", err);
@@ -121,6 +125,9 @@ process.on("unhandledRejection", (err) => {
 
 const { startAiRefreshScheduler } = require("./utils/aiRefreshScheduler");
 startAiRefreshScheduler();
+
+const { startTalentPoolReminderScheduler } = require("./utils/talentPoolReminderScheduler");
+startTalentPoolReminderScheduler();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

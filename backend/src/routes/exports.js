@@ -145,6 +145,22 @@ const ENTITIES = {
       Difficulty: q.difficulty, Points: q.points, "Created At": q.createdAt.toISOString(),
     }));
   },
+
+  // Requires ?poolId= — unlike every other entity here, this one is scoped to a single Talent
+  // Pool rather than "every row of this type at the institute," since a pool roster only makes
+  // sense in that context (there's no "all Talent Pool members across the institute" report).
+  talentPools: async (instituteId, query = {}) => {
+    if (!query.poolId) return [];
+    const members = await prisma.talentPoolMember.findMany({
+      where: { poolId: query.poolId },
+      include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } } },
+      orderBy: { addedAt: "desc" },
+    });
+    return members.map((m) => ({
+      "Roll Number": m.student.rollNumber || "", "Registration Number": m.student.registrationNumber || "",
+      Name: m.student.name, Email: m.student.email, "Added Via": m.addedVia, "Added At": m.addedAt.toISOString(),
+    }));
+  },
 };
 
 // ADMIN/STAFF (institute-scoped for Staff and institute-scoped Admins; unscoped for platform-level

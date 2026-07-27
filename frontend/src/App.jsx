@@ -45,6 +45,8 @@ import AttendanceAssignmentDetail from "./pages/AttendanceAssignmentDetail";
 import ExecuteAttendance from "./pages/ExecuteAttendance";
 import AttendanceReports from "./pages/AttendanceReports";
 import MyAttendance from "./pages/MyAttendance";
+import TalentPools from "./pages/TalentPools";
+import MyTalentPools from "./pages/MyTalentPools";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ForceChangePassword from "./pages/ForceChangePassword";
@@ -162,6 +164,7 @@ export default function App() {
           <Route path="/account" element={<Protected><AccountSettings /></Protected>} />
           <Route path="/certificates" element={<Protected roles={["STUDENT"]}><MyCertificates /></Protected>} />
           <Route path="/attendance" element={<Protected roles={["STUDENT"]}><MyAttendance /></Protected>} />
+          <Route path="/talent-pools" element={<Protected roles={["STUDENT"]}><MyTalentPools /></Protected>} />
 
           {/* Student */}
           <Route path="/profile" element={<Protected roles={["STUDENT"]}><StudentProfile /></Protected>} />
@@ -261,6 +264,7 @@ export default function App() {
           <Route path="/admin/course-assignments" element={<Protected roles={["ADMIN"]}><CourseAssignments /></Protected>} />
           <Route path="/admin/institutes" element={<Protected roles={["ADMIN"]}><InstituteManagement /></Protected>} />
           <Route path="/admin/attendance-structure" element={<Protected roles={["ADMIN"]}><AttendanceStructure /></Protected>} />
+          <Route path="/admin/talent-pools" element={<Protected roles={["ADMIN", "STAFF"]}><TalentPools /></Protected>} />
           <Route path="/admin/email-logs" element={<Protected roles={["ADMIN"]}><EmailLogs /></Protected>} />
           <Route path="/admin/question-audit" element={<Protected roles={["ADMIN"]}><QuestionAudit /></Protected>} />
           <Route path="/admin/password-reset-history" element={<Protected roles={["ADMIN"]}><PasswordResetHistory basePath="/admin" /></Protected>} />

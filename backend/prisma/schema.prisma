@@ -80,6 +80,7 @@ model Institute {
   departments     Department[]
   academicGroups  AcademicGroup[]
   courseAssignments CourseInstituteAssignment[]
+  talentPools     TalentPool[]
 }
 
 model Class {
@@ -181,6 +182,12 @@ model User {
   attendanceSessionsUpdated AttendanceSession[]   @relation("AttendanceUpdatedBy")
   attendanceRecords        AttendanceRecord[]     @relation("AttendanceStudentRecords")
 
+  // Talent Pool module — arbitrary cross-department/batch student groupings, distinct from
+  // AcademicGroup (see TalentPool's own doc comment for why that model can't be reused here).
+  notifications          Notification[]
+  talentPoolMemberships  TalentPoolMember[]
+  createdTalentPools     TalentPool[]      @relation("TalentPoolCreator")
+
   @@index([instituteId])
   @@index([classId])
   @@index([academicGroupId])
@@ -230,6 +237,7 @@ model Test {
   attempts  TestAttempt[]
   classes   TestClass[] // empty = open to all classes (legacy/unscoped tests)
   academicGroups TestAcademicGroup[] // replaces classes[] as the real eligibility gate — see testEligibility.js
+  talentPools    TalentPoolTest[] // presence of any row makes this test Talent-Pool-exclusive — overrides, not OR's with, the academicGroups/classes check (see testEligibility.js)
 
   // Attendance Management: when Lecture Type = Exam, a session can link back to the Test being
   // administered, so exam attendance is tied to the actual test rather than duplicated.
@@ -262,6 +270,118 @@ model TestAcademicGroup {
   academicGroupId String
 
   @@unique([testId, academicGroupId])
+}
+
+// ===================================================================
+// Talent Pool module — admin-curated, arbitrary cross-department/batch
+// groupings of students (e.g. "Elite Coders", "Placement Batch"). This is
+// deliberately NOT built on AcademicGroup: AcademicGroup is strictly the
+// auto-derived Institute->Batch->Department->Section hierarchy (one student,
+// one group, upserted from registration data — see resolveAcademicGroup()
+// in users.js), so it cannot represent a hand-picked set of students that
+// crosses departments or batches. TalentPoolMember is a real many-to-many
+// roster instead. Exclusive-assessment scoping mirrors the existing
+// Test/TestAcademicGroup pattern (TalentPoolTest) plus a new, minimal
+// Interview-side gate (TalentPoolInterviewConfig), since InterviewSession
+// has no group-scoping concept today.
+// ===================================================================
+
+model TalentPool {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String?    // null = platform-level pool (unscoped Super Admin), same convention as Course/Test institute-nullability
+  isActive    Boolean  @default(true)
+  createdBy   User     @relation("TalentPoolCreator", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members          TalentPoolMember[]
+  autoRule         TalentPoolAutoRule?
+  testAssignments  TalentPoolTest[]
+  interviewConfigs TalentPoolInterviewConfig[]
+
+  @@index([instituteId])
+  @@index([isActive])
+}
+
+// The arbitrary M:N roster — the actual reason this feature needs a new model rather than reusing
+// AcademicGroup. addedByName mirrors Certificate.revokedByName's non-FK audit-name convention
+// (null when addedVia AUTO_RULE, since no admin personally added that row).
+model TalentPoolMember {
+  id          String     @id @default(uuid())
+  pool        TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId      String
+  student     User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
+  addedVia    String     @default("MANUAL") // "MANUAL" | "AUTO_RULE"
+  addedByName String?
+  addedAt     DateTime   @default(now())
+
+  @@unique([poolId, studentId])
+  @@index([poolId])
+  @@index([studentId])
+}
+
+// One optional auto-selection rule per pool. Re-running the rule only ever ADDS newly-matching
+// students (see talentPoolAutoSelect.js) — it never removes existing members, since live metrics
+// like attendance% must not silently evict someone the admin (or a prior run) already selected.
+model TalentPoolAutoRule {
+  id                            String   @id @default(uuid())
+  pool                          TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId                        String   @unique
+  minCgpa                       Float?
+  minAttendancePercent          Float?
+  minAverageScorePercent        Float?
+  minCompletionPercent          Float?   // Learning Module completion %
+  requiredBadgeIds              Json?    // string[] of Badge.id
+  requiredCertificateCourseIds  Json?    // string[] of Course.id, matched against VALID Certificate rows
+  matchMode                     String   @default("ALL") // "ALL" | "ANY"
+  scopeInstituteId              String?
+  scopeDepartmentIds            Json?    // string[] of Department.id
+  scopeBatch                    String?
+  lastRunAt                     DateTime?
+  lastRunAddedCount             Int?     @default(0)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+}
+
+// Direct mirror of TestAcademicGroup, but the exclusivity direction is inverted from the
+// "empty = open to everyone" convention: presence of ANY row here makes the test invisible to
+// non-members (see testEligibility.js's memberPoolIds handling), since a pool-exclusive test must
+// never fall back to being open-to-all just because it also happens to have zero group/class rows.
+model TalentPoolTest {
+  id             String   @id @default(uuid())
+  pool           TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId         String
+  test           Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId         String
+  assignedAt     DateTime @default(now())
+  reminderSentAt DateTime? // idempotency flag for the opt-in deadline-reminder scheduler
+
+  @@unique([poolId, testId])
+  @@index([testId])
+}
+
+// The minimal Mock Interview exclusivity gate: InterviewSession has no group-scoping today, so
+// rather than building a full parallel eligibility engine for it, a pool can define named
+// interview configs (same config shape InterviewSession.config already uses) that only pool
+// members may start a session against — see the talentPoolConfigId branch in interview.js's
+// POST /sessions, sibling to the existing isMock/isCompanyRound branches.
+model TalentPoolInterviewConfig {
+  id        String   @id @default(uuid())
+  pool      TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId    String
+  label     String
+  isActive  Boolean  @default(true)
+  config    Json     // {difficulty, company, mix, durationMin, ...} — same shape as InterviewSession.config
+  createdAt DateTime @default(now())
+
+  sessions InterviewSession[]
+
+  @@index([poolId])
 }
 
 model Question {
@@ -543,6 +663,27 @@ model EmailLog {
   @@index([status])
   @@index([studentId])
   @@index([createdAt])
+}
+
+// Persisted in-app notification — did not exist anywhere on the platform before the Talent Pool
+// module (the dashboard bell was previously a student-only, live-computed list with no backing
+// table — see getNotifications() in dashboard.js and the comment in Navbar.jsx). `type` is a
+// plain extensible String tag, not an enum, matching EmailLog.emailType's convention. Every write
+// here is paired with a sendMailLogged() call for the email channel — see utils/notifications.js.
+model Notification {
+  id          String    @id @default(uuid())
+  recipient   User      @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId String
+  type        String    // e.g. "TALENT_POOL_ADDED" | "TALENT_POOL_REMOVED" | "TALENT_POOL_ASSESSMENT_ASSIGNED" | "TALENT_POOL_DEADLINE_REMINDER" | "TALENT_POOL_RESULTS_PUBLISHED"
+  message     String
+  link        String?
+  read        Boolean   @default(false)
+  readAt      DateTime?
+  meta        Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipientId, read])
+  @@index([recipientId, createdAt])
 }
 
 // ===================================================================
@@ -1281,6 +1422,13 @@ model StudentProfile {
   clerkEligibilitySetBy      String?
   clerkEligibilitySetAt      DateTime?
 
+  // Talent Pool auto-selection criterion. Admin/Staff-set only (see profile.js's PATCH
+  // /students/:studentId/cgpa) — deliberately NOT in the student's own self-editable field list,
+  // same "setBy/setAt audit trail, not a raw FK" convention as departmentEligibility above.
+  cgpa      Float?
+  cgpaSetBy String?
+  cgpaSetAt DateTime?
+
   mandatoryStatus      String    @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | COMPLETED
   mandatoryCompletedAt DateTime?
 
@@ -1623,12 +1771,19 @@ model InterviewSession {
   startedAt      DateTime @default(now())
   submittedAt    DateTime?
 
+  // Talent Pool exclusivity: set only when this session was started against a pool's interview
+  // config (see interview.js POST /sessions' talentPoolConfigId branch). SetNull (not Cascade) —
+  // deleting the config later must not delete the student's completed session history.
+  talentPoolConfig   TalentPoolInterviewConfig? @relation(fields: [talentPoolConfigId], references: [id], onDelete: SetNull)
+  talentPoolConfigId String?
+
   answers    InterviewAnswer[]
   report     InterviewReport?
   violations InterviewViolation[]
 
   @@index([studentId, category])
   @@index([studentId, status])
+  @@index([talentPoolConfigId])
 }
 
 // Event-level proctoring log for interview sessions — mirrors ProctoringViolation (the module-

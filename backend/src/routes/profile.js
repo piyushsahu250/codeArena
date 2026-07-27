@@ -160,6 +160,37 @@ router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), 
   }
 });
 
+// ADMIN/STAFF: set a student's CGPA — admin-entered only (mirrors placementOffers.js's
+// department-eligibility upsert-with-setBy/setAt pattern exactly). Deliberately not in
+// STUDENT_PROFILE_FIELDS above, so a student can never self-report this — it's a Talent Pool
+// auto-selection criterion and needs to stay a trustworthy, staff-verified number.
+router.patch("/students/:studentId/cgpa", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const cgpa = Number(req.body.cgpa);
+    if (!Number.isFinite(cgpa) || cgpa < 0 || cgpa > 10) return res.status(400).json({ error: "cgpa must be a number between 0 and 10" });
+
+    const student = await prisma.user.findUnique({ where: { id: req.params.studentId } });
+    if (!student || student.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
+    if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const profile = await prisma.studentProfile.upsert({
+      where: { studentId: req.params.studentId },
+      create: { studentId: req.params.studentId, cgpa, cgpaSetBy: req.user.name, cgpaSetAt: new Date() },
+      update: { cgpa, cgpaSetBy: req.user.name, cgpaSetAt: new Date() },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.STUDENT_PROFILE_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      studentId: req.params.studentId, instituteId: student.instituteId, details: { type: "cgpa", cgpa },
+    });
+    res.json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update CGPA" });
+  }
+});
+
 // ADMIN/STAFF/CLERK: downloadable PDF of the same profile data above, for offline record-keeping
 // (e.g. Placement Cell staff printing a student's academic-record sheet).
 router.get("/:studentId/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {

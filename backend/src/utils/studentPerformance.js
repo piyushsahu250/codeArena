@@ -1,5 +1,6 @@
 const prisma = require("../prisma");
 const { testEligibilityWhere } = require("./testEligibility");
+const { getStudentPoolIds } = require("./talentPoolEligibility");
 
 function round1(n) {
   return Math.round(n * 10) / 10;
@@ -26,11 +27,12 @@ async function computeStudentPerformance(studentId, { maskUnpublished = false } 
   });
   if (!student || student.id !== studentId) return null;
 
+  const memberPoolIds = await getStudentPoolIds(prisma, studentId);
   const [assignedTests, attempts] = await Promise.all([
     prisma.test.findMany({
       where: {
         isPublished: true,
-        ...testEligibilityWhere(student.academicGroup?.id, student.class?.id),
+        ...testEligibilityWhere(student.academicGroup?.id, student.class?.id, [...memberPoolIds]),
       },
       select: { id: true },
     }),
