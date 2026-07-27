@@ -88,6 +88,21 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
 // ADMIN: delete an institute — only if no dependent classes or users exist
 router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    // A class with zero enrolled users carries no real data to lose (its only other links —
+    // TestClass, StaffClassAssignment — cascade harmlessly, same reasoning as
+    // deleteAcademicGroupIfEmpty() for AcademicGroup/Department). Clearing these first means an
+    // institute whose only remaining "classes" are stale leftovers (created once, never
+    // populated, or emptied out student-by-student over time) deletes cleanly instead of 409ing
+    // forever — a class that still has real students always survives this and correctly blocks
+    // the delete below.
+    const emptyClasses = await prisma.class.findMany({
+      where: { instituteId: req.params.id, users: { none: {} } },
+      select: { id: true },
+    });
+    if (emptyClasses.length) {
+      await prisma.class.deleteMany({ where: { id: { in: emptyClasses.map((c) => c.id) } } });
+    }
+
     const [classCount, userCount] = await Promise.all([
       prisma.class.count({ where: { instituteId: req.params.id } }),
       prisma.user.count({ where: { instituteId: req.params.id } }),
