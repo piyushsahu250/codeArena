@@ -204,6 +204,19 @@ router.delete("/admin/departments/:id", authenticate, requireRole("ADMIN"), atta
     if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only manage departments under your own institute" });
     }
+    // Groups with zero enrolled students carry no real data to lose — same "safe to remove
+    // automatically" bar deleteAcademicGroupIfEmpty() already applies elsewhere with no
+    // confirmation prompt (see utils/academicGroups.js). Clearing these first means a department
+    // whose only remaining "divisions" are stale empty ones (e.g. left behind after every student
+    // in them was edited/moved away one at a time) deletes cleanly instead of 409ing forever. A
+    // group that still has real students always survives this and correctly blocks the delete below.
+    const emptyGroups = await prisma.academicGroup.findMany({
+      where: { departmentId: req.params.id, users: { none: {} } },
+      select: { id: true },
+    });
+    if (emptyGroups.length) {
+      await prisma.academicGroup.deleteMany({ where: { id: { in: emptyGroups.map((g) => g.id) } } });
+    }
     await prisma.department.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
