@@ -129,6 +129,26 @@ export default function StudentPerformance({ basePath }) {
     }
   }
 
+  async function deleteDocumentAsManager(doc) {
+    const ok = await confirmDialog({
+      title: "Delete Document",
+      message: `Delete "${docTypes.find((t) => t.value === doc.documentType)?.label || doc.documentType}"${doc.label ? ` — ${doc.label}` : ""}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    setVerifyingDocId(doc.id);
+    try {
+      await api.delete(`/documents/${doc.id}/admin`);
+      toast.success("Document deleted.");
+      loadDocuments();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to delete document");
+    } finally {
+      setVerifyingDocId(null);
+    }
+  }
+
   async function downloadReport(format) {
     setDownloading(format);
     try {
@@ -502,6 +522,16 @@ export default function StudentPerformance({ basePath }) {
                         {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
                           <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 200 }}>{d.rejectionReason}</p>
                         )}
+                        <div style={{ marginTop: 6 }}>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }}
+                            disabled={verifyingDocId === d.id}
+                            onClick={() => deleteDocumentAsManager(d)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

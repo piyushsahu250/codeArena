@@ -12,6 +12,7 @@ const DOCUMENT_TYPES = [
   { value: "DEGREE_CERTIFICATE", label: "Degree / Provisional Certificate" },
   { value: "BONAFIDE_CERTIFICATE", label: "Bonafide Certificate" },
   { value: "GOVERNMENT_ID", label: "Government ID" },
+  { value: "LINKEDIN_CERTIFICATE", label: "LinkedIn Certificate" },
   { value: "INTERNSHIP_CERTIFICATE", label: "Internship Certificate" },
   { value: "EXPERIENCE_CERTIFICATE", label: "Experience Certificate" },
   { value: "JOINING_LETTER", label: "Joining Letter" },
