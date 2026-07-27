@@ -99,7 +99,7 @@ router.post("/login", async (req, res) => {
       profileComplete = computeMandatoryCompletion(user, studentProfile, resume).unlocked;
     }
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, mustChangePassword, requireProfileCompletion, profileComplete } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Login failed" });

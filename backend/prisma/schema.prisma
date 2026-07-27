@@ -80,7 +80,8 @@ model Institute {
   departments     Department[]
   academicGroups  AcademicGroup[]
   courseAssignments CourseInstituteAssignment[]
-  talentPools     TalentPool[]
+  talentPools     TalentPoolInstitute[]
+  talentPoolAttendanceAssignments StaffClassAssignment[] @relation("TalentPoolAttendanceInstitute")
 }
 
 model Class {
@@ -290,21 +291,39 @@ model TalentPool {
   id          String   @id @default(uuid())
   name        String
   description String?
-  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
-  instituteId String?    // null = platform-level pool (unscoped Super Admin), same convention as Course/Test institute-nullability
   isActive    Boolean  @default(true)
   createdBy   User     @relation("TalentPoolCreator", fields: [createdById], references: [id])
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // A pool can span multiple institutes (replaces the earlier single-instituteId design — no
+  // live pools existed when this changed, so this was a clean replacement, not a migration).
+  // Empty list = platform-level pool (unscoped Super Admin), same convention as the old nullable
+  // instituteId used to express.
+  institutes TalentPoolInstitute[]
+
   members          TalentPoolMember[]
   autoRule         TalentPoolAutoRule?
   testAssignments  TalentPoolTest[]
   interviewConfigs TalentPoolInterviewConfig[]
+  attendanceOwners StaffClassAssignment[] @relation("TalentPoolAttendanceOwners")
 
-  @@index([instituteId])
   @@index([isActive])
+}
+
+// Join table for TalentPool's multi-institute membership. A pool is visible/manageable by an
+// institute-scoped ADMIN/STAFF only when their institute appears here (see loadPoolScoped in
+// routes/talentPools.js) — replaces the old exact-match check against a single instituteId.
+model TalentPoolInstitute {
+  id          String     @id @default(uuid())
+  pool        TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId      String
+  institute   Institute  @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String
+
+  @@unique([poolId, instituteId])
+  @@index([instituteId])
 }
 
 // The arbitrary M:N roster — the actual reason this feature needs a new model rather than reusing
@@ -1930,6 +1949,20 @@ model StaffClassAssignment {
   // Institute -> Batch -> Department -> Section replacement for the class/division link above.
   academicGroup   AcademicGroup? @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
   academicGroupId String?
+
+  // A third, mutually-exclusive roster type alongside class/academicGroup above: "the students of
+  // ONE institute within a (possibly multi-institute) Talent Pool." Lets a Talent Pool's
+  // attendance-mandatory assessments reuse the exact same LecturePlan/AttendanceSession/
+  // AttendanceRecord/ExecuteAttendance machinery as ordinary division-based attendance, instead of
+  // a parallel implementation — see routes/talentPools.js's attendance-owners routes (the only
+  // writers of these two fields) and routes/attendance.js's resolveAssignmentAccess/
+  // rosterWhereForAssignment, which branch on talentPoolId being set. Existing rows are unaffected
+  // (both null, same code path as before this was added).
+  talentPool            TalentPool? @relation("TalentPoolAttendanceOwners", fields: [talentPoolId], references: [id], onDelete: Cascade)
+  talentPoolId          String?
+  attendanceInstitute   Institute?  @relation("TalentPoolAttendanceInstitute", fields: [attendanceInstituteId], references: [id], onDelete: Cascade)
+  attendanceInstituteId String?
+
   // Free text (programs vary in term count/naming across institutes) — mutable; a division's
   // assignment carries across semesters and an admin can just update it rather than recreating.
   semester String @default("")
@@ -1941,6 +1974,11 @@ model StaffClassAssignment {
   @@index([classId])
   @@index([academicGroupId])
   @@index([staffId])
+  @@index([talentPoolId])
+  // Real constraint (unlike the academicGroup path, which relies on route logic alone) — this is
+  // a brand-new pairing with no legacy rows to worry about, and the spec explicitly requires
+  // preventing duplicate attendance-ownership assignments for the same institute within a pool.
+  @@unique([talentPoolId, attendanceInstituteId])
 }
 
 enum LectureType {

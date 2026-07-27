@@ -35,6 +35,16 @@ export default function CreateTest() {
   const [form, setForm] = useState(emptyForm);
   const [academicGroups, setAcademicGroups] = useState([]);
   const [academicGroupIds, setAcademicGroupIds] = useState([]);
+  // Group Type is mutually exclusive per the spec — "Only one Group Type should be selected for
+  // an assessment" — since testEligibilityWhere already treats any TalentPoolTest link as a full
+  // override of the academicGroup/class check, not an OR with it (see backend/src/utils/
+  // testEligibility.js). Switching to Talent Pools here doesn't invent a new assignment mechanism —
+  // it just calls the existing POST/DELETE /talent-pools/:id/tests routes after the test itself is
+  // saved, diffed against whatever pools this test was already linked to.
+  const [groupType, setGroupType] = useState("ACADEMIC");
+  const [talentPools, setTalentPools] = useState([]);
+  const [talentPoolIds, setTalentPoolIds] = useState([]);
+  const [initialTalentPoolIds, setInitialTalentPoolIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [showBankModal, setShowBankModal] = useState(false);
@@ -42,6 +52,7 @@ export default function CreateTest() {
 
   useEffect(() => {
     api.get("/academic-groups").then((res) => setAcademicGroups(res.data));
+    api.get("/talent-pools").then((res) => setTalentPools(res.data)).catch(() => setTalentPools([]));
   }, []);
 
   useEffect(() => {
@@ -67,6 +78,10 @@ export default function CreateTest() {
         randomHard: t.difficultyDistribution?.hard ?? "",
       });
       setAcademicGroupIds((t.academicGroups || []).map((g) => g.academicGroupId));
+      const poolIds = (t.talentPools || []).map((tp) => tp.poolId);
+      setTalentPoolIds(poolIds);
+      setInitialTalentPoolIds(poolIds);
+      setGroupType(poolIds.length > 0 ? "TALENT_POOL" : "ACADEMIC");
       const qIds = t.questions.map((tq) => tq.question.id);
       setSelected(qIds);
       setQuestions((prev) => {
@@ -130,17 +145,28 @@ export default function CreateTest() {
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         questionIds: isRandomMode ? undefined : selected,
-        academicGroupIds,
+        academicGroupIds: groupType === "ACADEMIC" ? academicGroupIds : [],
         randomQuestionsPerStudent: isRandomMode ? Number(form.randomQuestionsPerStudent) : undefined,
         difficultyDistribution: isRandomMode && distributionSum > 0
           ? { easy: Number(form.randomEasy || 0), medium: Number(form.randomMedium || 0), hard: Number(form.randomHard || 0) }
           : undefined,
       };
+      let testId = id;
       if (isEdit) {
         await api.patch(`/tests/${id}`, payload);
       } else {
-        await api.post("/tests", payload);
+        const { data: created } = await api.post("/tests", payload);
+        testId = created.id;
       }
+
+      const desiredPoolIds = groupType === "TALENT_POOL" ? talentPoolIds : [];
+      const toAssign = desiredPoolIds.filter((pid) => !initialTalentPoolIds.includes(pid));
+      const toUnassign = initialTalentPoolIds.filter((pid) => !desiredPoolIds.includes(pid));
+      await Promise.all([
+        ...toAssign.map((pid) => api.post(`/talent-pools/${pid}/tests`, { testId })),
+        ...toUnassign.map((pid) => api.delete(`/talent-pools/${pid}/tests/${testId}`)),
+      ]);
+
       navigate("/staff");
     } catch (err) {
       alert(err.response?.data?.error || "Failed to save test");
@@ -242,11 +268,44 @@ export default function CreateTest() {
             </label>
           </div>
 
-          <div style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Assign to academic groups</div>
-          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>Leave all unchecked to make this test visible to every group (default).</p>
-          <div style={{ marginTop: 8 }}>
-            <AcademicGroupPicker multi groups={academicGroups} value={academicGroupIds} onChange={setAcademicGroupIds} />
+          <div style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Assign to</div>
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+            Choose exactly one Group Type. A Talent-Pool-exclusive test is only visible to that pool's members — any
+            Academic Group assignment is ignored while Talent Pools is selected.
+          </p>
+          <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+              <input type="radio" name="groupType" checked={groupType === "ACADEMIC"} onChange={() => setGroupType("ACADEMIC")} />
+              Academic Groups
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+              <input type="radio" name="groupType" checked={groupType === "TALENT_POOL"} onChange={() => setGroupType("TALENT_POOL")} />
+              Talent Pools
+            </label>
           </div>
+
+          {groupType === "ACADEMIC" ? (
+            <>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>Leave all unchecked to make this test visible to every group (default).</p>
+              <div style={{ marginTop: 8 }}>
+                <AcademicGroupPicker multi groups={academicGroups} value={academicGroupIds} onChange={setAcademicGroupIds} />
+              </div>
+            </>
+          ) : (
+            <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {talentPools.map((p) => (
+                <label key={p.id} className="card" style={{ padding: "8px 12px", fontSize: 13, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={talentPoolIds.includes(p.id)}
+                    onChange={() => setTalentPoolIds((ids) => (ids.includes(p.id) ? ids.filter((i) => i !== p.id) : [...ids, p.id]))}
+                  />
+                  {p.name}
+                </label>
+              ))}
+              {talentPools.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No Talent Pools exist yet — create one from the Talent Pools admin page first.</p>}
+            </div>
+          )}
 
           <div style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Question Selection Mode</div>
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>

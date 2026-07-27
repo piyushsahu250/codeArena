@@ -132,10 +132,12 @@ export default function AttendanceAssignmentDetail() {
         <Link to="/staff/attendance" className="btn btn-ghost" style={{ fontSize: 12 }}>← Back to Attendance</Link>
         {assignment && (
           <div style={{ marginTop: 12 }}>
-            <h1>{formatAcademicGroupLabel(assignment.academicGroup, assignment.class)}</h1>
+            <h1>{assignment.talentPoolId ? `Talent Pool: ${assignment.talentPool?.name}` : formatAcademicGroupLabel(assignment.academicGroup, assignment.class)}</h1>
             <ChalkUnderline />
             <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
-              Semester {assignment.semester} · Faculty: {assignment.staff.name}
+              {assignment.talentPoolId
+                ? `Institute: ${assignment.attendanceInstitute?.name} · Faculty: ${assignment.staff.name}`
+                : `Semester ${assignment.semester} · Faculty: ${assignment.staff.name}`}
             </p>
           </div>
         )}

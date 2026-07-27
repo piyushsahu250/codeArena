@@ -107,13 +107,17 @@ async function resolveAssignmentAccess(req, res, assignmentId) {
       staff: { select: { id: true, name: true, email: true } },
       class: { include: { institute: { select: { id: true, name: true } }, division: { include: { department: true } } } },
       academicGroup: { include: { institute: { select: { id: true, name: true } }, department: true } },
+      // Third roster type — "students of ONE institute within a Talent Pool" — see schema.prisma's
+      // StaffClassAssignment comment. Only populated when talentPoolId is set.
+      talentPool: { select: { id: true, name: true } },
+      attendanceInstitute: { select: { id: true, name: true } },
     },
   });
   if (!assignment) {
     res.status(404).json({ error: "Assignment not found" });
     return null;
   }
-  const instituteId = assignment.academicGroup?.instituteId || assignment.class?.instituteId;
+  const instituteId = assignment.academicGroup?.instituteId || assignment.class?.instituteId || assignment.attendanceInstituteId;
   if (req.user.role === "STAFF") {
     if (assignment.staffId !== req.user.id) {
       res.status(403).json({ error: "You are not assigned to this group" });
@@ -129,13 +133,33 @@ async function resolveAssignmentAccess(req, res, assignmentId) {
   return assignment;
 }
 
-// Roster where-clause for an assignment: academicGroupId when populated (every current
-// assignment, post-migration), classId as a defensive fallback for any row that somehow wasn't
-// backfilled.
+// Roster where-clause for an assignment: talentPoolId first (this assignment owns attendance for
+// one institute's slice of a Talent Pool's members — see schema.prisma), then academicGroupId
+// (every current division-based assignment, post-migration), classId as a defensive fallback for
+// any row that somehow wasn't backfilled.
 function rosterWhereForAssignment(assignment) {
+  if (assignment.talentPoolId) {
+    return {
+      role: "STUDENT",
+      instituteId: assignment.attendanceInstituteId,
+      talentPoolMemberships: { some: { poolId: assignment.talentPoolId } },
+    };
+  }
   return assignment.academicGroupId
     ? { academicGroupId: assignment.academicGroupId, role: "STUDENT" }
     : { classId: assignment.classId, role: "STUDENT" };
+}
+
+// Which tests may be picked for a PRACTICE_TEST/EXAM lecture under this assignment. For a
+// talent-pool assignment, this is simply "attendance-mandatory tests exclusively assigned to that
+// pool" (the pool is already known, so testEligibilityWhere's per-student membership resolution
+// isn't needed here). For an ordinary division assignment, behavior is unchanged.
+function eligibleTestsWhere(assignment, now) {
+  const base = { isPublished: true, attendanceMandatory: true, startTime: { lte: now }, endTime: { gte: now } };
+  if (assignment.talentPoolId) {
+    return { ...base, talentPools: { some: { poolId: assignment.talentPoolId } } };
+  }
+  return { ...base, ...testEligibilityWhere(assignment.academicGroupId, assignment.classId) };
 }
 
 // ===================== Admin: Department CRUD =====================
@@ -426,6 +450,8 @@ router.get("/my-assignments", authenticate, requireRole("ADMIN", "STAFF"), attac
       staff: { select: { id: true, name: true } },
       class: { include: { institute: { select: { id: true, name: true } }, division: { include: { department: true } } } },
       academicGroup: { include: { institute: { select: { id: true, name: true } }, department: true } },
+      talentPool: { select: { id: true, name: true } },
+      attendanceInstitute: { select: { id: true, name: true } },
     };
     let assignments;
     if (req.user.role === "STAFF") {
@@ -435,12 +461,15 @@ router.get("/my-assignments", authenticate, requireRole("ADMIN", "STAFF"), attac
       });
     } else {
       const where = {};
-      if (req.requesterInstituteId) where.academicGroup = { instituteId: req.requesterInstituteId };
+      if (req.requesterInstituteId) {
+        where.OR = [{ academicGroup: { instituteId: req.requesterInstituteId } }, { attendanceInstituteId: req.requesterInstituteId }];
+      }
       assignments = await prisma.staffClassAssignment.findMany({ where, include });
     }
     // Sorted in JS (not the DB query) since the sort key differs by which relation is populated —
-    // academicGroup.section for post-migration rows, class.name for any pre-migration fallback.
-    assignments.sort((a, b) => (a.academicGroup?.section || a.class?.name || "").localeCompare(b.academicGroup?.section || b.class?.name || ""));
+    // academicGroup.section for post-migration rows, class.name for any pre-migration fallback,
+    // the Talent Pool's own name for a pool-based row.
+    assignments.sort((a, b) => (a.academicGroup?.section || a.class?.name || a.talentPool?.name || "").localeCompare(b.academicGroup?.section || b.class?.name || b.talentPool?.name || ""));
     res.json(assignments);
   } catch (err) {
     console.error(err);
@@ -659,13 +688,7 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
       plan.lectureType === "REGULAR"
         ? Promise.resolve([])
         : prisma.test.findMany({
-            where: {
-              isPublished: true,
-              attendanceMandatory: true,
-              startTime: { lte: now },
-              endTime: { gte: now },
-              ...testEligibilityWhere(assignment.academicGroupId, assignment.classId),
-            },
+            where: eligibleTestsWhere(assignment, now),
             select: { id: true, title: true },
             orderBy: { title: "asc" },
           }),
@@ -694,13 +717,7 @@ router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate,
     if (plan.lectureType !== "REGULAR") {
       const now = new Date();
       const eligible = await prisma.test.findMany({
-        where: {
-          isPublished: true,
-          attendanceMandatory: true,
-          startTime: { lte: now },
-          endTime: { gte: now },
-          ...testEligibilityWhere(assignment.academicGroupId, assignment.classId),
-        },
+        where: eligibleTestsWhere(assignment, now),
         select: { id: true },
       });
       if (!req.body.testId || !eligible.some((t) => t.id === req.body.testId)) {
@@ -768,7 +785,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
   try {
     const {
       date, dateFrom, dateTo, academicYear, departmentId, section, academicGroupId,
-      subject, semester, facultyId, lectureType, status, studentId,
+      subject, semester, facultyId, lectureType, status, studentId, talentPoolId,
     } = req.query;
 
     // Resolve the STAFF scope (their own assignment IDs) separately from any narrowing filter the
@@ -781,8 +798,15 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
       const own = await prisma.staffClassAssignment.findMany({ where: { staffId: req.user.id }, select: { id: true } });
       staffAssignedIds = own.map((a) => a.id);
     } else if (req.requesterInstituteId) {
-      assignmentWhere.academicGroup = { instituteId: req.requesterInstituteId };
+      // Scoped admins see both their institute's division-based rows AND their institute's
+      // Talent-Pool-based rows (attendanceInstituteId) — a plain `academicGroup: {instituteId}`
+      // filter alone would silently hide the latter.
+      assignmentWhere.OR = [
+        { academicGroup: { instituteId: req.requesterInstituteId } },
+        { attendanceInstituteId: req.requesterInstituteId },
+      ];
     }
+    if (talentPoolId) assignmentWhere.talentPoolId = talentPoolId;
 
     if (facultyId) {
       if (staffAssignedIds) {
@@ -838,6 +862,8 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
                     staff: { select: { name: true } },
                     class: { include: { division: { include: { department: true } } } },
                     academicGroup: { include: { department: true } },
+                    talentPool: { select: { name: true } },
+                    attendanceInstitute: { select: { name: true } },
                   },
                 },
               },
@@ -856,8 +882,8 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
       return {
         Date: plan.scheduleDate.toISOString().slice(0, 10),
         Batch: group?.batch || assignment.class?.batchYear || "",
-        Department: group?.department?.name || assignment.class?.division?.department?.name || "",
-        Section: group?.section || assignment.class?.division?.name || "",
+        Department: group?.department?.name || assignment.class?.division?.department?.name || (assignment.talentPoolId ? "Talent Pool" : ""),
+        Section: group?.section || assignment.class?.division?.name || (assignment.talentPoolId ? `${assignment.talentPool?.name || ""} — ${assignment.attendanceInstitute?.name || ""}` : ""),
         Subject: plan.subject,
         Semester: assignment.semester,
         Faculty: assignment.staff.name,

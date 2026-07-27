@@ -22,7 +22,7 @@ export default function AttendanceReports() {
   const [myAssignments, setMyAssignments] = useState([]);
   const [filters, setFilters] = useState({
     date: "", dateFrom: "", dateTo: "", academicYear: "", departmentId: "", section: "",
-    subject: "", semester: "", facultyId: "", lectureType: "", status: "",
+    subject: "", semester: "", facultyId: "", lectureType: "", status: "", talentPoolId: "",
   });
   const [rows, setRows] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -52,6 +52,11 @@ export default function AttendanceReports() {
   }, [myAssignments, filters.departmentId]);
 
   const semesters = useMemo(() => [...new Set(myAssignments.map((a) => a.semester))], [myAssignments]);
+  const talentPools = useMemo(() => {
+    const map = new Map();
+    myAssignments.forEach((a) => a.talentPoolId && map.set(a.talentPoolId, a.talentPool?.name || "Talent Pool"));
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [myAssignments]);
   const faculty = useMemo(() => {
     const map = new Map();
     myAssignments.forEach((a) => map.set(a.staff.id, a.staff.name));
@@ -162,6 +167,15 @@ export default function AttendanceReports() {
             <label style={labelStyle}>Subject</label>
             <input style={inputStyle} placeholder="e.g. Data Structures" value={filters.subject} onChange={(e) => set("subject", e.target.value)} />
           </div>
+          {talentPools.length > 0 && (
+            <div>
+              <label style={labelStyle}>Talent Pool</label>
+              <select style={inputStyle} value={filters.talentPoolId} onChange={(e) => set("talentPoolId", e.target.value)}>
+                <option value="">All</option>
+                {talentPools.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
           {isAdmin && (
             <div>
               <label style={labelStyle}>Faculty</label>
