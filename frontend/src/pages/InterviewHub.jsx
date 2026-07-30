@@ -45,6 +45,7 @@ export default function InterviewHub() {
   const dark = theme === "dark";
   const [setupCard, setSetupCard] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [config, setConfig] = useState({
     subject: "Java", topic: "Arrays", difficulty: "EASY", language: "java",
@@ -69,6 +70,7 @@ export default function InterviewHub() {
 
   async function start(category, extraConfig) {
     setStarting(true);
+    setStartError(null);
     try {
       const body = category === "MOCK"
         ? { isMock: true, config: { jobRole: config.jobRole || undefined, experienceLevel: config.experienceLevel } }
@@ -80,7 +82,21 @@ export default function InterviewHub() {
       const { data } = await api.post("/interview/sessions", body);
       navigate(`/interview/session/${data.session.id}`);
     } catch (err) {
-      alert(err.response?.data?.error || "Could not start interview");
+      const serverMessage = err.response?.data?.error;
+      // The backend returns this exact family of messages only for the "zero questions
+      // available" business-rule case (see pickQuestions()/POST /sessions in interview.js) —
+      // never a generic failure, so it's safe to key the fallback UI off it.
+      const isNoQuestions = typeof serverMessage === "string" && serverMessage.startsWith("No interview questions available")
+        || typeof serverMessage === "string" && serverMessage.startsWith("No questions available");
+      if (category === "COMPANY_ROUND" && isNoQuestions) {
+        setStartError({
+          message: "We couldn't generate the company-specific interview right now. Please try again or start a general technical interview.",
+          retry: () => start("COMPANY_ROUND"),
+          showGeneralFallback: true,
+        });
+      } else {
+        setStartError({ message: serverMessage || "Could not start interview. Please try again.", retry: () => start(category, extraConfig) });
+      }
     } finally {
       setStarting(false);
     }
@@ -89,6 +105,7 @@ export default function InterviewHub() {
   const CONFIGURABLE = ["TECHNICAL", "CODING", "APTITUDE", "SYSTEM_DESIGN", "BEHAVIORAL", "MANAGERIAL", "COMPANY", "COMPANY_ROUND"];
 
   function handleCardClick(key) {
+    setStartError(null);
     if (CONFIGURABLE.includes(key)) {
       setSetupCard(setupCard === key ? null : key);
     } else {
@@ -132,6 +149,25 @@ export default function InterviewHub() {
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
               {summary.improvementSuggestions.map((s, i) => <li key={i}>{s}</li>)}
             </ul>
+          </div>
+        )}
+
+        {startError && (
+          <div className="ip-glass" style={{ padding: 16, marginTop: 16, border: "1px solid var(--rust)" }}>
+            <p style={{ margin: 0, color: "var(--rust)", fontWeight: 600, fontSize: 14 }}>{startError.message}</p>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button className="btn btn-ghost" disabled={starting} onClick={startError.retry}>Try Again</button>
+              {startError.showGeneralFallback && (
+                <button
+                  className="btn btn-primary"
+                  disabled={starting}
+                  onClick={() => start("TECHNICAL", { subject: config.subject, difficulty: config.difficulty, ...commonConfig() })}
+                >
+                  Start General Technical Interview
+                </button>
+              )}
+              <button className="btn btn-ghost" onClick={() => setStartError(null)}>Dismiss</button>
+            </div>
           </div>
         )}
 

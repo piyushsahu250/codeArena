@@ -213,6 +213,12 @@ export default function InterviewSession() {
           <div className="ip-glass" style={{ padding: 32, maxWidth: 560, marginTop: 24 }}>
             <h2>{session.isMock ? "Mock Interview" : session.isCompanyRound ? `${session.config?.company || ""} Company Round` : session.isResumeBased ? "Resume-based Interview" : `${CATEGORY_LABEL[session.category]} Interview`}</h2>
             <ChalkUnderline />
+            {session.isCompanyRound && session.config?.generalFallbackCategories?.length > 0 && (
+              <p style={{ fontSize: 12, marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(217,119,87,0.12)", color: "var(--rust)" }}>
+                We don't have enough {session.config.company}-specific questions in {session.config.generalFallbackCategories.join(", ").toLowerCase()} yet, so this round
+                includes general industry-standard questions for {session.config.generalFallbackCategories.length > 1 ? "those sections" : "that section"}.
+              </p>
+            )}
             <p style={{ fontSize: 13, marginTop: 14, opacity: 0.85 }}>
               This interview is fully proctored and runs in fullscreen with your camera and microphone on for the
               whole duration. Switching tabs, exiting fullscreen, or turning off your camera/microphone is tracked

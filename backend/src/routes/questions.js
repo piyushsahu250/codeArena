@@ -183,6 +183,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       evaluationType, functionSignature, starterCodeByLanguage, memoryLimitKb, tags, sqlSchema,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
+      allowDuplicate,
     } = req.body;
 
     if (!description) return res.status(400).json({ error: "Question text is required" });
@@ -192,6 +193,22 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
       if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
         return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
+      }
+    }
+
+    if (!allowDuplicate) {
+      const duplicate = await prisma.question.findFirst({
+        where: {
+          ...instituteVisibilityWhere(req.requesterInstituteId),
+          folderId: folderId || null,
+          description: { equals: description.trim(), mode: "insensitive" },
+        },
+      });
+      if (duplicate) {
+        return res.status(409).json({
+          duplicate: true,
+          existing: { id: duplicate.id, title: duplicate.title, description: duplicate.description },
+        });
       }
     }
 
@@ -389,21 +406,93 @@ router.patch("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attach
   }
 });
 
-// Requires the folder to be empty (no questions, no child folders) — admins move or merge its
-// contents out first. Replaces the earlier "un-file everything on delete" behavior: a silent
-// cascade is surprising for a management action explicitly scoped to "delete EMPTY banks."
-router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const folder = await prisma.questionFolder.findUnique({
-    where: { id: req.params.id },
-    include: { _count: { select: { questions: true, children: true } } },
-  });
+// BFS-orders a folder's full descendant tree, root first — used by both the delete-preview and
+// the recursive delete below so their notion of "everything inside this folder" always matches.
+async function collectDescendantFolders(rootId) {
+  const order = [rootId];
+  let frontier = [rootId];
+  while (frontier.length > 0) {
+    const children = await prisma.questionFolder.findMany({ where: { parentId: { in: frontier } }, select: { id: true } });
+    const childIds = children.map((c) => c.id);
+    if (childIds.length === 0) break;
+    order.push(...childIds);
+    frontier = childIds;
+  }
+  return order;
+}
+
+// Powers the folder-delete confirmation dialog's exact-counts requirement — walks the whole
+// sub-tree and reports how many questions/sub-banks actually exist, plus how many of those
+// questions are attached to a Test and therefore can't be deleted (see DELETE below).
+router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
   if (!ownsRow(req.requesterInstituteId, folder)) return res.status(403).json({ error: "Not your institute's folder" });
-  if (folder._count.questions > 0 || folder._count.children > 0) {
-    return res.status(409).json({ error: "This folder isn't empty — move or merge its questions and sub-folders first." });
+
+  const folderIds = await collectDescendantFolders(folder.id);
+  const questions = await prisma.question.findMany({ where: { folderId: { in: folderIds } }, select: { id: true } });
+  const blocked = questions.length > 0
+    ? await prisma.testQuestion.findMany({ where: { questionId: { in: questions.map((q) => q.id) } }, select: { questionId: true }, distinct: ["questionId"] })
+    : [];
+
+  res.json({ questionCount: questions.length, subBankCount: folderIds.length - 1, blockedCount: blocked.length });
+});
+
+// Replaces the earlier "folder must be empty" block. Recursively deletes every question in
+// this folder's entire sub-tree (skipping any attached to a Test — same P2003/P2014 handling
+// as the single-question DELETE /:id route below), then deletes the folders themselves
+// bottom-up: a folder is only removed once it has zero remaining questions AND zero remaining
+// child folders, so a branch containing a test-attached question survives — along with every
+// ancestor above it — instead of being silently cascade-deleted out from under that question
+// (QuestionFolder.parent is onDelete: Cascade at the DB level, which this per-row approach
+// deliberately avoids triggering on any folder that still holds real content).
+router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
+  if (!folder) return res.status(404).json({ error: "Folder not found" });
+  if (!ownsRow(req.requesterInstituteId, folder)) return res.status(403).json({ error: "Not your institute's folder" });
+
+  const folderIds = await collectDescendantFolders(folder.id); // BFS order: root first, deepest last
+  const questions = await prisma.question.findMany({ where: { folderId: { in: folderIds } } });
+
+  let deletedQuestionCount = 0;
+  const remainingByFolder = new Map();
+  for (const q of questions) {
+    try {
+      await prisma.question.delete({ where: { id: q.id } });
+      deletedQuestionCount++;
+    } catch (err) {
+      if (err.code === "P2003" || err.code === "P2014") {
+        remainingByFolder.set(q.folderId, (remainingByFolder.get(q.folderId) || 0) + 1);
+      } else {
+        throw err;
+      }
+    }
   }
-  await prisma.questionFolder.delete({ where: { id: folder.id } });
-  res.json({ success: true });
+
+  const folderRows = await prisma.questionFolder.findMany({ where: { id: { in: folderIds } }, select: { id: true, parentId: true } });
+  const parentOf = new Map(folderRows.map((f) => [f.id, f.parentId]));
+  const hasRemainingChild = new Map();
+
+  let deletedFolderCount = 0;
+  // Reversed BFS order = deepest folders first, so a folder's children are always resolved
+  // before the folder itself is considered for deletion.
+  for (const id of [...folderIds].reverse()) {
+    const deletable = !(remainingByFolder.get(id) > 0) && !hasRemainingChild.get(id);
+    if (deletable) {
+      await prisma.questionFolder.delete({ where: { id } });
+      deletedFolderCount++;
+    } else {
+      const parentId = parentOf.get(id);
+      if (parentId) hasRemainingChild.set(parentId, true);
+    }
+  }
+
+  res.json({
+    deletedFolderCount,
+    deletedQuestionCount,
+    skippedQuestionCount: questions.length - deletedQuestionCount,
+    fullyDeleted: deletedFolderCount === folderIds.length,
+  });
 });
 
 // Merge :id (source) into targetId — reassigns all of source's questions and direct child
@@ -446,6 +535,96 @@ router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   if (movableIds.length === 0) return res.status(403).json({ error: "None of the selected questions are in your institute's question bank" });
   await prisma.question.updateMany({ where: { id: { in: movableIds } }, data: { folderId } });
   res.json({ movedCount: movableIds.length, skippedCount: questionIds.length - movableIds.length });
+});
+
+// Bulk-delete: mirrors bulk-move's ownership-filter pattern, but deletes one row at a time
+// (not deleteMany) so a mixed selection — some questions attached to a Test, some not —
+// partially succeeds instead of the whole batch failing on the first FK-restrict question
+// (same per-row P2003/P2014 handling as the single DELETE /:id route below).
+router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
+  if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
+  const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
+  const blocked = [];
+  let deletedCount = 0;
+  for (const q of owned) {
+    if (!ownsRow(req.requesterInstituteId, q)) continue;
+    try {
+      await prisma.question.delete({ where: { id: q.id } });
+      deletedCount++;
+    } catch (err) {
+      if (err.code === "P2003" || err.code === "P2014") {
+        blocked.push({ id: q.id, title: q.title || q.description.slice(0, 60), reason: "Used in one or more tests" });
+      } else {
+        throw err;
+      }
+    }
+  }
+  const skippedCount = questionIds.length - deletedCount - blocked.length;
+  res.json({ deletedCount, skippedCount, blocked });
+});
+
+// Bulk-copy: clones questions (including test cases) into a DIFFERENT question bank — Copy
+// exists specifically to duplicate into another bank, so a question already in the target
+// folder is skipped rather than cloned into itself (which would just create the exact
+// duplicates the new duplicate-detection elsewhere in this file is trying to prevent).
+router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
+  const folderId = req.body.folderId || null;
+  if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
+  if (!folderId) return res.status(400).json({ error: "A destination question bank is required" });
+
+  const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
+  if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+    return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
+  }
+
+  const owned = await prisma.question.findMany({ where: { id: { in: questionIds } }, include: { testCases: true } });
+  let copiedCount = 0;
+  let skippedCount = questionIds.length - owned.length;
+  for (const q of owned) {
+    if (!ownsRow(req.requesterInstituteId, q) || q.folderId === folderId) { skippedCount++; continue; }
+    const { id, questionNumber, createdAt, testCases, folderId: _f, instituteId: _i, createdById: _c, ...rest } = q;
+    await prisma.question.create({
+      data: {
+        ...rest,
+        instituteId: req.requesterInstituteId,
+        folderId,
+        createdById: req.user.id,
+        testCases: { create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation })) },
+      },
+    });
+    copiedCount++;
+  }
+  res.json({ copiedCount, skippedCount });
+});
+
+// Deletes every DIRECT question in this folder (not descendant sub-banks — matches the
+// existing folder-detail view's own scoping, where the question list/Select All only ever
+// shows direct children). Same per-row FK-restrict handling as bulk-delete; the folder itself
+// is left untouched.
+router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
+  if (!folder || !ownsRow(req.requesterInstituteId, folder)) return res.status(404).json({ error: "Question bank not found" });
+
+  const questions = await prisma.question.findMany({ where: { folderId: folder.id } });
+  const blocked = [];
+  let clearedCount = 0;
+  for (const q of questions) {
+    if (!ownsRow(req.requesterInstituteId, q)) continue;
+    try {
+      await prisma.question.delete({ where: { id: q.id } });
+      clearedCount++;
+    } catch (err) {
+      if (err.code === "P2003" || err.code === "P2014") {
+        blocked.push({ id: q.id, title: q.title || q.description.slice(0, 60), reason: "Used in one or more tests" });
+      } else {
+        throw err;
+      }
+    }
+  }
+  const skippedCount = questions.length - clearedCount - blocked.length;
+  res.json({ clearedCount, skippedCount, blocked });
 });
 
 // Download a sample .xlsx template for bulk question import — quiz types by default,
@@ -506,8 +685,18 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
 });
 
 // Export the current (optionally filtered) question bank to .xlsx
+// An explicit `questionIds` param (comma-separated or repeated) overrides the filter-based
+// selection entirely — powers "Export selected" from the bulk action bar without a new endpoint.
 router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const questions = await prisma.question.findMany({ where: buildWhere(req.query, req.requesterInstituteId), orderBy: { questionNumber: "asc" } });
+  const questions = req.query.questionIds
+    ? await prisma.question.findMany({
+        where: {
+          id: { in: Array.isArray(req.query.questionIds) ? req.query.questionIds : String(req.query.questionIds).split(",").map((s) => s.trim()).filter(Boolean) },
+          ...instituteVisibilityWhere(req.requesterInstituteId),
+        },
+        orderBy: { questionNumber: "asc" },
+      })
+    : await prisma.question.findMany({ where: buildWhere(req.query, req.requesterInstituteId), orderBy: { questionNumber: "asc" } });
 
   const rows = questions.map((q) => {
     const options = Array.isArray(q.options) ? q.options : [];
@@ -613,7 +802,25 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
 
     const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
     const created = [];
+    const skipped = [];
     const errors = [];
+    // "import" (from the frontend's duplicate-summary Skip/Import-anyway selector) disables the
+    // dedup checks below entirely — every valid row is created regardless of matches.
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    const seenDescriptions = new Set(); // within-file duplicate detection, mirrors bulk-import-coding's seenTitles
+    const existingDescriptionsByFolder = new Map(); // folderId ("" = unfiled) -> Set of existing descriptions, loaded lazily
+
+    async function existingDescriptions(fId) {
+      const key = fId || "";
+      if (!existingDescriptionsByFolder.has(key)) {
+        const rows = await prisma.question.findMany({
+          where: { folderId: fId || null, ...instituteVisibilityWhere(req.requesterInstituteId) },
+          select: { description: true },
+        });
+        existingDescriptionsByFolder.set(key, new Set(rows.map((r) => (r.description || "").trim().toLowerCase()).filter(Boolean)));
+      }
+      return existingDescriptionsByFolder.get(key);
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const rowNum = i + 2;
@@ -636,6 +843,19 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
       if (questionType === "CODING") {
         errors.push({ row: rowNum, reason: "Coding questions use the separate coding-question bulk upload (different template/columns), not this one" });
         continue;
+      }
+
+      const descKey = description.trim().toLowerCase();
+      if (duplicateAction !== "import") {
+        if (seenDescriptions.has(descKey)) {
+          skipped.push({ row: rowNum, reason: "Duplicate question text within this file" });
+          continue;
+        }
+        const existing = await existingDescriptions(folderId);
+        if (existing.has(descKey)) {
+          skipped.push({ row: rowNum, reason: "A question with this text already exists in that Question Bank" });
+          continue;
+        }
       }
 
       const subject = field(row, "subject");
@@ -665,13 +885,18 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
             createdById: req.user.id,
           },
         });
+        seenDescriptions.add(descKey);
+        (await existingDescriptions(folderId)).add(descKey);
         created.push(question);
       } catch (err) {
         errors.push({ row: rowNum, reason: err.message || "Failed to create question" });
       }
     }
 
-    res.json({ total: rows.length, createdCount: created.length, errorCount: errors.length, errors, created });
+    res.json({
+      total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
+      skipped, errors, created,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Bulk import failed" });
@@ -748,6 +973,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
     const created = [];
     const skipped = [];
     const errors = [];
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
     const seenTitles = new Set(); // within-file duplicate detection
     const folderIdByName = new Map(); // bank name (lowercased) -> folderId, resolved/created once per name
     const existingTitlesByFolder = new Map(); // folderId ("" = unfiled) -> Set of existing titles, loaded lazily
@@ -791,7 +1017,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       if (!description) { errors.push({ row: rowNum, reason: "Missing Problem Statement" }); continue; }
 
       const titleKey = title.toLowerCase();
-      if (seenTitles.has(titleKey)) {
+      if (duplicateAction !== "import" && seenTitles.has(titleKey)) {
         skipped.push({ row: rowNum, reason: `Duplicate title within this file: "${title}"` });
         continue;
       }
@@ -885,7 +1111,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       try {
         const folderId = await resolveBankFolder(bankName);
         const titles = await existingTitles(folderId);
-        if (titles.has(titleKey)) {
+        if (duplicateAction !== "import" && titles.has(titleKey)) {
           skipped.push({ row: rowNum, reason: `A question titled "${title}" already exists in that Question Bank` });
           continue;
         }

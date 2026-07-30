@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Folder } from "lucide-react";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
+import { useConfirm } from "../context/ConfirmContext";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -12,6 +13,8 @@ const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "Tru
 // { id: "__none__", name: "Uncategorized" }; or a real folder row from GET /questions/folders
 // (id, name, category, description, parentId, _count: { questions, children }).
 export default function QuestionBank() {
+  const navigate = useNavigate();
+  const confirmDialog = useConfirm();
   const [folders, setFolders] = useState(null);
   const [activeFolder, setActiveFolder] = useState(null);
   const [newFolderName, setNewFolderName] = useState("");
@@ -43,6 +46,11 @@ export default function QuestionBank() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [moveTargetId, setMoveTargetId] = useState("");
   const [moving, setMoving] = useState(false);
+  const [copyTargetId, setCopyTargetId] = useState("");
+  const [copying, setCopying] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [clearingFolder, setClearingFolder] = useState(false);
+  const [duplicateAction, setDuplicateAction] = useState("skip");
 
   function loadFolders() {
     api.get("/questions/folders").then((res) => setFolders(res.data));
@@ -153,12 +161,56 @@ export default function QuestionBank() {
   }
 
   async function deleteFolder(folder) {
-    if (!confirm(`Delete "${folder.name}"? A question bank must be empty (no questions or sub-banks) before it can be deleted — move or merge its contents first.`)) return;
+    let preview;
+    try {
+      const { data } = await api.get(`/questions/folders/${folder.id}/delete-preview`);
+      preview = data;
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to check this bank's contents");
+      return;
+    }
+    const parts = [`Questions: ${preview.questionCount}`, `Sub-banks: ${preview.subBankCount}`];
+    if (preview.blockedCount > 0) {
+      parts.push(`${preview.blockedCount} question${preview.blockedCount === 1 ? "" : "s"} used in a Test will be kept, and this bank won't be fully deleted`);
+    }
+    const ok = await confirmDialog({
+      title: `Delete "${folder.name}"?`,
+      message: `This permanently deletes everything inside this question bank — ${parts.join(" · ")}. This action cannot be undone.`,
+      confirmLabel: "Delete Permanently",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/questions/folders/${folder.id}`);
+      if (activeFolder?.id === folder.id) setActiveFolder(null);
       loadFolders();
+      load();
     } catch (err) {
       alert(err.response?.data?.error || "Failed to delete folder");
+    }
+  }
+
+  async function clearFolder(folder) {
+    const ok = await confirmDialog({
+      title: "Clear All Questions?",
+      message: "All questions inside this folder will be permanently deleted. This action cannot be undone.",
+      confirmLabel: "Clear All",
+      danger: true,
+    });
+    if (!ok) return;
+    setClearingFolder(true);
+    try {
+      const { data } = await api.post(`/questions/folders/${folder.id}/clear`);
+      if (data.blocked?.length > 0) {
+        alert(`Cleared ${data.clearedCount} question(s). ${data.blocked.length} question(s) used in a Test couldn't be deleted and remain in this bank.`);
+      }
+      setSelectedIds([]);
+      load();
+      loadFolders();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to clear this bank");
+    } finally {
+      setClearingFolder(false);
     }
   }
 
@@ -180,6 +232,10 @@ export default function QuestionBank() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
+  function toggleSelectAll() {
+    setSelectedIds((prev) => (prev.length === questions.length ? [] : questions.map((q) => q.id)));
+  }
+
   async function moveSelected() {
     setMoving(true);
     try {
@@ -195,9 +251,66 @@ export default function QuestionBank() {
     }
   }
 
+  async function copySelected() {
+    if (!copyTargetId) return;
+    setCopying(true);
+    try {
+      const { data } = await api.post("/questions/bulk-copy", { questionIds: selectedIds, folderId: copyTargetId });
+      setSelectedIds([]);
+      setCopyTargetId("");
+      if (data.skippedCount > 0) alert(`Copied ${data.copiedCount} question(s). ${data.skippedCount} skipped (already in that bank, or not yours to copy).`);
+      load();
+      loadFolders();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to copy questions");
+    } finally {
+      setCopying(false);
+    }
+  }
+
+  async function deleteSelected() {
+    const ok = await confirmDialog({
+      title: `Delete ${selectedIds.length} Question${selectedIds.length === 1 ? "" : "s"}?`,
+      message: "These questions will be permanently removed from the question bank. This action cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      const { data } = await api.post("/questions/bulk-delete", { questionIds: selectedIds });
+      if (data.blocked?.length > 0) {
+        alert(`Deleted ${data.deletedCount} question(s). ${data.blocked.length} question(s) used in a Test couldn't be deleted.`);
+      }
+      setSelectedIds([]);
+      load();
+      loadFolders();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete questions");
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  async function exportSelected() {
+    await downloadFile("/questions/export", "question-bank-export-selected.xlsx", { questionIds: selectedIds.join(",") });
+  }
+
+  function addSelectedToTest() {
+    navigate("/staff/tests/new", { state: { prefillQuestionIds: selectedIds } });
+  }
+
   async function handleDelete(question) {
+    const ok = await confirmDialog({
+      title: "Delete Question?",
+      message: "This question will be permanently removed from the question bank. This action cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/questions/${question.id}`);
+      setSelectedIds((prev) => prev.filter((id) => id !== question.id));
       load();
       loadFolders();
     } catch (err) {
@@ -205,10 +318,12 @@ export default function QuestionBank() {
     }
   }
 
-  async function downloadFile(url, filename) {
-    const params = { q, subject, topic, difficulty, questionType, createdById };
-    if (activeFolder?.id === "__none__") params.folderId = "__none__";
-    else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+  async function downloadFile(url, filename, overrideParams) {
+    const params = overrideParams || { q, subject, topic, difficulty, questionType, createdById };
+    if (!overrideParams) {
+      if (activeFolder?.id === "__none__") params.folderId = "__none__";
+      else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+    }
     const res = await api.get(url, { responseType: "blob", params });
     const blobUrl = URL.createObjectURL(res.data);
     const link = document.createElement("a");
@@ -229,6 +344,7 @@ export default function QuestionBank() {
       if (activeFolder && activeFolder.id !== "__all__" && activeFolder.id !== "__none__") {
         formData.append("folderId", activeFolder.id);
       }
+      formData.append("duplicateAction", duplicateAction);
       const { data } = await api.post("/questions/bulk-import", formData);
       setImportResult(data);
       setImportFile(null);
@@ -329,6 +445,16 @@ export default function QuestionBank() {
                 {activeFolder.category ? ` · ${activeFolder.category}` : ""}
               </p>
             )}
+            {isRealFolder && activeFolder._count?.questions > 0 && (
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: 12, marginTop: 8, color: "var(--rust)", borderColor: "var(--rust)" }}
+                disabled={clearingFolder}
+                onClick={() => clearFolder(activeFolder)}
+              >
+                {clearingFolder ? "Clearing…" : "Clear All Questions"}
+              </button>
+            )}
 
             {isRealFolder && (
               <>
@@ -406,8 +532,12 @@ export default function QuestionBank() {
                   questions aren't supported via import — use "+ Add question" for those.
                   {isRealFolder && ` Imported questions will be saved into "${activeFolder.name}".`}
                 </p>
-                <form onSubmit={handleImport} style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
+                <form onSubmit={handleImport} style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                   <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
+                  <select style={{ ...selectStyle, minWidth: 200 }} value={duplicateAction} onChange={(e) => setDuplicateAction(e.target.value)}>
+                    <option value="skip">Skip duplicate questions</option>
+                    <option value="import">Import duplicates anyway</option>
+                  </select>
                   <button className="btn btn-primary" disabled={!importFile || importing}>
                     {importing ? "Importing…" : "Import"}
                   </button>
@@ -416,8 +546,17 @@ export default function QuestionBank() {
                   <div style={{ marginTop: 12 }}>
                     <p style={{ fontSize: 14 }}>
                       <strong>{importResult.createdCount}</strong> question{importResult.createdCount === 1 ? "" : "s"} created
-                      out of {importResult.total}.{importResult.errorCount > 0 && ` ${importResult.errorCount} failed.`}
+                      out of {importResult.total}.
+                      {importResult.skippedCount > 0 && ` ${importResult.skippedCount} duplicate${importResult.skippedCount === 1 ? "" : "s"} skipped.`}
+                      {importResult.errorCount > 0 && ` ${importResult.errorCount} failed.`}
                     </p>
+                    {importResult.skipped?.length > 0 && (
+                      <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
+                        {importResult.skipped.map((s, i) => (
+                          <div key={i} style={{ fontSize: 12, color: "var(--ink-dim)" }} className="mono">Row {s.row}: {s.reason}</div>
+                        ))}
+                      </div>
+                    )}
                     {importResult.errors.length > 0 && (
                       <div style={{ marginTop: 8 }}>
                         <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadErrorReport}>
@@ -435,21 +574,14 @@ export default function QuestionBank() {
               </div>
             )}
 
-            {selectedIds.length > 0 && (
-              <div className="card" style={{ padding: 12, marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{selectedIds.length} selected</span>
-                <select style={{ ...selectStyle, minWidth: 200 }} value={moveTargetId} onChange={(e) => setMoveTargetId(e.target.value)}>
-                  <option value="">Move to: Uncategorized</option>
-                  {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
-                <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={moveSelected} disabled={moving}>
-                  {moving ? "Moving…" : "Move Selected"}
-                </button>
-                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setSelectedIds([])}>Clear selection</button>
-              </div>
+            {!loading && questions.length > 0 && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 20, fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={selectedIds.length === questions.length} onChange={toggleSelectAll} />
+                Select All ({questions.length})
+              </label>
             )}
 
-            <div style={{ display: "grid", gap: 10, marginTop: 24 }}>
+            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
               {loading && <SkeletonGrid count={6} minWidth={200} />}
               {!loading && questions.map((question) => (
                 <div key={question.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -487,6 +619,43 @@ export default function QuestionBank() {
                 <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
                 <span className="mono" style={{ fontSize: 13 }}>Page {pageMeta.page} / {pageMeta.totalPages} ({pageMeta.total} total)</span>
                 <button className="btn btn-ghost" disabled={page >= pageMeta.totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+              </div>
+            )}
+
+            {selectedIds.length > 0 && (
+              <div
+                className="card"
+                style={{
+                  position: "sticky", bottom: 0, padding: 12, marginTop: 16, display: "flex", alignItems: "center",
+                  gap: 10, flexWrap: "wrap", zIndex: 10, boxShadow: "0 -4px 12px rgba(0,0,0,0.08)",
+                }}
+              >
+                <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{selectedIds.length} Selected</span>
+                <select style={{ ...selectStyle, minWidth: 180 }} value={moveTargetId} onChange={(e) => setMoveTargetId(e.target.value)}>
+                  <option value="">Move to: Uncategorized</option>
+                  {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+                <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={moveSelected} disabled={moving}>
+                  {moving ? "Moving…" : "Move"}
+                </button>
+                <select style={{ ...selectStyle, minWidth: 180 }} value={copyTargetId} onChange={(e) => setCopyTargetId(e.target.value)}>
+                  <option value="">Copy to…</option>
+                  {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={copySelected} disabled={copying || !copyTargetId}>
+                  {copying ? "Copying…" : "Copy"}
+                </button>
+                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={exportSelected}>Export</button>
+                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={addSelectedToTest}>Add to Test</button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, color: "var(--rust)", borderColor: "var(--rust)" }}
+                  onClick={deleteSelected}
+                  disabled={bulkDeleting}
+                >
+                  {bulkDeleting ? "Deleting…" : "Delete"}
+                </button>
+                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setSelectedIds([])}>Deselect All</button>
               </div>
             )}
           </>

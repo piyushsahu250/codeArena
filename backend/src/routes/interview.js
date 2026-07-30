@@ -94,6 +94,10 @@ function sanitizeQuestion(q) {
 // stay "hard" filters, applied unconditionally when present, unchanged from before.
 const SOFT_FILTER_FIELDS = ["company", "packageBand", "experienceLevel"];
 
+// Returns { items, usedFallback } rather than a bare array — usedFallback lets a caller (e.g. a
+// Company Round composing several categories at once) tell the student when a category had to
+// fall back to the general, non-company-specific pool, instead of silently serving generic
+// content under a company-branded label.
 async function pickQuestions(category, config, count) {
   const hardWhere = { category, isActive: true, generatedForStudentId: null };
   if (config.subject) hardWhere.subject = config.subject;
@@ -102,14 +106,22 @@ async function pickQuestions(category, config, count) {
 
   const softWhere = {};
   for (const field of SOFT_FILTER_FIELDS) {
-    if (config[field]) softWhere[field] = config[field];
+    if (config[field]) {
+      // Company is free text entered by admins (see InterviewDraftReview.jsx) with no
+      // normalization anywhere — "TCS" vs "tcs " must still match the same seeded pool.
+      softWhere[field] = field === "company"
+        ? { equals: String(config[field]).trim(), mode: "insensitive" }
+        : config[field];
+    }
   }
 
   let pool = await prisma.interviewQuestion.findMany({ where: { ...hardWhere, ...softWhere } });
+  let usedFallback = false;
   if (pool.length === 0 && Object.keys(softWhere).length > 0) {
     pool = await prisma.interviewQuestion.findMany({ where: hardWhere });
+    usedFallback = true;
   }
-  return shuffle(pool).slice(0, count || SESSION_QUESTION_COUNT[category] || 6);
+  return { items: shuffle(pool).slice(0, count || SESSION_QUESTION_COUNT[category] || 6), usedFallback };
 }
 
 // =========================== Student: dashboard summary ===========================
@@ -227,34 +239,53 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       const [hr, tech, coding] = await Promise.all([
         pickQuestions("HR", difficultyCfg, 3), pickQuestions("TECHNICAL", difficultyCfg, 3), pickQuestions("CODING", difficultyCfg, 2),
       ]);
-      questions = [...hr, ...tech, ...coding];
-      if (questions.length === 0) return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+      questions = [...hr.items, ...tech.items, ...coding.items];
+      if (questions.length === 0) {
+        console.warn(`[interview] Mock interview has zero questions available — difficulty=${config?.difficulty}, studentId=${req.user.id}`);
+        return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+      }
       sessionData = { ...sessionData, isMock: true, category: null, config: { ...config, durationMin: MOCK_DURATION_MIN } };
     } else if (isCompanyRound) {
       // "Student selects TCS -> HR + Technical + Coding + Managerial questions, all scoped to
       // that company (falling back to the general pool per-category if that company doesn't
       // have questions in a given category yet — see pickQuestions)."
-      const roundCfg = { company: config.company, difficulty: config?.difficulty };
+      const roundCfg = { company: config.company, difficulty: config?.difficulty, experienceLevel: config?.experienceLevel };
       const [hr, tech, coding, managerial] = await Promise.all([
         pickQuestions("HR", roundCfg, 2), pickQuestions("TECHNICAL", roundCfg, 3),
         pickQuestions("CODING", roundCfg, 2), pickQuestions("MANAGERIAL", roundCfg, 2),
       ]);
-      questions = [...hr, ...tech, ...coding, ...managerial];
-      if (questions.length === 0) return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
-      sessionData = { ...sessionData, isCompanyRound: true, category: null, config: { ...config, durationMin: COMPANY_ROUND_DURATION_MIN } };
+      questions = [...hr.items, ...tech.items, ...coding.items, ...managerial.items];
+      if (questions.length === 0) {
+        console.warn(`[interview] Company Round has zero questions available — company=${config.company}, experienceLevel=${config?.experienceLevel}, difficulty=${config?.difficulty}, studentId=${req.user.id}`);
+        return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+      }
+      const generalFallbackCategories = [
+        hr.usedFallback && "HR", tech.usedFallback && "TECHNICAL", coding.usedFallback && "CODING", managerial.usedFallback && "MANAGERIAL",
+      ].filter(Boolean);
+      sessionData = { ...sessionData, isCompanyRound: true, category: null, config: { ...config, durationMin: COMPANY_ROUND_DURATION_MIN, generalFallbackCategories } };
     } else if (talentPoolConfigId) {
       const poolCfg = talentPoolConfig.config || {};
-      const roundCfg = { company: poolCfg.company, difficulty: poolCfg.difficulty };
+      const roundCfg = { company: poolCfg.company, difficulty: poolCfg.difficulty, experienceLevel: poolCfg.experienceLevel };
       const [hr, tech, coding, managerial] = await Promise.all([
         pickQuestions("HR", roundCfg, 2), pickQuestions("TECHNICAL", roundCfg, 3),
         pickQuestions("CODING", roundCfg, 2), pickQuestions("MANAGERIAL", roundCfg, 2),
       ]);
-      questions = [...hr, ...tech, ...coding, ...managerial];
-      if (questions.length === 0) return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
-      sessionData = { ...sessionData, category: null, talentPoolConfigId, config: { ...poolCfg, durationMin: poolCfg.durationMin || COMPANY_ROUND_DURATION_MIN } };
+      questions = [...hr.items, ...tech.items, ...coding.items, ...managerial.items];
+      if (questions.length === 0) {
+        console.warn(`[interview] Talent Pool interview config has zero questions available — poolConfigId=${talentPoolConfigId}, company=${poolCfg.company}, studentId=${req.user.id}`);
+        return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+      }
+      const generalFallbackCategories = [
+        hr.usedFallback && "HR", tech.usedFallback && "TECHNICAL", coding.usedFallback && "CODING", managerial.usedFallback && "MANAGERIAL",
+      ].filter(Boolean);
+      sessionData = { ...sessionData, category: null, talentPoolConfigId, config: { ...poolCfg, durationMin: poolCfg.durationMin || COMPANY_ROUND_DURATION_MIN, generalFallbackCategories } };
     } else {
-      questions = await pickQuestions(category, config || {});
-      if (questions.length === 0) return res.status(400).json({ error: "No questions available for this selection yet — try a different subject/difficulty or ask an admin to add more." });
+      const result = await pickQuestions(category, config || {});
+      questions = result.items;
+      if (questions.length === 0) {
+        console.warn(`[interview] No questions available — category=${category}, config=${JSON.stringify(config || {})}, studentId=${req.user.id}`);
+        return res.status(400).json({ error: "No questions available for this selection yet — try a different subject/difficulty or ask an admin to add more." });
+      }
       sessionData = { ...sessionData, category };
     }
 

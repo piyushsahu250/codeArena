@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ClipboardList, FolderOpen, Folder, Upload } from "lucide-react";
 import api from "../api";
 import Navbar from "../components/Navbar";
@@ -28,6 +28,7 @@ export default function CreateTest() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [questions, setQuestions] = useState([]);
   const [search, setSearch] = useState("");
@@ -108,6 +109,21 @@ export default function CreateTest() {
       return extra.length ? [...prev, ...extra] : prev;
     });
   }
+
+  // Arriving from Question Bank's bulk-select "Add to Test" action pre-seeds `selected` with
+  // whatever the admin/staff had checked there — same mechanism the bank picker modal already
+  // uses (fetch + mergeQuestions), just triggered on mount instead of from that modal.
+  useEffect(() => {
+    const ids = location.state?.prefillQuestionIds;
+    if (!isEdit && Array.isArray(ids) && ids.length > 0) {
+      Promise.all(ids.map((qId) => api.get(`/questions/${qId}`).then((res) => res.data).catch(() => null))).then((results) => {
+        const found = results.filter(Boolean);
+        mergeQuestions(found);
+        setSelected((prev) => [...new Set([...prev, ...found.map((q) => q.id)])]);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function updateField(field) {
     return (e) => setForm({ ...form, [field]: e.target.value });

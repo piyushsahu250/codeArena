@@ -7,6 +7,7 @@ import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
+import { useConfirm } from "../context/ConfirmContext";
 
 const QUESTION_TYPES = [
   { value: "CODING", label: "Coding" },
@@ -29,6 +30,7 @@ export default function CreateQuestion() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+  const confirmDialog = useConfirm();
 
   const [form, setForm] = useState(emptyForm);
   const [testCases, setTestCases] = useState([{ input: "", expected: "", isHidden: false, explanation: "" }]);
@@ -151,7 +153,7 @@ export default function CreateQuestion() {
     else if (options.length < 2 || (form.questionType === "TRUE_FALSE" && newType !== "TRUE_FALSE")) setOptions(["", ""]);
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e, allowDuplicate = false) {
     e.preventDefault();
     setSaving(true);
     try {
@@ -162,6 +164,7 @@ export default function CreateQuestion() {
         memoryLimitKb: form.memoryLimitKb ? Math.round(Number(form.memoryLimitKb) * 1024) : null,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         folderId: folderId || null,
+        allowDuplicate: allowDuplicate || undefined,
       };
       if (form.questionType === "CODING") {
         payload.testCases = testCases;
@@ -181,10 +184,22 @@ export default function CreateQuestion() {
       }
       navigate("/staff/questions");
     } catch (err) {
+      if (!isEdit && err.response?.status === 409 && err.response?.data?.duplicate) {
+        const existing = err.response.data.existing;
+        const ok = await confirmDialog({
+          title: "Duplicate Question Detected",
+          message: `A question with this text already exists in this question bank${existing.title ? ` ("${existing.title}")` : ""}: "${existing.description}". Do you want to add this one anyway?`,
+          confirmLabel: "Add Anyway",
+        });
+        if (ok) return await handleSubmit(e, true);
+        setSaving(false);
+        return;
+      }
       alert(err.response?.data?.error || "Failed to save question");
-    } finally {
       setSaving(false);
+      return;
     }
+    setSaving(false);
   }
 
   if (loading) return <div style={{ padding: 48 }} className="mono">Loading…</div>;
