@@ -814,7 +814,11 @@ router.post("/:id/attendance-owners", authenticate, requireRole("ADMIN", "STAFF"
     if (staff.instituteId !== instituteId) return res.status(400).json({ error: "This staff member does not belong to the selected institute" });
 
     if (req.user.role === "STAFF") {
-      if (req.user.id !== staffId || req.user.instituteId !== instituteId) {
+      // req.user comes straight from the JWT payload, which never carries instituteId (that's
+      // exactly why attachRequesterInstitute exists as a separate DB lookup) — req.requesterInstituteId
+      // is the correct field here, not req.user.instituteId (which is always undefined and would
+      // make this check reject every legitimate self-assign).
+      if (req.user.id !== staffId || req.requesterInstituteId !== instituteId) {
         return res.status(403).json({ error: "You can only self-assign attendance ownership for your own institute" });
       }
     } else if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {
