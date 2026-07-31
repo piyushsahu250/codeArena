@@ -185,8 +185,12 @@ router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), atta
     for (const student of students) {
       const newPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(newPassword, 10);
-      await prisma.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
-      await recordPasswordChange(prisma, student.id, passwordHash, null);
+      // Hash write + passwordChangedAt/PasswordHistory write must be atomic — see auth.js's
+      // reset-password route for why.
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
+        await recordPasswordChange(tx, student.id, passwordHash, null);
+      });
       reset.push({ id: student.id, name: student.name, email: student.email, rollNumber: student.rollNumber, newPassword });
     }
 

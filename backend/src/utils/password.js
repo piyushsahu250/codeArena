@@ -70,11 +70,16 @@ async function isPasswordReused(prisma, userId, candidatePassword, historyDepth)
 // passwordChangedAt (drives expiry enforcement) and append to PasswordHistory. Trims history
 // beyond 2x the given depth so a lowered depth doesn't need a separate cleanup pass, and a
 // raised depth doesn't lose more history than necessary.
+//
+// Every call site wraps this together with the actual passwordHash write in one
+// `prisma.$transaction(async (tx) => { ...; await recordPasswordChange(tx, ...); })` — passing
+// `tx` here — so this function deliberately does NOT open its own `$transaction` (Prisma doesn't
+// support nested transactions; doing so would throw). Atomicity comes entirely from the caller's
+// transaction context, which is why the client is always named `prisma` here even though it's
+// often actually a `tx`.
 async function recordPasswordChange(prisma, userId, passwordHash, historyDepth) {
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: userId }, data: { passwordChangedAt: new Date() } }),
-    prisma.passwordHistory.create({ data: { userId, passwordHash } }),
-  ]);
+  await prisma.user.update({ where: { id: userId }, data: { passwordChangedAt: new Date() } });
+  await prisma.passwordHistory.create({ data: { userId, passwordHash } });
   const keep = Math.max((historyDepth || 3) * 2, 6);
   const all = await prisma.passwordHistory.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, select: { id: true } });
   const staleIds = all.slice(keep).map((r) => r.id);

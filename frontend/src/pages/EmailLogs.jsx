@@ -11,14 +11,25 @@ const TYPE_LABEL = { WELCOME: "Welcome Email", PASSWORD_RESET: "Password Reset" 
 export default function EmailLogs() {
   const toast = useToast();
   const [logs, setLogs] = useState(null);
+  const [pageMeta, setPageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
   const [retryingId, setRetryingId] = useState(null);
 
   function load() {
-    api.get("/admin/email-logs", { params: statusFilter ? { status: statusFilter } : {} }).then((res) => setLogs(res.data));
+    const params = { page, pageSize: 50 };
+    if (statusFilter) params.status = statusFilter;
+    api.get("/admin/email-logs", { params }).then((res) => {
+      setLogs(res.data.rows);
+      setPageMeta({ page: res.data.page, totalPages: res.data.totalPages, total: res.data.total });
+    });
   }
 
-  useEffect(load, [statusFilter]);
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+  useEffect(load, [statusFilter, page]);
 
   // There's no way to literally "resend" the original message — passwords are never stored in
   // plaintext, so a retry generates a fresh unique password (same as any other reset) and sends
@@ -118,6 +129,14 @@ export default function EmailLogs() {
             </tbody>
           </table>
         </div>
+
+        {logs !== null && pageMeta.totalPages > 1 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center", alignItems: "center" }}>
+            <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+            <span className="mono" style={{ fontSize: 13 }}>Page {pageMeta.page} / {pageMeta.totalPages} ({pageMeta.total} total)</span>
+            <button className="btn btn-ghost" disabled={page >= pageMeta.totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+          </div>
+        )}
       </div>
     </div>
   );

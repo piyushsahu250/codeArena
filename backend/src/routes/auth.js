@@ -166,11 +166,17 @@ router.post("/reset-password", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash, resetTokenHash: null, resetTokenExpiry: null },
+    // The hash write and the passwordChangedAt/PasswordHistory write must succeed or fail
+    // together — a crash between them would leave a changed password with no expiry stamp and
+    // no reuse-history record, silently breaking both password-expiry enforcement and reuse
+    // prevention for this account.
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, resetTokenHash: null, resetTokenExpiry: null },
+      });
+      await recordPasswordChange(tx, user.id, passwordHash, user.institute?.passwordHistoryDepth);
     });
-    await recordPasswordChange(prisma, user.id, passwordHash, user.institute?.passwordHistoryDepth);
 
     sendMail({
       to: user.email,

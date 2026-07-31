@@ -130,9 +130,19 @@ router.patch("/me", authenticate, async (req, res) => {
       data.mustChangePassword = false;
     }
 
-    const updated = await prisma.user.update({ where: { id: user.id }, data, select: SELECT_FIELDS });
+    // When a password is changing, the hash write and the passwordChangedAt/PasswordHistory
+    // write must be atomic (see auth.js's reset-password route for the same reasoning) — a
+    // crash between them would leave a changed password untracked for expiry/reuse purposes.
+    let updated;
     if (newPasswordHash) {
-      await recordPasswordChange(prisma, user.id, newPasswordHash, institute?.passwordHistoryDepth);
+      await prisma.$transaction(async (tx) => {
+        updated = await tx.user.update({ where: { id: user.id }, data, select: SELECT_FIELDS });
+        await recordPasswordChange(tx, user.id, newPasswordHash, institute?.passwordHistoryDepth);
+      });
+    } else {
+      updated = await prisma.user.update({ where: { id: user.id }, data, select: SELECT_FIELDS });
+    }
+    if (newPasswordHash) {
       sendMailLogged(prisma, {
         to: updated.email, name: updated.name, emailType: "LOGIN_ALERT",
         studentId: updated.role === "STUDENT" ? updated.id : null,
@@ -234,6 +244,16 @@ router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ error: "Email already registered" });
 
+    // Roll numbers are only unique within an institute (see the @@unique([instituteId,
+    // rollNumber]) constraint on User) — bulk-import already enforced this, but single-account
+    // creation never checked at all, so two students could silently end up with the same roll
+    // number at the same institute if created one at a time. Checked before create rather than
+    // left to surface as a raw DB constraint error.
+    if (role === "STUDENT" && String(rollNumber || "").trim()) {
+      const dupRoll = await prisma.user.findFirst({ where: { instituteId, rollNumber: String(rollNumber).trim() } });
+      if (dupRoll) return res.status(409).json({ error: `Roll number "${rollNumber}" is already in use at ${institute.name}` });
+    }
+
     const generatedPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
     const user = await prisma.user.create({
@@ -332,6 +352,18 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
     }
     if (data.mobile !== undefined && data.mobile !== null && data.mobile !== "") {
       if (!MOBILE_RE.test(String(data.mobile).trim())) return res.status(400).json({ error: "Invalid mobile number" });
+    }
+    // Roll numbers are only unique within an institute (see the @@unique([instituteId,
+    // rollNumber]) constraint on User) — check before saving so a raw DB constraint error never
+    // surfaces to the admin.
+    if (data.rollNumber !== undefined && String(data.rollNumber || "").trim()) {
+      const rollNumber = String(data.rollNumber).trim();
+      const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
+      if (rollNumber !== existing.rollNumber || targetInstituteId !== existing.instituteId) {
+        const dupRoll = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, rollNumber, id: { not: existing.id } } });
+        if (dupRoll) return res.status(409).json({ error: "That roll number is already in use by another account at this institute" });
+      }
+      data.rollNumber = rollNumber;
     }
     if (data.instituteId) {
       const institute = await prisma.institute.findUnique({ where: { id: data.instituteId } });
@@ -433,11 +465,15 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), upload.single("f
     const sendCredentials = req.body.sendCredentials === "true";
 
     const [existingUsers, institutes] = await Promise.all([
-      prisma.user.findMany({ select: { email: true, rollNumber: true } }),
+      prisma.user.findMany({ select: { email: true, rollNumber: true, instituteId: true } }),
       prisma.institute.findMany(),
     ]);
     const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
-    const existingRolls = new Set(existingUsers.filter((u) => u.rollNumber).map((u) => u.rollNumber.toLowerCase()));
+    // Roll numbers are only unique WITHIN an institute (mirrors the new
+    // @@unique([instituteId, rollNumber]) DB constraint) — the same roll number legitimately
+    // exists at two different institutes, so the dedup key must include instituteId, not just
+    // the roll number on its own.
+    const existingRolls = new Set(existingUsers.filter((u) => u.rollNumber).map((u) => `${u.instituteId || ""}::${u.rollNumber.toLowerCase()}`));
     const seenEmails = new Set();
     const seenRolls = new Set();
     const instituteByName = new Map(institutes.map((i) => [i.name.toLowerCase(), i]));
@@ -479,13 +515,13 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), upload.single("f
         continue;
       }
 
-      const rollKey = rollNumber.toLowerCase();
+      const rollKey = `${institute.id}::${rollNumber.toLowerCase()}`;
       if (existingEmails.has(email) || seenEmails.has(email)) {
         duplicates.push({ row: rowNum, name, email, rollNumber, reason: "Email already exists" });
         continue;
       }
       if (existingRolls.has(rollKey) || seenRolls.has(rollKey)) {
-        duplicates.push({ row: rowNum, name, email, rollNumber, reason: "Roll number already exists" });
+        duplicates.push({ row: rowNum, name, email, rollNumber, reason: `Roll number already exists at ${institute.name}` });
         continue;
       }
 
@@ -628,7 +664,8 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
 // Institute -> Department -> Section instead of typed free-text, for working through an entire
 // section's students consecutively instead of searching one at a time. departmentId + section
 // are both required: a bare institute/department selection with no section would return an
-// entire institute's roster unbounded.
+// entire institute's roster unbounded. Page/pageSize paginated (previously a hard 500-row cap
+// with no way to see further students in a large section).
 router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { departmentId, section, batch, placementParticipation, offerVerificationStatus } = req.query;
@@ -640,45 +677,41 @@ router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
       where: { instituteId, departmentId, section, ...(batch ? { batch } : {}) },
       select: { id: true },
     });
-    if (groups.length === 0) return res.json([]);
+    if (groups.length === 0) return res.json({ rows: [], page: 1, pageSize: 50, total: 0, totalPages: 0 });
 
-    let students = await prisma.user.findMany({
-      where: { role: "STUDENT", academicGroupId: { in: groups.map((g) => g.id) } },
-      select: {
-        id: true, name: true, email: true, rollNumber: true,
-        institute: { select: { name: true } },
-        class: { select: { name: true, batchYear: true } },
-        academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
-      },
-      orderBy: { name: "asc" },
-      take: 500,
-    });
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 50));
 
-    // Placement Registration Status is stored on StudentProfile, not User — filtered as a second
-    // pass rather than a Prisma relation-filter so a student with no StudentProfile row yet (never
-    // opened Profile) is correctly excluded from either "INTERESTED"/"NOT_INTERESTED" filter.
-    if (placementParticipation) {
-      const profiles = await prisma.studentProfile.findMany({
-        where: { studentId: { in: students.map((s) => s.id) }, placementParticipation },
-        select: { studentId: true },
-      });
-      const allowed = new Set(profiles.map((p) => p.studentId));
-      students = students.filter((s) => allowed.has(s.id));
-    }
-
-    // Verification Status here means "has at least one placement offer with this verification
-    // status" — offer-level verification is this pass's scope (see studentProfileCompletion.js /
+    // Placement Registration Status lives on StudentProfile, not User — a student with no
+    // StudentProfile row yet (never opened Profile) is correctly excluded from either
+    // "INTERESTED"/"NOT_INTERESTED" filter, same as a Prisma relation-filter on a null relation.
+    // Verification Status means "has at least one placement offer with this verification status"
+    // — offer-level verification is this pass's scope (see studentProfileCompletion.js /
     // placementOffers.js), not a whole-profile status.
-    if (offerVerificationStatus) {
-      const offers = await prisma.placementOffer.findMany({
-        where: { studentId: { in: students.map((s) => s.id) }, verificationStatus: offerVerificationStatus },
-        select: { studentId: true },
-      });
-      const allowed = new Set(offers.map((o) => o.studentId));
-      students = students.filter((s) => allowed.has(s.id));
-    }
+    const where = {
+      role: "STUDENT",
+      academicGroupId: { in: groups.map((g) => g.id) },
+      ...(placementParticipation ? { studentProfile: { placementParticipation } } : {}),
+      ...(offerVerificationStatus ? { placementOffers: { some: { verificationStatus: offerVerificationStatus } } } : {}),
+    };
 
-    res.json(students);
+    const [students, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true, name: true, email: true, rollNumber: true,
+          institute: { select: { name: true } },
+          class: { select: { name: true, batchYear: true } },
+          academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
+        },
+        orderBy: { name: "asc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    res.json({ rows: students, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Browse failed" });
@@ -728,9 +761,12 @@ router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
       ...(studentId ? { studentId } : {}),
       ...(from || to ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
     };
-    const logs = await prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, take: 1000 });
 
     if (format === "csv") {
+      // Export stays a single capped pull (same "cap, not paginate" convention as every other
+      // export on this platform) — a CSV download is inherently a one-shot "give me everything
+      // visible" action, unlike the JSON list view below.
+      const logs = await prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, take: 5000 });
       const header = "Timestamp,Action,Actor,Role,IP Address,Device,Student ID,Institute ID,Details\n";
       const rows = logs.map((l) => [
         l.createdAt.toISOString(), l.action, l.adminName, l.adminRole || "", l.ipAddress || "", l.deviceInfo || "",
@@ -741,7 +777,13 @@ router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
       return res.send(header + rows.join("\n"));
     }
 
-    res.json(logs);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
+      prisma.auditLog.count({ where }),
+    ]);
+    res.json({ rows: logs, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load audit log" });
@@ -925,11 +967,15 @@ router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "STAFF"), 
 
     const newPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { id: req.params.id },
-      data: { passwordHash, mustChangePassword: true },
+    // Hash write + passwordChangedAt/PasswordHistory write must be atomic — see auth.js's
+    // reset-password route for why.
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: req.params.id },
+        data: { passwordHash, mustChangePassword: true },
+      });
+      await recordPasswordChange(tx, req.params.id, passwordHash, null); // system-generated — skip reuse-block, still tracked for future dedup
     });
-    await recordPasswordChange(prisma, req.params.id, passwordHash, null); // system-generated — skip reuse-block, still tracked for future dedup
     let emailSent = null; // null = not requested, true/false = requested + outcome
     let emailError = null;
     if (req.body.sendEmail) {
@@ -980,8 +1026,12 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
     for (const user of users) {
       const generatedPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
-      await prisma.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: true } });
-      await recordPasswordChange(prisma, user.id, passwordHash, null);
+      // Hash write + passwordChangedAt/PasswordHistory write must be atomic — see auth.js's
+      // reset-password route for why.
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: true } });
+        await recordPasswordChange(tx, user.id, passwordHash, null);
+      });
       results.push({ id: user.id, name: user.name, email: user.email, rollNumber: user.rollNumber, generatedPassword, emailSent: null, emailError: null });
     }
     if (req.body.sendEmail) {
@@ -1036,8 +1086,40 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
           error: `This account has created ${createdTestCount} test${createdTestCount === 1 ? "" : "s"}. Reassign or delete ${createdTestCount === 1 ? "it" : "them"} first, then delete the account.`,
         });
       }
+      // LecturePlan.createdBy and AttendanceSession.markedBy are also Restrict (no onDelete
+      // specified) — same reason as Test.createdBy above, just previously unchecked, which meant
+      // deleting a staff account that ever created a lecture plan or marked attendance surfaced
+      // as a raw, unhandled 500 instead of this same friendly 409.
+      const [lecturePlanCount, attendanceMarkedCount] = await Promise.all([
+        prisma.lecturePlan.count({ where: { createdById: req.params.id } }),
+        prisma.attendanceSession.count({ where: { markedById: req.params.id } }),
+      ]);
+      if (lecturePlanCount > 0) {
+        return res.status(409).json({
+          error: `This account has created ${lecturePlanCount} lecture plan${lecturePlanCount === 1 ? "" : "s"}. Reassign or delete ${lecturePlanCount === 1 ? "it" : "them"} first, then delete the account.`,
+        });
+      }
+      if (attendanceMarkedCount > 0) {
+        return res.status(409).json({
+          error: `This account has marked attendance for ${attendanceMarkedCount} session${attendanceMarkedCount === 1 ? "" : "s"}. Those attendance records must be reassigned first, then delete the account.`,
+        });
+      }
       await prisma.user.delete({ where: { id: req.params.id } });
     } else {
+      // Certificate/InterviewCertificate are also Restrict (not Cascade) — a certificate is
+      // proof of something the student actually earned, so it must not be silently destroyed by
+      // deleting the account. Checked before the transaction rather than caught from it, since
+      // failing partway through would otherwise leave Submission/TestAttempt already deleted.
+      const [certCount, interviewCertCount] = await Promise.all([
+        prisma.certificate.count({ where: { studentId: req.params.id } }),
+        prisma.interviewCertificate.count({ where: { studentId: req.params.id } }),
+      ]);
+      if (certCount > 0 || interviewCertCount > 0) {
+        const total = certCount + interviewCertCount;
+        return res.status(409).json({
+          error: `This student has earned ${total} certificate${total === 1 ? "" : "s"}. Revoke or reassign ${total === 1 ? "it" : "them"} first, then delete the account.`,
+        });
+      }
       await prisma.$transaction([
         prisma.submission.deleteMany({ where: { studentId: req.params.id } }),
         prisma.testAttempt.deleteMany({ where: { studentId: req.params.id } }),

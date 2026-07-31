@@ -10,23 +10,32 @@ import { Download } from "lucide-react";
 // platform Admin sees every institute (same convention as PasswordResetHistory).
 export default function AuditLogPage({ basePath }) {
   const [logs, setLogs] = useState(null);
+  const [pageMeta, setPageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [page, setPage] = useState(1);
   const [actions, setActions] = useState([]);
   const [actionFilter, setActionFilter] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
   function load() {
-    const params = {};
+    const params = { page, pageSize: 50 };
     if (actionFilter) params.action = actionFilter;
     if (from) params.from = from;
     if (to) params.to = to;
-    api.get("/users/audit-log", { params }).then((res) => setLogs(res.data));
+    api.get("/users/audit-log", { params }).then((res) => {
+      setLogs(res.data.rows);
+      setPageMeta({ page: res.data.page, totalPages: res.data.totalPages, total: res.data.total });
+    });
   }
 
   useEffect(() => {
     api.get("/users/audit-log/actions").then((res) => setActions(res.data)).catch(() => {});
   }, []);
-  useEffect(load, [actionFilter, from, to]);
+  useEffect(() => {
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionFilter, from, to]);
+  useEffect(load, [actionFilter, from, to, page]);
 
   function exportCsv() {
     const params = new URLSearchParams({ format: "csv" });
@@ -64,7 +73,7 @@ export default function AuditLogPage({ basePath }) {
 
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>
           A record of security-relevant actions across the platform — logins, password changes, test and
-          certificate activity, and account/institute management. Most recent 1,000 entries.
+          certificate activity, and account/institute management.
         </p>
 
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -124,6 +133,14 @@ export default function AuditLogPage({ basePath }) {
             </tbody>
           </table>
         </div>
+
+        {logs !== null && pageMeta.totalPages > 1 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center", alignItems: "center" }}>
+            <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+            <span className="mono" style={{ fontSize: 13 }}>Page {pageMeta.page} / {pageMeta.totalPages} ({pageMeta.total} total)</span>
+            <button className="btn btn-ghost" disabled={page >= pageMeta.totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+          </div>
+        )}
       </div>
     </div>
   );

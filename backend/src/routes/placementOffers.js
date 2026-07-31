@@ -5,6 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validateOfferInput } = require("../utils/placementOfferValidation");
 const { generatePlacementPdf } = require("../utils/placementPdf");
+const { cached } = require("../utils/cache");
 
 const router = express.Router();
 
@@ -252,35 +253,42 @@ const DECLINE_LABELS = {
   FAMILY_BUSINESS: "Family Business", EMPLOYED: "Already Employed", NOT_INTERESTED: "Not Interested", OTHER: "Other",
 };
 
+// Cached (short TTL, keyed by institute scope + the filters that actually change the result) —
+// this is otherwise a full-institute batch-fetch-and-aggregate on every call, and both the
+// dashboard panel AND the PDF export (below) call this same function, so without a cache the
+// export re-runs the identical expensive computation the dashboard just did moments earlier.
 async function computeRegistrationAnalytics(req) {
   const { departmentId, batch } = req.query;
-  const academicGroupFilter = { ...(departmentId ? { departmentId } : {}), ...(batch ? { batch } : {}) };
-  const students = await loadInstituteStudents(req, Object.keys(academicGroupFilter).length ? { academicGroup: academicGroupFilter } : {});
-  if (students.length === 0) return { total: 0, registered: 0, notRegistered: 0, percentRegistered: 0, declineBreakdown: [] };
+  const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
+  return cached(`placementAnalytics:registration:${instituteKey}:${departmentId || ""}:${batch || ""}`, 60 * 1000, async () => {
+    const academicGroupFilter = { ...(departmentId ? { departmentId } : {}), ...(batch ? { batch } : {}) };
+    const students = await loadInstituteStudents(req, Object.keys(academicGroupFilter).length ? { academicGroup: academicGroupFilter } : {});
+    if (students.length === 0) return { total: 0, registered: 0, notRegistered: 0, percentRegistered: 0, declineBreakdown: [] };
 
-  const profiles = await prisma.studentProfile.findMany({ where: { studentId: { in: students.map((s) => s.id) } } });
-  const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
+    const profiles = await prisma.studentProfile.findMany({ where: { studentId: { in: students.map((s) => s.id) } } });
+    const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
 
-  let registered = 0;
-  const declineCounts = {};
-  for (const s of students) {
-    const p = profileByStudent.get(s.id);
-    if (p?.placementParticipation === "INTERESTED") registered++;
-    else if (p?.placementParticipation === "NOT_INTERESTED") {
-      const reason = p.placementDeclineReason || "OTHER";
-      declineCounts[reason] = (declineCounts[reason] || 0) + 1;
+    let registered = 0;
+    const declineCounts = {};
+    for (const s of students) {
+      const p = profileByStudent.get(s.id);
+      if (p?.placementParticipation === "INTERESTED") registered++;
+      else if (p?.placementParticipation === "NOT_INTERESTED") {
+        const reason = p.placementDeclineReason || "OTHER";
+        declineCounts[reason] = (declineCounts[reason] || 0) + 1;
+      }
     }
-  }
-  const notRegistered = students.length - registered;
-  const declineBreakdown = Object.entries(declineCounts).map(([reason, count]) => ({
-    reason, label: DECLINE_LABELS[reason] || reason, count, percent: Math.round((count / students.length) * 100),
-  }));
+    const notRegistered = students.length - registered;
+    const declineBreakdown = Object.entries(declineCounts).map(([reason, count]) => ({
+      reason, label: DECLINE_LABELS[reason] || reason, count, percent: Math.round((count / students.length) * 100),
+    }));
 
-  return {
-    total: students.length, registered, notRegistered,
-    percentRegistered: Math.round((registered / students.length) * 100),
-    declineBreakdown,
-  };
+    return {
+      total: students.length, registered, notRegistered,
+      percentRegistered: Math.round((registered / students.length) * 100),
+      declineBreakdown,
+    };
+  });
 }
 
 router.get("/analytics/registration", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
@@ -294,48 +302,51 @@ router.get("/analytics/registration", authenticate, requireRole("ADMIN", "STAFF"
 
 async function computeOfferAnalytics(req) {
   const verifiedOnly = req.query.verifiedOnly === "true";
-  const students = await loadInstituteStudents(req);
-  if (students.length === 0) {
-    return { totalStudents: 0, placed: 0, unplaced: 0, activeOffers: 0, multipleOffers: 0, totalOffers: 0, averageOffersPerStudent: 0, onCampus: 0, offCampus: 0, highestPackage: 0, averagePackage: 0, verifiedOnly };
-  }
-
-  const offers = await prisma.placementOffer.findMany({
-    where: { studentId: { in: students.map((s) => s.id) }, ...(verifiedOnly ? { verificationStatus: "VERIFIED" } : {}) },
-  });
-
-  const byStudent = new Map();
-  for (const o of offers) {
-    if (!byStudent.has(o.studentId)) byStudent.set(o.studentId, []);
-    byStudent.get(o.studentId).push(o);
-  }
-
-  let placed = 0, multipleOffers = 0, activeOffers = 0, onCampus = 0, offCampus = 0;
-  for (const studentOffers of byStudent.values()) {
-    if (studentOffers.some((o) => o.offerStatus === "ACCEPTED")) placed++;
-    if (studentOffers.length > 1) multipleOffers++;
-  }
-  let highestPackage = 0, packageSum = 0;
-  for (const o of offers) {
-    if (o.offerStatus === "HOLDING") activeOffers++;
-    if (o.source === "ON_CAMPUS") onCampus++; else if (o.source === "OFF_CAMPUS") offCampus++;
-    if (o.offerType === "PLACEMENT") {
-      if (o.offeredPackage > highestPackage) highestPackage = o.offeredPackage;
-      packageSum += o.offeredPackage;
+  const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
+  return cached(`placementAnalytics:offers:${instituteKey}:${verifiedOnly}`, 60 * 1000, async () => {
+    const students = await loadInstituteStudents(req);
+    if (students.length === 0) {
+      return { totalStudents: 0, placed: 0, unplaced: 0, activeOffers: 0, multipleOffers: 0, totalOffers: 0, averageOffersPerStudent: 0, onCampus: 0, offCampus: 0, highestPackage: 0, averagePackage: 0, verifiedOnly };
     }
-  }
-  const placementOfferCount = offers.filter((o) => o.offerType === "PLACEMENT").length;
 
-  return {
-    totalStudents: students.length,
-    placed, unplaced: students.length - placed,
-    activeOffers, multipleOffers,
-    totalOffers: offers.length,
-    averageOffersPerStudent: byStudent.size ? Math.round((offers.length / byStudent.size) * 100) / 100 : 0,
-    onCampus, offCampus,
-    highestPackage,
-    averagePackage: placementOfferCount ? Math.round((packageSum / placementOfferCount) * 100) / 100 : 0,
-    verifiedOnly,
-  };
+    const offers = await prisma.placementOffer.findMany({
+      where: { studentId: { in: students.map((s) => s.id) }, ...(verifiedOnly ? { verificationStatus: "VERIFIED" } : {}) },
+    });
+
+    const byStudent = new Map();
+    for (const o of offers) {
+      if (!byStudent.has(o.studentId)) byStudent.set(o.studentId, []);
+      byStudent.get(o.studentId).push(o);
+    }
+
+    let placed = 0, multipleOffers = 0, activeOffers = 0, onCampus = 0, offCampus = 0;
+    for (const studentOffers of byStudent.values()) {
+      if (studentOffers.some((o) => o.offerStatus === "ACCEPTED")) placed++;
+      if (studentOffers.length > 1) multipleOffers++;
+    }
+    let highestPackage = 0, packageSum = 0;
+    for (const o of offers) {
+      if (o.offerStatus === "HOLDING") activeOffers++;
+      if (o.source === "ON_CAMPUS") onCampus++; else if (o.source === "OFF_CAMPUS") offCampus++;
+      if (o.offerType === "PLACEMENT") {
+        if (o.offeredPackage > highestPackage) highestPackage = o.offeredPackage;
+        packageSum += o.offeredPackage;
+      }
+    }
+    const placementOfferCount = offers.filter((o) => o.offerType === "PLACEMENT").length;
+
+    return {
+      totalStudents: students.length,
+      placed, unplaced: students.length - placed,
+      activeOffers, multipleOffers,
+      totalOffers: offers.length,
+      averageOffersPerStudent: byStudent.size ? Math.round((offers.length / byStudent.size) * 100) / 100 : 0,
+      onCampus, offCampus,
+      highestPackage,
+      averagePackage: placementOfferCount ? Math.round((packageSum / placementOfferCount) * 100) / 100 : 0,
+      verifiedOnly,
+    };
+  });
 }
 
 router.get("/analytics/offers", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
@@ -349,29 +360,32 @@ router.get("/analytics/offers", authenticate, requireRole("ADMIN", "STAFF", "CLE
 
 async function computeDepartmentAnalytics(req) {
   const { batch } = req.query;
-  const students = await loadInstituteStudents(req, batch ? { academicGroup: { batch } } : {});
-  if (students.length === 0) return [];
+  const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
+  return cached(`placementAnalytics:department:${instituteKey}:${batch || ""}`, 60 * 1000, async () => {
+    const students = await loadInstituteStudents(req, batch ? { academicGroup: { batch } } : {});
+    if (students.length === 0) return [];
 
-  const profiles = await prisma.studentProfile.findMany({ where: { studentId: { in: students.map((s) => s.id) } } });
-  const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
+    const profiles = await prisma.studentProfile.findMany({ where: { studentId: { in: students.map((s) => s.id) } } });
+    const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
 
-  const byDept = new Map(); // deptId -> { name, total, registered, notRegistered, deptEligible, deptIneligible, clerkEligible, clerkIneligible }
-  for (const s of students) {
-    const dept = s.academicGroup?.department;
-    const key = dept?.id || "unassigned";
-    const label = dept?.name || "Unassigned";
-    if (!byDept.has(key)) byDept.set(key, { departmentId: key, department: label, total: 0, registered: 0, notRegistered: 0, deptEligible: 0, deptIneligible: 0, clerkEligible: 0, clerkIneligible: 0 });
-    const row = byDept.get(key);
-    row.total++;
-    const p = profileByStudent.get(s.id);
-    if (p?.placementParticipation === "INTERESTED") row.registered++;
-    else if (p?.placementParticipation === "NOT_INTERESTED") row.notRegistered++;
-    if (p?.departmentEligibility === "ELIGIBLE") row.deptEligible++;
-    else if (p?.departmentEligibility === "NOT_ELIGIBLE") row.deptIneligible++;
-    if (p?.clerkEligibility === "ELIGIBLE") row.clerkEligible++;
-    else if (p?.clerkEligibility === "NOT_ELIGIBLE") row.clerkIneligible++;
-  }
-  return [...byDept.values()].sort((a, b) => a.department.localeCompare(b.department));
+    const byDept = new Map(); // deptId -> { name, total, registered, notRegistered, deptEligible, deptIneligible, clerkEligible, clerkIneligible }
+    for (const s of students) {
+      const dept = s.academicGroup?.department;
+      const key = dept?.id || "unassigned";
+      const label = dept?.name || "Unassigned";
+      if (!byDept.has(key)) byDept.set(key, { departmentId: key, department: label, total: 0, registered: 0, notRegistered: 0, deptEligible: 0, deptIneligible: 0, clerkEligible: 0, clerkIneligible: 0 });
+      const row = byDept.get(key);
+      row.total++;
+      const p = profileByStudent.get(s.id);
+      if (p?.placementParticipation === "INTERESTED") row.registered++;
+      else if (p?.placementParticipation === "NOT_INTERESTED") row.notRegistered++;
+      if (p?.departmentEligibility === "ELIGIBLE") row.deptEligible++;
+      else if (p?.departmentEligibility === "NOT_ELIGIBLE") row.deptIneligible++;
+      if (p?.clerkEligibility === "ELIGIBLE") row.clerkEligible++;
+      else if (p?.clerkEligibility === "NOT_ELIGIBLE") row.clerkIneligible++;
+    }
+    return [...byDept.values()].sort((a, b) => a.department.localeCompare(b.department));
+  });
 }
 
 router.get("/analytics/department", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
@@ -399,17 +413,21 @@ router.get("/analytics/report.pdf", authenticate, requireRole("ADMIN", "STAFF", 
 
 router.get("/analytics/documents", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
-    const students = await loadInstituteStudents(req);
-    if (students.length === 0) return res.json({ total: 0, pending: 0, verified: 0, rejected: 0, reuploadRequired: 0 });
+    const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
+    const counts = await cached(`placementAnalytics:documents:${instituteKey}`, 60 * 1000, async () => {
+      const students = await loadInstituteStudents(req);
+      if (students.length === 0) return { total: 0, pending: 0, verified: 0, rejected: 0, reuploadRequired: 0 };
 
-    const documents = await prisma.studentDocument.findMany({ where: { studentId: { in: students.map((s) => s.id) } }, select: { verificationStatus: true } });
-    const counts = { total: documents.length, pending: 0, verified: 0, rejected: 0, reuploadRequired: 0 };
-    for (const d of documents) {
-      if (d.verificationStatus === "PENDING") counts.pending++;
-      else if (d.verificationStatus === "VERIFIED") counts.verified++;
-      else if (d.verificationStatus === "REJECTED") counts.rejected++;
-      else if (d.verificationStatus === "REUPLOAD_REQUIRED") counts.reuploadRequired++;
-    }
+      const documents = await prisma.studentDocument.findMany({ where: { studentId: { in: students.map((s) => s.id) } }, select: { verificationStatus: true } });
+      const result = { total: documents.length, pending: 0, verified: 0, rejected: 0, reuploadRequired: 0 };
+      for (const d of documents) {
+        if (d.verificationStatus === "PENDING") result.pending++;
+        else if (d.verificationStatus === "VERIFIED") result.verified++;
+        else if (d.verificationStatus === "REJECTED") result.rejected++;
+        else if (d.verificationStatus === "REUPLOAD_REQUIRED") result.reuploadRequired++;
+      }
+      return result;
+    });
     res.json(counts);
   } catch (err) {
     console.error(err);

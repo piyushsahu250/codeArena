@@ -194,6 +194,12 @@ model User {
   @@index([academicGroupId])
   @@index([role])
   @@index([department])
+  // Roll numbers are only meaningful per-institute (mirrors Class's own
+  // @@unique([instituteId, name, batchYear])) — a NULL in either column never conflicts with
+  // anything under standard Postgres unique-constraint semantics, so this only ever constrains
+  // rows that actually have both an institute and a roll number (i.e. real students), leaving
+  // staff/admin (rollNumber: null) and legacy unscoped rows (instituteId: null) unaffected.
+  @@unique([instituteId, rollNumber])
 }
 
 model Test {
@@ -1009,9 +1015,14 @@ model Certificate {
   id              String            @id @default(uuid())
   certificateCode String            @unique // format: CA-<year>-<institute code>-<program code>-<sequence>
   type            CertificateType   @default(LEARNING_MODULE)
-  student         User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: a certificate is proof the student earned something real (already
+  // possibly shared/verified outside the app via its QR/verify link) — deleting the student or
+  // course it's attached to must not silently destroy it. The corresponding delete routes
+  // (users.js account-delete, learning.js course-delete) check for and report existing
+  // certificates before deleting, the same way Test.createdBy already protects created tests.
+  student         User              @relation(fields: [studentId], references: [id], onDelete: Restrict)
   studentId       String
-  course          Course?           @relation(fields: [courseId], references: [id], onDelete: Cascade) // LEARNING_MODULE only
+  course          Course?           @relation(fields: [courseId], references: [id], onDelete: Restrict) // LEARNING_MODULE only
   courseId        String?
   moduleCodingTestId String?        // CODING_ASSESSMENT only — denormalized, no FK (see AuditLog.adminId for the same pattern)
   title           String            // display name on the certificate PDF, populated for every type
@@ -1028,6 +1039,7 @@ model Certificate {
   // these are two independently-earned achievements, not one row per course.
   @@unique([studentId, courseId, type])
   @@index([studentId])
+  @@index([courseId])
   @@index([type])
   @@index([status])
 }
@@ -1220,7 +1232,10 @@ model StudentBadge {
   id        String   @id @default(uuid())
   student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId String
-  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: deleting a Badge definition must not silently erase every student's
+  // already-earned record of it — gamification.js's badge-delete route checks for and reports
+  // existing StudentBadge rows first.
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Restrict)
   badgeId   String
   earnedAt  DateTime @default(now())
 
@@ -1470,7 +1485,8 @@ model Company {
   createdByName   String
   createdAt       DateTime @default(now())
 
-  @@index([name])
+  // No separate @@index([name]) — `name` is already @unique above, which creates its own index;
+  // an explicit duplicate index here was pure write overhead with zero query benefit.
 }
 
 enum OfferVerificationStatus {
@@ -1826,7 +1842,11 @@ model InterviewAnswer {
   id           String   @id @default(uuid())
   session      InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   sessionId    String
-  question     InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: an InterviewQuestion can be shared across many students' sessions —
+  // deleting it from the question bank must not silently erase historical answers/scoring detail
+  // from past completed interviews. Deleting the SESSION itself still cascades its answers above
+  // (that's a genuine cleanup, not data loss of shared content).
+  question     InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
   questionId   String
   answerText   String?  // HR/Technical free-text (or Web-Speech-API transcript), or Aptitude selected option index as a string
   code         String?  // Coding
@@ -1863,7 +1883,8 @@ model InterviewReport {
 model InterviewCertificate {
   id              String   @id @default(uuid())
   certificateCode String   @unique
-  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade — same reasoning as Certificate.student above.
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Restrict)
   studentId       String   @unique
   averageScore    Int
   issuedAt        DateTime @default(now())

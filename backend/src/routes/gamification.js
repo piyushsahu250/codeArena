@@ -249,9 +249,20 @@ router.patch("/badges/:id", authenticate, requireRole("ADMIN"), async (req, res)
 
 router.delete("/badges/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    // StudentBadge.badge is Restrict, not Cascade — deleting a badge definition must not
+    // silently erase every student's already-earned record of it.
+    const earnedCount = await prisma.studentBadge.count({ where: { badgeId: req.params.id } });
+    if (earnedCount > 0) {
+      return res.status(409).json({
+        error: `${earnedCount} student${earnedCount === 1 ? "" : "s"} have already earned this badge. It can't be deleted while any student holds it.`,
+      });
+    }
     await prisma.badge.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
+    if (err.code === "P2003" || err.code === "P2014") {
+      return res.status(409).json({ error: "This badge has already been earned by students and can't be deleted." });
+    }
     console.error(err);
     res.status(500).json({ error: "Failed to delete badge" });
   }

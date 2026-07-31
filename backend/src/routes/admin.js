@@ -3,46 +3,52 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { getSnapshot } = require("../utils/metrics");
 const { getQueueStatus } = require("../utils/queue");
+const { cached } = require("../utils/cache");
 
 const router = express.Router();
 
-// ADMIN: dashboard summary stats
+// ADMIN: dashboard summary stats — 16 counts on every admin dashboard load, cached briefly since
+// none of these need to be second-by-second accurate on a summary card.
 router.get("/stats", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
-    const now = new Date();
-    const [
-      totalInstitutes, totalClasses, totalUsers, totalStudents, totalStaff,
-      totalTests, totalQuestions, activeTests, scheduledTests, completedTests,
-      totalCourses, totalPracticeQuestions, certificatesIssued, interviewCertificatesIssued,
-      totalAcademicGroups, studentsUnlinkedFromAcademicGroup,
-    ] = await Promise.all([
-      prisma.institute.count(),
-      prisma.class.count(),
-      prisma.user.count(),
-      prisma.user.count({ where: { role: "STUDENT" } }),
-      prisma.user.count({ where: { role: "STAFF" } }),
-      prisma.test.count(),
-      prisma.question.count(),
-      prisma.test.count({ where: { isPublished: true, startTime: { lte: now }, endTime: { gte: now } } }),
-      prisma.test.count({ where: { isPublished: true, startTime: { gt: now } } }),
-      prisma.test.count({ where: { isPublished: true, endTime: { lt: now } } }),
-      prisma.course.count(),
-      prisma.practiceQuestion.count(),
-      prisma.certificate.count(),
-      prisma.interviewCertificate.count(),
-      // Institute->Batch->Department->Section migration visibility (see
-      // backend/scripts/migrateAcademicGroups.js) — surfaced here so the zero-data-loss gate is
-      // checkable at a glance from the dashboard that's already loaded, no separate API call needed.
-      prisma.academicGroup.count(),
-      prisma.user.count({ where: { role: "STUDENT", classId: { not: null }, academicGroupId: null } }),
-    ]);
+    const stats = await cached("admin:stats", 60 * 1000, async () => {
+      const now = new Date();
+      const [
+        totalInstitutes, totalClasses, totalUsers, totalStudents, totalStaff,
+        totalTests, totalQuestions, activeTests, scheduledTests, completedTests,
+        totalCourses, totalPracticeQuestions, certificatesIssued, interviewCertificatesIssued,
+        totalAcademicGroups, studentsUnlinkedFromAcademicGroup,
+      ] = await Promise.all([
+        prisma.institute.count(),
+        prisma.class.count(),
+        prisma.user.count(),
+        prisma.user.count({ where: { role: "STUDENT" } }),
+        prisma.user.count({ where: { role: "STAFF" } }),
+        prisma.test.count(),
+        prisma.question.count(),
+        prisma.test.count({ where: { isPublished: true, startTime: { lte: now }, endTime: { gte: now } } }),
+        prisma.test.count({ where: { isPublished: true, startTime: { gt: now } } }),
+        prisma.test.count({ where: { isPublished: true, endTime: { lt: now } } }),
+        prisma.course.count(),
+        prisma.practiceQuestion.count(),
+        prisma.certificate.count(),
+        prisma.interviewCertificate.count(),
+        // Institute->Batch->Department->Section migration visibility (see
+        // backend/scripts/migrateAcademicGroups.js) — surfaced here so the zero-data-loss gate is
+        // checkable at a glance from the dashboard that's already loaded, no separate API call needed.
+        prisma.academicGroup.count(),
+        prisma.user.count({ where: { role: "STUDENT", classId: { not: null }, academicGroupId: null } }),
+      ]);
 
-    res.json({
-      totalInstitutes, totalClasses, totalUsers, totalStudents, totalStaff,
-      totalTests, totalQuestions, activeTests, scheduledTests, completedTests,
-      totalCourses, totalPracticeQuestions, certificatesIssued: certificatesIssued + interviewCertificatesIssued,
-      totalAcademicGroups, studentsUnlinkedFromAcademicGroup,
+      return {
+        totalInstitutes, totalClasses, totalUsers, totalStudents, totalStaff,
+        totalTests, totalQuestions, activeTests, scheduledTests, completedTests,
+        totalCourses, totalPracticeQuestions, certificatesIssued: certificatesIssued + interviewCertificatesIssued,
+        totalAcademicGroups, studentsUnlinkedFromAcademicGroup,
+      };
     });
+
+    res.json(stats);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load stats" });
@@ -108,24 +114,30 @@ router.get("/question-audit", authenticate, requireRole("ADMIN"), async (req, re
 });
 
 // ADMIN: outbound email delivery log — every welcome/password-reset send attempt, with real
-// provider-confirmed status (never inferred). Optional ?status=FAILED filter; capped at 300 rows,
-// most recent first — this is an operational log, not a paginated archive.
+// provider-confirmed status (never inferred). Optional ?status=FAILED filter, page/pageSize
+// paginated (previously a hard 300-row cap with no way to see older entries).
 router.get("/email-logs", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
     const where = {};
     if (req.query.status && ["PENDING", "SENT", "FAILED", "RETRYING"].includes(req.query.status)) {
       where.status = req.query.status;
     }
-    const logs = await prisma.emailLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 300,
-      select: {
-        id: true, studentId: true, recipientName: true, recipientEmail: true, emailType: true,
-        status: true, errorMessage: true, messageId: true, retryCount: true, createdAt: true, sentAt: true,
-      },
-    });
-    res.json(logs);
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
+    const [logs, total] = await Promise.all([
+      prisma.emailLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true, studentId: true, recipientName: true, recipientEmail: true, emailType: true,
+          status: true, errorMessage: true, messageId: true, retryCount: true, createdAt: true, sentAt: true,
+        },
+      }),
+      prisma.emailLog.count({ where }),
+    ]);
+    res.json({ rows: logs, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load email logs" });

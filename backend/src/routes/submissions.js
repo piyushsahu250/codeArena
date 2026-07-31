@@ -228,31 +228,38 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
 
     // A re-submission replaces the prior one for this question — otherwise changing your
     // answer just added another row, and scoring picked whichever of the two scored higher,
-    // which meant an earlier, since-changed answer could still silently win.
-    await prisma.submission.deleteMany({ where: { attemptId, questionId } });
-    const submission = await prisma.submission.create({
-      data: {
-        attemptId,
-        questionId,
-        studentId: req.user.id,
-        language: question.questionType,
-        code: JSON.stringify(selectedOptions || []),
-        score,
-        passedCases: result.passedCases,
-        totalCases: result.totalCases,
-        verdict: result.verdict,
-      },
-    });
+    // which meant an earlier, since-changed answer could still silently win. The whole
+    // delete-replace-recompute-update sequence runs in one transaction — without it, a crash
+    // partway through could leave TestAttempt.totalScore stale relative to the student's actual
+    // last-saved answer, or (very briefly) let a concurrent read see zero submissions for this
+    // question between the delete and the create.
+    let submission;
+    await prisma.$transaction(async (tx) => {
+      await tx.submission.deleteMany({ where: { attemptId, questionId } });
+      submission = await tx.submission.create({
+        data: {
+          attemptId,
+          questionId,
+          studentId: req.user.id,
+          language: question.questionType,
+          code: JSON.stringify(selectedOptions || []),
+          score,
+          passedCases: result.passedCases,
+          totalCases: result.totalCases,
+          verdict: result.verdict,
+        },
+      });
 
-    const allSubs = await prisma.submission.findMany({ where: { attemptId } });
-    const bestByQuestion = {};
-    for (const s of allSubs) {
-      if (!bestByQuestion[s.questionId] || s.score > bestByQuestion[s.questionId]) {
-        bestByQuestion[s.questionId] = s.score;
+      const allSubs = await tx.submission.findMany({ where: { attemptId } });
+      const bestByQuestion = {};
+      for (const s of allSubs) {
+        if (!bestByQuestion[s.questionId] || s.score > bestByQuestion[s.questionId]) {
+          bestByQuestion[s.questionId] = s.score;
+        }
       }
-    }
-    const totalScore = Object.values(bestByQuestion).reduce((a, b) => a + b, 0);
-    await prisma.testAttempt.update({ where: { id: attemptId }, data: { totalScore } });
+      const totalScore = Object.values(bestByQuestion).reduce((a, b) => a + b, 0);
+      await tx.testAttempt.update({ where: { id: attemptId }, data: { totalScore } });
+    });
 
     res.json({ submissionId: submission.id, execution: sanitizeSubmitResponse(question, result) });
   } catch (err) {

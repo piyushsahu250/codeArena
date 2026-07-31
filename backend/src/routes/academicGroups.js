@@ -94,8 +94,12 @@ router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), atta
     for (const student of students) {
       const newPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(newPassword, 10);
-      await prisma.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
-      await recordPasswordChange(prisma, student.id, passwordHash, null);
+      // Hash write + passwordChangedAt/PasswordHistory write must be atomic — see auth.js's
+      // reset-password route for why.
+      await prisma.$transaction(async (tx) => {
+        await tx.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
+        await recordPasswordChange(tx, student.id, passwordHash, null);
+      });
       reset.push({ id: student.id, name: student.name, email: student.email, rollNumber: student.rollNumber, newPassword });
     }
 
@@ -133,11 +137,28 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
     });
     const studentIds = students.map((s) => s.id);
 
+    // Certificate/InterviewCertificate are Restrict, not Cascade — a certificate is proof of
+    // something a student actually earned and must not be silently destroyed by a group-wide
+    // student purge. Checked up front (same reasoning as DELETE /users/:id) rather than letting
+    // the transaction below fail partway through.
+    const [certCount, interviewCertCount] = studentIds.length > 0
+      ? await Promise.all([
+          prisma.certificate.count({ where: { studentId: { in: studentIds } } }),
+          prisma.interviewCertificate.count({ where: { studentId: { in: studentIds } } }),
+        ])
+      : [0, 0];
+    if (certCount > 0 || interviewCertCount > 0) {
+      const total = certCount + interviewCertCount;
+      return res.status(409).json({
+        error: `${total} certificate${total === 1 ? "" : "s"} have been earned by students in this group. Revoke or reassign ${total === 1 ? "it" : "them"} first, then delete the group.`,
+      });
+    }
+
     // Mirrors DELETE /users/:id's own cascade order exactly: submission/testAttempt have no
-    // onDelete configured on their student relation (unlike Certificate/ModuleCodingAttempt/
-    // InterviewSession/etc., which do cascade automatically), so they're the only two that need
-    // deleting by hand before the User rows themselves — everything else the DB cleans up on its
-    // own. The AcademicGroup row is deleted last, once nothing still references it.
+    // onDelete configured on their student relation (unlike ModuleCodingAttempt/InterviewSession/
+    // etc., which do cascade automatically), so they're the only two that need deleting by hand
+    // before the User rows themselves — everything else the DB cleans up on its own. The
+    // AcademicGroup row is deleted last, once nothing still references it.
     await prisma.$transaction([
       prisma.submission.deleteMany({ where: { studentId: { in: studentIds } } }),
       prisma.testAttempt.deleteMany({ where: { studentId: { in: studentIds } } }),

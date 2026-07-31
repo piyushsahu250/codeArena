@@ -90,17 +90,6 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
   const score = totalQuestions > 0 ? Math.round(sumPercent / totalQuestions) : 0;
   const passed = score >= attempt.moduleCodingTest.passingPercent;
 
-  const updated = await prisma.moduleCodingAttempt.update({
-    where: { id: attemptId },
-    data: {
-      status: reason ? "AUTO_SUBMITTED" : "SUBMITTED",
-      score,
-      passed,
-      submittedAt: new Date(),
-      autoSubmitReason: reason || null,
-    },
-  });
-
   // Auto-issue ONE CODING_ASSESSMENT certificate per student per COURSE, once every certificate-
   // gating test/Level in the course has been passed (see gatingLevels.js: every legacy Module-
   // direct test, plus every Level in a Chapter marked countsTowardCertificate) — not one
@@ -112,6 +101,13 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
   // second issueCertificate() call for the same course is a no-op via the findUnique check below,
   // and a pass is permanent per this platform's "no downgrade on retake" convention, so this only
   // ever needs to fire once.
+  //
+  // Deliberately runs BEFORE the attempt's status flips to SUBMITTED/AUTO_SUBMITTED below:
+  // routes/moduleCoding.js's /finalize treats `status !== "IN_PROGRESS"` as "already finalized,
+  // short-circuit" for idempotency — if the status flip happened first and the process crashed
+  // (or issueCertificate's .catch() swallowed a real failure) before this block ran, a retried
+  // finalize call would short-circuit before ever reaching certificate issuance again, silently
+  // leaving a student who passed without the certificate they earned.
   if (passed) {
     const course = attempt.moduleCodingTest.chapter?.module?.course ?? attempt.moduleCodingTest.module?.course;
     if (course) {
@@ -119,12 +115,16 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
       const passedTestIds = new Set(
         (
           await prisma.moduleCodingAttempt.findMany({
-            where: { studentId: attempt.studentId, moduleCodingTestId: { in: testIds }, passed: true },
+            where: { studentId: attempt.studentId, moduleCodingTestId: { in: testIds }, passed: true, id: { not: attemptId } },
             select: { moduleCodingTestId: true },
             distinct: ["moduleCodingTestId"],
           })
         ).map((a) => a.moduleCodingTestId)
       );
+      // This attempt's own pass isn't written to the DB yet (that happens below) — count it now
+      // so a student whose *this* attempt completes the set is correctly recognized immediately,
+      // not just on their next attempt.
+      passedTestIds.add(attempt.moduleCodingTestId);
       const allModulesPassed = testIds.length > 0 && testIds.every((id) => passedTestIds.has(id));
 
       if (allModulesPassed) {
@@ -144,6 +144,17 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
       }
     }
   }
+
+  const updated = await prisma.moduleCodingAttempt.update({
+    where: { id: attemptId },
+    data: {
+      status: reason ? "AUTO_SUBMITTED" : "SUBMITTED",
+      score,
+      passed,
+      submittedAt: new Date(),
+      autoSubmitReason: reason || null,
+    },
+  });
 
   return { ...updated, questionBreakdown };
 }

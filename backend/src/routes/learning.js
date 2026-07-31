@@ -748,6 +748,16 @@ router.delete("/courses/:id", authenticate, requireRole("ADMIN"), async (req, re
   try {
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return res.status(404).json({ error: "Course not found" });
+
+    // Certificate.course is Restrict, not Cascade — a course that has already issued
+    // certificates to students must not have them silently destroyed by deleting the course.
+    const certCount = await prisma.certificate.count({ where: { courseId: req.params.id } });
+    if (certCount > 0) {
+      return res.status(409).json({
+        error: `${certCount} certificate${certCount === 1 ? "" : "s"} have been issued for this course. Revoke or reassign ${certCount === 1 ? "it" : "them"} first, then delete the course.`,
+      });
+    }
+
     await prisma.course.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
@@ -756,6 +766,9 @@ router.delete("/courses/:id", authenticate, requireRole("ADMIN"), async (req, re
     });
     res.json({ success: true });
   } catch (err) {
+    if (err.code === "P2003" || err.code === "P2014") {
+      return res.status(409).json({ error: "This course has related data that must be removed first." });
+    }
     console.error(err);
     res.status(500).json({ error: "Failed to delete course" });
   }

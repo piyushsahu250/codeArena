@@ -981,6 +981,9 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"
     await prisma.interviewQuestion.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
+    if (err.code === "P2003" || err.code === "P2014") {
+      return res.status(409).json({ error: "This question is part of one or more students' interview history and can't be deleted." });
+    }
     console.error(err);
     res.status(500).json({ error: "Failed to delete question" });
   }

@@ -324,6 +324,12 @@ router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   }
   if (departmentId) studentWhere.academicGroup = { departmentId };
 
+  // No skip/take pagination here (unlike most list routes) — this same response also feeds the
+  // memberIds Set the Search/Browse/Transfer panels use to know which students are already
+  // members, so returning only one page would make already-added students look addable again
+  // past the first page. Instead this follows the same "cap, not paginate" convention this
+  // codebase already uses for exactly this kind of dual-purpose full-set response (see
+  // attendance.js's `take: 10000` / exports.js's `MAX_ROWS`) — previously had no cap at all.
   const members = await prisma.talentPoolMember.findMany({
     where: { poolId: pool.id, ...(Object.keys(studentWhere).length ? { student: studentWhere } : {}) },
     orderBy: { addedAt: "desc" },
@@ -336,6 +342,7 @@ router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRe
         },
       },
     },
+    take: 2000,
   });
   res.json(members);
 });

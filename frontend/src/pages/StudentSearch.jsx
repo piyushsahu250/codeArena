@@ -52,6 +52,8 @@ export default function StudentSearch({ basePath }) {
   const [browsePlacementParticipation, setBrowsePlacementParticipation] = useState("");
   const [browseVerificationStatus, setBrowseVerificationStatus] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [browsePageMeta, setBrowsePageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [lastMode, setLastMode] = useState(null); // "search" | "browse" — controls whether Prev/Next renders
 
   useEffect(() => {
     if (user?.role === "ADMIN") api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
@@ -84,6 +86,7 @@ export default function StudentSearch({ basePath }) {
     try {
       const { data } = await api.get("/users/search", { params: { q: q.trim() } });
       setResults(data);
+      setLastMode("search");
     } catch (err) {
       setError(err.response?.data?.error || "Search failed");
     } finally {
@@ -91,7 +94,7 @@ export default function StudentSearch({ basePath }) {
     }
   }
 
-  async function handleFetch() {
+  async function handleFetch(page = 1) {
     if (!browseDepartmentId || !browseSection) return;
     setBrowsing(true);
     setError("");
@@ -102,9 +105,12 @@ export default function StudentSearch({ basePath }) {
           instituteId: browseInstituteId || undefined, departmentId: browseDepartmentId, section: browseSection,
           batch: browseBatch || undefined, placementParticipation: browsePlacementParticipation || undefined,
           offerVerificationStatus: browseVerificationStatus || undefined,
+          page, pageSize: 50,
         },
       });
-      setResults(data);
+      setResults(data.rows);
+      setBrowsePageMeta({ page: data.page, totalPages: data.totalPages, total: data.total });
+      setLastMode("browse");
     } catch (err) {
       setError(err.response?.data?.error || "Failed to load students");
     } finally {
@@ -263,7 +269,7 @@ export default function StudentSearch({ basePath }) {
                 <option value="PENDING">Has Pending Offer</option>
               </select>
             </div>
-            <button className="btn btn-primary" onClick={handleFetch} disabled={!browseDepartmentId || !browseSection || browsing}>
+            <button className="btn btn-primary" onClick={() => handleFetch(1)} disabled={!browseDepartmentId || !browseSection || browsing}>
               {browsing ? "Fetching…" : "Fetch"}
             </button>
             <button className="btn btn-ghost" onClick={exportFiltered} disabled={exporting}>
@@ -326,6 +332,14 @@ export default function StudentSearch({ basePath }) {
             )}
           </div>
         )}
+
+        {lastMode === "browse" && browsePageMeta.totalPages > 1 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center", alignItems: "center" }}>
+            <button className="btn btn-ghost" disabled={browsePageMeta.page <= 1 || browsing} onClick={() => handleFetch(browsePageMeta.page - 1)}>← Prev</button>
+            <span className="mono" style={{ fontSize: 13 }}>Page {browsePageMeta.page} / {browsePageMeta.totalPages} ({browsePageMeta.total} total)</span>
+            <button className="btn btn-ghost" disabled={browsePageMeta.page >= browsePageMeta.totalPages || browsing} onClick={() => handleFetch(browsePageMeta.page + 1)}>Next →</button>
+          </div>
+        )}
       </div>
 
       {editingStudentId && (
@@ -338,7 +352,7 @@ export default function StudentSearch({ basePath }) {
             // Re-run whichever fetch produced the current list so the edited row reflects the
             // save immediately instead of showing stale data until the next search/fetch.
             if (q.trim()) handleSearch({ preventDefault() {} });
-            else if (browseDepartmentId && browseSection) handleFetch();
+            else if (browseDepartmentId && browseSection) handleFetch(browsePageMeta.page);
           }}
         />
       )}

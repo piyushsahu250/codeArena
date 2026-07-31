@@ -12,6 +12,7 @@ const { parseResumeFile } = require("../utils/resumeParser");
 const { improveText } = require("../utils/resumeImprove");
 const { askClaudeJson } = require("../utils/aiClient");
 const { ROLE_KEYWORDS, analyzeForRole } = require("../utils/resumeJobRoles");
+const { cached } = require("../utils/cache");
 
 const router = express.Router();
 // Real, billed Claude API calls — tighter than the global per-user limiter, same rationale as
@@ -508,20 +509,27 @@ router.get("/me/pdf", authenticate, requireRole("STUDENT"), async (req, res) => 
 
 // =========================== Admin/Staff ===========================
 
+// Both routes below load every scoped student's full resume content to compute
+// completion — cached briefly per institute scope, since this is otherwise a full
+// load-everything-and-aggregate-in-JS pass on every dashboard/list load.
 router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
-    const students = await prisma.user.findMany({ where, select: { id: true } });
-    const ids = students.map((s) => s.id);
-    const resumes = ids.length ? await prisma.resume.findMany({ where: { studentId: { in: ids } } }) : [];
-    const config = await getFieldConfig();
-    const completions = resumes.map((r) => computeCompletion(r, config.mandatorySections).percent);
-    res.json({
-      totalStudents: ids.length,
-      resumesStarted: resumes.length,
-      averageCompletion: completions.length ? Math.round(completions.reduce((a, b) => a + b, 0) / completions.length) : 0,
-      fullyComplete: completions.filter((c) => c === 100).length,
+    const instituteKey = req.requesterInstituteId || "all";
+    const stats = await cached(`resumeStats:${instituteKey}`, 60 * 1000, async () => {
+      const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
+      const students = await prisma.user.findMany({ where, select: { id: true } });
+      const ids = students.map((s) => s.id);
+      const resumes = ids.length ? await prisma.resume.findMany({ where: { studentId: { in: ids } } }) : [];
+      const config = await getFieldConfig();
+      const completions = resumes.map((r) => computeCompletion(r, config.mandatorySections).percent);
+      return {
+        totalStudents: ids.length,
+        resumesStarted: resumes.length,
+        averageCompletion: completions.length ? Math.round(completions.reduce((a, b) => a + b, 0) / completions.length) : 0,
+        fullyComplete: completions.filter((c) => c === 100).length,
+      };
     });
+    res.json(stats);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load resume statistics" });
@@ -530,23 +538,26 @@ router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRe
 
 router.get("/admin/students", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
-    const students = await prisma.user.findMany({ where, select: { id: true, name: true, email: true, rollNumber: true } });
-    const resumes = students.length
-      ? await prisma.resume.findMany({ where: { studentId: { in: students.map((s) => s.id) } } })
-      : [];
-    const resumeMap = new Map(resumes.map((r) => [r.studentId, r]));
-    const config = await getFieldConfig();
+    const instituteKey = req.requesterInstituteId || "all";
+    const rows = await cached(`resumeStudents:${instituteKey}`, 60 * 1000, async () => {
+      const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
+      const students = await prisma.user.findMany({ where, select: { id: true, name: true, email: true, rollNumber: true } });
+      const resumes = students.length
+        ? await prisma.resume.findMany({ where: { studentId: { in: students.map((s) => s.id) } } })
+        : [];
+      const resumeMap = new Map(resumes.map((r) => [r.studentId, r]));
+      const config = await getFieldConfig();
 
-    const rows = students
-      .map((s) => {
-        const r = resumeMap.get(s.id);
-        return {
-          studentId: s.id, name: s.name, email: s.email, rollNumber: s.rollNumber,
-          hasResume: !!r, completion: r ? computeCompletion(r, config.mandatorySections).percent : 0,
-        };
-      })
-      .sort((a, b) => b.completion - a.completion);
+      return students
+        .map((s) => {
+          const r = resumeMap.get(s.id);
+          return {
+            studentId: s.id, name: s.name, email: s.email, rollNumber: s.rollNumber,
+            hasResume: !!r, completion: r ? computeCompletion(r, config.mandatorySections).percent : 0,
+          };
+        })
+        .sort((a, b) => b.completion - a.completion);
+    });
     res.json(rows);
   } catch (err) {
     console.error(err);
