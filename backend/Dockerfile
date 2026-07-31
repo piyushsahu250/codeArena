@@ -29,4 +29,4 @@ COPY . .
 RUN npx prisma generate
 
 EXPOSE 4000
-CMD ["sh", "-c", "node prisma/dedupeDuplicateSubmissions.js; npx prisma db push --skip-generate --accept-data-loss && (node scripts/migrateAcademicGroups.js; true) && (node scripts/fixFunctionModeTestCaseInputs.js; true) && (node scripts/backfillModuleCodingTestCases.js; true) && (node scripts/auditFunctionModeTestCaseInputs.js; true) && (node scripts/backfillChapters.js; true) && (node scripts/backfillCourseVisibility.js; true) && (node scripts/fixIntegratedMTechAcademicGroup.js; true) && (npm run seed || true) && npm start"]
+CMD ["sh", "-c", "node prisma/dedupeDuplicateSubmissions.js; npx prisma db push --skip-generate --accept-data-loss && (node scripts/migrateAcademicGroups.js; true) && (node scripts/fixFunctionModeTestCaseInputs.js; true) && (node scripts/backfillModuleCodingTestCases.js; true) && (node scripts/auditFunctionModeTestCaseInputs.js; true) && (node scripts/backfillChapters.js; true) && (node scripts/backfillCourseVisibility.js; true) && (node scripts/fixIntegratedMTechAcademicGroup.js; true) && (node scripts/addSearchIndexes.js; true) && (npm run seed || true) && npm start"]
