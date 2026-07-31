@@ -22,7 +22,18 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
   const where = {};
   if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
   else if (req.query.instituteId) where.instituteId = req.query.instituteId;
-  const cacheKey = `academic-groups:list:${req.requesterInstituteId || req.query.instituteId || "all"}`;
+
+  // Accepts a single batch or a comma-separated list (e.g. "2023-2027,2024-2028") for a future
+  // multi-select without another backend change — filtering happens in this query (indexed via
+  // AcademicGroup's existing @@index([instituteId, batch])), not by loading everything and
+  // filtering in JS/frontend.
+  const batches = req.query.batch ? String(req.query.batch).split(",").map((b) => b.trim()).filter(Boolean) : [];
+  if (batches.length === 1) where.batch = batches[0];
+  else if (batches.length > 1) where.batch = { in: batches };
+
+  // The batch selection is folded into the cache key so a batch-filtered request never serves a
+  // stale unfiltered (or differently-filtered) result cached under the same institute.
+  const cacheKey = `academic-groups:list:${req.requesterInstituteId || req.query.instituteId || "all"}:${batches.slice().sort().join(",") || "all"}`;
   const groups = await cached(cacheKey, 2 * 60 * 1000, () =>
     prisma.academicGroup.findMany({
       where,

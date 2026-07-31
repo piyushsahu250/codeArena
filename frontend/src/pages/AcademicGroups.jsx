@@ -21,6 +21,12 @@ export default function AcademicGroups() {
   const [groups, setGroups] = useState([]);
   const [institutes, setInstitutes] = useState([]);
   const [filterInstituteId, setFilterInstituteId] = useState("");
+  const [filterBatch, setFilterBatch] = useState("");
+  // Derived from the last unfiltered-by-batch fetch (i.e. whenever filterBatch itself is empty) —
+  // kept independent of the currently-displayed `groups` so the dropdown's own option list never
+  // narrows to just whatever batch happens to be selected.
+  const [availableBatches, setAvailableBatches] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [roster, setRoster] = useState(null);
   const [rosterLoading, setRosterLoading] = useState(false);
@@ -32,19 +38,45 @@ export default function AcademicGroups() {
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  function load(instituteId) {
-    api.get("/academic-groups", { params: instituteId ? { instituteId } : {} }).then((res) => setGroups(res.data));
+  // Filtering happens server-side (GET /academic-groups' `batch` param, backed by AcademicGroup's
+  // existing @@index([instituteId, batch])) — this only ever fetches the already-filtered result,
+  // never the full list filtered client-side. When batch is empty ("All Batches"), the response
+  // also doubles as the source for the batch dropdown's own option list.
+  function load(instituteId, batch) {
+    setLoading(true);
+    const params = {};
+    if (instituteId) params.instituteId = instituteId;
+    if (batch) params.batch = batch;
+    api.get("/academic-groups", { params })
+      .then((res) => {
+        setGroups(res.data);
+        if (!batch) {
+          const batches = [...new Set(res.data.map((g) => g.batch))].filter(Boolean)
+            .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+          setAvailableBatches(batches);
+        }
+      })
+      .finally(() => setLoading(false));
   }
 
   useEffect(() => {
     api.get("/institutes").then((res) => setInstitutes(res.data));
-    load();
   }, []);
 
+  // Covers both the initial load and every subsequent filter change — avoids firing the identical
+  // request twice on mount (one bare, one from this effect) the way the institute-only version of
+  // this page used to.
   useEffect(() => {
-    load(filterInstituteId);
+    load(filterInstituteId, filterBatch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterInstituteId]);
+  }, [filterInstituteId, filterBatch]);
+
+  function changeInstitute(instituteId) {
+    // Changing institute clears the batch filter — a batch selected under one institute may not
+    // exist under another, and this avoids a confusing "no results" state from a stale combination.
+    setFilterInstituteId(instituteId);
+    setFilterBatch("");
+  }
 
   async function toggleRoster(group) {
     if (expandedId === group.id) {
@@ -138,13 +170,29 @@ export default function AcademicGroups() {
           here; this is a read-only view of what's already been derived from your student data.
         </p>
 
-        <div style={{ marginTop: 20 }}>
-          <label style={{ ...labelStyle, marginTop: 0 }}>Filter by institute</label>
-          <select style={{ ...inputStyle, maxWidth: 300 }} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
-            <option value="">All institutes</option>
-            {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-          </select>
+        <div style={{ display: "flex", gap: 16, marginTop: 20, flexWrap: "wrap" }}>
+          <div>
+            <label style={{ ...labelStyle, marginTop: 0 }}>Filter by institute</label>
+            <select style={{ ...inputStyle, maxWidth: 300 }} value={filterInstituteId} onChange={(e) => changeInstitute(e.target.value)} disabled={loading}>
+              <option value="">All institutes</option>
+              {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ ...labelStyle, marginTop: 0 }}>Filter by batch</label>
+            <select style={{ ...inputStyle, maxWidth: 220 }} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} disabled={loading}>
+              <option value="">All batches</option>
+              {availableBatches.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
         </div>
+
+        {!loading && groups.length > 0 && (
+          <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>
+            {groups.length} group{groups.length === 1 ? "" : "s"} · {groups.reduce((sum, g) => sum + (g._count?.users || 0), 0)} student{groups.reduce((sum, g) => sum + (g._count?.users || 0), 0) === 1 ? "" : "s"} total
+          </p>
+        )}
+        {loading && <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 10 }}>Loading…</p>}
 
         {resetResult && (
           <div className="card" style={{ padding: 20, marginTop: 20 }}>
@@ -241,9 +289,11 @@ export default function AcademicGroups() {
               )}
             </div>
           ))}
-          {groups.length === 0 && (
+          {!loading && groups.length === 0 && (
             <div className="card" style={{ padding: 32, textAlign: "center", color: "var(--ink-dim)" }}>
-              No academic groups yet — they'll appear here as soon as students are registered.
+              {filterInstituteId || filterBatch
+                ? "No academic groups match the selected filters."
+                : "No academic groups yet — they'll appear here as soon as students are registered."}
             </div>
           )}
         </div>
