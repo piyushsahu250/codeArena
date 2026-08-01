@@ -1314,6 +1314,7 @@ function buildAdminSessionWhere(req) {
 
 const STUDENT_JOIN_SELECT = {
   id: true, name: true, email: true, rollNumber: true, registrationNumber: true, department: true, batchYear: true, section: true,
+  instituteId: true,
   institute: { select: { name: true } },
   class: { select: { name: true, batchYear: true } },
   academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
@@ -1485,8 +1486,9 @@ router.get("/admin/sessions/:sessionId/report", authenticate, requireRole("ADMIN
       },
     });
     if (!session) return res.status(404).json({ error: "Session not found" });
-    const target = await prisma.user.findUnique({ where: { id: session.studentId }, select: { instituteId: true } });
-    if (req.requesterInstituteId && target.instituteId !== req.requesterInstituteId) {
+    // session.student already carries instituteId (STUDENT_JOIN_SELECT) — no need for a second
+    // query just to re-fetch the same student.
+    if (req.requesterInstituteId && session.student.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only view students under your own institute" });
     }
 
