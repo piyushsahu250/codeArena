@@ -7,6 +7,7 @@ import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import { SkeletonGrid, SkeletonCard } from "../components/Skeleton";
 
 const ROLES = ["STUDENT", "STAFF", "ADMIN", "CLERK"];
 const emptyForm = {
@@ -44,7 +45,7 @@ export default function AdminDashboard() {
     load();
     api.get("/institutes").then((res) => setInstitutes(res.data));
     api.get("/tests").then((res) => setTests(res.data)).catch(() => setTests([]));
-    api.get("/gamification/admin/stats").then((res) => setGamiStats(res.data)).catch(() => setGamiStats(null));
+    api.get("/gamification/admin/stats").then((res) => setGamiStats(res.data)).catch(() => setGamiStats({ topStudents: [] }));
   }, []);
 
   function updateField(field) {
@@ -175,7 +176,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {stats && (
+        {stats === null ? (
+          <div style={{ marginTop: 28 }}><SkeletonGrid count={10} minWidth={130} /></div>
+        ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginTop: 28 }}>
             <StatCard label="Institutes" value={stats.totalInstitutes} />
             <StatCard label="Academic Groups" value={stats.totalAcademicGroups} />
@@ -209,7 +212,9 @@ export default function AdminDashboard() {
           <div>
             <h3 style={{ fontSize: 16, marginBottom: 12 }}>Test Status Distribution</h3>
             <div className="card" style={{ padding: 20, height: 220 }}>
-              {!tests || tests.length === 0 ? (
+              {tests === null ? (
+                <SkeletonCard height={220} />
+              ) : tests.length === 0 ? (
                 <p style={{ color: "var(--ink-dim)", fontSize: 13, textAlign: "center", paddingTop: 60 }}>No tests yet.</p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -227,7 +232,9 @@ export default function AdminDashboard() {
           <div>
             <h3 style={{ fontSize: 16, marginBottom: 12 }}>Top Students Platform-wide (XP)</h3>
             <div className="card" style={{ padding: 20, height: 220, overflowY: "auto" }}>
-              {!gamiStats || gamiStats.topStudents.length === 0 ? (
+              {gamiStats === null ? (
+                <SkeletonCard height={220} />
+              ) : gamiStats.topStudents.length === 0 ? (
                 <p style={{ color: "var(--ink-dim)", fontSize: 13, textAlign: "center", paddingTop: 60 }}>Not enough activity yet.</p>
               ) : (
                 <div style={{ display: "grid", gap: 8 }}>

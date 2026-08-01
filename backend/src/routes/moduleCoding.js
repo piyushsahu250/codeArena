@@ -1018,6 +1018,10 @@ router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, req
 // unscoped Platform Admin) must still only export their own institute's data.
 router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    // Capped like every sibling export route (interview.js's session export, exports.js's
+    // MAX_ROWS, users.js's audit-log CSV) — this route previously had no take at all, so a test
+    // with an unusually large attempt count would build its entire XLSX buffer in memory with
+    // nothing bounding it.
     const attempts = await prisma.moduleCodingAttempt.findMany({
       where: {
         moduleCodingTestId: req.params.id,
@@ -1025,6 +1029,7 @@ router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN"), attach
       },
       include: { student: { select: { name: true, email: true, rollNumber: true } } },
       orderBy: { startedAt: "desc" },
+      take: 5000,
     });
     const rows = attempts.map((a) => ({
       Student: a.student.name, Email: a.student.email, RollNumber: a.student.rollNumber || "",

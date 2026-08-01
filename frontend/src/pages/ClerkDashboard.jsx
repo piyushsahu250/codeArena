@@ -6,6 +6,7 @@ import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import { SkeletonGrid } from "../components/Skeleton";
 
 const PIE_COLORS = ["#4F9D6E", "#C7852A", "#B0473F", "#5B7DB1"];
 
@@ -26,14 +27,19 @@ export default function ClerkDashboard() {
 
   useEffect(() => {
     api.get("/placement/analytics/registration", { params: { batch: batchFilter || undefined } })
-      .then((res) => setRegistration(res.data)).catch(() => setRegistration(null));
+      .then((res) => setRegistration(res.data))
+      .catch(() => setRegistration({ total: 0, registered: 0, notRegistered: 0, percentRegistered: 0, declineBreakdown: [] }));
     api.get("/placement/analytics/department", { params: { batch: batchFilter || undefined } })
-      .then((res) => setDepartment(res.data)).catch(() => setDepartment(null));
+      .then((res) => setDepartment(res.data)).catch(() => setDepartment([]));
   }, [batchFilter]);
 
   useEffect(() => {
     api.get("/placement/analytics/offers", { params: { verifiedOnly: verifiedOnly || undefined } })
-      .then((res) => setOfferStats(res.data)).catch(() => setOfferStats(null));
+      .then((res) => setOfferStats(res.data))
+      .catch(() => setOfferStats({
+        totalStudents: 0, placed: 0, unplaced: 0, activeOffers: 0, multipleOffers: 0,
+        totalOffers: 0, averageOffersPerStudent: 0, onCampus: 0, offCampus: 0, highestPackage: 0, averagePackage: 0,
+      }));
   }, [verifiedOnly]);
 
   useEffect(() => {
@@ -94,7 +100,9 @@ export default function ClerkDashboard() {
 
         {/* Registration Overview */}
         <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 10 }}>Placement Registration Overview</h3>
-        {registration && (
+        {registration === null ? (
+          <SkeletonGrid count={5} minWidth={160} />
+        ) : (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
               <StatCard icon={Users} label="Total Students" value={registration.total} />
@@ -132,7 +140,9 @@ export default function ClerkDashboard() {
             Verified offers only
           </label>
         </div>
-        {offerStats && (
+        {offerStats === null ? (
+          <SkeletonGrid count={8} minWidth={150} />
+        ) : (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
               <StatCard icon={Users} label="Placed" value={offerStats.placed} />

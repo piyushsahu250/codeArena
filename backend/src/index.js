@@ -5,7 +5,9 @@ const helmet = require("helmet");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { timingMiddleware, recordProcessError } = require("./utils/metrics");
+const logger = require("./utils/logger");
 const { isConfigured: isAiConfigured } = require("./utils/aiClient");
 
 const authRoutes = require("./routes/auth");
@@ -45,9 +47,48 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(helmet());
 app.use(compression());
-app.use(cors({ exposedHeaders: ["Content-Disposition"] }));
+// Scoped to the known frontend origin(s) rather than reflecting any caller — same FRONTEND_URL
+// env var already used platform-wide for building email/certificate links (auth.js, users.js,
+// mailer.js, etc.), so no new config surface. Local Vite dev ports are always allowed since this
+// list only ever governs a browser's CORS preflight, not authentication itself (auth is a Bearer
+// token the frontend attaches explicitly, never an ambient cookie, so this is defense in depth
+// rather than the actual access boundary). Requests with no Origin header (curl, server-to-server,
+// mobile) are unaffected — CORS only applies to browser-issued cross-origin requests.
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "https://codearena-app.vercel.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error("Not allowed by CORS"));
+  },
+  exposedHeaders: ["Content-Disposition"],
+}));
 app.use(express.json({ limit: "1mb" }));
 app.use(timingMiddleware);
+
+// Structured per-request log line (JSON, one per request) — the only per-request record that
+// existed before this was metrics.js's anonymous rolling-average timing window, which has no way
+// to answer "what did request X do." requestId is echoed back as a response header so a student/
+// admin bug report ("it broke, here's what I saw") can be correlated to the exact log line.
+app.use((req, res, next) => {
+  req.requestId = crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.requestId);
+  const start = Date.now();
+  res.on("finish", () => {
+    logger.info("request", {
+      requestId: req.requestId,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      durationMs: Date.now() - start,
+      userId: req.user?.id || null,
+    });
+  });
+  next();
+});
 
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeArena API" }));
 
@@ -115,11 +156,11 @@ app.use("/api/talent-pools", talentPoolRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 process.on("uncaughtException", (err) => {
-  console.error("[uncaughtException]", err);
+  logger.error("uncaughtException", { message: err?.message, stack: err?.stack });
   recordProcessError(err, "uncaughtException");
 });
 process.on("unhandledRejection", (err) => {
-  console.error("[unhandledRejection]", err);
+  logger.error("unhandledRejection", { message: err?.message, stack: err?.stack });
   recordProcessError(err, "unhandledRejection");
 });
 
