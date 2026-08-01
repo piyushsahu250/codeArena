@@ -12,7 +12,7 @@ const { processGamification } = require("../utils/gamification");
 const { askClaude } = require("../utils/aiClient");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { attachRequesterInstitute } = require("../middleware/institute");
-const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse } = require("../utils/courseEligibility");
+const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
 const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
@@ -67,22 +67,45 @@ const PASS_THRESHOLD = 70; // % correct required on a module's practice test to 
 
 // =========================== Student-facing (read) ===========================
 
-// Any authenticated user: list all courses (inactive ones show as "coming soon" — the
-// frontend greys them out rather than hiding them, so the roadmap itself is visible).
+// ADMIN/STAFF: unfiltered — CourseAssignments.jsx and LearningManagement.jsx both need to see
+// every course (including DRAFT and institute-unassigned ones) to manage them.
+// STUDENT: filtered to courses that are actually PUBLISHED and actually assigned to their own
+// institute/academic group — previously this route returned every course to every role, so a
+// student could see (and, via /courses/:slug below, open) courses meant for another institute or
+// never even published. courseEligibilityWhere/isEligibilityUnresolvable are the same helpers
+// already used on the admin assignment routes; this just closes the gap where students were the
+// one place they were never actually applied.
 router.get("/courses", authenticate, async (req, res) => {
+  const where = {};
+  if (req.user.role === "STUDENT") {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return res.json([]);
+    where.status = "PUBLISHED";
+    Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
+  }
   const courses = await prisma.course.findMany({
+    where,
     orderBy: { order: "asc" },
     include: { prerequisites: { select: { prerequisiteCourseId: true } } },
   });
   res.json(courses);
 });
 
-// Any authenticated user: one course's full module/lesson tree. For a STUDENT, each lesson
-// carries their own progress status/bookmark and each module + the course carry completion
-// counts, so the dashboard can render progress bars without a second round trip.
+// ADMIN/STAFF: unfiltered. STUDENT: same PUBLISHED + institute/group-assignment gate as
+// GET /courses above — without this, a student who knew (or guessed) a slug could open a course's
+// full content directly even though it was filtered out of their course list. A student who fails
+// this gate gets the same 404 as a genuinely nonexistent slug, rather than a 403 that would confirm
+// the course exists.
 router.get("/courses/:slug", authenticate, async (req, res) => {
-  const course = await prisma.course.findUnique({
-    where: { slug: req.params.slug },
+  const where = { slug: req.params.slug };
+  if (req.user.role === "STUDENT") {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return res.status(404).json({ error: "Course not found" });
+    where.status = "PUBLISHED";
+    Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
+  }
+  const course = await prisma.course.findFirst({
+    where,
     include: {
       modules: {
         orderBy: { order: "asc" },
@@ -155,13 +178,32 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
   const lesson = await prisma.lesson.findUnique({
     where: { id: req.params.id },
     include: {
-      module: { include: { course: true, lessons: { orderBy: { order: "asc" } } } },
+      module: {
+        include: {
+          course: {
+            include: {
+              instituteAssignments: { select: { instituteId: true } },
+              academicGroupAssignments: { select: { academicGroupId: true } },
+            },
+          },
+          lessons: { orderBy: { order: "asc" } },
+        },
+      },
       questions: { orderBy: { order: "asc" } },
     },
   });
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
 
   if (req.user.role === "STUDENT") {
+    // Same PUBLISHED + institute/group-assignment gate as GET /courses/:slug — otherwise a
+    // student could reach a course's lesson content directly by id even though the course itself
+    // was filtered out of their course list and blocked at /courses/:slug.
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    const eligible = lesson.module.course.status === "PUBLISHED"
+      && !isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)
+      && isCourseVisibleToStudent(lesson.module.course, student.instituteId, student.academicGroupId);
+    if (!eligible) return res.status(404).json({ error: "Lesson not found" });
+
     const lockMap = await getModuleLockMap(prisma, req.user.id, lesson.module.courseId);
     if (lockMap.get(lesson.module.id)?.locked) {
       return res.status(403).json({ error: "This module is locked. Complete the previous module's practice test to unlock it." });
@@ -994,6 +1036,11 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN"), async (
         countsTowardCertificate: countsTowardCertificate === undefined ? true : !!countsTowardCertificate,
       },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "chapter", operation: "create", chapterId: chapter.id, moduleId: chapter.moduleId, title: chapter.title },
+    });
     res.json(chapter);
   } catch (err) {
     console.error(err);
@@ -1029,6 +1076,11 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, re
         ...(countsTowardCertificate !== undefined ? { countsTowardCertificate: !!countsTowardCertificate } : {}),
       },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "chapter", operation: "edit", chapterId: chapter.id, title: chapter.title, changedFields: Object.keys(req.body) },
+    });
     res.json(chapter);
   } catch (err) {
     console.error(err);
@@ -1038,7 +1090,14 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, re
 
 router.delete("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
+    if (!chapter) return res.status(404).json({ error: "Chapter not found" });
     await prisma.chapter.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "chapter", operation: "delete", chapterId: chapter.id, moduleId: chapter.moduleId, title: chapter.title },
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -1058,6 +1117,11 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN"), async (r
         estimatedMinutes: Number(estimatedMinutes) || 10, isModuleTest: !!isModuleTest,
         isActive: isActive === undefined ? true : !!isActive,
       },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "lesson", operation: "create", lessonId: lesson.id, moduleId: lesson.moduleId, title: lesson.title },
     });
     res.json(lesson);
   } catch (err) {
@@ -1085,6 +1149,11 @@ router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN"), async (
         isActive: isActive === undefined ? true : !!isActive,
       },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "lesson", operation: "create", lessonId: lesson.id, moduleId: lesson.moduleId, chapterId: lesson.chapterId, title: lesson.title },
+    });
     res.json(lesson);
   } catch (err) {
     console.error(err);
@@ -1111,6 +1180,18 @@ router.patch("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res
         ...(chapterId !== undefined ? { chapterId: chapterId || null } : {}),
       },
     });
+    // The one edit that actually matters for "content versioning" (task's approved lightweight
+    // scope: who changed what, when — no rollback/diff) — content/blocks are the fields a student
+    // actually reads, so flagging that specifically rather than just listing every changed key.
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: {
+        entity: "lesson", operation: "edit", lessonId: lesson.id, title: lesson.title,
+        contentChanged: content !== undefined || blocks !== undefined,
+        changedFields: Object.keys(req.body),
+      },
+    });
     res.json(lesson);
   } catch (err) {
     console.error(err);
@@ -1120,7 +1201,14 @@ router.patch("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res
 
 router.delete("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
+    if (!lesson) return res.status(404).json({ error: "Lesson not found" });
     await prisma.lesson.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "lesson", operation: "delete", lessonId: lesson.id, moduleId: lesson.moduleId, title: lesson.title },
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);

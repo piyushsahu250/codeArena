@@ -25,6 +25,7 @@ const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", mar
 export default function LearningManagement() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
   const [moduleId, setModuleId] = useState(null);
@@ -62,11 +63,20 @@ export default function LearningManagement() {
     <div>
       <Navbar />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <h1>Learning Management</h1>
-          {!isAdmin && (
-            <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 12 }}>Read-Only Access</span>
-          )}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h1>Learning Management</h1>
+            {!isAdmin && (
+              <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 12 }}>Read-Only Access</span>
+            )}
+          </div>
+          {/* Every course/module/chapter/lesson create/edit/delete is already recorded in the
+              platform's Audit Log (action: COURSE_MANAGEMENT_CHANGED) — this just makes that
+              existing "who changed what, when" record discoverable from inside the CMS itself
+              instead of only from the separate Audit Log page. */}
+          <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate(isAdmin ? "/admin/audit-log" : "/staff/audit-log")}>
+            View Change History →
+          </button>
         </div>
         <ChalkUnderline />
         <p style={{ color: "var(--ink-dim)", marginTop: 12, fontSize: 14 }}>
