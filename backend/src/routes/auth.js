@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { sendMail, sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { createSession, endSession } = require("../utils/sessions");
@@ -8,6 +9,7 @@ const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange, isPasswordExpired } = require("../utils/password");
 const { authenticate } = require("../middleware/auth");
 const { computeMandatoryCompletion } = require("../utils/studentProfileCompletion");
+const { decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
 
@@ -17,6 +19,19 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
+
+// Keyed by IP+email (not just IP) so a shared campus/lab IP doesn't get one collective lockout
+// budget shared across every student behind it, while still capping how fast any single email can
+// be brute-forced from one source. The global limiter in index.js (600/5min) is far too loose to
+// stop credential-stuffing against one account.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.ip}:${String(req.body?.email || "").toLowerCase()}`,
+  message: { error: "Too many login attempts. Please wait a few minutes and try again." },
+});
 
 // Best-effort, non-blocking — a login alert failing to send must never fail or slow the login
 // itself. Fires for the account's very first login ever, or a login from a device/browser
@@ -48,7 +63,7 @@ router.post("/register", async (req, res) => {
   res.status(403).json({ error: "User registration is managed by the administrator. Please contact your institute administrator to receive your login credentials." });
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email }, include: { institute: true } });
@@ -96,7 +111,7 @@ router.post("/login", async (req, res) => {
         prisma.studentProfile.findUnique({ where: { studentId: user.id } }),
         prisma.resume.findUnique({ where: { studentId: user.id }, select: { education: true, fullName: true, email: true } }),
       ]);
-      profileComplete = computeMandatoryCompletion(user, studentProfile, resume).unlocked;
+      profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume).unlocked;
     }
 
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete } });

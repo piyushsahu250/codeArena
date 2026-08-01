@@ -5,6 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion, MOBILE_RE } = require("../utils/studentProfileCompletion");
 const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
+const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ async function loadCompletionInputs(studentId) {
     prisma.studentProfile.findUnique({ where: { studentId } }),
     prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true } }),
   ]);
-  return { user, studentProfile, resume };
+  return { user, studentProfile: decryptProfile(studentProfile), resume };
 }
 
 // STUDENT: merged view of everything the profile page renders — User's identity subset,
@@ -92,12 +93,13 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       profileData.placementUpdatedAt = new Date();
     }
 
+    const encryptedProfileData = encryptProfileData(profileData);
     await prisma.$transaction([
       ...(Object.keys(userData).length ? [prisma.user.update({ where: { id: req.user.id }, data: userData })] : []),
       prisma.studentProfile.upsert({
         where: { studentId: req.user.id },
-        create: { studentId: req.user.id, ...profileData },
-        update: profileData,
+        create: { studentId: req.user.id, ...encryptedProfileData },
+        update: encryptedProfileData,
       }),
     ]);
 
@@ -123,7 +125,7 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       success: true,
       completion,
       user: { id: freshUser.id, name: freshUser.name, mobile: freshUser.mobile, gender: freshUser.gender, profilePhotoUrl: freshUser.profilePhotoUrl },
-      profile: await prisma.studentProfile.findUnique({ where: { studentId: req.user.id } }),
+      profile: decryptProfile(await prisma.studentProfile.findUnique({ where: { studentId: req.user.id } })),
     });
   } catch (err) {
     console.error(err);
@@ -184,7 +186,7 @@ router.patch("/students/:studentId/cgpa", authenticate, requireRole("ADMIN", "ST
       req, action: AUDIT_ACTIONS.STUDENT_PROFILE_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       studentId: req.params.studentId, instituteId: student.instituteId, details: { type: "cgpa", cgpa },
     });
-    res.json(profile);
+    res.json(decryptProfile(profile));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update CGPA" });

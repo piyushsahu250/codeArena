@@ -13,9 +13,10 @@ const { createSession } = require("../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
+const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -215,7 +216,7 @@ router.get("/", authenticate, requireRole("ADMIN"), async (req, res) => {
 // ADMIN: create a Staff, Admin, or Student account directly (no self-registration needed).
 // Password is a unique, randomly generated temporary one — the admin never types one — and the
 // account is flagged to force a password change on first login.
-router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       name, email, role, rollNumber, registrationNumber, department, mobile, gender, program,
@@ -229,6 +230,11 @@ router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
       return res.status(400).json({ error: "role must be STUDENT, STAFF, ADMIN, or CLERK" });
     }
     if (!instituteId) return res.status(400).json({ error: "An institute is required" });
+    // An institute-scoped ADMIN must not be able to plant accounts under a different institute by
+    // passing an arbitrary instituteId — only a platform-level (unscoped) admin can target any.
+    if (req.requesterInstituteId && instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only create accounts under your own institute" });
+    }
     if (role === "STUDENT" && !String(mobile || "").trim()) return res.status(400).json({ error: "A mobile number is required for students" });
     if (role === "STUDENT" && !String(batchYear || "").trim()) return res.status(400).json({ error: "A batch is required for students" });
     if (mobile && !MOBILE_RE.test(String(mobile).trim())) return res.status(400).json({ error: "Invalid mobile number" });
@@ -435,7 +441,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
 // combination is found-or-created automatically as an AcademicGroup; there's no separate "Class"
 // to create ahead of time anymore. Each row gets its own unique, randomly generated password (not
 // shared with any other row), and the account is flagged to force a password change on first login.
-router.post("/bulk-upload", authenticate, requireRole("ADMIN"), upload.single("file"), async (req, res) => {
+router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -512,6 +518,12 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), upload.single("f
       const institute = instituteByName.get(instituteName.toLowerCase());
       if (!institute) {
         errors.push({ row: rowNum, name, email, rollNumber, reason: `Institute "${instituteName}" was not found. Create it first in Institute Management.` });
+        continue;
+      }
+      // Mirrors the same guard on POST / — an institute-scoped ADMIN can only import students
+      // into their own institute, regardless of what the uploaded file's Institute column says.
+      if (req.requesterInstituteId && institute.id !== req.requesterInstituteId) {
+        errors.push({ row: rowNum, name, email, rollNumber, reason: `You can only upload students to your own institute` });
         continue;
       }
 

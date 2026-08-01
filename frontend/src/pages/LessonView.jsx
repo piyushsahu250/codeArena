@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import DOMPurify from "dompurify";
 import Editor from "@monaco-editor/react";
 import api from "../api";
 import { useGamification } from "../context/GamificationContext";
@@ -135,7 +136,15 @@ export default function LessonView() {
 
         <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 12 }}>~{lesson.estimatedMinutes} min read</p>
 
-        <div className="card lesson-content" style={{ padding: 24, marginTop: 20 }} dangerouslySetInnerHTML={{ __html: lesson.content || "<p><em>No content yet.</em></p>" }} />
+        <div
+          className="card lesson-content"
+          style={{ padding: 24, marginTop: 20 }}
+          // Lesson content is admin-authored, but any institute-scoped admin (not just a
+          // superadmin) can author it — sanitize before render so a malicious/compromised admin
+          // account can't stash stored XSS (e.g. exfiltrating the JWT from localStorage) in a
+          // lesson every enrolled student loads.
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(lesson.content || "<p><em>No content yet.</em></p>") }}
+        />
 
         {lesson.videoUrl && (
           <div className="card" style={{ padding: 16, marginTop: 16 }}>

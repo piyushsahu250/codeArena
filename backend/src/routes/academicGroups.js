@@ -116,13 +116,18 @@ router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), atta
 // most destructive single action (it deletes real student accounts, not just the group), so it
 // gets the same "type your password to confirm" gate a password manager's own sudo mode would use,
 // on top of the count-and-warn confirmation the frontend shows before this call is ever made.
-router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const group = await prisma.academicGroup.findUnique({
       where: { id: req.params.id },
       include: { institute: { select: { name: true } }, department: { select: { name: true } } },
     });
     if (!group) return res.status(404).json({ error: "Academic group not found" });
+    // Cascade-deletes every student in the group — an institute-scoped ADMIN must not be able to
+    // reach a group belonging to a different institute by ID.
+    if (req.requesterInstituteId && group.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage academic groups under your own institute" });
+    }
 
     const { password } = req.body;
     if (!password) return res.status(400).json({ error: "Your password is required to confirm this action" });

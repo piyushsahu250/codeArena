@@ -8,7 +8,7 @@ async function authenticate(req, res, next) {
   }
   const token = header.split(" ")[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
     // A syntactically valid, unexpired token can still be dead: forced logout from another
     // device, or replaced by a newer login under Institute.singleSessionOnly. Tokens issued
     // before session tracking existed have no jti and are grandfathered in as always-active.

@@ -5,9 +5,10 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
+const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
 // null requesterInstituteId (the seeded platform-level Super Admin) sees every institute's
 // questions/folders unfiltered. An institute-scoped requester sees their own institute's rows

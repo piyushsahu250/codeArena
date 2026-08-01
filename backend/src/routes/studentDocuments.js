@@ -5,6 +5,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validateDocumentInput, DOCUMENT_TYPES } = require("../utils/documentValidation");
+const { fetchExternalUrl } = require("../utils/safeFetch");
 
 const router = express.Router();
 
@@ -213,7 +214,9 @@ router.get("/:id/download", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
     const timeout = setTimeout(() => controller.abort(), 20000);
     let upstream;
     try {
-      upstream = await fetch(directDownloadUrl(doc.documentLink), { redirect: "follow", signal: controller.signal });
+      upstream = await fetchExternalUrl(directDownloadUrl(doc.documentLink), { signal: controller.signal });
+    } catch (fetchErr) {
+      return res.status(502).json({ error: fetchErr.message || "Could not fetch the document from its source link" });
     } finally {
       clearTimeout(timeout);
     }

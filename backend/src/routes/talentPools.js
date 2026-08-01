@@ -11,9 +11,10 @@ const { computeTalentPoolRank, computeTalentPoolInterviewRank } = require("../ut
 const { previewAutoSelection, runAutoSelection } = require("../utils/talentPoolAutoSelect");
 const { notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned } = require("../utils/notifications");
 const { generateTalentPoolPdf } = require("../utils/talentPoolPdf");
+const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
 const MEMBER_SELECT = { id: true, name: true, email: true, rollNumber: true, registrationNumber: true };
 const INSTITUTES_INCLUDE = { institutes: { include: { institute: { select: { id: true, name: true } } } } };

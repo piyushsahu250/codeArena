@@ -19,9 +19,10 @@ const { askClaudeJson } = require("../utils/aiClient");
 const { cached } = require("../utils/cache");
 const { COMPANIES } = require("../utils/companies");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
+const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 // Real, billed Claude API calls — tighter than the global per-user limiter, same rationale as
 // learning.js's hintLimiter and resume.js's aiReviewLimiter.
 const aiInsightsLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });

@@ -5,6 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { cached, invalidate } = require("../utils/cache");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion } = require("../utils/studentProfileCompletion");
+const { decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
 
@@ -229,7 +230,7 @@ router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "
       prisma.studentProfile.findMany({ where: { studentId: { in: studentIds } } }),
       prisma.resume.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, education: true, fullName: true, email: true } }),
     ]);
-    const profileByStudent = new Map(profiles.map((p) => [p.studentId, p]));
+    const profileByStudent = new Map(profiles.map((p) => [p.studentId, decryptProfile(p)]));
     const resumeByStudent = new Map(resumes.map((r) => [r.studentId, r]));
 
     let completed = 0;

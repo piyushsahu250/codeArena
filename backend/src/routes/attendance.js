@@ -8,9 +8,10 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { sendExport } = require("../utils/exportFile");
 const { generateAttendancePdf } = require("../utils/attendancePdf");
 const { testEligibilityWhere } = require("../utils/testEligibility");
+const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
 const LECTURE_TYPES = ["REGULAR", "PRACTICE_TEST", "EXAM"];
 const LECTURE_TYPE_LABELS = { REGULAR: "Regular Class", PRACTICE_TEST: "Practice Test", EXAM: "Exam" };

@@ -6,6 +6,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validateOfferInput } = require("../utils/placementOfferValidation");
 const { generatePlacementPdf } = require("../utils/placementPdf");
 const { cached } = require("../utils/cache");
+const { decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
 
@@ -203,7 +204,7 @@ router.patch("/students/:studentId/department-eligibility", authenticate, requir
       studentId: req.params.studentId, instituteId: student.instituteId,
       details: { type: "department", status },
     });
-    res.json(profile);
+    res.json(decryptProfile(profile));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update department eligibility" });
@@ -228,7 +229,7 @@ router.patch("/students/:studentId/clerk-eligibility", authenticate, requireRole
       studentId: req.params.studentId, instituteId: student.instituteId,
       details: { type: "clerk", status },
     });
-    res.json(profile);
+    res.json(decryptProfile(profile));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update clerk eligibility" });
