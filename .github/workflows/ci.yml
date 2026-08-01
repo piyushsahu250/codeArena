@@ -17,11 +17,19 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Dummy values — schema.prisma's datasource block references both env("DATABASE_URL") and
+      # env("DIRECT_DATABASE_URL") (the latter for Prisma's non-pooled connection during schema
+      # operations), so both must resolve to *something* for `prisma validate`/`generate` to even
+      # parse the schema — neither command opens a real connection. Set at job level so every step
+      # in this job sees them, not just one.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
       # npm ci (not npm install) requires package-lock.json to exactly match package.json, and
@@ -33,10 +41,6 @@ jobs:
       - run: npm install
       - name: Validate Prisma schema
         run: npx prisma validate
-        env:
-          # Dummy value — `prisma validate` only needs the env var to be present to resolve the
-          # schema's env("DATABASE_URL") reference, it never opens a connection.
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       - run: npx prisma generate
 
   frontend:
@@ -48,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       # npm ci (not npm install) requires package-lock.json to exactly match package.json, and
