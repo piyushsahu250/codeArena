@@ -24,6 +24,22 @@ const { mapWithConcurrency } = require("./queue");
 const { wrapFunctionCode, looksLikeFullProgram } = require("./functionHarness");
 const { judgeSqlSubmission } = require("./sqlJudge");
 
+// Node's child_process.spawn inherits the FULL parent environment by default when no `env`
+// option is given — that meant every compiled/executed student submission ran with
+// JWT_SECRET/DATABASE_URL/ANTHROPIC_API_KEY/mailer credentials sitting right there in its
+// process environment, readable by trivially printing it (`print(os.environ)`,
+// `System.getenv()`, `getenv()`, etc.) and returned straight back to the student in the /run
+// endpoints' response (unlike /submit paths, which strip raw output). Whitelisting to exactly
+// what a compiler/interpreter actually needs to run closes this at the source, regardless of
+// what the submitted code does or which endpoint returns the output.
+const JUDGE_ENV = {
+  PATH: process.env.PATH,
+  HOME: process.env.HOME || os.tmpdir(),
+  LANG: process.env.LANG || "C.UTF-8",
+  LC_ALL: process.env.LC_ALL || "C.UTF-8",
+  TMPDIR: os.tmpdir(),
+};
+
 const CASE_CONCURRENCY = Number(process.env.JUDGE_CASE_CONCURRENCY || 2);
 const MEMORY_LIMIT_KB = Number(process.env.JUDGE_MEMORY_LIMIT_KB || 262144); // 256 MB default
 // Compilation budget — separate from and typically larger than any single test case's own
@@ -270,7 +286,8 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     // detached so the child becomes its own process-group leader — on timeout we kill the whole
     // group (process.kill(-pid, ...)), not just this one PID, which also reaps any children the
     // submitted program itself forked (a plain child.kill() would leave those running).
-    const child = spawn(timeCmd, timeArgs, { ...options, detached: true, killSignal: "SIGKILL" });
+    // env explicitly whitelisted (see JUDGE_ENV above) — never inherit process.env's secrets.
+    const child = spawn(timeCmd, timeArgs, { ...options, env: { ...JUDGE_ENV, ...options.env }, detached: true, killSignal: "SIGKILL" });
 
     let stdout = "";
     let stderr = "";
