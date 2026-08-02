@@ -20,6 +20,7 @@ const { cached } = require("../utils/cache");
 const { COMPANIES } = require("../utils/companies");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -1167,6 +1168,112 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"
     }
     console.error(err);
     res.status(500).json({ error: "Failed to delete question" });
+  }
+});
+
+// =========================== Admin: Company Interview Profiles ===========================
+// Drives the weighted question selection + round-elimination flow in pickQuestions()/POST
+// /sessions/POST /sessions/:id/rounds/advance — see CompanyInterviewProfile's schema comment for
+// the legally-safe-sourcing constraint (general public interview-prep knowledge only, never a
+// claim about a specific real question). Read access matches the rest of this file's admin
+// routes (ADMIN+STAFF); write access is ADMIN-only since this materially changes what every
+// student sees in a Company Round, not a per-question edit.
+
+router.get("/admin/company-profiles", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const profiles = await prisma.companyInterviewProfile.findMany({ orderBy: { company: "asc" } });
+    res.json(profiles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load company interview profiles" });
+  }
+});
+
+function validateRoundPlan(roundPlan) {
+  if (roundPlan == null) return null;
+  if (!Array.isArray(roundPlan) || roundPlan.length === 0) return "roundPlan must be a non-empty array or omitted entirely";
+  for (const [i, r] of roundPlan.entries()) {
+    if (!VALID_CATEGORIES.includes(r.category)) return `Round ${i + 1}: invalid category "${r.category}"`;
+    if (!Number.isInteger(r.count) || r.count < 1 || r.count > 10) return `Round ${i + 1}: count must be an integer between 1 and 10`;
+    if (r.eliminationThreshold != null && (typeof r.eliminationThreshold !== "number" || r.eliminationThreshold < 0 || r.eliminationThreshold > 100)) {
+      return `Round ${i + 1}: eliminationThreshold must be a number 0-100, or left blank`;
+    }
+  }
+  return null;
+}
+
+router.post("/admin/company-profiles", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const { company, isActive, categoryWeights, roundPlan, notes } = req.body;
+    const trimmed = String(company || "").trim();
+    if (!trimmed) return res.status(400).json({ error: "A company name is required" });
+    const roundPlanNormalized = Array.isArray(roundPlan)
+      ? roundPlan.map((r, i) => ({ ...r, roundNumber: i + 1 }))
+      : null;
+    const roundPlanError = validateRoundPlan(roundPlanNormalized);
+    if (roundPlanError) return res.status(400).json({ error: roundPlanError });
+
+    const profile = await prisma.companyInterviewProfile.upsert({
+      where: { company: trimmed },
+      update: { isActive: isActive !== false, categoryWeights: categoryWeights ?? null, roundPlan: roundPlanNormalized, notes: notes || null, updatedByAdminId: req.user.id },
+      create: { company: trimmed, isActive: isActive !== false, categoryWeights: categoryWeights ?? null, roundPlan: roundPlanNormalized, notes: notes || null, updatedByAdminId: req.user.id },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COMPANY_INTERVIEW_PROFILE_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { company: trimmed, hasRoundPlan: !!roundPlanNormalized, categories: Object.keys(categoryWeights || {}) },
+    });
+    res.json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save company interview profile" });
+  }
+});
+
+router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const existing = await prisma.companyInterviewProfile.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Profile not found" });
+    const { isActive, categoryWeights, roundPlan, notes } = req.body;
+    const roundPlanNormalized = roundPlan === undefined ? undefined
+      : Array.isArray(roundPlan) ? roundPlan.map((r, i) => ({ ...r, roundNumber: i + 1 })) : null;
+    if (roundPlanNormalized !== undefined) {
+      const roundPlanError = validateRoundPlan(roundPlanNormalized);
+      if (roundPlanError) return res.status(400).json({ error: roundPlanError });
+    }
+    const profile = await prisma.companyInterviewProfile.update({
+      where: { id: req.params.id },
+      data: {
+        ...(isActive !== undefined ? { isActive } : {}),
+        ...(categoryWeights !== undefined ? { categoryWeights } : {}),
+        ...(roundPlanNormalized !== undefined ? { roundPlan: roundPlanNormalized } : {}),
+        ...(notes !== undefined ? { notes: notes || null } : {}),
+        updatedByAdminId: req.user.id,
+      },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COMPANY_INTERVIEW_PROFILE_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { company: existing.company },
+    });
+    res.json(profile);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update company interview profile" });
+  }
+});
+
+router.delete("/admin/company-profiles/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const existing = await prisma.companyInterviewProfile.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Profile not found" });
+    await prisma.companyInterviewProfile.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COMPANY_INTERVIEW_PROFILE_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { company: existing.company },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete company interview profile" });
   }
 });
 

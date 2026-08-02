@@ -7,6 +7,7 @@ import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
+import CompanyProfilesPanel from "../components/CompanyProfilesPanel";
 import { CATEGORIES, APTITUDE_CATS } from "../constants/interviewCategories";
 
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 4 };
@@ -329,6 +330,15 @@ export default function InterviewAdmin() {
             </div>
           ))}
           {weakTopics && <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Based on {weakTopics.totalReports} report{weakTopics.totalReports === 1 ? "" : "s"}.</p>}
+        </div>
+
+        <h3 style={{ fontSize: 16, marginTop: 32 }}>Company Interview Profiles</h3>
+        <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+          Configure per-company topic/difficulty weighting and round-elimination structure for Company Round sessions.
+          A company with no profile behaves exactly as before — plain shuffled question selection, no elimination.
+        </p>
+        <div style={{ marginTop: 12 }}>
+          <CompanyProfilesPanel />
         </div>
       </div>
     </div>
