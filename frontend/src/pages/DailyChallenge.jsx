@@ -36,6 +36,7 @@ export default function DailyChallenge() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [history, setHistory] = useState(null);
+  const [stats, setStats] = useState(null);
   const [language, setLanguage] = useState("java");
   const [code, setCode] = useState("");
   const [runResult, setRunResult] = useState(null);
@@ -57,6 +58,7 @@ export default function DailyChallenge() {
       })
       .catch(() => setError("Failed to load today's challenge"));
     api.get("/challenges/daily/history").then((res) => setHistory(res.data)).catch(() => {});
+    api.get("/challenges/stats").then((res) => setStats(res.data)).catch(() => {});
   }, []);
 
   function handleLanguageChange(lang) {
@@ -90,6 +92,7 @@ export default function DailyChallenge() {
       setSubmitResult(res);
       notify(res.gamification);
       api.get("/challenges/daily/history").then((r) => setHistory(r.data)).catch(() => {});
+      api.get("/challenges/stats").then((r) => setStats(r.data)).catch(() => {});
     } catch (err) {
       setSubmitResult({ error: err.response?.data?.error || "Submission failed" });
     } finally {
@@ -106,6 +109,13 @@ export default function DailyChallenge() {
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
           A new problem every day. Solving it counts toward your streak, same as Practice Coding.
         </p>
+        {stats && (
+          <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
+            <span className="mono" style={{ fontSize: 13 }}>Streak: <strong>{stats.currentStreak}</strong> day{stats.currentStreak === 1 ? "" : "s"}</span>
+            <span className="mono" style={{ fontSize: 13, opacity: 0.75 }}>Longest: <strong>{stats.longestStreak}</strong></span>
+            <span className="mono" style={{ fontSize: 13, opacity: 0.75 }}>Challenge XP: <strong>{stats.challengeXp}</strong></span>
+          </div>
+        )}
         <CalendarStrip history={history} />
 
         {error && <p style={{ color: "var(--rust)", marginTop: 20 }}>{error}</p>}

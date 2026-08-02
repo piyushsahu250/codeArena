@@ -248,6 +248,9 @@ export default function InterviewSession() {
   const q = questions[activeIdx];
   const draft = drafts[q.id] || {};
   const micBlocked = proctor.micStatus === "UNAVAILABLE";
+  const roundPlan = Array.isArray(session.roundPlanSnapshot) ? session.roundPlanSnapshot : null;
+  const isRoundElimination = !!roundPlan;
+  const currentRoundInfo = isRoundElimination ? roundPlan[session.currentRoundNumber - 1] : null;
 
   function updateDraft(patch) {
     setDrafts((d) => ({ ...d, [q.id]: { ...d[q.id], ...patch } }));
@@ -326,6 +329,41 @@ export default function InterviewSession() {
     await saveAnswer(true);
     setRunResult(null);
     if (activeIdx < questions.length - 1) setActiveIdx((i) => i + 1);
+  }
+
+  // Company Round sessions with a real round-elimination profile: this replaces the plain
+  // finalize() as the "last question" action. The server is the sole authority on whether the
+  // round was passed — this just saves the last answer, asks the server to score the round, and
+  // either appends the next round's questions (continuing the session) or navigates to the report
+  // (round-elimination or the whole interview completed).
+  async function advanceRound() {
+    if (finalizedRef.current) return;
+    setSaving(true);
+    try {
+      await saveAnswer(false);
+      const { data: res } = await api.post(`/interview/sessions/${id}/rounds/advance`);
+      if (res.completed) {
+        finalizedRef.current = true;
+        proctor.stopMedia();
+        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+        navigate(`/interview/report/${id}`, { state: { report: res.report } });
+        return;
+      }
+      const nextQs = res.nextRoundQuestions || [];
+      setData((d) => ({ ...d, session: res.session, questions: [...d.questions, ...nextQs] }));
+      setDrafts((dr) => {
+        const merged = { ...dr };
+        for (const nq of nextQs) merged[nq.id] = { answerText: "", code: nq.starterCode || "", language: nq.language || "java", selected: null };
+        return merged;
+      });
+      setRunResult(null);
+      setCodeSubmittedResult(false);
+      setActiveIdx((i) => i + 1);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to advance to the next round");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function finalize() {
@@ -434,6 +472,16 @@ export default function InterviewSession() {
           </div>
         )}
 
+        {isRoundElimination && currentRoundInfo && (
+          <div className="ip-glass" style={{ padding: "10px 16px", marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+            <span className="badge" style={{ background: "var(--ip-accent)" }}>Round {session.currentRoundNumber} of {roundPlan.length}</span>
+            <strong>{currentRoundInfo.label || CATEGORY_LABEL[currentRoundInfo.category] || currentRoundInfo.category}</strong>
+            {currentRoundInfo.eliminationThreshold != null && (
+              <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>— need {currentRoundInfo.eliminationThreshold}%+ to advance</span>
+            )}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 16 }}>
           {questions.map((qq, i) => (
             <button key={qq.id} onClick={() => setActiveIdx(i)} className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 8px", opacity: i === activeIdx ? 1 : 0.5, fontWeight: i === activeIdx ? 700 : 400 }}>
@@ -517,6 +565,10 @@ export default function InterviewSession() {
             </div>
             {activeIdx < questions.length - 1 ? (
               <button className="btn btn-primary" onClick={() => go(1)} disabled={saving || micBlocked}>{saving ? "Saving…" : "Next →"}</button>
+            ) : isRoundElimination ? (
+              <button className="btn btn-primary" onClick={advanceRound} disabled={saving}>
+                {saving ? "Scoring round…" : session.currentRoundNumber < roundPlan.length ? "Submit Round →" : "Submit Interview"}
+              </button>
             ) : (
               <button className="btn btn-primary" onClick={finalize} disabled={saving}>{saving ? "Submitting…" : "Submit Interview"}</button>
             )}

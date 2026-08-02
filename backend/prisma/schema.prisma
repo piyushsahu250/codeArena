@@ -73,6 +73,11 @@ model Institute {
   // students are never retroactively locked out unless an admin opts their institute in.
   requireProfileCompletion Boolean @default(false)
 
+  // Daily/Weekly Challenge automation: opt-in per institute so the scheduler's blast radius stays
+  // bounded (Global always auto-publishes; a specific institute's own challenge only auto-publishes
+  // once an admin flips this on — see utils/challengeScheduler.js). Off by default.
+  autoScheduleChallenges Boolean @default(false)
+
   classes         Class[]
   users           User[]
   questions       Question[]
@@ -82,6 +87,8 @@ model Institute {
   courseAssignments CourseInstituteAssignment[]
   talentPools     TalentPoolInstitute[]
   talentPoolAttendanceAssignments StaffClassAssignment[] @relation("TalentPoolAttendanceInstitute")
+  dailyChallenges  DailyChallenge[]
+  weeklyChallenges WeeklyChallenge[]
 }
 
 model Class {
@@ -1262,16 +1269,32 @@ model StudentStreak {
 // surface). Solving one routes through the same gamification hook (processGamification) and
 // StudentStreak used everywhere else, so it counts toward the student's existing streak — no
 // parallel streak system.
+// Scope fields both nullable, following the same null-means-wider-scope convention as
+// attachRequesterInstitute/req.requesterInstituteId used everywhere else in this codebase:
+// instituteId=null,academicGroupId=null = Global; instituteId set,academicGroupId=null =
+// institute-wide; both set = one academic group only. A student resolves "today's challenge" by
+// most-specific-match (see utils/challengeScoping.js) — exactly one row applies to any student.
+// The plain @@unique below cannot by itself stop two different Global rows for the same date
+// (Postgres treats NULL as distinct in a composite unique), so the migration also adds two
+// partial unique indexes — see the migration SQL for daily_challenge_global_unique /
+// daily_challenge_institute_unique.
 model DailyChallenge {
-  id         String   @id @default(uuid())
-  date       DateTime @unique // truncated to the day — "today's" challenge is looked up by date
-  question   Question @relation(fields: [questionId], references: [id])
-  questionId String
-  createdAt  DateTime @default(now())
+  id              String        @id @default(uuid())
+  date            DateTime      // truncated to the day — no longer @unique alone, see scope note above
+  question        Question      @relation(fields: [questionId], references: [id])
+  questionId      String
+  institute       Institute?    @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId     String?
+  academicGroup   AcademicGroup? @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
+  academicGroupId String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
 
   submissions DailyChallengeSubmission[]
 
+  @@unique([date, instituteId, academicGroupId])
   @@index([questionId])
+  @@index([date])
 }
 
 model DailyChallengeSubmission {
@@ -1294,16 +1317,24 @@ model DailyChallengeSubmission {
   @@index([studentId])
 }
 
+// Same scope-field convention as DailyChallenge above — see that model's comment.
 model WeeklyChallenge {
-  id         String   @id @default(uuid())
-  weekStart  DateTime @unique // Monday of the ISO week this challenge belongs to
-  question   Question @relation(fields: [questionId], references: [id])
-  questionId String
-  createdAt  DateTime @default(now())
+  id              String        @id @default(uuid())
+  weekStart       DateTime      // Monday of the ISO week this challenge belongs to
+  question        Question      @relation(fields: [questionId], references: [id])
+  questionId      String
+  institute       Institute?    @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId     String?
+  academicGroup   AcademicGroup? @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
+  academicGroupId String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
 
   submissions WeeklyChallengeSubmission[]
 
+  @@unique([weekStart, instituteId, academicGroupId])
   @@index([questionId])
+  @@index([weekStart])
 }
 
 model WeeklyChallengeSubmission {
@@ -1787,6 +1818,36 @@ model CompanyPatternNote {
   @@index([company])
 }
 
+// Legally-safe, general-knowledge interview pattern for one company — topic emphasis, difficulty
+// mix, and round structure, sourced from the kind of thing every interview-prep book/blog already
+// publishes (e.g. "Amazon interviews emphasize Leadership Principles + arrays/hashmaps"). Same
+// framing as CompanyPatternNote above (AI-estimated, never a claim about a specific real question),
+// but this is the structured config pickQuestions() actually reads to weight selection, not a
+// human-readable checklist. Missing category in categoryWeights, or no row at all for a company =
+// today's plain shuffle for that category — every field here is purely additive to selection
+// behavior, never a hard requirement.
+model CompanyInterviewProfile {
+  id       String  @id @default(uuid())
+  company  String  @unique
+  isActive Boolean @default(true)
+
+  // { CODING: { topicWeights: {"Arrays": 0.3, "Hashmap": 0.25, ...}, difficultyMix: {EASY:0.3,MEDIUM:0.5,HARD:0.2} }, HR: {...}, ... }
+  categoryWeights Json?
+
+  // Ordered round definitions for a Company Round session:
+  // [{ roundNumber, category, count, eliminationThreshold, label }, ...]
+  // eliminationThreshold: null = no elimination check for that round (used on the last round).
+  // No roundPlan at all = today's flat HR(2)+Technical(3)+Coding(2)+Managerial(2) composition.
+  roundPlan Json?
+
+  notes            String? // e.g. "Sourced from general public interview-prep guidance"
+  updatedByAdminId String?
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@index([company])
+}
+
 // One row per attempt. `category` HR/TECHNICAL/CODING/APTITUDE is a focused single-type
 // session; a Mock session sets isMock=true and its questions span multiple categories
 // (config.mix records the composition). Resume-based sessions set isResumeBased=true and
@@ -1811,6 +1872,16 @@ model InterviewSession {
   // deleting the config later must not delete the student's completed session history.
   talentPoolConfig   TalentPoolInterviewConfig? @relation(fields: [talentPoolConfigId], references: [id], onDelete: SetNull)
   talentPoolConfigId String?
+
+  // Round-elimination — populated only for Company Round sessions whose company has an active
+  // CompanyInterviewProfile.roundPlan; every other session leaves these at their defaults and
+  // behaves exactly as before this feature existed. roundPlanSnapshot is copied at session-start
+  // so a later admin edit to the profile never retroactively changes an in-flight or already-
+  // completed session's rules.
+  roundPlanSnapshot  Json?    // copy of CompanyInterviewProfile.roundPlan at session start
+  currentRoundNumber Int      @default(1)
+  roundResults       Json?    // [{roundNumber, category, label, score, status: PASSED|ELIMINATED|NOT_REACHED|IN_PROGRESS, questionIds, answeredCount}]
+  eliminatedAtRound  Int?     // set once, null = never eliminated (or not a round-elimination session)
 
   answers    InterviewAnswer[]
   report     InterviewReport?
@@ -1860,6 +1931,7 @@ model InterviewAnswer {
 
   @@unique([sessionId, questionId])
   @@index([sessionId])
+  @@index([questionId])
 }
 
 // Finalized per-session feedback snapshot — persisted (not recomputed on every read) so a
@@ -1875,6 +1947,15 @@ model InterviewReport {
   strongAreas     Json    // string[]
   weakAreas       Json    // string[]
   recommendations Json    // string[]
+
+  // Round-elimination / richer-feedback additions — all nullable, populated only where relevant
+  // (Company Round sessions with a matched profile for companyReadinessScore; every session gets
+  // timeEfficiency/optimizationSuggestions since those are pure arithmetic over data already
+  // captured on InterviewAnswer, not profile-dependent).
+  companyReadinessScore   Int?  // overallScore blended with round-completion % for round-elimination sessions; falls back to overallScore for everything else
+  timeEfficiency          Json? // { avgTimePerQuestionSec, byCategory: {...}, comparedToBudget: "under"|"on-pace"|"over" }
+  optimizationSuggestions Json? // string[] — pacing/structure advice, distinct from the weak-area-driven `recommendations` above
+
   createdAt       DateTime @default(now())
 
   @@index([studentId, createdAt])
@@ -1946,6 +2027,8 @@ model AcademicGroup {
   testAssignments  TestAcademicGroup[]
   staffAssignments StaffClassAssignment[]
   courseAssignments CourseAcademicGroupAssignment[]
+  dailyChallenges  DailyChallenge[]
+  weeklyChallenges WeeklyChallenge[]
 
   @@unique([instituteId, batch, departmentId, section])
   @@index([instituteId])

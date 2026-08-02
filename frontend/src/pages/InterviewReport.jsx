@@ -18,6 +18,7 @@ export default function InterviewReport() {
   const [report, setReport] = useState(location.state?.report || null);
   const [recommendedLearning, setRecommendedLearning] = useState(location.state?.recommendedLearning || null);
   const [sessionStatus, setSessionStatus] = useState(null);
+  const [session, setSession] = useState(null);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [aiInsights, setAiInsights] = useState(null);
@@ -40,6 +41,7 @@ export default function InterviewReport() {
   useEffect(() => {
     api.get(`/interview/sessions/${id}`).then((res) => {
       setSessionStatus(res.data.session.status);
+      setSession(res.data.session);
       if (res.data.session.report) setReport(res.data.session.report);
       else if (!report) setError("This interview hasn't been submitted yet.");
       if (!recommendedLearning) setRecommendedLearning(res.data.recommendedLearning || []);
@@ -88,7 +90,57 @@ export default function InterviewReport() {
         <div className="ip-glass" style={{ padding: 28, marginTop: 20, textAlign: "center" }}>
           <div className="mono" style={{ fontSize: 44, fontWeight: 700, color: "var(--ip-accent)" }}>{report.overallScore}%</div>
           <div style={{ opacity: 0.7 }}>Overall Score</div>
+          {typeof report.companyReadinessScore === "number" && Array.isArray(session?.roundPlanSnapshot) && session.roundPlanSnapshot.length > 0 && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+              <div className="mono" style={{ fontSize: 28, fontWeight: 700, color: session.eliminatedAtRound ? "var(--rust)" : "var(--ip-accent)" }}>
+                {report.companyReadinessScore}%
+              </div>
+              <div style={{ opacity: 0.7, fontSize: 13 }}>
+                Company Readiness Score{session.config?.company ? ` — ${session.config.company}` : ""}
+              </div>
+            </div>
+          )}
         </div>
+
+        {Array.isArray(session?.roundPlanSnapshot) && session.roundPlanSnapshot.length > 0 && (
+          <div className="ip-glass" style={{ padding: 16, marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Round-by-Round Breakdown</div>
+            {session.eliminatedAtRound && (
+              <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: "rgba(200,60,60,0.1)", color: "var(--rust)", fontSize: 13, fontWeight: 600 }}>
+                Eliminated at Round {session.eliminatedAtRound}
+              </div>
+            )}
+            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+              {(session.roundResults || []).map((r) => (
+                <div key={r.roundNumber} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, padding: "8px 10px", borderRadius: 6, background: "var(--card-bg, #F7F7F5)" }}>
+                  <span className="badge" style={{
+                    fontSize: 11,
+                    background: r.status === "PASSED" ? "var(--ip-accent)" : r.status === "ELIMINATED" ? "var(--rust)" : r.status === "IN_PROGRESS" ? "var(--amber)" : "var(--ink-dim)",
+                  }}>
+                    {r.status === "NOT_REACHED" ? "Not Reached" : r.status.charAt(0) + r.status.slice(1).toLowerCase()}
+                  </span>
+                  <span style={{ fontWeight: 600 }}>Round {r.roundNumber}: {r.label}</span>
+                  {typeof r.score === "number" && <span style={{ marginLeft: "auto", opacity: 0.75 }}>{r.score}%</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {report.timeEfficiency && (
+          <div className="ip-glass" style={{ padding: 16, marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Time Efficiency</div>
+            <p style={{ fontSize: 13, marginTop: 8 }}>
+              You averaged <strong>{report.timeEfficiency.avgTimePerQuestionSec}s</strong> per question against a ~{report.timeEfficiency.budgetSecPerQuestion}s budget —{" "}
+              {report.timeEfficiency.comparedToBudget === "over" ? "slower than the expected pace." : report.timeEfficiency.comparedToBudget === "under" ? "faster than the expected pace." : "right on pace."}
+            </p>
+            {report.optimizationSuggestions?.length > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 13 }}>
+                {report.optimizationSuggestions.map((s, i) => <li key={i}>{s}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
 
         {Object.keys(report.scoreBreakdown || {}).length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginTop: 16 }}>

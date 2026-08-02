@@ -95,11 +95,51 @@ function sanitizeQuestion(q) {
 // stay "hard" filters, applied unconditionally when present, unchanged from before.
 const SOFT_FILTER_FIELDS = ["company", "packageBand", "experienceLevel"];
 
+// Weighted-without-replacement sample using a CompanyInterviewProfile.categoryWeights entry:
+// { topicWeights: {"Arrays": 0.3, ...}, difficultyMix: {EASY:0.3,MEDIUM:0.5,HARD:0.2} }. A
+// question's weight is topicMatch * difficultyMatch, with small non-zero floors so untagged/
+// off-profile questions can still be picked (just deprioritized) rather than excluded outright —
+// this is a bias on top of the existing pool, never a hard filter. Falls back to plain shuffle
+// when the profile defines nothing usable, so profile-less categories see zero behavior change.
+function weightedSample(pool, weights, count) {
+  const topicWeights = weights?.topicWeights || {};
+  const difficultyMix = weights?.difficultyMix || {};
+  if (!Object.keys(topicWeights).length && !Object.keys(difficultyMix).length) return shuffle(pool).slice(0, count);
+
+  const remaining = pool.map((q) => {
+    const tagMatches = [q.subject, ...(Array.isArray(q.tags) ? q.tags : [])].filter((t) => t && topicWeights[t] != null);
+    const topicWeight = tagMatches.length ? Math.max(...tagMatches.map((t) => topicWeights[t])) : 0.05;
+    const difficultyWeight = q.difficulty && difficultyMix[q.difficulty] != null ? difficultyMix[q.difficulty] : 0.1;
+    return { q, weight: Math.max(0.01, topicWeight * difficultyWeight) };
+  });
+
+  const picked = [];
+  for (let i = 0; i < count && remaining.length > 0; i++) {
+    const total = remaining.reduce((s, r) => s + r.weight, 0);
+    let roll = Math.random() * total;
+    let idx = remaining.length - 1;
+    for (let j = 0; j < remaining.length; j++) {
+      roll -= remaining[j].weight;
+      if (roll <= 0) { idx = j; break; }
+    }
+    picked.push(remaining[idx].q);
+    remaining.splice(idx, 1);
+  }
+  return picked;
+}
+
 // Returns { items, usedFallback } rather than a bare array — usedFallback lets a caller (e.g. a
 // Company Round composing several categories at once) tell the student when a category had to
 // fall back to the general, non-company-specific pool, instead of silently serving generic
 // content under a company-branded label.
-async function pickQuestions(category, config, count) {
+//
+// options.companyProfile: a CompanyInterviewProfile row (or null) — when its categoryWeights has
+// an entry for this category, selection is weighted (weightedSample) instead of pure shuffle.
+// options.excludeStudentId: when set, excludes questions this student has already answered in the
+// last INTERVIEW_ANTI_REPEAT_DAYS days (default 90) — a real anti-repetition gap this platform had
+// none of before. Same fallback posture as everything else here: if exclusion would empty the
+// pool, it's dropped rather than failing the session start (a repeat question beats no session).
+async function pickQuestions(category, config, count, options = {}) {
   const hardWhere = { category, isActive: true, generatedForStudentId: null };
   if (config.subject) hardWhere.subject = config.subject;
   if (config.difficulty) hardWhere.difficulty = config.difficulty;
@@ -116,13 +156,36 @@ async function pickQuestions(category, config, count) {
     }
   }
 
-  let pool = await prisma.interviewQuestion.findMany({ where: { ...hardWhere, ...softWhere } });
+  let excludeIds = [];
+  if (options.excludeStudentId) {
+    const days = Math.max(1, Number(process.env.INTERVIEW_ANTI_REPEAT_DAYS) || 90);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const recent = await prisma.interviewAnswer.findMany({
+      where: { session: { studentId: options.excludeStudentId }, createdAt: { gte: since } },
+      select: { questionId: true },
+      distinct: ["questionId"],
+    });
+    excludeIds = recent.map((r) => r.questionId);
+  }
+
+  const fullWhere = { ...hardWhere, ...softWhere };
+  let pool = await prisma.interviewQuestion.findMany({ where: excludeIds.length ? { ...fullWhere, id: { notIn: excludeIds } } : fullWhere });
   let usedFallback = false;
+  if (pool.length === 0 && excludeIds.length > 0) {
+    // Drop the anti-repeat exclusion first — a repeat is a smaller compromise than falling all
+    // the way back to the general (non-company) pool below.
+    pool = await prisma.interviewQuestion.findMany({ where: fullWhere });
+  }
   if (pool.length === 0 && Object.keys(softWhere).length > 0) {
-    pool = await prisma.interviewQuestion.findMany({ where: hardWhere });
+    pool = await prisma.interviewQuestion.findMany({ where: excludeIds.length ? { ...hardWhere, id: { notIn: excludeIds } } : hardWhere });
+    if (pool.length === 0) pool = await prisma.interviewQuestion.findMany({ where: hardWhere });
     usedFallback = true;
   }
-  return { items: shuffle(pool).slice(0, count || SESSION_QUESTION_COUNT[category] || 6), usedFallback };
+
+  const n = count || SESSION_QUESTION_COUNT[category] || 6;
+  const categoryWeights = options.companyProfile?.categoryWeights?.[category];
+  const items = categoryWeights ? weightedSample(pool, categoryWeights, n) : shuffle(pool).slice(0, n);
+  return { items, usedFallback };
 }
 
 // =========================== Student: dashboard summary ===========================
@@ -237,8 +300,9 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       sessionData = { ...sessionData, isResumeBased: true, category: null };
     } else if (isMock) {
       const difficultyCfg = { difficulty: config?.difficulty };
+      const opts = { excludeStudentId: req.user.id };
       const [hr, tech, coding] = await Promise.all([
-        pickQuestions("HR", difficultyCfg, 3), pickQuestions("TECHNICAL", difficultyCfg, 3), pickQuestions("CODING", difficultyCfg, 2),
+        pickQuestions("HR", difficultyCfg, 3, opts), pickQuestions("TECHNICAL", difficultyCfg, 3, opts), pickQuestions("CODING", difficultyCfg, 2, opts),
       ]);
       questions = [...hr.items, ...tech.items, ...coding.items];
       if (questions.length === 0) {
@@ -247,29 +311,63 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       }
       sessionData = { ...sessionData, isMock: true, category: null, config: { ...config, durationMin: MOCK_DURATION_MIN } };
     } else if (isCompanyRound) {
-      // "Student selects TCS -> HR + Technical + Coding + Managerial questions, all scoped to
-      // that company (falling back to the general pool per-category if that company doesn't
-      // have questions in a given category yet — see pickQuestions)."
+      // Company Round has two shapes: (1) a company with an active CompanyInterviewProfile.
+      // roundPlan gets the real, sequential, elimination-gated experience below — only the first
+      // round's questions are created now, later rounds are created one at a time by
+      // POST /sessions/:id/rounds/advance as the student clears each one; (2) every other company
+      // (no profile, or a profile with no roundPlan configured) keeps today's exact flat
+      // HR(2)+Technical(3)+Coding(2)+Managerial(2) composition, unchanged.
+      const companyProfile = await prisma.companyInterviewProfile.findFirst({
+        where: { company: { equals: config.company, mode: "insensitive" }, isActive: true },
+      });
+      const roundPlan = Array.isArray(companyProfile?.roundPlan) ? companyProfile.roundPlan : null;
       const roundCfg = { company: config.company, difficulty: config?.difficulty, experienceLevel: config?.experienceLevel };
-      const [hr, tech, coding, managerial] = await Promise.all([
-        pickQuestions("HR", roundCfg, 2), pickQuestions("TECHNICAL", roundCfg, 3),
-        pickQuestions("CODING", roundCfg, 2), pickQuestions("MANAGERIAL", roundCfg, 2),
-      ]);
-      questions = [...hr.items, ...tech.items, ...coding.items, ...managerial.items];
-      if (questions.length === 0) {
-        console.warn(`[interview] Company Round has zero questions available — company=${config.company}, experienceLevel=${config?.experienceLevel}, difficulty=${config?.difficulty}, studentId=${req.user.id}`);
-        return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+      const opts = { excludeStudentId: req.user.id, companyProfile };
+
+      if (roundPlan && roundPlan.length > 0) {
+        const round1 = roundPlan[0];
+        const picked = await pickQuestions(round1.category, roundCfg, round1.count, opts);
+        questions = picked.items;
+        if (questions.length === 0) {
+          console.warn(`[interview] Company Round (round-elimination) has zero questions for round 1 — company=${config.company}, category=${round1.category}, studentId=${req.user.id}`);
+          return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+        }
+        const roundResults = roundPlan.map((r, i) => ({
+          roundNumber: r.roundNumber, category: r.category, label: r.label || CATEGORY_LABEL[r.category] || r.category,
+          status: i === 0 ? "IN_PROGRESS" : "NOT_REACHED",
+          questionIds: i === 0 ? questions.map((q) => q.id) : [],
+          answeredCount: 0, score: null,
+        }));
+        sessionData = {
+          ...sessionData, isCompanyRound: true, category: null,
+          config: { ...config, durationMin: COMPANY_ROUND_DURATION_MIN, generalFallbackCategories: picked.usedFallback ? [round1.category] : [] },
+          roundPlanSnapshot: roundPlan, currentRoundNumber: 1, roundResults,
+        };
+      } else {
+        // "Student selects TCS -> HR + Technical + Coding + Managerial questions, all scoped to
+        // that company (falling back to the general pool per-category if that company doesn't
+        // have questions in a given category yet — see pickQuestions)."
+        const [hr, tech, coding, managerial] = await Promise.all([
+          pickQuestions("HR", roundCfg, 2, opts), pickQuestions("TECHNICAL", roundCfg, 3, opts),
+          pickQuestions("CODING", roundCfg, 2, opts), pickQuestions("MANAGERIAL", roundCfg, 2, opts),
+        ]);
+        questions = [...hr.items, ...tech.items, ...coding.items, ...managerial.items];
+        if (questions.length === 0) {
+          console.warn(`[interview] Company Round has zero questions available — company=${config.company}, experienceLevel=${config?.experienceLevel}, difficulty=${config?.difficulty}, studentId=${req.user.id}`);
+          return res.status(400).json({ error: "No interview questions available yet — ask an admin to add some." });
+        }
+        const generalFallbackCategories = [
+          hr.usedFallback && "HR", tech.usedFallback && "TECHNICAL", coding.usedFallback && "CODING", managerial.usedFallback && "MANAGERIAL",
+        ].filter(Boolean);
+        sessionData = { ...sessionData, isCompanyRound: true, category: null, config: { ...config, durationMin: COMPANY_ROUND_DURATION_MIN, generalFallbackCategories } };
       }
-      const generalFallbackCategories = [
-        hr.usedFallback && "HR", tech.usedFallback && "TECHNICAL", coding.usedFallback && "CODING", managerial.usedFallback && "MANAGERIAL",
-      ].filter(Boolean);
-      sessionData = { ...sessionData, isCompanyRound: true, category: null, config: { ...config, durationMin: COMPANY_ROUND_DURATION_MIN, generalFallbackCategories } };
     } else if (talentPoolConfigId) {
       const poolCfg = talentPoolConfig.config || {};
       const roundCfg = { company: poolCfg.company, difficulty: poolCfg.difficulty, experienceLevel: poolCfg.experienceLevel };
+      const opts = { excludeStudentId: req.user.id };
       const [hr, tech, coding, managerial] = await Promise.all([
-        pickQuestions("HR", roundCfg, 2), pickQuestions("TECHNICAL", roundCfg, 3),
-        pickQuestions("CODING", roundCfg, 2), pickQuestions("MANAGERIAL", roundCfg, 2),
+        pickQuestions("HR", roundCfg, 2, opts), pickQuestions("TECHNICAL", roundCfg, 3, opts),
+        pickQuestions("CODING", roundCfg, 2, opts), pickQuestions("MANAGERIAL", roundCfg, 2, opts),
       ]);
       questions = [...hr.items, ...tech.items, ...coding.items, ...managerial.items];
       if (questions.length === 0) {
@@ -281,7 +379,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       ].filter(Boolean);
       sessionData = { ...sessionData, category: null, talentPoolConfigId, config: { ...poolCfg, durationMin: poolCfg.durationMin || COMPANY_ROUND_DURATION_MIN, generalFallbackCategories } };
     } else {
-      const result = await pickQuestions(category, config || {});
+      const result = await pickQuestions(category, config || {}, undefined, { excludeStudentId: req.user.id });
       questions = result.items;
       if (questions.length === 0) {
         console.warn(`[interview] No questions available — category=${category}, config=${JSON.stringify(config || {})}, studentId=${req.user.id}`);
@@ -362,9 +460,14 @@ router.get("/sessions/:id/ai-insights", authenticate, requireRole("STUDENT"), ai
       return `Q: ${q?.prompt || "?"}\nA: ${answer}\nScore: ${a.score}/100`;
     }).join("\n\n");
 
+    const roundContext = session.eliminatedAtRound
+      ? ` The candidate was eliminated at round ${session.eliminatedAtRound} of a ${Array.isArray(session.roundPlanSnapshot) ? session.roundPlanSnapshot.length : "?"}-round company-style interview (company readiness score: ${session.report.companyReadinessScore ?? "n/a"}%).`
+      : Array.isArray(session.roundPlanSnapshot) && session.roundPlanSnapshot.length > 0
+        ? ` The candidate cleared all ${session.roundPlanSnapshot.length} rounds of a company-style interview (company readiness score: ${session.report.companyReadinessScore ?? "n/a"}%).`
+        : "";
     const insights = await askClaudeJson({
       system: "You are an interview coach analyzing a completed mock interview transcript. Be specific — reference the candidate's actual answers, not generic advice. Return only JSON matching the requested schema.",
-      prompt: `Overall score: ${session.report.overallScore}%. Transcript:\n\n${transcript.slice(0, 8000)}\n\nReturn JSON exactly shaped: {"narrative": string (3-4 sentence performance summary), "recommendations": string[] (3-5 specific, actionable next steps referencing the actual answers)}.`,
+      prompt: `Overall score: ${session.report.overallScore}%.${roundContext} Transcript:\n\n${transcript.slice(0, 8000)}\n\nReturn JSON exactly shaped: {"narrative": string (3-4 sentence performance summary), "recommendations": string[] (3-5 specific, actionable next steps referencing the actual answers)}.`,
       maxTokens: 1000,
       temperature: 0.4,
     });
@@ -545,6 +648,81 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), async 
   }
 });
 
+// STUDENT: called when the frontend has walked the student through every question in the
+// session's current round — advances to the next round if the round's score clears its
+// eliminationThreshold, or ends the session early (finalizes with whatever exists; later rounds
+// stay NOT_REACHED and never get their questions created) otherwise. The server is the sole
+// authority on scoring here — a question's score was already locked in by POST /sessions/:id/
+// answer at submit time, this route only aggregates what's already stored, never trusts a client
+// claim about how the student did. Like the rest of this session flow (a student can already
+// submit a whole interview with every question skipped), this does not hard-block on incomplete
+// answers — an unanswered question simply scores 0 toward the round average, same as everywhere
+// else in this file.
+router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
+    if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
+    if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    const roundPlan = Array.isArray(session.roundPlanSnapshot) ? session.roundPlanSnapshot : null;
+    if (!roundPlan) return res.status(400).json({ error: "This session has no round structure" });
+
+    const roundResults = Array.isArray(session.roundResults) ? [...session.roundResults] : [];
+    const idx = session.currentRoundNumber - 1;
+    const currentRound = roundResults[idx];
+    if (!currentRound || currentRound.status !== "IN_PROGRESS") {
+      return res.status(400).json({ error: "No round is currently in progress for this session" });
+    }
+
+    const answers = await prisma.interviewAnswer.findMany({ where: { sessionId: session.id, questionId: { in: currentRound.questionIds } } });
+    const answered = answers.filter((a) => !a.skipped);
+    const roundScore = answered.length > 0 ? Math.round(answered.reduce((s, a) => s + a.score, 0) / answered.length) : 0;
+    const threshold = roundPlan[idx]?.eliminationThreshold;
+    const passed = threshold == null || roundScore >= threshold;
+
+    roundResults[idx] = { ...currentRound, status: passed ? "PASSED" : "ELIMINATED", score: roundScore, answeredCount: answered.length };
+
+    if (!passed) {
+      for (let i = idx + 1; i < roundResults.length; i++) roundResults[i] = { ...roundResults[i], status: "NOT_REACHED" };
+      await prisma.interviewSession.update({ where: { id: session.id }, data: { roundResults, eliminatedAtRound: session.currentRoundNumber } });
+      const { session: updated, report } = await finalizeSession({ ...session, roundResults, eliminatedAtRound: session.currentRoundNumber });
+      return res.json({ eliminated: true, completed: true, session: updated, report });
+    }
+
+    const nextIdx = idx + 1;
+    if (nextIdx >= roundPlan.length) {
+      await prisma.interviewSession.update({ where: { id: session.id }, data: { roundResults } });
+      const { session: updated, report } = await finalizeSession({ ...session, roundResults });
+      return res.json({ eliminated: false, completed: true, session: updated, report });
+    }
+
+    const nextRound = roundPlan[nextIdx];
+    const companyProfile = await prisma.companyInterviewProfile.findFirst({
+      where: { company: { equals: session.config?.company, mode: "insensitive" }, isActive: true },
+    });
+    const roundCfg = { company: session.config?.company, difficulty: session.config?.difficulty, experienceLevel: session.config?.experienceLevel };
+    const picked = await pickQuestions(nextRound.category, roundCfg, nextRound.count, { excludeStudentId: req.user.id, companyProfile });
+    if (picked.items.length === 0) {
+      // No questions available for the next round — end the session gracefully rather than
+      // getting the student stuck on a round that can never start.
+      for (let i = nextIdx; i < roundResults.length; i++) roundResults[i] = { ...roundResults[i], status: "NOT_REACHED" };
+      await prisma.interviewSession.update({ where: { id: session.id }, data: { roundResults } });
+      const { session: updated, report } = await finalizeSession({ ...session, roundResults });
+      return res.json({ eliminated: false, completed: true, session: updated, report, note: "No further round questions were available." });
+    }
+
+    await prisma.interviewAnswer.createMany({ data: picked.items.map((q) => ({ sessionId: session.id, questionId: q.id, skipped: true })) });
+    roundResults[nextIdx] = { ...roundResults[nextIdx], status: "IN_PROGRESS", questionIds: picked.items.map((q) => q.id) };
+    const updatedSession = await prisma.interviewSession.update({
+      where: { id: session.id }, data: { currentRoundNumber: nextRound.roundNumber, roundResults },
+    });
+
+    res.json({ eliminated: false, completed: false, session: updatedSession, nextRoundQuestions: picked.items.map(sanitizeQuestion) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to advance to the next round" });
+  }
+});
+
 // Shared by the normal finalize flow and the proctoring-violation auto-terminate path — a
 // terminated session still gets a real report built from whatever was genuinely answered before
 // termination (partial credit), not an empty/blank one.
@@ -552,7 +730,9 @@ async function finalizeSession(session, { status = "COMPLETED", terminationReaso
   const answers = await prisma.interviewAnswer.findMany({ where: { sessionId: session.id } });
   const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
   const answersWithQuestions = answers.map((a) => ({ ...a, question: questions.find((q) => q.id === a.questionId) || {} }));
-  const built = buildInterviewReport(answersWithQuestions);
+  const built = buildInterviewReport(answersWithQuestions, {
+    roundPlanSnapshot: session.roundPlanSnapshot, eliminatedAtRound: session.eliminatedAtRound, durationMin: session.config?.durationMin,
+  });
 
   const [updated, report] = await prisma.$transaction([
     prisma.interviewSession.update({ where: { id: session.id }, data: { status, submittedAt: new Date(), terminationReason } }),

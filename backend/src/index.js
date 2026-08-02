@@ -170,6 +170,9 @@ startAiRefreshScheduler();
 const { startTalentPoolReminderScheduler } = require("./utils/talentPoolReminderScheduler");
 startTalentPoolReminderScheduler();
 
+const { startChallengeScheduler } = require("./utils/challengeScheduler");
+startChallengeScheduler();
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`CodeArena API running on port ${PORT}`);

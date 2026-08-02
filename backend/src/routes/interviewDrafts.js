@@ -23,9 +23,9 @@ const VALID_CATEGORIES = ["HR", "TECHNICAL", "CODING", "APTITUDE", "SYSTEM_DESIG
 
 router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN", "STAFF"), draftGenLimiter, async (req, res) => {
   try {
-    const { category, company, count, difficulty, packageBand, experienceLevel } = req.body;
+    const { category, company, count, difficulty, packageBand, experienceLevel, topicHint } = req.body;
     if (!VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: "Invalid category" });
-    const rows = await generateQuestionDrafts({ category, company: company || null, count, difficulty, packageBand, experienceLevel });
+    const rows = await generateQuestionDrafts({ category, company: company || null, count, difficulty, packageBand, experienceLevel, topicHint: topicHint || undefined });
     res.json({ created: rows.length, drafts: rows });
   } catch (err) {
     console.error(err);

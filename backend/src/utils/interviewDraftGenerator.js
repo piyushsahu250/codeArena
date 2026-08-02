@@ -35,14 +35,18 @@ const SYSTEM_PROMPT =
   "category (and, if given, at that company), based on general public knowledge, not any specific copied " +
   "source. Respond with ONLY the requested JSON, no commentary.";
 
-function buildQuestionPrompt({ category, company, difficulty, count }) {
+function buildQuestionPrompt({ category, company, difficulty, count, topicHint }) {
   const schemaHint = CATEGORY_SCHEMA_HINT[category] || CATEGORY_SCHEMA_HINT.DEFAULT;
   const companyLine = company
     ? `Style them like questions commonly associated with ${company}'s interview process for this category.`
     : "These are for the general practice pool (not tied to a specific company).";
+  // Lets an admin closing a specific coverage gap (e.g. "Amazon needs arrays/hashmap CODING
+  // questions") ask for exactly that topic instead of a generic batch — same generate-then-
+  // human-approve pipeline either way, this only shapes the prompt.
+  const topicLine = topicHint ? ` Focus specifically on these topics: ${topicHint}.` : "";
   return (
     `Generate ${count} original ${category} interview practice question(s)${difficulty ? ` at ${difficulty} difficulty` : ""}. ` +
-    `${companyLine} ${schemaHint}`
+    `${companyLine}${topicLine} ${schemaHint}`
   );
 }
 
@@ -51,11 +55,11 @@ function clampCount(count) {
   return Math.min(10, Math.max(1, Number(count) || 3));
 }
 
-async function generateQuestionDrafts({ category, company, count, difficulty, packageBand, experienceLevel, sourceRun }) {
+async function generateQuestionDrafts({ category, company, count, difficulty, packageBand, experienceLevel, sourceRun, topicHint }) {
   const n = clampCount(count);
   const draft = await askClaudeJson({
     system: SYSTEM_PROMPT,
-    prompt: buildQuestionPrompt({ category, company, difficulty, count: n }),
+    prompt: buildQuestionPrompt({ category, company, difficulty, count: n, topicHint }),
     maxTokens: category === "CODING" ? 4096 : 2048,
   });
   const questions = Array.isArray(draft?.questions) ? draft.questions : [];
