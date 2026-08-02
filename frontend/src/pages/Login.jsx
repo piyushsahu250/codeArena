@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,6 +10,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  // Set by api.js's response interceptor when it force-redirects here after a dead
+  // token/session (expired JWT, forced logout elsewhere, revoked single-session login) — tells
+  // the student/staff/admin why they landed back on this page instead of leaving them guessing.
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("expired") === "1";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -59,6 +64,12 @@ export default function Login() {
           <p style={{ color: "var(--ink-dim)", marginTop: -4, marginBottom: 24, fontSize: 14 }}>
             Use your university email to continue.
           </p>
+
+          {sessionExpired && (
+            <p style={{ color: "var(--amber-dark)", fontSize: 13, marginTop: 4, marginBottom: 8 }}>
+              Your session expired or was signed out elsewhere — please sign in again.
+            </p>
+          )}
 
           <label style={labelStyle}>Email</label>
           <input
