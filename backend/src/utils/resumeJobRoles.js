@@ -32,6 +32,17 @@ function arr(x) {
   return Array.isArray(x) ? x : [];
 }
 
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Same substring-false-positive fix as resumeAts.js's matchesKeyword — plain `.includes()` let
+// "git" match inside "digital"/"legitimate" and "api" match inside "rapid"/"capital", inflating
+// matchPercent with keywords the resume never actually demonstrated.
+function matchesKeyword(text, keyword) {
+  return new RegExp(`(?<![a-z0-9])${escapeRegExp(keyword)}(?![a-z0-9])`, "i").test(text);
+}
+
 function collectResumeText(resume) {
   const parts = [resume.summary || ""];
   for (const s of arr(resume.skills)) parts.push(s.name || "");
@@ -49,8 +60,8 @@ function analyzeForRole(resume, role) {
   if (!roleDef) return null;
 
   const text = collectResumeText(resume);
-  const presentKeywords = roleDef.keywords.filter((k) => text.includes(k));
-  const missingKeywords = roleDef.keywords.filter((k) => !text.includes(k));
+  const presentKeywords = roleDef.keywords.filter((k) => matchesKeyword(text, k));
+  const missingKeywords = roleDef.keywords.filter((k) => !matchesKeyword(text, k));
 
   const existingSkillNames = new Set(arr(resume.skills).map((s) => (s.name || "").toLowerCase()));
   const recommendedSkills = roleDef.skills.filter((s) => !existingSkillNames.has(s.toLowerCase()));
@@ -59,7 +70,7 @@ function analyzeForRole(resume, role) {
 
   const projects = arr(resume.projects).map((p) => {
     const pText = `${p.title || ""} ${p.description || ""} ${p.technologies || ""}`.toLowerCase();
-    const overlap = roleDef.keywords.filter((k) => pText.includes(k)).length;
+    const overlap = roleDef.keywords.filter((k) => matchesKeyword(pText, k)).length;
     return { title: p.title, relevance: overlap };
   }).filter((p) => p.relevance > 0).sort((a, b) => b.relevance - a.relevance);
 

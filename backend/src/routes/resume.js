@@ -10,7 +10,7 @@ const { generateResumeDocx } = require("../utils/resumeDocx");
 const { buildAutofillData } = require("../utils/resumeAutofill");
 const { parseResumeFile } = require("../utils/resumeParser");
 const { improveText } = require("../utils/resumeImprove");
-const { askClaudeJson } = require("../utils/aiClient");
+const { askClaudeJson, isConfigured: aiIsConfigured } = require("../utils/aiClient");
 const { ROLE_KEYWORDS, analyzeForRole } = require("../utils/resumeJobRoles");
 const { cached } = require("../utils/cache");
 
@@ -18,6 +18,11 @@ const router = express.Router();
 // Real, billed Claude API calls — tighter than the global per-user limiter, same rationale as
 // learning.js's hintLimiter.
 const aiReviewLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
+// Separate, more generous bucket from aiReviewLimiter — a student calling "Improve with AI" once
+// per section while editing is a much smaller/cheaper call (short text, low max_tokens) than the
+// whole-resume review, and sharing one counter across both routes would make routine per-section
+// use hit the whole-resume review's limit almost immediately.
+const improveLimiter = rateLimit({ windowMs: 60 * 1000, max: 15, keyGenerator: (req) => req.user.id });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // fullName/photoUrl/email/mobile/address are independently editable here — Resume Builder does
@@ -270,14 +275,50 @@ router.post("/me/clear-section", authenticate, requireRole("STUDENT"), async (re
   }
 });
 
-// STUDENT: rule-based rewrite suggestion for one block of text (summary / project description /
-// experience responsibilities / achievement). Returns a suggestion only — never auto-saves, so
-// the student explicitly accepts or rejects it in the editor.
-router.post("/me/improve", authenticate, requireRole("STUDENT"), (req, res) => {
+// STUDENT: rewrite suggestion for one block of text (summary / project description / experience
+// responsibilities / achievement). Returns a suggestion only — never auto-saves, so the student
+// explicitly accepts or rejects it in the editor. Uses a real Claude call when the server has
+// ANTHROPIC_API_KEY configured, falling back to the deterministic rule-based rewrite otherwise —
+// same graceful-degradation posture as every other AI feature on this platform (this endpoint
+// must keep working even when AI isn't configured, since it predates the AI integration). The
+// response's `source` field tells the frontend which path produced the suggestion so it can be
+// honest about it rather than always implying a real AI rewrite happened.
+router.post("/me/improve", authenticate, requireRole("STUDENT"), improveLimiter, async (req, res) => {
   try {
     const { text, section } = req.body;
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text is required" });
-    res.json(improveText(text, section || "general"));
+    const original = String(text).trim();
+
+    if (aiIsConfigured()) {
+      try {
+        const ai = await askClaudeJson({
+          system:
+            "You are a resume-writing coach helping a student rewrite one section of their resume to be concise, " +
+            "ATS-friendly, and impactful. Use strong action verbs and active voice. NEVER invent facts, technologies, " +
+            "companies, or metrics that are not already present in the original text — if there's no quantifiable " +
+            "outcome in the original, do not add a fake one; you may suggest the student add a real one instead. " +
+            "Return only JSON.",
+          prompt:
+            `Section: ${section || "general"}\nOriginal text:\n"""${original}"""\n\n` +
+            'Return JSON exactly shaped: {"improved": string (the rewritten text, same underlying facts, no invented content), ' +
+            '"changes": string[] (2-4 short bullet points explaining what changed and why)}.',
+          maxTokens: 500,
+          temperature: 0.4,
+        });
+        if (ai && typeof ai.improved === "string" && ai.improved.trim()) {
+          return res.json({
+            original,
+            improved: ai.improved.trim(),
+            changes: Array.isArray(ai.changes) && ai.changes.length ? ai.changes : ["Rewritten for clarity and impact."],
+            source: "ai",
+          });
+        }
+      } catch (aiErr) {
+        console.error("AI improve failed, falling back to rule-based rewrite:", aiErr.message);
+      }
+    }
+
+    res.json({ ...improveText(original, section || "general"), source: "rule-based" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to generate improvement" });

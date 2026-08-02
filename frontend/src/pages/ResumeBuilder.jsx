@@ -532,8 +532,10 @@ export default function ResumeBuilder() {
               )}
             </div>
 
-            {/* AI Review — a real Claude call, distinct from the rule-based "Improve with AI" text
-                rewriter above; augments the ATS score above rather than replacing it. */}
+            {/* AI Review — a real Claude call reviewing the whole resume at once; augments the ATS
+                score above rather than replacing it. The per-field "Improve with AI" buttons
+                elsewhere on this page also call Claude now (falling back to a deterministic
+                rule-based rewrite only when the server has no ANTHROPIC_API_KEY configured). */}
             <div className="card" style={{ padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>AI Resume Review</div>
@@ -1353,9 +1355,11 @@ function PreviewSection({ title, accent, children }) {
   );
 }
 
-// Rule-based rewrite suggestion (weak-verb replacement, grammar cleanup, quantify-impact
-// prompts) — not a real LLM call, but labeled "Improve with AI" per how this is meant to read to
-// students, consistent with how the rest of this platform handles "AI" features.
+// Calls a real Claude rewrite when the server has AI configured; the backend transparently falls
+// back to a deterministic rule-based rewrite (weak-verb replacement, grammar cleanup,
+// quantify-impact prompts) otherwise, so this button keeps working either way. `suggestion.source`
+// ("ai" | "rule-based") tells us which one actually produced the result, shown as a small note
+// rather than always implying a real AI rewrite happened.
 function ImproveButton({ text, section, onApply }) {
   const [loading, setLoading] = useState(false);
   const [suggestion, setSuggestion] = useState(null);
@@ -1391,6 +1395,11 @@ function ImproveButton({ text, section, onApply }) {
           <ul style={{ paddingLeft: 16, margin: "0 0 8px", color: "var(--ink-dim)" }}>
             {suggestion.changes.map((c, i) => <li key={i}>{c}</li>)}
           </ul>
+          {suggestion.source === "rule-based" && (
+            <div style={{ fontSize: 10, color: "var(--ink-dim)", marginBottom: 8 }}>
+              AI rewriting isn't configured on this server right now — this is a rule-based suggestion instead.
+            </div>
+          )}
           <div style={{ display: "flex", gap: 6 }}>
             <button type="button" className="btn btn-primary" style={{ fontSize: 11, padding: "3px 10px" }} onClick={accept}>Accept</button>
             <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }} onClick={() => setSuggestion(null)}>Reject</button>

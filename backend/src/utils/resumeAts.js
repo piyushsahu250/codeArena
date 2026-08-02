@@ -6,6 +6,20 @@ function arr(x) {
   return Array.isArray(x) ? x : [];
 }
 
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Plain `text.includes(keyword)` false-matches on any keyword that happens to be a substring of a
+// longer, unrelated word — "oop" inside "cooperative", "git" inside "digital"/"legitimate", "api"
+// inside "rapid"/"capital" — silently inflating the keyword/matchPercent score with credit the
+// resume never earned. `\b` alone doesn't fix this for symbol-containing keywords like "c++" or
+// "ci/cd" (a `\b` can't match between two non-word characters, e.g. "+" followed by a space), so
+// this checks for alphanumeric adjacency directly via lookaround instead of word-boundary tokens.
+function matchesKeyword(text, keyword) {
+  return new RegExp(`(?<![a-z0-9])${escapeRegExp(keyword)}(?![a-z0-9])`, "i").test(text);
+}
+
 const SECTION_DEFS = [
   { key: "personal", label: "Personal Details", check: (r) => !!(r.fullName && r.email && r.mobile) },
   { key: "summary", label: "Professional Summary", check: (r) => !!(r.summary && r.summary.trim().length >= 20) },
@@ -47,8 +61,8 @@ const STRONG_ACTION_VERBS = [
 // folds weak phrasing into "Readability" — this just surfaces exactly which strong verbs were
 // found vs which weak phrases were flagged, so the suggestion isn't a black box).
 function computeActionVerbUsage(text) {
-  const strongVerbsFound = STRONG_ACTION_VERBS.filter((v) => new RegExp(`\\b${v}\\b`, "i").test(text));
-  const weakPhrasesFound = WEAK_PHRASES.filter((p) => text.includes(p));
+  const strongVerbsFound = STRONG_ACTION_VERBS.filter((v) => matchesKeyword(text, v));
+  const weakPhrasesFound = WEAK_PHRASES.filter((p) => matchesKeyword(text, p));
   return { strongCount: strongVerbsFound.length, weakCount: weakPhrasesFound.length, strongVerbsFound, weakPhrasesFound };
 }
 
@@ -92,7 +106,7 @@ function computeReadability(resume) {
 // 15, Experience 10, Certifications 5, Keywords 15, Formatting 5, Readability 5.
 function computeAtsScore(resume) {
   const text = collectSearchableText(resume);
-  const matchedKeywords = KEYWORDS.filter((k) => text.includes(k));
+  const matchedKeywords = KEYWORDS.filter((k) => matchesKeyword(text, k));
 
   const contactScore = (() => {
     let s = resume.email && resume.mobile ? 6 : resume.email || resume.mobile ? 3 : 0;
@@ -110,11 +124,22 @@ function computeAtsScore(resume) {
   const skillsCount = arr(resume.skills).length;
   const skillsScore = Math.round((Math.min(skillsCount, 10) / 10) * 15);
 
+  // Quality-gated, not just counted — a project entry with only a bare title (no description)
+  // previously scored the same 4/4 points as a fully fleshed-out one, which let the score look
+  // "done" while the actual content was empty. Mirrors the same bar `educationOk` already applies
+  // to Education below (real, substantive content required for full credit, not just presence).
   const projects = arr(resume.projects);
-  const projectsScore = Math.min(projects.length, 3) * 4 + (projects.some((p) => p.githubUrl || p.liveUrl) ? 3 : 0);
+  const projectQualityScore = projects.slice(0, 3).reduce((sum, p) => {
+    if (p.title && p.description && p.description.trim().length >= 20) return sum + 4;
+    if (p.title || p.description) return sum + 2;
+    return sum;
+  }, 0);
+  const projectsScore = Math.min(projectQualityScore + (projects.some((p) => p.githubUrl || p.liveUrl) ? 3 : 0), 15);
 
-  const experienceCount = arr(resume.experience).length;
-  const experienceScore = Math.min(experienceCount, 2) * 5;
+  const experienceEntries = arr(resume.experience);
+  const experienceCount = experienceEntries.length;
+  const qualityExperienceCount = experienceEntries.filter((e) => e.title && e.company).length;
+  const experienceScore = Math.min(qualityExperienceCount, 2) * 5;
 
   const certCount = arr(resume.certifications).length;
   const certScore = Math.round((Math.min(certCount, 3) / 3) * 5);

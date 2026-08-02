@@ -195,7 +195,16 @@ const GITHUB_RE = /(https?:\/\/)?(www\.)?github\.com\/[a-zA-Z0-9_\-/]+/i;
 // matching this regex as if it were a domain name, and since it happened to be the first
 // non-linkedin/github URL-shaped text found anywhere in the whole resume body, it got assigned
 // as the portfolio link, corrupting the contact line with a stray "M.Tech" appended to it.
-const GENERIC_URL_RE = /(https?:\/\/)?(www\.)?[a-zA-Z0-9-]{2,}\.[a-zA-Z]{2,}(\/[^\s,;]*)?/;
+//
+// The bare-domain alternative (no http(s):// or www. prefix) excludes a handful of common
+// code/framework suffixes ("React.js", "Node.js", "Vue.js", "app.py", "styles.css", ...) via a
+// negative lookahead — without this, a completely ordinary project-description line like "Built
+// with React.js and Node.js" matched "React.js" as if it were a live-demo URL, which caused the
+// WHOLE line to be pulled out of the description in parseProjectBlock (see the `liveMatch`
+// branch there: matches are consumed per-line via `continue`, not per-substring), silently
+// erasing real content and replacing it with a bogus liveUrl. A URL with an explicit http(s):// or
+// www. prefix is always trusted regardless of its extension, since that's unambiguous.
+const GENERIC_URL_RE = /https?:\/\/[^\s,;]+|www\.[a-zA-Z0-9-]{2,}\.[a-zA-Z]{2,}(?:\/[^\s,;]*)?|[a-zA-Z0-9-]{2,}\.(?!js\b|jsx\b|ts\b|tsx\b|py\b|css\b|html?\b)[a-zA-Z]{2,}(?:\/[^\s,;]*)?/i;
 const MONTH = "jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec";
 const DATE_TOKEN = `(?:(?:${MONTH})[a-z]*\\.?\\s*)?\\d{4}|present|current`;
 const DATE_RANGE_RE = new RegExp(`(${DATE_TOKEN})\\s*(?:[-–—]|to)\\s*(${DATE_TOKEN})`, "i");
