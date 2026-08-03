@@ -46,6 +46,7 @@ export default function StudentDashboard() {
   const [gami, setGami] = useState(null);
   const [interviewSummary, setInterviewSummary] = useState(null);
   const [resumeCompletion, setResumeCompletion] = useState(null);
+  const [results, setResults] = useState(null);
   // Distinct from "still loading" — the summary cards are the one piece of this page with no
   // sane empty-state fallback (every other section already tolerates its own fetch failing
   // silently, per the individual .catch()es below), so a failure here gets its own retry UI
@@ -77,6 +78,7 @@ export default function StudentDashboard() {
     api.get("/gamification/me").then((res) => setGami(res.data)).catch(() => setGami(null));
     api.get("/interview/summary").then((res) => setInterviewSummary(res.data)).catch(() => setInterviewSummary(null));
     api.get("/resume/me").then((res) => setResumeCompletion(res.data.completion?.percent ?? 0)).catch(() => setResumeCompletion(0));
+    api.get("/results/me").then((res) => setResults(res.data)).catch(() => setResults([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -197,6 +199,28 @@ export default function StudentDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Result Management — a compact entry point to /results (the full card list lives there,
+            per this platform's established "summary here, detail on its own page" convention
+            already used for Certificates/Talent Pools/Placement), shown only once there's
+            actually something to see so it doesn't clutter the dashboard for students awaiting
+            an offline exam's results. */}
+        {results && results.length > 0 && (
+          <div className="card" style={{ padding: 20, marginTop: SECTION_GAP, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: "var(--ink-dim)", textTransform: "uppercase" }}>My Results</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginTop: 2 }}>
+                {results.length} result{results.length === 1 ? "" : "s"} published
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 4 }}>
+                Latest: {results[0].title} — {results[0].resultLabel}
+              </div>
+            </div>
+            <Link to="/results" className="btn btn-ghost" style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+              <ClipboardList size={13} /> View All
+            </Link>
           </div>
         )}
 

@@ -39,6 +39,7 @@ const placementOfferRoutes = require("./routes/placementOffers");
 const studentDocumentRoutes = require("./routes/studentDocuments");
 const talentPoolRoutes = require("./routes/talentPools");
 const notificationRoutes = require("./routes/notifications");
+const resultManagementRoutes = require("./routes/resultManagement");
 
 const app = express();
 // Render sits in front of this service behind a reverse proxy — without trusting it, req.ip
@@ -154,6 +155,7 @@ app.use("/api/placement", placementOfferRoutes);
 app.use("/api/documents", studentDocumentRoutes);
 app.use("/api/talent-pools", talentPoolRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/results", resultManagementRoutes);
 
 process.on("uncaughtException", (err) => {
   logger.error("uncaughtException", { message: err?.message, stack: err?.stack });

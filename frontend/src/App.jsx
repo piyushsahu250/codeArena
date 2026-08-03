@@ -47,6 +47,8 @@ import AttendanceReports from "./pages/AttendanceReports";
 import MyAttendance from "./pages/MyAttendance";
 import TalentPools from "./pages/TalentPools";
 import MyTalentPools from "./pages/MyTalentPools";
+import ResultManagement from "./pages/ResultManagement";
+import MyResults from "./pages/MyResults";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ForceChangePassword from "./pages/ForceChangePassword";
@@ -165,6 +167,7 @@ export default function App() {
           <Route path="/certificates" element={<Protected roles={["STUDENT"]}><MyCertificates /></Protected>} />
           <Route path="/attendance" element={<Protected roles={["STUDENT"]}><MyAttendance /></Protected>} />
           <Route path="/talent-pools" element={<Protected roles={["STUDENT"]}><MyTalentPools /></Protected>} />
+          <Route path="/results" element={<Protected roles={["STUDENT"]}><MyResults /></Protected>} />
 
           {/* Student */}
           <Route path="/profile" element={<Protected roles={["STUDENT"]}><StudentProfile /></Protected>} />
@@ -265,6 +268,7 @@ export default function App() {
           <Route path="/admin/institutes" element={<Protected roles={["ADMIN"]}><InstituteManagement /></Protected>} />
           <Route path="/admin/attendance-structure" element={<Protected roles={["ADMIN"]}><AttendanceStructure /></Protected>} />
           <Route path="/admin/talent-pools" element={<Protected roles={["ADMIN", "STAFF"]}><TalentPools /></Protected>} />
+          <Route path="/admin/results" element={<Protected roles={["ADMIN", "STAFF"]}><ResultManagement /></Protected>} />
           <Route path="/admin/email-logs" element={<Protected roles={["ADMIN"]}><EmailLogs /></Protected>} />
           <Route path="/admin/question-audit" element={<Protected roles={["ADMIN"]}><QuestionAudit /></Protected>} />
           <Route path="/admin/password-reset-history" element={<Protected roles={["ADMIN"]}><PasswordResetHistory basePath="/admin" /></Protected>} />
@@ -283,6 +287,7 @@ export default function App() {
           <Route path="/clerk/students" element={<Protected roles={["CLERK"]}><StudentSearch basePath="/clerk" /></Protected>} />
           <Route path="/clerk/students/:id" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/clerk" /></Suspense></Protected>} />
           <Route path="/clerk/companies" element={<Protected roles={["CLERK"]}><CompanyMaster /></Protected>} />
+          <Route path="/clerk/results" element={<Protected roles={["CLERK"]}><ResultManagement /></Protected>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

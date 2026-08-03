@@ -25,6 +25,7 @@ const MENU = {
       { label: "Daily Challenge", to: "/challenges/daily", icon: CalendarDays },
       { label: "Weekly Challenge", to: "/challenges/weekly", icon: CalendarRange },
       { label: "Company Tests", to: "/company-tests", icon: Briefcase },
+      { label: "My Results", to: "/results", icon: ClipboardList },
       { label: "Mock Interview", to: "/interview", icon: Mic },
       { label: "Resume Builder", to: "/resume", icon: FileText },
       { label: "Interview History", to: "/interview/history", icon: History },
@@ -38,6 +39,7 @@ const MENU = {
       { label: "Dashboard", to: "/clerk", icon: LayoutDashboard },
       { label: "Student Search", to: "/clerk/students", icon: Users },
       { label: "Company Master", to: "/clerk/companies", icon: Building },
+      { label: "Results", to: "/clerk/results", icon: ClipboardList },
     ] },
     { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
   ],
@@ -52,6 +54,7 @@ const MENU = {
     { group: "Students", items: [
       { label: "Student Search", to: "/staff/students", icon: Users },
       { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
+      { label: "Results", to: "/admin/results", icon: ClipboardList },
       { label: "Password Reset History", to: "/staff/password-reset-history", icon: History },
       { label: "Audit Log", to: "/staff/audit-log", icon: History },
       { label: "Certificates", to: "/staff/certificates", icon: Award },
@@ -91,6 +94,7 @@ const MENU = {
       { label: "Mock Interviews", to: "/staff/interviews", icon: Mic },
       { label: "AI Draft Review", to: "/staff/interview-drafts", icon: Sparkles },
       { label: "Interview Reports", to: "/staff/interview-reports", icon: ClipboardList },
+      { label: "Results", to: "/admin/results", icon: ClipboardList },
     ] },
     { group: "System", items: [
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },

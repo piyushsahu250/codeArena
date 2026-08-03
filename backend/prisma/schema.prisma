@@ -89,6 +89,7 @@ model Institute {
   talentPoolAttendanceAssignments StaffClassAssignment[] @relation("TalentPoolAttendanceInstitute")
   dailyChallenges  DailyChallenge[]
   weeklyChallenges WeeklyChallenge[]
+  resultExaminations ResultExamination[]
 }
 
 model Class {
@@ -195,6 +196,10 @@ model User {
   notifications          Notification[]
   talentPoolMemberships  TalentPoolMember[]
   createdTalentPools     TalentPool[]      @relation("TalentPoolCreator")
+
+  // Manual/offline exam results (Result Management module) — never duplicates name/roll/
+  // department here, always read live off this User + its academicGroup at render time.
+  resultEntries ResultEntry[]
 
   @@index([instituteId])
   @@index([classId])
@@ -1989,6 +1994,7 @@ model Department {
 
   divisions      Division[]
   academicGroups AcademicGroup[]
+  resultExaminationTags ResultExaminationDepartment[]
 
   @@unique([instituteId, name])
 }
@@ -2034,6 +2040,113 @@ model AcademicGroup {
   @@index([instituteId])
   @@index([departmentId])
   @@index([instituteId, batch])
+}
+
+// ===================================================================
+// Result Management — manual marksheets for offline/manually-conducted exams (placement
+// readiness tests, mock tests, internal assessments). Deliberately independent of the online
+// Test/ModuleCodingTest/Interview engines above: nothing here is timed, graded by a judge, or
+// proctored — an Admin enters marks that were determined outside the platform, and this module
+// only handles storing/publishing/presenting them as a digital marksheet. Reuses Student/
+// Institute/Department/Notification wholesale rather than duplicating any of it.
+// ===================================================================
+
+enum ResultExaminationStatus {
+  DRAFT
+  PUBLISHED
+  UNPUBLISHED
+}
+
+enum ResultEntrySource {
+  MANUAL
+  BULK_IMPORT
+}
+
+model ResultExamination {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  institute   Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String
+  batch       String? // free-text, matches AcademicGroup.batch convention — informational, not an eligibility gate
+  // Free-text list of sections (what the spec calls "Division(s)"), e.g. "A, B" — informational
+  // only, same role as `batch`. AcademicGroup.section (a plain string, not a relation) is the
+  // actual modern division field a student is scoped by, so this is deliberately NOT a relation to
+  // the legacy Division model (Department -> Division -> Class), which no current student
+  // enrollment is tied to.
+  divisions   String?
+
+  examDate    DateTime
+  // Informational only — no scheduler reads this field. "Publish Later" just means the admin
+  // records an intended date and comes back to click Publish themselves.
+  publishDate DateTime?
+
+  totalMarks     Float
+  passingMarks   Float?
+  passingPercent Float?
+  // Configurable wording so a Pass/Fail exam and a Qualified/Not Qualified exam can share the same
+  // underlying `passed` boolean on ResultEntry without this model needing a second status axis.
+  passLabel String @default("Pass")
+  failLabel String @default("Fail")
+
+  status           ResultExaminationStatus @default(DRAFT)
+  allowPdfDownload Boolean                 @default(true)
+
+  createdByAdminId String
+  createdByName    String
+  publishedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  departments ResultExaminationDepartment[]
+  entries     ResultEntry[]
+
+  @@index([instituteId])
+  @@index([instituteId, status])
+}
+
+// Purely descriptive/filter tagging on the exam (which departments it broadly covers, for
+// Search/Export/Analytics) — NOT an eligibility gate. Which students actually have a result is
+// determined entirely by which ResultEntry rows exist, the same way every other "which students
+// does this apply to" question on this platform is answered by the join-row data rather than a
+// separate access list. Mirrors TestAcademicGroup's join-table shape.
+model ResultExaminationDepartment {
+  id            String            @id @default(uuid())
+  examination   ResultExamination @relation(fields: [examinationId], references: [id], onDelete: Cascade)
+  examinationId String
+  department    Department        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  departmentId  String
+
+  @@unique([examinationId, departmentId])
+}
+
+// One row per student per examination. percentage/passed are computed at write time (on create,
+// on entry edit, and on every entry when the exam's totalMarks/passingMarks/passingPercent
+// changes) — never recalculated live on every read, the same materialized-computed-value posture
+// as Submission.score elsewhere on this platform. `grade` is a plain optional admin-entered field,
+// deliberately never auto-computed — this platform has no standing grading-scale policy to encode,
+// and fabricating one would misrepresent the institute's actual grading system.
+model ResultEntry {
+  id            String            @id @default(uuid())
+  examination   ResultExamination @relation(fields: [examinationId], references: [id], onDelete: Cascade)
+  examinationId String
+  student       User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId     String
+
+  obtainedMarks Float
+  percentage    Float
+  passed        Boolean
+  grade         String?
+
+  enteredByAdminId String
+  enteredByName    String
+  source           ResultEntrySource @default(MANUAL)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([examinationId, studentId])
+  @@index([studentId])
+  @@index([examinationId])
 }
 
 // Admin-managed: which single staff member owns attendance for a division (Class). One division =

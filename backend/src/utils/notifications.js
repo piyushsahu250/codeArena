@@ -101,4 +101,22 @@ async function notifyResultsPublished(prisma, student, pool, testTitle) {
   ]);
 }
 
-module.exports = { notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished };
+// Result Management module — a published manual/offline exam result. Same shape as
+// notifyResultsPublished (Talent Pool) above, kept as its own function since the two features are
+// otherwise unrelated and a shared function would need to branch on which link/wording to use.
+async function notifyResultPublished(prisma, student, examination) {
+  const link = "/results";
+  await Promise.all([
+    notify(prisma, { recipientId: student.id, type: "RESULT_PUBLISHED", message: `Result published for "${examination.title}"`, link }),
+    emailStudent(
+      prisma, student, `Result published: "${examination.title}"`,
+      `<p>Hi ${student.name},</p><p>Your result for <strong>${examination.title}</strong> is now available on your dashboard.</p><p><a href="${FRONTEND_URL}${link}">View your Results</a></p>`,
+      "RESULT_PUBLISHED"
+    ),
+  ]);
+}
+
+module.exports = {
+  notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished,
+  notifyResultPublished,
+};
