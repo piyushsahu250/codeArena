@@ -79,19 +79,29 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       userData.name = `${first} ${last}`;
     }
 
+    // Format-validate personalEmail/pincode/dob only when the student is actually changing that
+    // field — these three fields went unvalidated for a long time, so plenty of already-saved
+    // profiles have a value that wouldn't pass today's stricter check. Since every save on this
+    // tab resubmits the whole form (not just the field the student touched), validating an
+    // untouched legacy value would permanently block that student from saving anything at all on
+    // this tab. Comparing against the currently-stored (decrypted) value keeps validation strict
+    // for genuinely new input while never punishing someone for data saved before this existed.
+    const existingProfileForCompare = decryptProfile(await prisma.studentProfile.findUnique({ where: { studentId: req.user.id } }));
+
     const profileData = {};
     for (const key of STUDENT_PROFILE_FIELDS) {
       if (rest[key] !== undefined) profileData[key] = rest[key] || null;
     }
-    if (profileData.personalEmail && !EMAIL_RE.test(profileData.personalEmail)) {
+    if (profileData.personalEmail && profileData.personalEmail !== existingProfileForCompare?.personalEmail && !EMAIL_RE.test(profileData.personalEmail)) {
       return res.status(400).json({ error: "Enter a valid personal email address" });
     }
-    if (profileData.pincode && !PINCODE_RE.test(profileData.pincode)) {
+    if (profileData.pincode && profileData.pincode !== existingProfileForCompare?.pincode && !PINCODE_RE.test(profileData.pincode)) {
       return res.status(400).json({ error: "Enter a valid pincode" });
     }
     if (profileData.dob) {
       const dob = new Date(profileData.dob);
-      if (Number.isNaN(dob.getTime()) || dob.getTime() >= Date.now()) {
+      const dobChanged = !existingProfileForCompare?.dob || dob.getTime() !== new Date(existingProfileForCompare.dob).getTime();
+      if (dobChanged && (Number.isNaN(dob.getTime()) || dob.getTime() >= Date.now())) {
         return res.status(400).json({ error: "Enter a valid date of birth" });
       }
       profileData.dob = dob;
