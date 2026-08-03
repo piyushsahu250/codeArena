@@ -25,7 +25,7 @@ const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 const SELECT_FIELDS = {
   id: true, name: true, email: true, role: true, rollNumber: true, registrationNumber: true, department: true,
   mobile: true, gender: true, program: true, batchYear: true, section: true, isActive: true, profilePhotoUrl: true, createdAt: true,
-  mustChangePassword: true,
+  mustChangePassword: true, accountStatus: true, employeeId: true, designation: true, lastLoginAt: true,
   institute: { select: { id: true, name: true } },
   class: { select: { id: true, name: true, batchYear: true } },
   academicGroup: { select: { id: true, batch: true, section: true, department: { select: { id: true, name: true } } } },
@@ -192,7 +192,7 @@ router.delete("/me/sessions/:sessionId", authenticate, async (req, res) => {
 
     await prisma.loginSession.update({ where: { id: session.id }, data: { isActive: false, logoutAt: new Date() } });
     cache.invalidate(`session-active:${session.token}`);
-    await logAudit({ req, action: AUDIT_ACTIONS.SESSION_REVOKED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: req.user.role === "STUDENT" ? req.user.id : null, details: { revokedSessionId: session.id, device: `${session.browser} on ${session.os}` } });
+    await logAudit({ req, action: AUDIT_ACTIONS.SESSION_REVOKED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, studentId: req.user.id, details: { revokedSessionId: session.id, device: `${session.browser} on ${session.os}` } });
     res.json({ message: "Session signed out" });
   } catch (err) {
     console.error(err);
@@ -220,7 +220,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
   try {
     const {
       name, email, role, rollNumber, registrationNumber, department, mobile, gender, program,
-      batchYear, section, instituteId,
+      batchYear, section, instituteId, employeeId, designation,
     } = req.body;
     if (!name || !email || !role) {
       return res.status(400).json({ error: "name, email, and role are required" });
@@ -259,6 +259,10 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
       const dupRoll = await prisma.user.findFirst({ where: { instituteId, rollNumber: String(rollNumber).trim() } });
       if (dupRoll) return res.status(409).json({ error: `Roll number "${rollNumber}" is already in use at ${institute.name}` });
     }
+    if (String(employeeId || "").trim()) {
+      const dupEmployee = await prisma.user.findFirst({ where: { instituteId, employeeId: String(employeeId).trim() } });
+      if (dupEmployee) return res.status(409).json({ error: `Employee ID "${employeeId}" is already in use at ${institute.name}` });
+    }
 
     const generatedPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
@@ -266,6 +270,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
       data: {
         name, email, passwordHash, role, rollNumber, registrationNumber, department, mobile, gender,
         program, batchYear, section, instituteId, academicGroupId: academicGroup?.id || null, mustChangePassword: true,
+        employeeId: employeeId ? String(employeeId).trim() : null, designation: designation ? String(designation).trim() : null,
       },
       select: SELECT_FIELDS,
     });
@@ -335,7 +340,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
 // record of who edited what and when.
 const EDITABLE_FIELDS = [
   "name", "email", "mobile", "gender", "rollNumber", "registrationNumber", "department", "program",
-  "batchYear", "section", "instituteId", "isActive", "profilePhotoUrl",
+  "batchYear", "section", "instituteId", "isActive", "profilePhotoUrl", "employeeId", "designation",
 ];
 router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
@@ -377,6 +382,16 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
       }
       data.rollNumber = rollNumber;
     }
+    // Same NULL-tolerant per-institute uniqueness as rollNumber above, for Staff/Clerk employee IDs.
+    if (data.employeeId !== undefined && String(data.employeeId || "").trim()) {
+      const employeeId = String(data.employeeId).trim();
+      const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
+      if (employeeId !== existing.employeeId || targetInstituteId !== existing.instituteId) {
+        const dupEmployee = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, employeeId, id: { not: existing.id } } });
+        if (dupEmployee) return res.status(409).json({ error: "That employee ID is already in use by another account at this institute" });
+      }
+      data.employeeId = employeeId;
+    }
     if (data.instituteId) {
       const institute = await prisma.institute.findUnique({ where: { id: data.instituteId } });
       if (!institute) return res.status(404).json({ error: "Institute not found" });
@@ -400,7 +415,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
       prisma.user.update({ where: { id: existing.id }, data, select: SELECT_FIELDS }),
       prisma.auditLog.create({
         data: {
-          action: "STUDENT_PROFILE_UPDATED",
+          action: existing.role === "STUDENT" ? "STUDENT_PROFILE_UPDATED" : "USER_PROFILE_UPDATED",
           adminId: req.user.id,
           adminName: admin?.name || req.user.email,
           details: {
@@ -986,7 +1001,14 @@ router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "STAFF"), 
       return res.status(403).json({ error: "You can only reset passwords for students under your own institute" });
     }
 
-    const newPassword = generateTempPassword();
+    let newPassword;
+    if (req.body.customPassword) {
+      newPassword = String(req.body.customPassword).trim();
+      const complexityError = validatePasswordComplexity(newPassword);
+      if (complexityError) return res.status(400).json({ error: complexityError });
+    } else {
+      newPassword = generateTempPassword();
+    }
     const passwordHash = await bcrypt.hash(newPassword, 10);
     // Hash write + passwordChangedAt/PasswordHistory write must be atomic — see auth.js's
     // reset-password route for why.

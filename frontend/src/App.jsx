@@ -48,6 +48,8 @@ import MyAttendance from "./pages/MyAttendance";
 import TalentPools from "./pages/TalentPools";
 import MyTalentPools from "./pages/MyTalentPools";
 import ResultManagement from "./pages/ResultManagement";
+import StaffClerkManagement from "./pages/StaffClerkManagement";
+import StaffClerkProfile from "./pages/StaffClerkProfile";
 import MyResults from "./pages/MyResults";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -279,6 +281,8 @@ export default function App() {
           <Route path="/admin/monitoring" element={<Protected roles={["ADMIN"]}><SystemMonitoring /></Protected>} />
           <Route path="/admin/students" element={<Protected roles={["ADMIN"]}><StudentSearch basePath="/admin" /></Protected>} />
           <Route path="/admin/students/:id" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/admin" /></Suspense></Protected>} />
+          <Route path="/admin/staff-clerk" element={<Protected roles={["ADMIN"]}><StaffClerkManagement /></Protected>} />
+          <Route path="/admin/staff-clerk/:id" element={<Protected roles={["ADMIN"]}><StaffClerkProfile /></Protected>} />
           <Route path="/admin/companies" element={<Protected roles={["ADMIN"]}><CompanyMaster /></Protected>} />
 
           {/* Placement Clerk — always institute-scoped, Placement Cell operations only (no

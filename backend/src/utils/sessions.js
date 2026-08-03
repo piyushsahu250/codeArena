@@ -29,9 +29,12 @@ async function createSession({ user, req, singleSessionOnly }) {
   }
 
   const { browser, os, device } = parseDevice(req.headers["user-agent"]);
-  await prisma.loginSession.create({
-    data: { userId: user.id, token: jti, ip: req.ip || null, device, browser, os },
-  });
+  await prisma.$transaction([
+    prisma.loginSession.create({
+      data: { userId: user.id, token: jti, ip: req.ip || null, device, browser, os },
+    }),
+    prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }),
+  ]);
 
   return token;
 }

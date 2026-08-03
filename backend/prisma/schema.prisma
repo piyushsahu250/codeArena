@@ -20,6 +20,18 @@ enum Role {
   CLERK
 }
 
+// Orthogonal to `Role` — an account's disciplinary/access state, kept in sync with the older
+// `isActive` boolean (isActive = accountStatus === "ACTIVE") so every existing isActive check
+// platform-wide (login gate, Student flows, etc.) needs zero changes. Only the Staff & Clerk
+// Management Dashboard exposes LOCKED/SUSPENDED transitions; Student account management still
+// only ever toggles between ACTIVE/INACTIVE via the existing isActive field.
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+  SUSPENDED
+}
+
 enum Difficulty {
   EASY
   MEDIUM
@@ -139,6 +151,15 @@ model User {
   passwordChangedAt  DateTime? // drives per-institute password-expiry enforcement
   createdAt    DateTime @default(now())
 
+  // Staff & Clerk Management Dashboard fields — see AccountStatus's own comment for how it relates
+  // to isActive. employeeId/designation are admin-editable free text, mirroring `department`.
+  accountStatus AccountStatus @default(ACTIVE)
+  employeeId    String?
+  designation   String?
+  lastLoginAt   DateTime? // denormalized from LoginSession, written by createSession() — avoids a
+                          // per-row join/subquery when listing/filtering/sorting thousands of
+                          // accounts by last-login date.
+
   institute   Institute? @relation(fields: [instituteId], references: [id])
   instituteId String?
   class       Class?     @relation(fields: [classId], references: [id])
@@ -206,12 +227,16 @@ model User {
   @@index([academicGroupId])
   @@index([role])
   @@index([department])
+  @@index([role, instituteId])
+  @@index([accountStatus])
   // Roll numbers are only meaningful per-institute (mirrors Class's own
   // @@unique([instituteId, name, batchYear])) — a NULL in either column never conflicts with
   // anything under standard Postgres unique-constraint semantics, so this only ever constrains
   // rows that actually have both an institute and a roll number (i.e. real students), leaving
   // staff/admin (rollNumber: null) and legacy unscoped rows (instituteId: null) unaffected.
   @@unique([instituteId, rollNumber])
+  // Same NULL-tolerant semantics as rollNumber above, for Staff/Clerk employee IDs.
+  @@unique([instituteId, employeeId])
 }
 
 model Test {

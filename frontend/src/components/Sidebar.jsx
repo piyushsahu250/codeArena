@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck, Share2, UserCircle, Building, Star,
+  CalendarCheck, Share2, UserCircle, Building, Star, UserCog,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 
@@ -77,6 +77,7 @@ const MENU = {
       { label: "Academic Groups", to: "/admin/academic-groups", icon: School },
       { label: "Bulk Upload", to: "/admin/bulk-upload", icon: Upload },
       { label: "Students", to: "/admin/students", icon: Users },
+      { label: "Staff & Clerk", to: "/admin/staff-clerk", icon: UserCog },
       { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
     ] },
     { group: "Attendance", items: [

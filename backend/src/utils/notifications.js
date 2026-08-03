@@ -116,7 +116,54 @@ async function notifyResultPublished(prisma, student, examination) {
   ]);
 }
 
+// Staff & Clerk Management Dashboard — account status transitions (activate/deactivate/lock/
+// unlock/suspend). `type`/`label` are supplied by the caller (the route already computed the
+// precise transition name, e.g. LOCKED->ACTIVE = "unlocked" not "activated") rather than
+// re-deriving it here.
+async function notifyAccountStatusChanged(prisma, user, { type, label, adminName, reason }) {
+  const link = "/account";
+  const message = `Your account has been ${label} by ${adminName}${reason ? ` — reason: ${reason}` : ""}.`;
+  await Promise.all([
+    notify(prisma, { recipientId: user.id, type, message, link }),
+    emailStudent(
+      prisma, user, `Your CodeArena account has been ${label}`,
+      `<p>Hi ${user.name},</p><p>${message}</p>${label === "locked" || label === "suspended" ? "<p>Contact your administrator if you believe this is a mistake.</p>" : ""}`,
+      type
+    ),
+  ]);
+}
+
+// Attendance staff-assignment scope added/removed for a Staff member — fired from
+// attendance.js's existing staff-assignments routes, which already audit-log this but never
+// notified the affected Staff member until now.
+async function notifyPermissionUpdated(prisma, user, { adminName, change }) {
+  const link = "/account";
+  const message = `Your class/attendance assignment was updated by ${adminName}: ${change}`;
+  await Promise.all([
+    notify(prisma, { recipientId: user.id, type: "PERMISSION_UPDATED", message, link }),
+    emailStudent(
+      prisma, user, "Your CodeArena assignment was updated",
+      `<p>Hi ${user.name},</p><p>${message}</p>`,
+      "PERMISSION_UPDATED"
+    ),
+  ]);
+}
+
+// Admin-initiated password reset (Staff & Clerk Management Dashboard, or the pre-existing
+// Student reset flow) — distinct from the student's own self-service PASSWORD_CHANGED email.
+async function notifyPasswordResetByAdmin(prisma, user, { adminName }) {
+  const message = `Your password was reset by ${adminName}. You'll be asked to set a new password the next time you log in.`;
+  await Promise.all([
+    notify(prisma, { recipientId: user.id, type: "PASSWORD_RESET_BY_ADMIN", message, link: "/account" }),
+    emailStudent(
+      prisma, user, "Your CodeArena password was reset",
+      `<p>Hi ${user.name},</p><p>${message}</p><p>If you didn't expect this, contact your administrator immediately.</p>`,
+      "PASSWORD_RESET_BY_ADMIN"
+    ),
+  ]);
+}
+
 module.exports = {
   notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished,
-  notifyResultPublished,
+  notifyResultPublished, notifyAccountStatusChanged, notifyPermissionUpdated, notifyPasswordResetByAdmin,
 };

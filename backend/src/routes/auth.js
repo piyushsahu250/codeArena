@@ -45,7 +45,7 @@ async function maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice) {
     to: user.email,
     name: user.name,
     emailType: "LOGIN_ALERT",
-    studentId: user.role === "STUDENT" ? user.id : null,
+    studentId: user.id,
     subject: isFirstLogin ? "Welcome — first login to your CodeArena account" : "New device signed in to your CodeArena account",
     html: wrapBranded(`
       <p>Hi ${user.name},</p>
@@ -72,7 +72,7 @@ router.post("/login", loginLimiter, async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      await logAudit({ req, action: AUDIT_ACTIONS.LOGIN_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.role === "STUDENT" ? user.id : null, instituteId: user.instituteId, details: { email } });
+      await logAudit({ req, action: AUDIT_ACTIONS.LOGIN_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { email } });
       return res.status(401).json({ error: "Incorrect password." });
     }
 
@@ -94,7 +94,7 @@ router.post("/login", loginLimiter, async (req, res) => {
       await prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: true } }).catch(() => {});
     }
 
-    await logAudit({ req, action: AUDIT_ACTIONS.LOGIN, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.role === "STUDENT" ? user.id : null, instituteId: user.instituteId, details: { isFirstLogin, isNewDevice } });
+    await logAudit({ req, action: AUDIT_ACTIONS.LOGIN, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { isFirstLogin, isNewDevice } });
     maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice); // fire-and-forget — see comment above
 
     // Student Profile Completion gating — mirrors mustChangePassword's shape exactly (a boolean

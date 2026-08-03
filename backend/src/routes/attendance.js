@@ -5,6 +5,7 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { notifyPermissionUpdated } = require("../utils/notifications");
 const { sendExport } = require("../utils/exportFile");
 const { generateAttendancePdf } = require("../utils/attendancePdf");
 const { testEligibilityWhere } = require("../utils/testEligibility");
@@ -384,6 +385,7 @@ router.post("/admin/staff-assignments", authenticate, requireRole("ADMIN"), atta
       req, action: AUDIT_ACTIONS.STAFF_CLASS_ASSIGNMENT_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: req.requesterInstituteId, details: { change: existing ? "reassigned" : "assigned", staffId, staffName: staff.name, academicGroupId, groupLabel, semester },
     });
+    notifyPermissionUpdated(prisma, staff, { adminName: req.user.name, change: `assigned to ${groupLabel}, semester ${semester}` }).catch(() => {});
 
     res.json(assignment);
   } catch (err) {
@@ -406,6 +408,10 @@ router.patch("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN"),
       data: { semester: nextSemester },
       include: { staff: { select: { id: true, name: true, email: true } }, academicGroup: { include: { department: true } } },
     });
+    if (nextSemester !== existing.semester) {
+      const groupLabel = updated.academicGroup ? `${updated.academicGroup.department.name} · ${updated.academicGroup.section} (${updated.academicGroup.batch})` : "your assignment";
+      notifyPermissionUpdated(prisma, updated.staff, { adminName: req.user.name, change: `semester updated to ${nextSemester} for ${groupLabel}` }).catch(() => {});
+    }
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -433,6 +439,7 @@ router.delete("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN")
       req, action: AUDIT_ACTIONS.STAFF_CLASS_ASSIGNMENT_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: req.requesterInstituteId, details: { change: "unassigned", staffId: assignment.staffId, staffName: assignment.staff.name, academicGroupId: assignment.academicGroupId, groupLabel },
     });
+    notifyPermissionUpdated(prisma, assignment.staff, { adminName: req.user.name, change: `removed from ${groupLabel}` }).catch(() => {});
 
     res.json({ success: true });
   } catch (err) {
