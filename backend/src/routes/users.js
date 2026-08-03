@@ -337,10 +337,16 @@ const EDITABLE_FIELDS = [
   "name", "email", "mobile", "gender", "rollNumber", "registrationNumber", "department", "program",
   "batchYear", "section", "instituteId", "isActive", "profilePhotoUrl",
 ];
-router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "User not found" });
+    if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only edit users under your own institute" });
+    }
+    if (req.requesterInstituteId && req.body.instituteId !== undefined && req.body.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You cannot move a user to a different institute" });
+    }
 
     const data = {};
     for (const field of EDITABLE_FIELDS) {
@@ -868,9 +874,12 @@ async function authorizeStudentPerformanceAccess(req, res) {
 // populating dropdowns, plus fields not exposed by the search/performance endpoints). Placed
 // after every literal-segment GET route (bulk-template, lookup/:query, search) so this catch-all
 // "/:id" can never shadow them — Express matches routes in registration order.
-router.get("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.params.id }, select: SELECT_FIELDS });
   if (!user) return res.status(404).json({ error: "User not found" });
+  if (req.requesterInstituteId && user.instituteId !== req.requesterInstituteId) {
+    return res.status(403).json({ error: "You can only view users under your own institute" });
+  }
   res.json(user);
 });
 

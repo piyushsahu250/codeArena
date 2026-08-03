@@ -40,12 +40,13 @@ const MANDATORY_FIELD_CHECKS = [
   { key: "motherContact", label: "Mother's contact number", section: "PROFILE", check: (u, p) => !!p?.motherContact && MOBILE_RE.test(p.motherContact) },
   { key: "shortDescription", label: "Short description (About)", section: "PROFILE", check: (u, p) => !!p?.shortDescription && p.shortDescription.trim().length >= 10 },
   { key: "education", label: "At least one education record", section: "RESUME", check: (u, p, resume) => Array.isArray(resume?.education) && resume.education.length > 0 },
+  { key: "documents", label: "At least one uploaded document", section: "DOCUMENTS", check: (u, p, resume, documents) => Array.isArray(documents) && documents.length > 0 },
 ];
 
-function computeMandatoryCompletion(user, studentProfile, resume) {
+function computeMandatoryCompletion(user, studentProfile, resume, documents) {
   const missingFields = [];
   for (const f of MANDATORY_FIELD_CHECKS) {
-    if (!f.check(user, studentProfile, resume)) missingFields.push({ key: f.key, label: f.label, section: f.section });
+    if (!f.check(user, studentProfile, resume, documents)) missingFields.push({ key: f.key, label: f.label, section: f.section });
   }
   const totalFields = MANDATORY_FIELD_CHECKS.length;
   const percent = Math.round(((totalFields - missingFields.length) / totalFields) * 100);

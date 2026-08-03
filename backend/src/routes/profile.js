@@ -3,7 +3,7 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
-const { computeMandatoryCompletion, MOBILE_RE } = require("../utils/studentProfileCompletion");
+const { computeMandatoryCompletion, MOBILE_RE, EMAIL_RE, PINCODE_RE } = require("../utils/studentProfileCompletion");
 const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
 const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption");
 
@@ -20,12 +20,13 @@ const STUDENT_PROFILE_FIELDS = [
 ];
 
 async function loadCompletionInputs(studentId) {
-  const [user, studentProfile, resume] = await Promise.all([
+  const [user, studentProfile, resume, documents] = await Promise.all([
     prisma.user.findUnique({ where: { id: studentId } }),
     prisma.studentProfile.findUnique({ where: { studentId } }),
     prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true } }),
+    prisma.studentDocument.findMany({ where: { studentId }, select: { id: true } }),
   ]);
-  return { user, studentProfile: decryptProfile(studentProfile), resume };
+  return { user, studentProfile: decryptProfile(studentProfile), resume, documents };
 }
 
 // STUDENT: merged view of everything the profile page renders — User's identity subset,
@@ -33,9 +34,9 @@ async function loadCompletionInputs(studentId) {
 // checklist), and the computed completion result (never trust a client-side percentage).
 router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const { user, studentProfile, resume } = await loadCompletionInputs(req.user.id);
+    const { user, studentProfile, resume, documents } = await loadCompletionInputs(req.user.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    const completion = computeMandatoryCompletion(user, studentProfile, resume);
+    const completion = computeMandatoryCompletion(user, studentProfile, resume, documents);
 
     res.json({
       user: {
@@ -82,7 +83,19 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     for (const key of STUDENT_PROFILE_FIELDS) {
       if (rest[key] !== undefined) profileData[key] = rest[key] || null;
     }
-    if (profileData.dob) profileData.dob = new Date(profileData.dob);
+    if (profileData.personalEmail && !EMAIL_RE.test(profileData.personalEmail)) {
+      return res.status(400).json({ error: "Enter a valid personal email address" });
+    }
+    if (profileData.pincode && !PINCODE_RE.test(profileData.pincode)) {
+      return res.status(400).json({ error: "Enter a valid pincode" });
+    }
+    if (profileData.dob) {
+      const dob = new Date(profileData.dob);
+      if (Number.isNaN(dob.getTime()) || dob.getTime() >= Date.now()) {
+        return res.status(400).json({ error: "Enter a valid date of birth" });
+      }
+      profileData.dob = dob;
+    }
     if (profileData.fatherContact && !MOBILE_RE.test(profileData.fatherContact)) {
       return res.status(400).json({ error: "Enter a valid father's contact number" });
     }
@@ -103,8 +116,8 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       }),
     ]);
 
-    const { user: freshUser, studentProfile, resume } = await loadCompletionInputs(req.user.id);
-    const completion = computeMandatoryCompletion(freshUser, studentProfile, resume);
+    const { user: freshUser, studentProfile, resume, documents } = await loadCompletionInputs(req.user.id);
+    const completion = computeMandatoryCompletion(freshUser, studentProfile, resume, documents);
     const wasComplete = studentProfile?.mandatoryStatus === "COMPLETED";
     await prisma.studentProfile.update({
       where: { studentId: req.user.id },
@@ -143,8 +156,8 @@ router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), 
       return res.status(404).json({ error: "Student not found" });
     }
 
-    const { user, studentProfile, resume } = await loadCompletionInputs(req.params.studentId);
-    const completion = computeMandatoryCompletion(user, studentProfile, resume);
+    const { user, studentProfile, resume, documents } = await loadCompletionInputs(req.params.studentId);
+    const completion = computeMandatoryCompletion(user, studentProfile, resume, documents);
     res.json({
       user: {
         id: user.id, name: user.name, email: user.email, mobile: user.mobile,

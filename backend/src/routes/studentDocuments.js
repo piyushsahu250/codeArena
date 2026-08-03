@@ -57,6 +57,12 @@ router.post("/", authenticate, requireRole("STUDENT"), async (req, res) => {
     if (error) return res.status(400).json({ error });
     const data = pickDocData(req.body);
     const doc = await prisma.studentDocument.create({ data: { studentId: req.user.id, ...data } });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.DOCUMENT_UPLOADED, actorId: req.user.id, actorName: req.user.name, actorRole: "STUDENT",
+      studentId: req.user.id, instituteId: student?.instituteId,
+      details: { self: true, documentId: doc.id, documentType: doc.documentType },
+    });
     res.json(doc);
   } catch (err) {
     console.error(err);
@@ -89,6 +95,12 @@ router.patch("/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
       data.rejectionReason = null;
     }
     const doc = await prisma.studentDocument.update({ where: { id: req.params.id }, data });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.DOCUMENT_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: "STUDENT",
+      studentId: req.user.id, instituteId: student?.instituteId,
+      details: { self: true, documentId: doc.id, documentType: doc.documentType, fieldsChanged: Object.keys(data) },
+    });
     res.json(doc);
   } catch (err) {
     console.error(err);
@@ -163,7 +175,7 @@ router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
     await logAudit({
       req, action: AUDIT_ACTIONS.DOCUMENT_VERIFIED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       studentId: doc.studentId, instituteId: student.instituteId,
-      details: { documentId: doc.id, documentType: doc.documentType, status },
+      details: { documentId: doc.id, documentType: doc.documentType, previousStatus: doc.verificationStatus, status, reason: status !== "VERIFIED" ? (reason || null) : null },
     });
     res.json(updated);
   } catch (err) {

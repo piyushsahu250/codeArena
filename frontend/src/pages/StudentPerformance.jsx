@@ -527,21 +527,33 @@ export default function StudentPerformance({ basePath }) {
                         <span className="badge" style={{ color: VERIFICATION_COLOR[d.verificationStatus] || "var(--rust)", fontWeight: 700 }}>
                           {d.verificationStatus === "REUPLOAD_REQUIRED" ? "Re-upload Required" : VERIFICATION_LABEL[d.verificationStatus]}
                         </span>
-                        {d.verificationStatus === "PENDING" && (
-                          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                        <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                          {d.verificationStatus === "PENDING" && (
+                            <span style={{ fontSize: 10.5, color: "var(--ink-dim)" }}>Awaiting review</span>
+                          )}
+                          {d.verificationStatus !== "PENDING" && (
+                            <span style={{ fontSize: 10.5, color: "var(--ink-dim)" }}>
+                              Change status{d.verifiedByName ? ` (last set by ${d.verifiedByName})` : ""}
+                            </span>
+                          )}
+                          {d.verificationStatus !== "VERIFIED" && (
                             <button className="btn btn-primary" style={{ fontSize: 11, padding: "3px 8px" }} disabled={verifyingDocId === d.id} onClick={() => verifyDocument(d.id, "VERIFIED")}>Verify</button>
-                            <input
-                              placeholder="Reason (for reject / re-upload)"
-                              style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--line)", width: 180 }}
-                              value={docReasonDraft[d.id] || ""}
-                              onChange={(e) => setDocReasonDraft({ ...docReasonDraft, [d.id]: e.target.value })}
-                            />
-                            <div style={{ display: "flex", gap: 4 }}>
+                          )}
+                          <input
+                            placeholder="Reason (for reject / re-upload)"
+                            style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--line)", width: 180 }}
+                            value={docReasonDraft[d.id] || ""}
+                            onChange={(e) => setDocReasonDraft({ ...docReasonDraft, [d.id]: e.target.value })}
+                          />
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {d.verificationStatus !== "REJECTED" && (
                               <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }} disabled={verifyingDocId === d.id} onClick={() => verifyDocument(d.id, "REJECTED")}>Reject</button>
+                            )}
+                            {d.verificationStatus !== "REUPLOAD_REQUIRED" && (
                               <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} disabled={verifyingDocId === d.id} onClick={() => verifyDocument(d.id, "REUPLOAD_REQUIRED")}>Request Re-upload</button>
-                            </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                         {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
                           <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 200 }}>{d.rejectionReason}</p>
                         )}

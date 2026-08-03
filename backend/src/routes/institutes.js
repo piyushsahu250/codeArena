@@ -226,17 +226,30 @@ router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "
     }
 
     const studentIds = students.map((s) => s.id);
-    const [profiles, resumes] = await Promise.all([
-      prisma.studentProfile.findMany({ where: { studentId: { in: studentIds } } }),
-      prisma.resume.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, education: true, fullName: true, email: true } }),
+    // Only select the columns computeMandatoryCompletion actually reads — this route can run over
+    // an institute's entire student body in one request, so pulling full StudentProfile rows
+    // (including every encrypted PII column) and full Resume rows here is wasted memory at scale.
+    const [profiles, resumes, documentCounts] = await Promise.all([
+      prisma.studentProfile.findMany({
+        where: { studentId: { in: studentIds } },
+        select: {
+          studentId: true, personalEmail: true, dob: true, address: true, state: true, district: true,
+          pincode: true, fatherName: true, fatherContact: true, motherName: true, motherContact: true, shortDescription: true,
+        },
+      }),
+      prisma.resume.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, education: true } }),
+      prisma.studentDocument.groupBy({ by: ["studentId"], where: { studentId: { in: studentIds } } }),
     ]);
     const profileByStudent = new Map(profiles.map((p) => [p.studentId, decryptProfile(p)]));
     const resumeByStudent = new Map(resumes.map((r) => [r.studentId, r]));
+    const documentsByStudent = new Map(documentCounts.map((d) => [d.studentId, [1]])); // presence-only stand-in, length>0 is all the check needs
 
     let completed = 0;
     const pending = [];
     for (const student of students) {
-      const completion = computeMandatoryCompletion(student, profileByStudent.get(student.id), resumeByStudent.get(student.id));
+      const completion = computeMandatoryCompletion(
+        student, profileByStudent.get(student.id), resumeByStudent.get(student.id), documentsByStudent.get(student.id),
+      );
       if (completion.complete) {
         completed++;
       } else {
@@ -247,11 +260,15 @@ router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "
         });
       }
     }
+    pending.sort((a, b) => a.percent - b.percent);
 
+    const PENDING_LIST_CAP = 300;
     res.json({
       institute, total: students.length, completed, incomplete: students.length - completed,
       percentComplete: Math.round((completed / students.length) * 100),
-      pending: pending.sort((a, b) => a.percent - b.percent),
+      pending: pending.slice(0, PENDING_LIST_CAP),
+      pendingTotal: pending.length,
+      pendingTruncated: pending.length > PENDING_LIST_CAP,
     });
   } catch (err) {
     console.error(err);

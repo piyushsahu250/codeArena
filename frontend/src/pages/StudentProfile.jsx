@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -96,13 +96,19 @@ export default function StudentProfile() {
   const [editingEducationIndex, setEditingEducationIndex] = useState(null); // -1 = adding, N = editing, null = closed
   const [educationSaving, setEducationSaving] = useState(false);
 
+  // Unsaved-changes tracking for the three editable-form tabs (Personal, Skills, Placement) — the
+  // baseline snapshot is refreshed every time load() runs (initial mount + after every successful
+  // save), so `dirty` only ever reflects edits made since the last save.
+  const baselineRef = useRef(null);
+  const [dirty, setDirty] = useState(false);
+
   function load() {
     api.get("/resume/me").then((res) => setEducation(res.data.resume?.education || [])).catch(() => setEducation([]));
     api.get("/profile/me").then((res) => {
       setData(res.data);
       const { user: u, profile: p } = res.data;
       const [first, ...rest] = (u.name || "").split(" ");
-      setForm({
+      const nextForm = {
         firstName: first || "", lastName: rest.join(" ") || "",
         mobile: u.mobile || "", gender: u.gender || "", profilePhotoUrl: u.profilePhotoUrl || "",
         personalEmail: p?.personalEmail || "", dob: p?.dob ? p.dob.slice(0, 10) : "",
@@ -110,18 +116,44 @@ export default function StudentProfile() {
         fatherName: p?.fatherName || "", fatherContact: p?.fatherContact || "",
         motherName: p?.motherName || "", motherContact: p?.motherContact || "",
         shortDescription: p?.shortDescription || "",
-      });
-      setSkillsForm({
+      };
+      const nextSkillsForm = {
         leetcodeHandle: p?.leetcodeHandle || "", hackerrankHandle: p?.hackerrankHandle || "",
         stopstalkHandle: p?.stopstalkHandle || "", amcatId: p?.amcatId || "", cocubesId: p?.cocubesId || "",
-      });
-      setPlacementForm({
+      };
+      const nextPlacementForm = {
         placementParticipation: p?.placementParticipation || "",
         placementDeclineReason: p?.placementDeclineReason || "", placementDeclineOther: p?.placementDeclineOther || "",
-      });
+      };
+      setForm(nextForm);
+      setSkillsForm(nextSkillsForm);
+      setPlacementForm(nextPlacementForm);
+      baselineRef.current = JSON.stringify({ form: nextForm, skillsForm: nextSkillsForm, placementForm: nextPlacementForm });
+      setDirty(false);
     });
   }
   useEffect(load, []);
+
+  useEffect(() => {
+    if (baselineRef.current === null) return;
+    setDirty(JSON.stringify({ form, skillsForm, placementForm }) !== baselineRef.current);
+  }, [form, skillsForm, placementForm]);
+
+  useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty]);
+
+  function confirmDiscardIfDirty(e) {
+    if (dirty && !window.confirm("You have unsaved profile changes that will be lost. Leave this page anyway?")) {
+      e.preventDefault();
+    }
+  }
 
   // CodeArena LMS Info is read-only and system-generated — reuses the existing Dashboard
   // aggregation route rather than duplicating coding-solved/streak computation here. Deliberately
@@ -411,6 +443,12 @@ export default function StudentProfile() {
           })()}
         </div>
 
+        {dirty && (
+          <p style={{ fontSize: 12, color: "var(--amber-dark)", marginTop: 12, marginBottom: -4 }}>
+            You have unsaved changes — remember to save before leaving this page.
+          </p>
+        )}
+
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 20 }}>
           {TABS.map((t) => (
             <button key={t.key} className={tab === t.key ? "btn btn-dark" : "btn btn-ghost"} style={{ fontSize: 12.5 }} onClick={() => setTab(t.key)}>
@@ -478,7 +516,7 @@ export default function StudentProfile() {
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>
             <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, marginBottom: 10 }}>
               At least one education record (SSLC, HSC, Diploma, Degree, etc.) is required — this is part of your
-              institutional academic record. It also appears automatically in your <Link to="/resume">Resume Builder</Link>.
+              institutional academic record. It also appears automatically in your <Link to="/resume" onClick={confirmDiscardIfDirty}>Resume Builder</Link>.
             </p>
 
             <div style={{ display: "grid", gap: 8 }}>
@@ -522,7 +560,7 @@ export default function StudentProfile() {
           <form onSubmit={saveSkills} className="card" style={{ padding: 20, marginTop: 16 }}>
             <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
               Hackathons, certifications, online courses, internships, GitHub, key skills, technology stack, and languages
-              are managed in your <Link to="/resume">Resume Builder</Link> — reused here rather than duplicated. Add your
+              are managed in your <Link to="/resume" onClick={confirmDiscardIfDirty}>Resume Builder</Link> — reused here rather than duplicated. Add your
               competitive-programming and assessment handles below.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>

@@ -107,11 +107,12 @@ router.post("/login", loginLimiter, async (req, res) => {
     let profileComplete = true;
     if (user.role === "STUDENT" && user.institute?.requireProfileCompletion) {
       requireProfileCompletion = true;
-      const [studentProfile, resume] = await Promise.all([
+      const [studentProfile, resume, documents] = await Promise.all([
         prisma.studentProfile.findUnique({ where: { studentId: user.id } }),
         prisma.resume.findUnique({ where: { studentId: user.id }, select: { education: true, fullName: true, email: true } }),
+        prisma.studentDocument.findMany({ where: { studentId: user.id }, select: { id: true } }),
       ]);
-      profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume).unlocked;
+      profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume, documents).unlocked;
     }
 
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete } });
