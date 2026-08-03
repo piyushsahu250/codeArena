@@ -372,25 +372,37 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     }
     // Roll numbers are only unique within an institute (see the @@unique([instituteId,
     // rollNumber]) constraint on User) — check before saving so a raw DB constraint error never
-    // surfaces to the admin.
-    if (data.rollNumber !== undefined && String(data.rollNumber || "").trim()) {
-      const rollNumber = String(data.rollNumber).trim();
-      const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
-      if (rollNumber !== existing.rollNumber || targetInstituteId !== existing.instituteId) {
-        const dupRoll = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, rollNumber, id: { not: existing.id } } });
-        if (dupRoll) return res.status(409).json({ error: "That roll number is already in use by another account at this institute" });
+    // surfaces to the admin. Blank input must be normalized to `null`, never left as `""` — the
+    // unique constraint treats NULL as "never conflicts" but treats "" as a real, collidable
+    // value, so saving one blank-rollNumber account as "" would then 500 the very next unrelated
+    // account's save the moment it also happened to have a blank rollNumber at the same institute.
+    if (data.rollNumber !== undefined) {
+      const rollNumber = String(data.rollNumber || "").trim();
+      if (!rollNumber) {
+        data.rollNumber = null;
+      } else {
+        const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
+        if (rollNumber !== existing.rollNumber || targetInstituteId !== existing.instituteId) {
+          const dupRoll = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, rollNumber, id: { not: existing.id } } });
+          if (dupRoll) return res.status(409).json({ error: "That roll number is already in use by another account at this institute" });
+        }
+        data.rollNumber = rollNumber;
       }
-      data.rollNumber = rollNumber;
     }
-    // Same NULL-tolerant per-institute uniqueness as rollNumber above, for Staff/Clerk employee IDs.
-    if (data.employeeId !== undefined && String(data.employeeId || "").trim()) {
-      const employeeId = String(data.employeeId).trim();
-      const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
-      if (employeeId !== existing.employeeId || targetInstituteId !== existing.instituteId) {
-        const dupEmployee = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, employeeId, id: { not: existing.id } } });
-        if (dupEmployee) return res.status(409).json({ error: "That employee ID is already in use by another account at this institute" });
+    // Same NULL-tolerant per-institute uniqueness (and the same blank->null normalization) as
+    // rollNumber above, for Staff/Clerk employee IDs.
+    if (data.employeeId !== undefined) {
+      const employeeId = String(data.employeeId || "").trim();
+      if (!employeeId) {
+        data.employeeId = null;
+      } else {
+        const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
+        if (employeeId !== existing.employeeId || targetInstituteId !== existing.instituteId) {
+          const dupEmployee = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, employeeId, id: { not: existing.id } } });
+          if (dupEmployee) return res.status(409).json({ error: "That employee ID is already in use by another account at this institute" });
+        }
+        data.employeeId = employeeId;
       }
-      data.employeeId = employeeId;
     }
     if (data.instituteId) {
       const institute = await prisma.institute.findUnique({ where: { id: data.instituteId } });
@@ -439,6 +451,11 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     res.json(updated);
   } catch (err) {
     console.error(err);
+    // Safety net for any unique-constraint collision the pre-checks above didn't already catch
+    // (e.g. a race between two concurrent edits) — surfaces as a clean 409, not an opaque 500.
+    if (err.code === "P2002") {
+      return res.status(409).json({ error: `That ${Array.isArray(err.meta?.target) ? err.meta.target.join(", ") : "value"} is already in use.` });
+    }
     res.status(500).json({ error: "Failed to update user" });
   }
 });
