@@ -259,7 +259,7 @@ export default function AdminDashboard() {
           <form onSubmit={handleRollLookup} style={{ display: "flex", gap: 10 }}>
             <input
               style={{ ...inputStyle, marginTop: 0 }}
-              placeholder="Roll number, email, or student ID"
+              placeholder="Registration number (PRN), roll number, email, or student ID"
               value={rollQuery}
               onChange={(e) => setRollQuery(e.target.value)}
             />
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
 
           {lookupResult && (
             <div style={{ marginTop: 20 }}>
-              <div style={{ fontWeight: 600 }}>{lookupResult.name} <span className="mono" style={{ fontWeight: 400, color: "var(--ink-dim)", fontSize: 13 }}>· {lookupResult.rollNumber} · {lookupResult.email}</span></div>
+              <div style={{ fontWeight: 600 }}>{lookupResult.rollNumber || "—"} · {lookupResult.name} <span className="mono" style={{ fontWeight: 400, color: "var(--ink-dim)", fontSize: 13 }}>({lookupResult.registrationNumber || "PRN not set"}) · {lookupResult.email}</span></div>
               <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
                 {lookupResult.attempts.map((a, idx) => (
                   <div key={idx} className="card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, gap: 12 }}>
@@ -345,11 +345,11 @@ export default function AdminDashboard() {
 
                 {form.role === "STUDENT" && (
                   <>
-                    <label style={labelStyle}>Roll number</label>
-                    <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} />
+                    <label style={labelStyle}>Registration number (PRN)</label>
+                    <input style={inputStyle} value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="Permanent unique ID" />
 
-                    <label style={labelStyle}>Registration number (optional)</label>
-                    <input style={inputStyle} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
+                    <label style={labelStyle}>Roll number (optional)</label>
+                    <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} placeholder="Auto-filled from PRN's last 3 characters if left blank" />
 
                     <label style={labelStyle}>Mobile number</label>
                     <input style={inputStyle} required value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />

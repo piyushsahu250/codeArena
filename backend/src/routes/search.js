@@ -49,11 +49,13 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
         : {};
 
       const students = await prisma.user.findMany({
-        where: { role: "STUDENT", ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }] },
+        where: { role: "STUDENT", ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }, { registrationNumber: insensitive(q) }] },
         take: LIMIT,
       });
       const basePath = req.user.role === "ADMIN" ? "/admin" : "/staff";
-      results.push(...students.map((s) => ({ type: "Student", label: `${s.name} (${s.rollNumber || s.email})`, url: `${basePath}/students/${s.id}` })));
+      // PRN-first display per the platform's standard identifier format — Registration Number is
+      // the permanent unique identifier, Roll Number can legitimately repeat.
+      results.push(...students.map((s) => ({ type: "Student", label: `${s.name} (${s.registrationNumber || s.rollNumber || s.email})`, url: `${basePath}/students/${s.id}` })));
 
       // Staff visibility is ADMIN-only, matching Academic Groups/Institutes below — staff-account
       // management elsewhere in the app (user creation/edit) is already admin-only, so this is

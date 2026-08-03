@@ -15,8 +15,10 @@ function generateTalentPoolPdf(pool, rows, res) {
   doc.fillColor("#000");
   doc.moveDown(1);
 
-  const colX = [40, 110, 260, 380, 440, 500];
-  const headers = ["Roll No.", "Name", "Added Via", "Rank", "Score %", "Attendance %"];
+  const colX = [40, 150, 260, 380, 440, 500];
+  // Roll Number repeats across departments/institutes by design, so this pool roster leads with
+  // PRN (Registration Number) for unambiguous identification, showing Roll Number alongside it.
+  const headers = ["Roll No. (PRN)", "Name", "Added Via", "Rank", "Score %", "Attendance %"];
   doc.font("Helvetica-Bold").fontSize(9);
   headers.forEach((h, i) => doc.text(h, colX[i], doc.y, { width: (colX[i + 1] || 555) - colX[i] - 4 }));
   doc.moveDown(0.3);
@@ -27,7 +29,8 @@ function generateTalentPoolPdf(pool, rows, res) {
   for (const r of rows) {
     if (doc.y > 750) { doc.addPage({ margin: 40, size: "A4" }); doc.y = 40; }
     const y = doc.y;
-    doc.text(r.rollNumber || "—", colX[0], y, { width: colX[1] - colX[0] - 4 });
+    const rollPrn = r.registrationNumber ? `${r.rollNumber || "—"} (${r.registrationNumber})` : (r.rollNumber || "—");
+    doc.text(rollPrn, colX[0], y, { width: colX[1] - colX[0] - 4 });
     doc.text(r.name || "—", colX[1], y, { width: colX[2] - colX[1] - 4 });
     doc.text(r.addedVia || "—", colX[2], y, { width: colX[3] - colX[2] - 4 });
     doc.text(r.rank != null ? `${r.rank}/${r.totalStudents}` : "—", colX[3], y, { width: colX[4] - colX[3] - 4 });

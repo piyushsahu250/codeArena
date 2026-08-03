@@ -10,6 +10,7 @@ const { sendExport } = require("../utils/exportFile");
 const { generateAttendancePdf } = require("../utils/attendancePdf");
 const { testEligibilityWhere } = require("../utils/testEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
+const { compareRollNumbers } = require("../utils/studentIdentifiers");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -691,8 +692,7 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
       prisma.user.findMany({
         where: rosterWhereForAssignment(assignment),
         select: { id: true, name: true, rollNumber: true },
-        orderBy: { name: "asc" },
-      }),
+      }).then((rows) => rows.sort(compareRollNumbers)), // ascending Roll Number (numeric-aware); this is one division's roster, small enough to sort in JS
       plan.lectureType === "REGULAR"
         ? Promise.resolve([])
         : prisma.test.findMany({

@@ -14,6 +14,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
+const { initRollNumberFromRegistration, compareRollNumbers } = require("../utils/studentIdentifiers");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -35,6 +36,7 @@ const SELECT_FIELDS = {
 // Maps flexible spreadsheet header text -> our field names
 const FIELD_ALIASES = {
   name: ["student name", "name", "full name"],
+  registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
   rollNumber: ["roll number", "roll no", "rollno", "roll no."],
   email: ["official email id", "email", "email id", "official email"],
   mobile: ["mobile number", "mobile", "phone", "phone number"],
@@ -94,7 +96,7 @@ function buildHeaderMap(headers) {
   return map;
 }
 
-const TEMPLATE_HEADERS = ["Student Name", "Roll Number", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section"];
+const TEMPLATE_HEADERS = ["Student Name", "Registration Number (PRN)", "Roll Number", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section"];
 
 // Any authenticated user: change their own email and/or password
 router.patch("/me", authenticate, async (req, res) => {
@@ -250,14 +252,19 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ error: "Email already registered" });
 
-    // Roll numbers are only unique within an institute (see the @@unique([instituteId,
-    // rollNumber]) constraint on User) — bulk-import already enforced this, but single-account
-    // creation never checked at all, so two students could silently end up with the same roll
-    // number at the same institute if created one at a time. Checked before create rather than
-    // left to surface as a raw DB constraint error.
-    if (role === "STUDENT" && String(rollNumber || "").trim()) {
-      const dupRoll = await prisma.user.findFirst({ where: { instituteId, rollNumber: String(rollNumber).trim() } });
-      if (dupRoll) return res.status(409).json({ error: `Roll number "${rollNumber}" is already in use at ${institute.name}` });
+    // Registration Number (PRN) is the platform's sole permanent, system-wide unique student
+    // identifier (see @@unique([registrationNumber]) on User) — checked before create rather than
+    // left to surface as a raw DB constraint error. Roll Number is intentionally NOT unique
+    // (classroom number, duplicates across departments/institutes are expected by design), so it
+    // gets no such check.
+    let normalizedRollNumber = String(rollNumber || "").trim() || null;
+    let normalizedRegNumber = String(registrationNumber || "").trim() || null;
+    if (role === "STUDENT" && normalizedRegNumber) {
+      const dupReg = await prisma.user.findFirst({ where: { registrationNumber: normalizedRegNumber } });
+      if (dupReg) return res.status(409).json({ error: `Registration Number "${normalizedRegNumber}" is already registered to another account` });
+    }
+    if (role === "STUDENT" && !normalizedRollNumber && normalizedRegNumber) {
+      normalizedRollNumber = initRollNumberFromRegistration(normalizedRegNumber);
     }
     if (String(employeeId || "").trim()) {
       const dupEmployee = await prisma.user.findFirst({ where: { instituteId, employeeId: String(employeeId).trim() } });
@@ -268,7 +275,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
     const user = await prisma.user.create({
       data: {
-        name, email, passwordHash, role, rollNumber, registrationNumber, department, mobile, gender,
+        name, email, passwordHash, role, rollNumber: normalizedRollNumber, registrationNumber: normalizedRegNumber, department, mobile, gender,
         program, batchYear, section, instituteId, academicGroupId: academicGroup?.id || null, mustChangePassword: true,
         employeeId: employeeId ? String(employeeId).trim() : null, designation: designation ? String(designation).trim() : null,
       },
@@ -370,23 +377,26 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     if (data.mobile !== undefined && data.mobile !== null && data.mobile !== "") {
       if (!MOBILE_RE.test(String(data.mobile).trim())) return res.status(400).json({ error: "Invalid mobile number" });
     }
-    // Roll numbers are only unique within an institute (see the @@unique([instituteId,
-    // rollNumber]) constraint on User) — check before saving so a raw DB constraint error never
-    // surfaces to the admin. Blank input must be normalized to `null`, never left as `""` — the
-    // unique constraint treats NULL as "never conflicts" but treats "" as a real, collidable
-    // value, so saving one blank-rollNumber account as "" would then 500 the very next unrelated
-    // account's save the moment it also happened to have a blank rollNumber at the same institute.
+    // Roll Number is intentionally NOT unique (classroom number — duplicates across departments/
+    // institutes are expected by design), so it's only ever normalized here, never uniqueness-
+    // checked. Blank input is normalized to `null`, never left as `""`.
     if (data.rollNumber !== undefined) {
-      const rollNumber = String(data.rollNumber || "").trim();
-      if (!rollNumber) {
-        data.rollNumber = null;
+      data.rollNumber = String(data.rollNumber || "").trim() || null;
+    }
+    // Registration Number (PRN) IS the platform's sole permanent, system-wide unique identifier
+    // (see @@unique([registrationNumber]) on User) — checked before saving so a raw DB constraint
+    // error never surfaces to the admin. Same blank->null normalization discipline as elsewhere in
+    // this route (NULL never conflicts; "" would).
+    if (data.registrationNumber !== undefined) {
+      const registrationNumber = String(data.registrationNumber || "").trim();
+      if (!registrationNumber) {
+        data.registrationNumber = null;
       } else {
-        const targetInstituteId = data.instituteId !== undefined ? data.instituteId : existing.instituteId;
-        if (rollNumber !== existing.rollNumber || targetInstituteId !== existing.instituteId) {
-          const dupRoll = await prisma.user.findFirst({ where: { instituteId: targetInstituteId, rollNumber, id: { not: existing.id } } });
-          if (dupRoll) return res.status(409).json({ error: "That roll number is already in use by another account at this institute" });
+        if (registrationNumber !== existing.registrationNumber) {
+          const dupReg = await prisma.user.findFirst({ where: { registrationNumber, id: { not: existing.id } } });
+          if (dupReg) return res.status(409).json({ error: "That Registration Number (PRN) is already registered to another account" });
         }
-        data.rollNumber = rollNumber;
+        data.registrationNumber = registrationNumber;
       }
     }
     // Same NULL-tolerant per-institute uniqueness (and the same blank->null normalization) as
@@ -462,7 +472,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 
 // ADMIN: download a sample .xlsx template for bulk student upload
 router.get("/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
-  const sampleRow = ["John Doe", "MCA2024001", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A"];
+  const sampleRow = ["John Doe", "MCA2024001", "12", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A"];
   const sheet = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, sampleRow]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Students");
@@ -495,9 +505,9 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
 
     const headerMap = buildHeaderMap(Object.keys(rows[0]));
-    if (!headerMap.name || !headerMap.rollNumber || !headerMap.email) {
+    if (!headerMap.name || !headerMap.registrationNumber || !headerMap.email) {
       return res.status(400).json({
-        error: "Missing required columns. The file must include Student Name, Roll Number, and Official Email ID.",
+        error: "Missing required columns. The file must include Student Name, Registration Number (PRN), and Official Email ID. Roll Number is optional — leave it blank and it will be auto-populated from the last 3 characters of the Registration Number.",
       });
     }
     if (!headerMap.instituteName || !headerMap.batchYear) {
@@ -509,17 +519,16 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
     const sendCredentials = req.body.sendCredentials === "true";
 
     const [existingUsers, institutes] = await Promise.all([
-      prisma.user.findMany({ select: { email: true, rollNumber: true, instituteId: true } }),
+      prisma.user.findMany({ select: { email: true, registrationNumber: true } }),
       prisma.institute.findMany(),
     ]);
     const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
-    // Roll numbers are only unique WITHIN an institute (mirrors the new
-    // @@unique([instituteId, rollNumber]) DB constraint) — the same roll number legitimately
-    // exists at two different institutes, so the dedup key must include instituteId, not just
-    // the roll number on its own.
-    const existingRolls = new Set(existingUsers.filter((u) => u.rollNumber).map((u) => `${u.instituteId || ""}::${u.rollNumber.toLowerCase()}`));
+    // Registration Number (PRN) is unique PLATFORM-WIDE (mirrors the @@unique([registrationNumber])
+    // DB constraint) — no institute scoping in the dedup key, unlike the old rollNumber-keyed dedup
+    // this replaced. Roll Number is deliberately not deduped at all (duplicates are expected).
+    const existingRegNumbers = new Set(existingUsers.filter((u) => u.registrationNumber).map((u) => u.registrationNumber.toLowerCase()));
     const seenEmails = new Set();
-    const seenRolls = new Set();
+    const seenRegNumbers = new Set();
     const instituteByName = new Map(institutes.map((i) => [i.name.toLowerCase(), i]));
     const groupCache = new Map(); // reused across rows sharing the same (institute, batch, department, section)
 
@@ -533,7 +542,8 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       const rowNum = i + 2; // +1 for header row, +1 for 1-indexing
       const row = rows[i];
       const name = field(row, "name");
-      const rollNumber = field(row, "rollNumber");
+      const registrationNumber = field(row, "registrationNumber");
+      let rollNumber = field(row, "rollNumber");
       const email = field(row, "email").toLowerCase();
       const mobile = field(row, "mobile");
       const department = field(row, "department");
@@ -542,41 +552,43 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       const section = field(row, "section");
       const instituteName = field(row, "instituteName");
 
-      if (!name && !rollNumber && !email) continue; // blank row
+      if (!name && !registrationNumber && !email) continue; // blank row
 
-      if (!name || !rollNumber || !email || !instituteName || !batchYear) {
-        errors.push({ row: rowNum, name, email, rollNumber, reason: "Missing required field (name, roll number, email, institute, or batch/year)" });
+      if (!name || !registrationNumber || !email || !instituteName || !batchYear) {
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Missing required field (name, registration number, email, institute, or batch/year)" });
         continue;
       }
       if (!EMAIL_RE.test(email)) {
-        errors.push({ row: rowNum, name, email, rollNumber, reason: "Invalid email format" });
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Invalid email format" });
         continue;
       }
 
       const institute = instituteByName.get(instituteName.toLowerCase());
       if (!institute) {
-        errors.push({ row: rowNum, name, email, rollNumber, reason: `Institute "${instituteName}" was not found. Create it first in Institute Management.` });
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: `Institute "${instituteName}" was not found. Create it first in Institute Management.` });
         continue;
       }
       // Mirrors the same guard on POST / — an institute-scoped ADMIN can only import students
       // into their own institute, regardless of what the uploaded file's Institute column says.
       if (req.requesterInstituteId && institute.id !== req.requesterInstituteId) {
-        errors.push({ row: rowNum, name, email, rollNumber, reason: `You can only upload students to your own institute` });
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: `You can only upload students to your own institute` });
         continue;
       }
 
-      const rollKey = `${institute.id}::${rollNumber.toLowerCase()}`;
+      const regKey = registrationNumber.toLowerCase();
       if (existingEmails.has(email) || seenEmails.has(email)) {
-        duplicates.push({ row: rowNum, name, email, rollNumber, reason: "Email already exists" });
+        duplicates.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Email already exists" });
         continue;
       }
-      if (existingRolls.has(rollKey) || seenRolls.has(rollKey)) {
-        duplicates.push({ row: rowNum, name, email, rollNumber, reason: `Roll number already exists at ${institute.name}` });
+      if (existingRegNumbers.has(regKey) || seenRegNumbers.has(regKey)) {
+        duplicates.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Registration Number (PRN) already exists" });
         continue;
       }
 
       seenEmails.add(email);
-      seenRolls.add(rollKey);
+      seenRegNumbers.add(regKey);
+
+      if (!rollNumber) rollNumber = initRollNumberFromRegistration(registrationNumber) || "";
 
       const generatedPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
@@ -585,7 +597,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
         const group = await resolveAcademicGroup({ instituteId: institute.id, batchYear, departmentName: department, section }, groupCache);
         const user = await prisma.user.create({
           data: {
-            name, email, rollNumber, passwordHash, role: "STUDENT",
+            name, email, registrationNumber, rollNumber: rollNumber || null, passwordHash, role: "STUDENT",
             mobile: mobile || null,
             department: department || null,
             program: program || null,
@@ -598,7 +610,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
         });
         created.push({ ...user, generatedPassword });
       } catch (err) {
-        errors.push({ row: rowNum, name, email, rollNumber, reason: "Failed to create account" });
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Failed to create account" });
       }
     }
 
@@ -625,7 +637,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       createdCount: created.length,
       duplicateCount: duplicates.length,
       errorCount: errors.length,
-      created: created.map((u) => ({ name: u.name, email: u.email, rollNumber: u.rollNumber, generatedPassword: u.generatedPassword, emailSent: u.emailSent ?? null })),
+      created: created.map((u) => ({ name: u.name, email: u.email, registrationNumber: u.registrationNumber, rollNumber: u.rollNumber, generatedPassword: u.generatedPassword, emailSent: u.emailSent ?? null })),
       duplicates,
       errors,
       sendCredentials,
@@ -645,7 +657,7 @@ router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequester
     const user = await prisma.user.findFirst({
       where: {
         role: "STUDENT",
-        OR: [{ rollNumber: q }, { email: q }, { id: q }],
+        OR: [{ registrationNumber: q }, { rollNumber: q }, { email: q }, { id: q }],
         ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
       },
       select: {
@@ -653,6 +665,7 @@ router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequester
         name: true,
         email: true,
         rollNumber: true,
+        registrationNumber: true,
         attempts: {
           select: {
             status: true,
@@ -666,7 +679,7 @@ router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequester
         },
       },
     });
-    if (!user) return res.status(404).json({ error: "No student found with that roll number, email, or ID" });
+    if (!user) return res.status(404).json({ error: "No student found with that registration number, roll number, email, or ID" });
     res.json(user);
   } catch (err) {
     console.error(err);
@@ -695,15 +708,16 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
         ],
       },
       select: {
-        id: true, name: true, email: true, rollNumber: true,
+        id: true, name: true, email: true, rollNumber: true, registrationNumber: true,
         institute: { select: { name: true } },
         class: { select: { name: true, batchYear: true } },
         academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
       },
       orderBy: { name: "asc" },
-      take: 20,
+      take: 200, // wider pool than the 20 actually returned, so the ascending-Roll-Number sort below picks the true top 20 among matches rather than just re-ordering whichever 20 happened to sort first by name
     });
-    res.json(students);
+    students.sort(compareRollNumbers);
+    res.json(students.slice(0, 20));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Search failed" });
@@ -745,21 +759,27 @@ router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
       ...(offerVerificationStatus ? { placementOffers: { some: { verificationStatus: offerVerificationStatus } } } : {}),
     };
 
-    const [students, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true, name: true, email: true, rollNumber: true,
-          institute: { select: { name: true } },
-          class: { select: { name: true, batchYear: true } },
-          academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
-        },
-        orderBy: { name: "asc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      prisma.user.count({ where }),
-    ]);
+    // Ascending Roll Number is numeric-aware ("1, 2, 3 ... 60", not lexicographic), which Prisma's
+    // `orderBy` can't express over a String column — so the full matching id/name/rollNumber set
+    // (already bounded to specific academicGroups, not the whole institute) is fetched once, sorted
+    // in JS, then just the current page's ids are hydrated with the full select below. This keeps
+    // pagination correct across the whole result set rather than only re-ordering a single page.
+    const allMatches = await prisma.user.findMany({ where, select: { id: true, name: true, rollNumber: true } });
+    allMatches.sort(compareRollNumbers);
+    const total = allMatches.length;
+    const pageIds = allMatches.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize).map((s) => s.id);
+
+    const hydrated = await prisma.user.findMany({
+      where: { id: { in: pageIds } },
+      select: {
+        id: true, name: true, email: true, rollNumber: true, registrationNumber: true,
+        institute: { select: { name: true } },
+        class: { select: { name: true, batchYear: true } },
+        academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
+      },
+    });
+    const byId = new Map(hydrated.map((s) => [s.id, s]));
+    const students = pageIds.map((id) => byId.get(id)).filter(Boolean);
 
     res.json({ rows: students, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
   } catch (err) {

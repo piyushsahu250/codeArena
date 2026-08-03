@@ -229,12 +229,14 @@ model User {
   @@index([department])
   @@index([role, instituteId])
   @@index([accountStatus])
-  // Roll numbers are only meaningful per-institute (mirrors Class's own
-  // @@unique([instituteId, name, batchYear])) — a NULL in either column never conflicts with
-  // anything under standard Postgres unique-constraint semantics, so this only ever constrains
-  // rows that actually have both an institute and a roll number (i.e. real students), leaving
-  // staff/admin (rollNumber: null) and legacy unscoped rows (instituteId: null) unaffected.
-  @@unique([instituteId, rollNumber])
+  @@index([rollNumber])
+  // Registration Number (PRN) is the platform's sole permanent, system-wide unique student
+  // identifier — global (not per-institute), NULL-tolerant (staff/admin rows, where it's always
+  // null, never conflict with anything under standard Postgres unique-constraint semantics).
+  // Roll Number (classroom number, used for attendance/display/sort ordering) is deliberately
+  // NOT unique — duplicates across departments/institutes are expected and allowed by design, so
+  // it carries a plain index (for WHERE/LIKE filtering) instead of a uniqueness constraint.
+  @@unique([registrationNumber])
   // Same NULL-tolerant semantics as rollNumber above, for Staff/Clerk employee IDs.
   @@unique([instituteId, employeeId])
 }

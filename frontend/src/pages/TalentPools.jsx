@@ -347,7 +347,7 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
         {members.map((m) => (
           <div key={m.id} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 13 }}>
-              {m.student.name} <span style={{ color: "var(--ink-dim)" }}>({m.student.rollNumber || m.student.email})</span>
+              {m.student.rollNumber || "—"} · {m.student.name} <span style={{ color: "var(--ink-dim)" }}>({m.student.registrationNumber || m.student.email})</span>
               {m.student.institute && <span style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>{m.student.institute.name}</span>}
               <span style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>{m.addedVia === "AUTO_RULE" ? "Auto-selected" : "Manually added"}</span>
             </div>
@@ -416,7 +416,7 @@ function SearchAddPanel({ pool, members, setError, onChange }) {
               <div key={u.id} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8, cursor: memberIds.has(u.id) ? "default" : "pointer" }}>
                   {!memberIds.has(u.id) && <input type="checkbox" checked={selected.includes(u.id)} onChange={() => toggle(u.id)} />}
-                  {u.name} <span style={{ color: "var(--ink-dim)" }}>({u.rollNumber || u.email})</span>
+                  {u.rollNumber || "—"} · {u.name} <span style={{ color: "var(--ink-dim)" }}>({u.registrationNumber || u.email})</span>
                 </label>
                 {memberIds.has(u.id) && <span style={{ fontSize: 12, color: "var(--mint)" }}>Already a member</span>}
               </div>
@@ -544,7 +544,7 @@ function BrowseAddPanel({ pool, members, setError, onChange }) {
               <div key={u.id} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8, cursor: memberIds.has(u.id) ? "default" : "pointer" }}>
                   {!memberIds.has(u.id) && <input type="checkbox" checked={selected.includes(u.id)} onChange={() => toggle(u.id)} />}
-                  {u.name} <span style={{ color: "var(--ink-dim)" }}>({u.rollNumber || u.email})</span>
+                  {u.rollNumber || "—"} · {u.name} <span style={{ color: "var(--ink-dim)" }}>({u.registrationNumber || u.email})</span>
                 </label>
                 {memberIds.has(u.id) && <span style={{ fontSize: 12, color: "var(--mint)" }}>Already a member</span>}
               </div>
@@ -602,8 +602,9 @@ function BulkImportPanel({ pool, setError, onChange }) {
   return (
     <div style={{ marginTop: 16 }}>
       <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-        Upload an Excel file with "Institute" and "Roll Number" columns. Institutes must be among this pool's
-        configured institutes; roll numbers are matched against existing registered students.
+        Upload an Excel file with "Institute" and "Registration Number (PRN)" columns (Roll Number is optional).
+        Institutes must be among this pool's configured institutes; students are matched by Registration Number,
+        since Roll Numbers can repeat across departments.
       </p>
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
         <button className="btn btn-ghost" type="button" onClick={downloadTemplate}>Download Template</button>
@@ -615,13 +616,13 @@ function BulkImportPanel({ pool, setError, onChange }) {
         <div style={{ marginTop: 16 }}>
           <p style={{ fontSize: 13 }}>
             {result.total} row(s) processed — <strong>{result.addedCount}</strong> added, {result.alreadyExistingCount} already existing,{" "}
-            {result.invalidInstituteCount} invalid institute, {result.invalidRollNumberCount} invalid roll number, {result.failedCount} failed.
+            {result.invalidInstituteCount} invalid institute, {result.invalidRollNumberCount} invalid registration number, {result.failedCount} failed.
           </p>
           {[
             ["Added", result.added, "var(--mint)"],
             ["Already Existing", result.alreadyExisting, "var(--ink-dim)"],
             ["Invalid Institute", result.invalidInstitute, "var(--rust)"],
-            ["Invalid Roll Number", result.invalidRollNumber, "var(--rust)"],
+            ["Invalid Registration Number", result.invalidRollNumber, "var(--rust)"],
             ["Failed", result.failed, "var(--rust)"],
           ].filter(([, rows]) => rows.length > 0).map(([title, rows, color]) => (
             <div key={title} style={{ marginTop: 12 }}>
@@ -631,7 +632,7 @@ function BulkImportPanel({ pool, setError, onChange }) {
                   <thead>
                     <tr style={{ textAlign: "left", color: "var(--ink-dim)" }}>
                       <th style={{ padding: "4px 8px" }}>Row</th><th style={{ padding: "4px 8px" }}>Institute</th>
-                      <th style={{ padding: "4px 8px" }}>Roll No.</th><th style={{ padding: "4px 8px" }}>{title === "Added" || title === "Already Existing" ? "Name" : "Reason"}</th>
+                      <th style={{ padding: "4px 8px" }}>Reg. No. (PRN)</th><th style={{ padding: "4px 8px" }}>{title === "Added" || title === "Already Existing" ? "Name" : "Reason"}</th>
                     </tr>
                   </thead>
                   <tbody>

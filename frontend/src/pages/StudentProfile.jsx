@@ -31,7 +31,7 @@ const DECLINE_REASONS = [
 ];
 
 const EMPTY_PERSONAL = {
-  firstName: "", lastName: "", mobile: "", gender: "", profilePhotoUrl: "",
+  firstName: "", lastName: "", mobile: "", gender: "", profilePhotoUrl: "", rollNumber: "",
   personalEmail: "", dob: "", address: "", state: "", district: "", pincode: "",
   fatherName: "", fatherContact: "", motherName: "", motherContact: "", shortDescription: "",
 };
@@ -111,6 +111,7 @@ export default function StudentProfile() {
       const nextForm = {
         firstName: first || "", lastName: rest.join(" ") || "",
         mobile: u.mobile || "", gender: u.gender || "", profilePhotoUrl: u.profilePhotoUrl || "",
+        rollNumber: u.rollNumber || "",
         personalEmail: p?.personalEmail || "", dob: p?.dob ? p.dob.slice(0, 10) : "",
         address: p?.address || "", state: p?.state || "", district: p?.district || "", pincode: p?.pincode || "",
         fatherName: p?.fatherName || "", fatherContact: p?.fatherContact || "",
@@ -469,6 +470,13 @@ export default function StudentProfile() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={labelStyle}>Personal Email</label><input style={inputStyle} type="email" required value={form.personalEmail} onChange={(e) => setForm({ ...form, personalEmail: e.target.value })} /></div>
               <div><label style={labelStyle}>College Email</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.email || ""} disabled /></div>
+            </div>
+
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Academic Identifiers</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div><label style={labelStyle}>Institute / College Name</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.institute?.name || ""} disabled /></div>
+              <div><label style={labelStyle}>Registration Number (PRN)</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.registrationNumber || ""} disabled /></div>
+              <div><label style={labelStyle}>Roll Number</label><input style={inputStyle} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value })} placeholder="Your classroom roll number" /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Phone</div>

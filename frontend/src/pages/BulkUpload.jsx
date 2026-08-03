@@ -89,8 +89,9 @@ export default function BulkUpload() {
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>Required columns</div>
               <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
-                Student Name, Roll Number, Official Email ID, Institute, Batch/Year — plus optional Mobile Number,
-                Department, Program, Section.
+                Student Name, Registration Number (PRN), Official Email ID, Institute, Batch/Year — plus optional Roll
+                Number (auto-filled from the last 3 characters of the PRN if left blank), Mobile Number, Department,
+                Program, Section.
               </p>
             </div>
             <button className="btn btn-ghost" onClick={downloadTemplate} disabled={downloadingTemplate}>
@@ -149,8 +150,8 @@ export default function BulkUpload() {
                     className="btn btn-ghost"
                     onClick={() => downloadCsv(
                       "student-credentials.csv",
-                      ["Name", "Email", "Roll Number", "Temporary Password"],
-                      result.created.map((u) => [u.name, u.email, u.rollNumber, u.generatedPassword])
+                      ["Name", "Email", "Registration Number", "Roll Number", "Temporary Password"],
+                      result.created.map((u) => [u.name, u.email, u.registrationNumber, u.rollNumber, u.generatedPassword])
                     )}
                   >
                     ⬇ Download Credentials (CSV)
@@ -166,6 +167,7 @@ export default function BulkUpload() {
                     <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
                       <th style={{ padding: "6px 4px" }}>Name</th>
                       <th>Email</th>
+                      <th>Registration No. (PRN)</th>
                       <th>Roll no.</th>
                       <th>Temporary password</th>
                     </tr>
@@ -175,6 +177,7 @@ export default function BulkUpload() {
                       <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
                         <td style={{ padding: "6px 4px" }}>{u.name}</td>
                         <td className="mono">{u.email}</td>
+                        <td className="mono">{u.registrationNumber}</td>
                         <td className="mono">{u.rollNumber}</td>
                         <td className="mono" style={{ fontWeight: 700 }}>{u.generatedPassword}</td>
                       </tr>
@@ -189,10 +192,10 @@ export default function BulkUpload() {
                 style={{ marginTop: 16 }}
                 onClick={() => downloadCsv(
                   "bulk-upload-error-report.csv",
-                  ["Row", "Type", "Name", "Email", "Roll Number", "Reason"],
+                  ["Row", "Type", "Name", "Email", "Registration Number", "Reason"],
                   [
-                    ...result.duplicates.map((r) => [r.row, "Duplicate", r.name, r.email, r.rollNumber, r.reason]),
-                    ...result.errors.map((r) => [r.row, "Error", r.name, r.email, r.rollNumber, r.reason]),
+                    ...result.duplicates.map((r) => [r.row, "Duplicate", r.name, r.email, r.registrationNumber, r.reason]),
+                    ...result.errors.map((r) => [r.row, "Error", r.name, r.email, r.registrationNumber, r.reason]),
                   ]
                 )}
               >
@@ -222,7 +225,7 @@ function ResultTable({ title, rows, color }) {
             <th style={{ padding: "6px 4px" }}>Row</th>
             <th>Name</th>
             <th>Email</th>
-            <th>Roll no.</th>
+            <th>Reg. No. (PRN)</th>
             <th>Reason</th>
           </tr>
         </thead>
@@ -232,7 +235,7 @@ function ResultTable({ title, rows, color }) {
               <td className="mono" style={{ padding: "6px 4px" }}>{r.row}</td>
               <td>{r.name || "—"}</td>
               <td className="mono">{r.email || "—"}</td>
-              <td className="mono">{r.rollNumber || "—"}</td>
+              <td className="mono">{r.registrationNumber || "—"}</td>
               <td style={{ color }}>{r.reason}</td>
             </tr>
           ))}

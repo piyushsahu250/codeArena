@@ -96,12 +96,12 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Roll Number</label>
-                <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} />
+                <label style={labelStyle}>Registration Number (PRN)</label>
+                <input style={inputStyle} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
               </div>
               <div>
-                <label style={labelStyle}>Registration Number</label>
-                <input style={inputStyle} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
+                <label style={labelStyle}>Roll Number</label>
+                <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} placeholder="Classroom roll number" />
               </div>
               <div>
                 <label style={labelStyle}>Institute</label>

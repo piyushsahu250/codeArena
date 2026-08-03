@@ -472,10 +472,11 @@ router.post("/:id/members/transfer", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
-// =========================== Bulk import (Excel: Institute + Roll Number) ===========================
+// =========================== Bulk import (Excel: Institute + Registration Number) ===========================
 
 const BULK_IMPORT_FIELD_ALIASES = {
   instituteName: ["institute", "institute name", "college", "college name"],
+  registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
   rollNumber: ["roll number", "roll no", "rollno", "roll no."],
 };
 function normalizeBulkImportHeader(h) {
@@ -494,8 +495,8 @@ function buildBulkImportHeaderMap(headers) {
 router.get("/:id/bulk-import-template", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
-  const headers = ["Institute", "Roll Number"];
-  const sampleRow = [pool.institutes[0]?.institute?.name || "Example Institute", "2024001"];
+  const headers = ["Institute", "Registration Number (PRN)", "Roll Number"];
+  const sampleRow = [pool.institutes[0]?.institute?.name || "Example Institute", "2024COMP001", "12"];
   const sheet = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Students");
@@ -505,10 +506,12 @@ router.get("/:id/bulk-import-template", authenticate, requireRole("ADMIN"), atta
   res.send(buffer);
 });
 
-// Matches each row against the registered student database by (Institute, Roll Number) — never
-// creates new student accounts (that's Bulk Upload's job elsewhere on this platform). Continues
-// past invalid rows rather than aborting, and buckets every row into exactly one of five outcomes
-// per the spec's required summary shape.
+// Matches each row against the registered student database by (Institute, Registration Number/PRN)
+// — never creates new student accounts (that's Bulk Upload's job elsewhere on this platform). Roll
+// Number is accepted as an optional display/cross-check column but never used for matching, since
+// it legitimately repeats across departments/institutes. Continues past invalid rows rather than
+// aborting, and buckets every row into exactly one of five outcomes per the spec's required summary
+// shape.
 router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
@@ -525,8 +528,8 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachReques
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
 
     const headerMap = buildBulkImportHeaderMap(Object.keys(rows[0]));
-    if (!headerMap.instituteName || !headerMap.rollNumber) {
-      return res.status(400).json({ error: 'The file must have "Institute" and "Roll Number" columns.' });
+    if (!headerMap.instituteName || !headerMap.registrationNumber) {
+      return res.status(400).json({ error: 'The file must have "Institute" and "Registration Number (PRN)" columns. Roll Number is optional (Registration Number is now the match key, since Roll Numbers can repeat across departments).' });
     }
 
     const configuredInstituteIds = poolInstituteIds(pool);
@@ -546,42 +549,45 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachReques
       const rowNum = i + 2; // 1-indexed spreadsheet row + header row offset
       const row = rows[i];
       const instituteNameRaw = String(row[headerMap.instituteName] || "").trim();
-      const rollNumberRaw = String(row[headerMap.rollNumber] || "").trim();
-      if (!instituteNameRaw && !rollNumberRaw) continue; // skip fully blank rows
+      const registrationNumberRaw = String(row[headerMap.registrationNumber] || "").trim();
+      const rollNumberRaw = headerMap.rollNumber ? String(row[headerMap.rollNumber] || "").trim() : "";
+      if (!instituteNameRaw && !registrationNumberRaw) continue; // skip fully blank rows
 
       try {
-        if (!instituteNameRaw || !rollNumberRaw) {
-          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: "Institute and Roll Number are both required." });
+        if (!instituteNameRaw || !registrationNumberRaw) {
+          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: "Institute and Registration Number (PRN) are both required." });
           continue;
         }
         const institute = instituteByName.get(instituteNameRaw.toLowerCase());
         if (!institute) {
           invalidInstitute.push({
-            row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw,
+            row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw,
             reason: `"${instituteNameRaw}" is not one of this Talent Pool's configured institutes.`,
           });
           continue;
         }
+        // Matched by Registration Number (PRN), the platform's sole unique student identifier —
+        // Roll Number is not used for matching since it legitimately repeats across departments.
         const student = await prisma.user.findFirst({
-          where: { role: "STUDENT", instituteId: institute.id, rollNumber: rollNumberRaw },
+          where: { role: "STUDENT", instituteId: institute.id, registrationNumber: registrationNumberRaw },
           select: { id: true, name: true },
         });
         if (!student) {
           invalidRollNumber.push({
-            row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw,
-            reason: `No student with roll number "${rollNumberRaw}" was found at ${institute.name}.`,
+            row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw,
+            reason: `No student with Registration Number "${registrationNumberRaw}" was found at ${institute.name}.`,
           });
           continue;
         }
         if (existingMemberIds.has(student.id) || seen.has(student.id)) {
-          alreadyExisting.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, name: student.name });
+          alreadyExisting.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, name: student.name });
           continue;
         }
         seen.add(student.id);
         toCreate.push({ poolId: pool.id, studentId: student.id, addedVia: "MANUAL", addedByName: req.user.name });
-        added.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, name: student.name });
+        added.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw || registrationNumberRaw, name: student.name });
       } catch (rowErr) {
-        failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
+        failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
       }
     }
 
@@ -958,7 +964,7 @@ router.get("/:id/report.pdf", authenticate, requireRole("ADMIN", "STAFF"), attac
       const absent = records.filter((r) => r.status === "ABSENT").length;
       const denom = present + late + absent;
       return {
-        rollNumber: m.student.rollNumber, name: m.student.name, addedVia: m.addedVia,
+        rollNumber: m.student.rollNumber, registrationNumber: m.student.registrationNumber, name: m.student.name, addedVia: m.addedVia,
         rank: rank.rank, totalStudents: rank.totalStudents,
         scorePercent: null,
         attendancePercent: denom > 0 ? Math.round(((present + late) / denom) * 100) : null,

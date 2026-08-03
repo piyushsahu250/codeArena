@@ -94,10 +94,10 @@ const ENTITIES = {
       where: instituteId ? { student: { instituteId } } : {},
       take: MAX_ROWS,
       orderBy: { startedAt: "desc" },
-      include: { student: { select: { name: true, email: true, rollNumber: true } }, test: { select: { title: true } } },
+      include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, test: { select: { title: true } } },
     });
     return rows.map((a) => ({
-      Student: a.student.name, Email: a.student.email, "Roll Number": a.student.rollNumber || "",
+      Student: a.student.name, Email: a.student.email, "Registration Number": a.student.registrationNumber || "", "Roll Number": a.student.rollNumber || "",
       Test: a.test.title, Score: a.totalScore, Status: a.status, "Tab Switches": a.tabSwitchCount,
       "Started At": a.startedAt.toISOString(), "Submitted At": a.submittedAt ? a.submittedAt.toISOString() : "",
     }));

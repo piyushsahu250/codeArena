@@ -10,8 +10,10 @@ const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption")
 const router = express.Router();
 
 // Every User field a student may edit from their own profile — deliberately narrower than the
-// admin-only PATCH /users/:id allowlist (no rollNumber/registrationNumber/instituteId/isActive).
-const STUDENT_EDITABLE_USER_FIELDS = ["mobile", "gender", "profilePhotoUrl"];
+// admin-only PATCH /users/:id allowlist (no registrationNumber/instituteId/isActive). Roll Number
+// IS student-editable — it's the classroom number, not the permanent unique Registration Number
+// (PRN), which stays admin-only.
+const STUDENT_EDITABLE_USER_FIELDS = ["mobile", "gender", "profilePhotoUrl", "rollNumber"];
 const STUDENT_PROFILE_FIELDS = [
   "personalEmail", "dob", "address", "state", "district", "pincode",
   "fatherName", "fatherContact", "motherName", "motherContact", "shortDescription",
@@ -21,7 +23,7 @@ const STUDENT_PROFILE_FIELDS = [
 
 async function loadCompletionInputs(studentId) {
   const [user, studentProfile, resume, documents] = await Promise.all([
-    prisma.user.findUnique({ where: { id: studentId } }),
+    prisma.user.findUnique({ where: { id: studentId }, include: { institute: { select: { name: true } } } }),
     prisma.studentProfile.findUnique({ where: { studentId } }),
     prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true } }),
     prisma.studentDocument.findMany({ where: { studentId }, select: { id: true } }),
@@ -43,6 +45,7 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
         id: user.id, name: user.name, email: user.email, mobile: user.mobile,
         gender: user.gender, profilePhotoUrl: user.profilePhotoUrl,
         rollNumber: user.rollNumber, registrationNumber: user.registrationNumber,
+        institute: user.institute,
       },
       profile: studentProfile,
       hasResume: !!(resume?.fullName && resume?.email),
@@ -69,6 +72,12 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     }
     if (userData.mobile && !MOBILE_RE.test(userData.mobile)) {
       return res.status(400).json({ error: "Enter a valid mobile number" });
+    }
+    // Roll Number is the classroom number, intentionally not unique (duplicates across
+    // departments/institutes are expected) — no uniqueness check here, just trim/blank->null
+    // normalization, same discipline used for this field everywhere else in the platform.
+    if ("rollNumber" in userData) {
+      userData.rollNumber = String(userData.rollNumber || "").trim() || null;
     }
     // First/Last Name is a UI-only split — joined back into the single User.name field this
     // platform already uses everywhere (audit logs, certificates, emails, dashboards).
@@ -147,7 +156,7 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     res.json({
       success: true,
       completion,
-      user: { id: freshUser.id, name: freshUser.name, mobile: freshUser.mobile, gender: freshUser.gender, profilePhotoUrl: freshUser.profilePhotoUrl },
+      user: { id: freshUser.id, name: freshUser.name, mobile: freshUser.mobile, gender: freshUser.gender, profilePhotoUrl: freshUser.profilePhotoUrl, rollNumber: freshUser.rollNumber, registrationNumber: freshUser.registrationNumber },
       profile: decryptProfile(await prisma.studentProfile.findUnique({ where: { studentId: req.user.id } })),
     });
   } catch (err) {
@@ -173,6 +182,7 @@ router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), 
         id: user.id, name: user.name, email: user.email, mobile: user.mobile,
         gender: user.gender, profilePhotoUrl: user.profilePhotoUrl,
         rollNumber: user.rollNumber, registrationNumber: user.registrationNumber,
+        institute: user.institute,
       },
       profile: studentProfile,
       hasResume: !!(resume?.fullName && resume?.email),
@@ -230,7 +240,7 @@ router.get("/:studentId/report.pdf", authenticate, requireRole("ADMIN", "STAFF",
     const instituteRecord = student.instituteId ? await prisma.institute.findUnique({ where: { id: student.instituteId } }) : null;
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${(user.rollNumber || user.id)}-profile.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${(user.registrationNumber || user.id)}-profile.pdf"`);
     generateStudentProfilePdf({
       user, studentProfile, instituteName: instituteRecord?.name,
       education: Array.isArray(resume?.education) ? resume.education : [],

@@ -465,7 +465,8 @@ router.get("/admin/examinations/:id/entries/:entryId/marksheet.pdf", authenticat
 
 const BULK_IMPORT_FIELD_ALIASES = {
   instituteName: ["institute", "institute name", "college", "college name"],
-  rollNumber: ["roll number", "roll no", "rollno", "roll no.", "prn", "prn no", "prn number"],
+  registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
+  rollNumber: ["roll number", "roll no", "rollno", "roll no."],
   obtainedMarks: ["marks obtained", "marks", "obtained marks", "score"],
 };
 function normalizeBulkImportHeader(h) {
@@ -485,8 +486,8 @@ router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("A
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
-    const headers = ["Institute Name", "Roll Number (or PRN)", "Marks Obtained"];
-    const sampleRow = [examination.institute.name, "2024001", Math.round(examination.totalMarks * 0.8)];
+    const headers = ["Institute Name", "Registration Number (PRN)", "Roll Number", "Marks Obtained"];
+    const sampleRow = [examination.institute.name, "2024COMP001", "12", Math.round(examination.totalMarks * 0.8)];
     const sheet = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Results");
@@ -520,8 +521,8 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
 
     const headerMap = buildBulkImportHeaderMap(Object.keys(rows[0]));
-    if (!headerMap.instituteName || !headerMap.rollNumber || !headerMap.obtainedMarks) {
-      return res.status(400).json({ error: 'The file must have "Institute Name", "Roll Number (or PRN)", and "Marks Obtained" columns.' });
+    if (!headerMap.instituteName || !headerMap.registrationNumber || !headerMap.obtainedMarks) {
+      return res.status(400).json({ error: 'The file must have "Institute Name", "Registration Number (PRN)", and "Marks Obtained" columns. Roll Number is optional (Registration Number is now the match key, since Roll Numbers can repeat).' });
     }
 
     const institutes = await prisma.institute.findMany({ select: { id: true, name: true } });
@@ -538,41 +539,44 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
       const rowNum = i + 2;
       const row = rows[i];
       const instituteNameRaw = String(row[headerMap.instituteName] || "").trim();
-      const rollNumberRaw = String(row[headerMap.rollNumber] || "").trim();
+      const registrationNumberRaw = String(row[headerMap.registrationNumber] || "").trim();
+      const rollNumberRaw = headerMap.rollNumber ? String(row[headerMap.rollNumber] || "").trim() : "";
       const marksRaw = row[headerMap.obtainedMarks];
-      if (!instituteNameRaw && !rollNumberRaw && marksRaw === "") continue; // skip fully blank rows
+      if (!instituteNameRaw && !registrationNumberRaw && marksRaw === "") continue; // skip fully blank rows
 
       try {
-        if (!instituteNameRaw || !rollNumberRaw) {
-          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: "Institute Name and Roll Number are both required." });
+        if (!instituteNameRaw || !registrationNumberRaw) {
+          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: "Institute Name and Registration Number (PRN) are both required." });
           continue;
         }
         const institute = instituteByName.get(instituteNameRaw.toLowerCase());
         if (!institute) {
-          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: `Institute "${instituteNameRaw}" was not found.` });
+          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `Institute "${instituteNameRaw}" was not found.` });
           continue;
         }
         if (req.requesterInstituteId && institute.id !== req.requesterInstituteId) {
-          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: `"${instituteNameRaw}" is not your institute.` });
+          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `"${instituteNameRaw}" is not your institute.` });
           continue;
         }
 
         const marks = Number(marksRaw);
         if (!Number.isFinite(marks) || marks < 0 || marks > examination.totalMarks) {
-          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: `Marks Obtained must be a number between 0 and ${examination.totalMarks}.` });
+          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `Marks Obtained must be a number between 0 and ${examination.totalMarks}.` });
           continue;
         }
 
+        // Matched by Registration Number (PRN), the platform's sole unique student identifier —
+        // Roll Number is not used for matching since it legitimately repeats across departments.
         const student = await prisma.user.findFirst({
-          where: { role: "STUDENT", instituteId: institute.id, rollNumber: rollNumberRaw },
+          where: { role: "STUDENT", instituteId: institute.id, registrationNumber: registrationNumberRaw },
           select: { id: true, name: true },
         });
         if (!student) {
-          invalidRollNumber.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: `No student with roll number "${rollNumberRaw}" was found at ${institute.name}.` });
+          invalidRollNumber.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `No student with Registration Number "${registrationNumberRaw}" was found at ${institute.name}.` });
           continue;
         }
         if (existingStudentIds.has(student.id) || seen.has(student.id)) {
-          duplicate.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, name: student.name });
+          duplicate.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, name: student.name });
           continue;
         }
 
@@ -582,9 +586,9 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
           examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, percentage, passed,
           enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
         });
-        imported.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, name: student.name, obtainedMarks: marks });
+        imported.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw || registrationNumberRaw, name: student.name, obtainedMarks: marks });
       } catch (rowErr) {
-        failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
+        failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
       }
     }
 
