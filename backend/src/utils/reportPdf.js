@@ -26,6 +26,7 @@ function generatePerformancePdf(data, res) {
   doc.moveDown(0.5);
   row(doc, "Name", data.student.name);
   row(doc, "Roll Number", data.student.rollNumber);
+  row(doc, "Registration Number (PRN)", data.student.registrationNumber);
   row(doc, "Official Email", data.student.email);
   row(doc, "Mobile", data.student.mobile);
   row(doc, "Institute", data.student.institute?.name);

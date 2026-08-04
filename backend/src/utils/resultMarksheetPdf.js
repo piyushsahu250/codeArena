@@ -36,7 +36,8 @@ function generateMarksheetPdf({ examination, entry, student, institute, departme
   }
 
   row("Student Name", student.name);
-  row("Roll Number / PRN", student.rollNumber || student.registrationNumber);
+  row("Roll Number", student.rollNumber);
+  row("Registration Number (PRN)", student.registrationNumber);
   row("Department", department || "—");
   row("Division", division || "—");
   row("Batch", examination.batch || "—");

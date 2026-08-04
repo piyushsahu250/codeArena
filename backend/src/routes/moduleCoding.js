@@ -941,7 +941,7 @@ router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "STA
   const attempt = await prisma.moduleCodingAttempt.findUnique({
     where: { id: req.params.attemptId },
     include: {
-      student: { select: { id: true, name: true, email: true, rollNumber: true, instituteId: true } },
+      student: { select: { id: true, name: true, email: true, rollNumber: true, registrationNumber: true, instituteId: true } },
       moduleCodingTest: true,
       questions: { orderBy: { order: "asc" }, include: { question: true } },
       submissions: true,
