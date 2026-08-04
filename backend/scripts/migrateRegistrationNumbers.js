@@ -9,10 +9,15 @@
  * Background: `rollNumber` was historically used to store the student's Registration Number
  * (PRN) — a permanent, system-wide-unique academic ID — while the real classroom Roll Number
  * (non-unique, used for attendance/seating order) had nowhere to live. This script performs the
- * one-time data migration in five ordered, independently-idempotent passes. Passes 1, 2, 4, and 5
- * are STUDENT-only (rollNumber semantics only apply to students); pass 3 (dedupe) scans every
- * role, since @@unique([registrationNumber]) is a table-wide constraint Postgres enforces
- * regardless of role.
+ * one-time data migration in five ordered, independently-idempotent passes. Passes 1, 4, and 5 are
+ * STUDENT-only (rollNumber semantics only apply to students); passes 2 (blank-normalize) and 3
+ * (dedupe) scan every role, since @@unique([registrationNumber]) is a table-wide constraint
+ * Postgres enforces regardless of role — a role-scoped pass here can corrupt non-student rows (see
+ * pass 2's repair step, added after exactly that happened for one boot).
+ *
+ * Every pass runs in its own try/catch inside main(), and every per-row write inside a pass is
+ * also individually try/catch'd: a single row failing to update must never stop the rest of that
+ * pass, or the rest of the script, from making progress in the same boot.
  *
  *   1. Copy + reinit — for any student with a blank `registrationNumber` but a real `rollNumber`
  *               (i.e. a row that has never been through this migration before — see idempotency
@@ -28,8 +33,11 @@
  *               once it's set (here or at account-creation time going forward), this pass's WHERE
  *               clause goes permanently false for that student, so a later self-service edit to
  *               `rollNumber` is never touched or reverted by a subsequent deploy's re-run.
- *   2. Blank-normalize — any lingering `registrationNumber === ""` becomes real `NULL` (defensive;
- *               required before a unique index can be added).
+ *   2. Blank-normalize — any lingering `registrationNumber === ""`, on any role, becomes real
+ *               `NULL` (required before a unique index can be added — Postgres unique indexes
+ *               treat two NULLs as non-colliding, but two empty strings collide like any other
+ *               value). Also repairs any row whose `registrationNumber` starts with `"-DUP"` — a
+ *               one-boot corruption possible before this pass covered every role (see dedupePass).
  *   3. Dedupe — group all non-null `registrationNumber`s across every role and institute (PRN is
  *               system-wide unique, not per-institute, and the underlying constraint isn't scoped
  *               to STUDENT rows either). Within any collision group, the earliest-created account
@@ -81,12 +89,28 @@ async function copyPass() {
 }
 
 async function blankNormalizePass() {
-  const result = await prisma.user.updateMany({
-    where: { role: "STUDENT", registrationNumber: "" },
+  // Platform-wide, not STUDENT-only: dedupePass below now scans every role (the
+  // @@unique([registrationNumber]) constraint isn't role-scoped), so an empty-string value on a
+  // Staff/Admin/Clerk row must be blanked to NULL here too — otherwise dedupePass treats several
+  // blank non-student rows as "duplicates" of each other and corrupts them with a literal "-DUPn"
+  // value. (That exact bug shipped for one boot before this fix; see the repair step below.)
+  const blanked = await prisma.user.updateMany({
+    where: { registrationNumber: "" },
     data: { registrationNumber: null },
   });
-  if (result.count) console.log(`[migrateRegistrationNumbers] Blank-normalize pass: ${result.count} empty-string registrationNumber(s) set to NULL.`);
-  return result;
+  // One-time repair: before this function covered every role, a boot's dedupePass grouped several
+  // Staff/Clerk rows that all had registrationNumber: "" as "duplicates" of each other and
+  // overwrote them with a bare "-DUP2", "-DUP3", ... value — garbage that can never be a real PRN
+  // (REGISTRATION_NUMBER_RE requires 9-12 alphanumeric characters, no hyphens). Detect and revert
+  // that specific corruption back to NULL. Safe and permanent: once reverted, a row's
+  // registrationNumber no longer starts with "-DUP", so this condition never fires for it again.
+  const repaired = await prisma.user.updateMany({
+    where: { registrationNumber: { startsWith: "-DUP" } },
+    data: { registrationNumber: null },
+  });
+  if (blanked.count) console.log(`[migrateRegistrationNumbers] Blank-normalize pass: ${blanked.count} empty-string registrationNumber(s) set to NULL.`);
+  if (repaired.count) console.log(`[migrateRegistrationNumbers] Repair pass: ${repaired.count} spurious "-DUPn"-only registrationNumber(s) (a one-boot corruption from an earlier version of dedupePass) reset to NULL.`);
+  return { blanked: blanked.count, repaired: repaired.count };
 }
 
 async function dedupePass() {
@@ -113,11 +137,17 @@ async function dedupePass() {
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const newRegNumber = `${row.registrationNumber}-DUP${i + 1}`;
-      await prisma.user.update({ where: { id: row.id }, data: { registrationNumber: newRegNumber } });
-      console.log(
-        `[migrateRegistrationNumbers] DUPLICATE PRN: ${row.email} (${row.role}, institute ${row.instituteId}): "${row.registrationNumber}" -> "${newRegNumber}" (duplicate of an earlier account — review recommended).`
-      );
-      fixedCount++;
+      // Per-row try/catch: one row's write failing (e.g. a stray collision) must not abort the
+      // remaining rows in this pass — every other row still gets its chance to be fixed this boot.
+      try {
+        await prisma.user.update({ where: { id: row.id }, data: { registrationNumber: newRegNumber } });
+        console.log(
+          `[migrateRegistrationNumbers] DUPLICATE PRN: ${row.email} (${row.role}, institute ${row.instituteId}): "${row.registrationNumber}" -> "${newRegNumber}" (duplicate of an earlier account — review recommended).`
+        );
+        fixedCount++;
+      } catch (err) {
+        console.error(`[migrateRegistrationNumbers] Dedupe pass: failed to rename ${row.email}'s registrationNumber (continuing with remaining rows):`, err.message);
+      }
     }
   }
   console.log(`[migrateRegistrationNumbers] Dedupe pass: ${fixedCount} duplicate registration number(s) renamed across ${groups.size} distinct value(s) checked.`);
@@ -147,26 +177,40 @@ async function autoInitRollNumberPass() {
 async function rollLengthFixPass() {
   const rows = await prisma.user.findMany({
     where: { role: "STUDENT", registrationNumber: { not: null }, rollNumber: { not: null } },
-    select: { id: true, registrationNumber: true, rollNumber: true },
+    select: { id: true, registrationNumber: true, rollNumber: true, email: true },
   });
   let fixed = 0;
   for (const row of rows) {
     if (String(row.rollNumber).length <= 3) continue; // already valid — auto-set or a legitimate student override, never touch
     const reinit = initRollNumberFromRegistration(row.registrationNumber);
     if (!reinit) continue;
-    await prisma.user.update({ where: { id: row.id }, data: { rollNumber: reinit } });
-    fixed++;
+    // Per-row try/catch, same reasoning as dedupePass above: this is the pass that cleans up
+    // rollNumber values still scarred with a "-DUPn" suffix from the deleted dedupeRollNumbers.js
+    // script (e.g. "038-DUP2" -> "038"), and one row hitting a leftover collision must not stop
+    // every other scarred row in the same boot from getting cleaned.
+    try {
+      await prisma.user.update({ where: { id: row.id }, data: { rollNumber: reinit } });
+      fixed++;
+    } catch (err) {
+      console.error(`[migrateRegistrationNumbers] Roll-length-fix pass: failed to reset ${row.email}'s rollNumber (continuing with remaining rows):`, err.message);
+    }
   }
   console.log(`[migrateRegistrationNumbers] Roll-length-fix pass: ${fixed} student(s) had an oversized (>3 char) legacy rollNumber reset to their registrationNumber's last 3 characters.`);
   return { fixed };
 }
 
 async function main() {
-  await copyPass();
-  await blankNormalizePass();
-  await dedupePass();
-  await autoInitRollNumberPass();
-  await rollLengthFixPass();
+  // Each pass runs in its own try/catch: a failure partway through one pass must not prevent the
+  // later passes from running this boot — the same "one early failure blocks all forward progress"
+  // pattern that stalled this platform's entire deploy pipeline for most of a day (see git history)
+  // must not also apply inside this script's own passes.
+  for (const pass of [copyPass, blankNormalizePass, dedupePass, autoInitRollNumberPass, rollLengthFixPass]) {
+    try {
+      await pass();
+    } catch (err) {
+      console.error(`[migrateRegistrationNumbers] ${pass.name} failed (continuing to next pass):`, err);
+    }
+  }
   await prisma.$disconnect();
 }
 
