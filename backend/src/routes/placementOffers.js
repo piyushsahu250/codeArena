@@ -307,11 +307,18 @@ async function computeOfferAnalytics(req) {
   return cached(`placementAnalytics:offers:${instituteKey}:${verifiedOnly}`, 60 * 1000, async () => {
     const students = await loadInstituteStudents(req);
     if (students.length === 0) {
-      return { totalStudents: 0, placed: 0, unplaced: 0, activeOffers: 0, multipleOffers: 0, totalOffers: 0, averageOffersPerStudent: 0, onCampus: 0, offCampus: 0, highestPackage: 0, averagePackage: 0, verifiedOnly };
+      return { totalStudents: 0, placed: 0, unplaced: 0, activeOffers: 0, multipleOffers: 0, totalOffers: 0, averageOffersPerStudent: 0, onCampus: 0, offCampus: 0, highestPackage: 0, averagePackage: 0, pendingVerification: 0, verifiedOnly };
     }
 
+    const studentIds = students.map((s) => s.id);
+    // Deliberately NOT subject to the verifiedOnly toggle below — that toggle exists to recompute
+    // placed/activeOffers/etc. against only-already-verified offers, but "how many offer letters
+    // still need review" must stay meaningful precisely when verifiedOnly is off; filtering it too
+    // would make this always read 0 in the one mode where it's actually useful.
+    const pendingVerification = await prisma.placementOffer.count({ where: { studentId: { in: studentIds }, verificationStatus: "PENDING" } });
+
     const offers = await prisma.placementOffer.findMany({
-      where: { studentId: { in: students.map((s) => s.id) }, ...(verifiedOnly ? { verificationStatus: "VERIFIED" } : {}) },
+      where: { studentId: { in: studentIds }, ...(verifiedOnly ? { verificationStatus: "VERIFIED" } : {}) },
     });
 
     const byStudent = new Map();
@@ -345,6 +352,7 @@ async function computeOfferAnalytics(req) {
       onCampus, offCampus,
       highestPackage,
       averagePackage: placementOfferCount ? Math.round((packageSum / placementOfferCount) * 100) / 100 : 0,
+      pendingVerification,
       verifiedOnly,
     };
   });
@@ -403,6 +411,13 @@ router.get("/analytics/report.pdf", authenticate, requireRole("ADMIN", "STAFF", 
     const [registration, offers, department] = await Promise.all([
       computeRegistrationAnalytics(req), computeOfferAnalytics(req), computeDepartmentAnalytics(req),
     ]);
+    // This bespoke PDF route bypasses the generic exports.js entity mechanism (which already
+    // logs DATA_EXPORTED for every other report), so without this call "Report Exported" had zero
+    // audit coverage for the placement summary specifically.
+    await logAudit({
+      req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId || null, details: { entity: "placementSummary", format: "pdf", batch: req.query.batch || null },
+    });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="placement-summary-${new Date().toISOString().slice(0, 10)}.pdf"`);
     generatePlacementPdf({ registration, offers, department }, res);

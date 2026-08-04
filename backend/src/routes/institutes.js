@@ -235,6 +235,7 @@ router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "
         select: {
           studentId: true, personalEmail: true, dob: true, address: true, state: true, district: true,
           pincode: true, fatherName: true, fatherContact: true, motherName: true, motherContact: true, shortDescription: true,
+          updatedAt: true,
         },
       }),
       prisma.resume.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, education: true } }),
@@ -262,6 +263,22 @@ router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "
     }
     pending.sort((a, b) => a.percent - b.percent);
 
+    // Reuses the same `profiles` batch-fetch above (no extra query) — surfaces which students'
+    // profiles actually changed most recently, for a Clerk/Staff dashboard "Recently Updated"
+    // panel. Only profiles that have been touched at least once are eligible; a never-edited
+    // StudentProfile row's updatedAt is just its creation time and isn't meaningfully "recent."
+    const studentById = new Map(students.map((s) => [s.id, s]));
+    const RECENTLY_UPDATED_CAP = 8;
+    const recentlyUpdated = profiles
+      .slice()
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .slice(0, RECENTLY_UPDATED_CAP)
+      .map((p) => {
+        const s = studentById.get(p.studentId);
+        return s ? { id: s.id, name: s.name, rollNumber: s.rollNumber, department: s.academicGroup?.department?.name || null, updatedAt: p.updatedAt } : null;
+      })
+      .filter(Boolean);
+
     const PENDING_LIST_CAP = 300;
     res.json({
       institute, total: students.length, completed, incomplete: students.length - completed,
@@ -269,6 +286,7 @@ router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "
       pending: pending.slice(0, PENDING_LIST_CAP),
       pendingTotal: pending.length,
       pendingTruncated: pending.length > PENDING_LIST_CAP,
+      recentlyUpdated,
     });
   } catch (err) {
     console.error(err);

@@ -39,6 +39,22 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
         take: LIMIT,
       });
       results.push(...tests.map((t) => ({ type: "Assessment", label: t.title, url: `/dashboard` })));
+    } else if (req.user.role === "CLERK") {
+      // Clerk's module set is Placement Cell only (see App.jsx's /clerk/* routes) — no Course/
+      // Question Bank/Test/Academic Group/Institute/Staff access exists for this role anywhere else
+      // in the app, so surfacing those as search results would only produce dead links. Scoped to
+      // students alone, on the /clerk basePath (the ADMIN/STAFF branch below hardcodes /staff,
+      // which 403s for Clerk).
+      const instituteFilter = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+      const students = await prisma.user.findMany({
+        where: { role: "STUDENT", ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }, { registrationNumber: insensitive(q) }, { mobile: insensitive(q) }] },
+        take: LIMIT,
+      });
+      results.push(...students.map((s) => {
+        const rollPrefix = s.rollNumber ? `${s.rollNumber} — ` : "";
+        const idSuffix = s.registrationNumber || s.email;
+        return { type: "Student", label: `${rollPrefix}${s.name} (${idSuffix})`, url: `/clerk/students/${s.id}` };
+      }));
     } else {
       const instituteFilter = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
       // Question Bank rows use the same institute-visibility rule as questions.js's own reads:

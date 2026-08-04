@@ -568,14 +568,16 @@ export default function StudentPerformance({ basePath }) {
                               {verifyingDocId === d.id ? "…" : "Download"}
                             </button>
                           )}
-                          <button
-                            className="btn btn-ghost"
-                            style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }}
-                            disabled={verifyingDocId === d.id}
-                            onClick={() => deleteDocumentAsManager(d)}
-                          >
-                            Delete
-                          </button>
+                          {(user.role === "ADMIN" || user.role === "STAFF") && (
+                            <button
+                              className="btn btn-ghost"
+                              style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }}
+                              disabled={verifyingDocId === d.id}
+                              onClick={() => deleteDocumentAsManager(d)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

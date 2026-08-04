@@ -184,12 +184,13 @@ router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
   }
 });
 
-// ADMIN/STAFF/CLERK: remove a document regardless of verification status — the student-side DELETE
-// above is deliberately locked once a document is VERIFIED, but staff overseeing placement records
-// still need a way to remove one (e.g. it was verified against the wrong file, or is no longer
-// needed). Separate path from the student route above so this never collides with (or accidentally
-// widens) that STUDENT-only handler.
-router.delete("/:id/admin", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+// ADMIN/STAFF: remove a document regardless of verification status — the student-side DELETE above
+// is deliberately locked once a document is VERIFIED, but staff overseeing placement records still
+// need a way to remove one (e.g. it was verified against the wrong file, or is no longer needed).
+// Separate path from the student route above so this never collides with (or accidentally widens)
+// that STUDENT-only handler. CLERK is deliberately excluded — Clerk's document responsibilities
+// are view/download/verify/remarks, never irreversible deletion (see the Clerk RBAC review).
+router.delete("/:id/admin", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const doc = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!doc) return res.status(404).json({ error: "Document not found" });

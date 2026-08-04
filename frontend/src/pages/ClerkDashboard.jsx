@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building, Search, Users, GraduationCap, FileDown, FileText } from "lucide-react";
+import { Building, Search, Users, GraduationCap, FileDown, FileText, UserCheck, Clock } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -17,6 +17,7 @@ export default function ClerkDashboard() {
   const [offerStats, setOfferStats] = useState(null);
   const [department, setDepartment] = useState(null);
   const [documentStats, setDocumentStats] = useState(null);
+  const [profileStats, setProfileStats] = useState(null);
   const [batchFilter, setBatchFilter] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -45,6 +46,15 @@ export default function ClerkDashboard() {
   useEffect(() => {
     api.get("/placement/analytics/documents").then((res) => setDocumentStats(res.data)).catch(() => setDocumentStats(null));
   }, []);
+
+  // Reuses the same institute-scoped completion-stats route Student Management/Institute admin
+  // already call — Clerk was already permitted here (see institutes.js), just never fetched it.
+  useEffect(() => {
+    if (!user?.instituteId) return;
+    api.get(`/institutes/${user.instituteId}/profile-completion-stats`)
+      .then((res) => setProfileStats(res.data))
+      .catch(() => setProfileStats(null));
+  }, [user?.instituteId]);
 
   async function downloadPdfReport() {
     setDownloadingPdf(true);
@@ -110,10 +120,19 @@ export default function ClerkDashboard() {
               <StatCard icon={GraduationCap} label="Not Registered" value={registration.notRegistered} />
               <StatCard icon={Building} label="Companies" value={companyCount ?? "—"} />
               <StatCard icon={Users} label="% Registered" value={`${registration.percentRegistered}%`} />
+              {profileStats && (
+                <StatCard icon={UserCheck} label="Profiles Verified" value={profileStats.completed} />
+              )}
+              {profileStats && (
+                <StatCard icon={Clock} label="Profiles Pending Verification" value={profileStats.incomplete} />
+              )}
               {documentStats && (
                 <Link to="/clerk/students" style={{ textDecoration: "none", color: "inherit" }}>
                   <StatCard icon={FileText} label="Documents Pending Verification" value={documentStats.pending} />
                 </Link>
+              )}
+              {documentStats && (
+                <StatCard icon={FileText} label="Documents Verified" value={documentStats.verified} />
               )}
             </div>
             {registration.declineBreakdown.length > 0 && (
@@ -153,6 +172,7 @@ export default function ClerkDashboard() {
               <StatCard icon={Users} label="Avg Offers / Student" value={offerStats.averageOffersPerStudent} />
               <StatCard icon={Building} label="Highest Package (LPA)" value={offerStats.highestPackage} />
               <StatCard icon={Building} label="Average Package (LPA)" value={offerStats.averagePackage} />
+              <StatCard icon={Clock} label="Offer Letters Pending Verification" value={offerStats.pendingVerification} />
             </div>
 
             {offerSourceData.length > 0 && (
@@ -221,6 +241,34 @@ export default function ClerkDashboard() {
             </tbody>
           </table>
         </div>
+
+        {profileStats && profileStats.recentlyUpdated.length > 0 && (
+          <>
+            <h3 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Recently Updated Student Profiles</h3>
+            <div className="card" style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
+                    <th style={{ padding: "10px 12px" }}>Roll Number</th>
+                    <th style={{ padding: "10px 12px" }}>Name</th>
+                    <th style={{ padding: "10px 12px" }}>Department</th>
+                    <th style={{ padding: "10px 12px" }}>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profileStats.recentlyUpdated.map((p) => (
+                    <tr key={p.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                      <td className="mono" style={{ padding: "10px 12px" }}>{p.rollNumber || "—"}</td>
+                      <td style={{ padding: "10px 12px" }}><Link to={`/clerk/students/${p.id}`}>{p.name}</Link></td>
+                      <td style={{ padding: "10px 12px" }}>{p.department || "—"}</td>
+                      <td className="mono" style={{ padding: "10px 12px" }}>{new Date(p.updatedAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="card" style={{ padding: 16, marginTop: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Need a filtered list?</div>
