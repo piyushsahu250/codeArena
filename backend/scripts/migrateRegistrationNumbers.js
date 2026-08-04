@@ -9,7 +9,10 @@
  * Background: `rollNumber` was historically used to store the student's Registration Number
  * (PRN) — a permanent, system-wide-unique academic ID — while the real classroom Roll Number
  * (non-unique, used for attendance/seating order) had nowhere to live. This script performs the
- * one-time data migration in five ordered, independently-idempotent passes, STUDENT rows only:
+ * one-time data migration in five ordered, independently-idempotent passes. Passes 1, 2, 4, and 5
+ * are STUDENT-only (rollNumber semantics only apply to students); pass 3 (dedupe) scans every
+ * role, since @@unique([registrationNumber]) is a table-wide constraint Postgres enforces
+ * regardless of role.
  *
  *   1. Copy + reinit — for any student with a blank `registrationNumber` but a real `rollNumber`
  *               (i.e. a row that has never been through this migration before — see idempotency
@@ -27,11 +30,11 @@
  *               `rollNumber` is never touched or reverted by a subsequent deploy's re-run.
  *   2. Blank-normalize — any lingering `registrationNumber === ""` becomes real `NULL` (defensive;
  *               required before a unique index can be added).
- *   3. Dedupe — group all non-null `registrationNumber`s PLATFORM-WIDE (PRN is system-wide unique,
- *               not per-institute). Within any collision group, the earliest-created account keeps
- *               its value untouched; every later duplicate gets a `-DUP2`, `-DUP3`, ... suffix
- *               appended, exactly like `dedupeRollNumbers.js` does for `rollNumber` today. Every
- *               case is logged (email + institute) — a genuine data-integrity signal worth an
+ *   3. Dedupe — group all non-null `registrationNumber`s across every role and institute (PRN is
+ *               system-wide unique, not per-institute, and the underlying constraint isn't scoped
+ *               to STUDENT rows either). Within any collision group, the earliest-created account
+ *               keeps its value untouched; every later duplicate gets a `-DUP2`, `-DUP3`, ...
+ *               suffix appended. Every case is logged (email + institute) — a genuine data-integrity signal worth an
  *               admin's attention, not something to silently sweep away.
  *   4. Roll Number auto-init — defensive fallback only, for any student with a still-blank
  *               `rollNumber` but a real `registrationNumber` that pass 1 didn't already handle
@@ -87,16 +90,21 @@ async function blankNormalizePass() {
 }
 
 async function dedupePass() {
-  const students = await prisma.user.findMany({
-    where: { role: "STUDENT", registrationNumber: { not: null } },
-    select: { id: true, registrationNumber: true, email: true, instituteId: true, createdAt: true },
+  // @@unique([registrationNumber]) is a table-wide constraint on User, not scoped to role: STUDENT
+  // — Postgres will refuse to create it if ANY two rows share a value, regardless of role. This
+  // pass must therefore scan every role, not just students, even though registrationNumber is
+  // documented as student-only: a stray non-null value on a Staff/Admin/Clerk row (e.g. from a
+  // legacy import) would otherwise never be seen here yet would still block the index.
+  const users = await prisma.user.findMany({
+    where: { registrationNumber: { not: null } },
+    select: { id: true, registrationNumber: true, email: true, instituteId: true, role: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
 
   const groups = new Map(); // registrationNumber -> rows, in createdAt-ascending order
-  for (const s of students) {
-    if (!groups.has(s.registrationNumber)) groups.set(s.registrationNumber, []);
-    groups.get(s.registrationNumber).push(s);
+  for (const u of users) {
+    if (!groups.has(u.registrationNumber)) groups.set(u.registrationNumber, []);
+    groups.get(u.registrationNumber).push(u);
   }
 
   let fixedCount = 0;
@@ -107,7 +115,7 @@ async function dedupePass() {
       const newRegNumber = `${row.registrationNumber}-DUP${i + 1}`;
       await prisma.user.update({ where: { id: row.id }, data: { registrationNumber: newRegNumber } });
       console.log(
-        `[migrateRegistrationNumbers] DUPLICATE PRN: ${row.email} (institute ${row.instituteId}): "${row.registrationNumber}" -> "${newRegNumber}" (duplicate of an earlier account — review recommended).`
+        `[migrateRegistrationNumbers] DUPLICATE PRN: ${row.email} (${row.role}, institute ${row.instituteId}): "${row.registrationNumber}" -> "${newRegNumber}" (duplicate of an earlier account — review recommended).`
       );
       fixedCount++;
     }
