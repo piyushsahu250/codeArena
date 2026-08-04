@@ -272,7 +272,16 @@ export default function AdminDashboard() {
 
           {lookupResult && (
             <div style={{ marginTop: 20 }}>
-              <div style={{ fontWeight: 600 }}>{lookupResult.rollNumber || "—"} · {lookupResult.name} <span className="mono" style={{ fontWeight: 400, color: "var(--ink-dim)", fontSize: 13 }}>({lookupResult.registrationNumber || "PRN not set"}) · {lookupResult.email}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ fontWeight: 600 }}>{lookupResult.rollNumber || "—"} · {lookupResult.name} <span className="mono" style={{ fontWeight: 400, color: "var(--ink-dim)", fontSize: 13 }}>({lookupResult.registrationNumber || "PRN not set"}) · {lookupResult.email}</span></div>
+                <Link
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, padding: "4px 10px" }}
+                  to={`/admin/students?q=${encodeURIComponent(lookupResult.registrationNumber || lookupResult.email)}`}
+                >
+                  Edit Profile →
+                </Link>
+              </div>
               <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
                 {lookupResult.attempts.map((a, idx) => (
                   <div key={idx} className="card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, gap: 12 }}>

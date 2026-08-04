@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -54,6 +54,19 @@ export default function StudentSearch({ basePath }) {
   const [exporting, setExporting] = useState(false);
   const [browsePageMeta, setBrowsePageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
   const [lastMode, setLastMode] = useState(null); // "search" | "browse" — controls whether Prev/Next renders
+  const [searchParams] = useSearchParams();
+
+  // Deep-link support — e.g. the Admin Dashboard's "Check test completion" lookup box links here
+  // with ?q=<registrationNumber> so a PRN search can lead straight into Edit Profile, without a
+  // second copy of the search box or a duplicate results view.
+  useEffect(() => {
+    const initialQ = searchParams.get("q");
+    if (initialQ) {
+      setQ(initialQ);
+      handleSearch(null, initialQ);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (user?.role === "ADMIN") api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
@@ -77,14 +90,15 @@ export default function StudentSearch({ basePath }) {
   const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.section))].sort();
   const batches = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.batch))].filter(Boolean).sort();
 
-  async function handleSearch(e) {
-    e.preventDefault();
-    if (!q.trim()) return;
+  async function handleSearch(e, termOverride) {
+    e?.preventDefault?.();
+    const term = (termOverride ?? q).trim();
+    if (!term) return;
     setSearching(true);
     setError("");
     setSelected([]);
     try {
-      const { data } = await api.get("/users/search", { params: { q: q.trim() } });
+      const { data } = await api.get("/users/search", { params: { q: term } });
       setResults(data);
       setLastMode("search");
     } catch (err) {
