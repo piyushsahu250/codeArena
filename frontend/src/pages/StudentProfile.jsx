@@ -10,6 +10,17 @@ import { useToast } from "../context/ToastContext";
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
 
+// Shared by every save handler on this page so "no response at all" (offline/DNS/CORS — axios
+// never got a response object) reads as a connectivity problem instead of the misleading default
+// fallback text, which otherwise told a student with no internet to go "check the fields below."
+// A real field-validation 400 or a server 5xx already carries a specific `error` string from the
+// backend and is shown as-is; only the true no-response case falls back to this generic wording.
+function saveErrorMessage(err, fallback) {
+  if (err.response?.data?.error) return err.response.data.error;
+  if (!err.response) return "Network error — check your connection and try again.";
+  return fallback;
+}
+
 const TABS = [
   { key: "personal", label: "Personal Academic & Info" },
   { key: "skills", label: "Skills & Capabilities" },
@@ -190,7 +201,7 @@ export default function StudentProfile() {
       updateUser({ profileComplete: res.data.completion.unlocked, name: res.data.user.name, mobile: res.data.user.mobile, gender: res.data.user.gender, profilePhotoUrl: res.data.user.profilePhotoUrl });
       load();
     } catch (err) {
-      const msg = err.response?.data?.error || "Failed to save. Please check the fields below.";
+      const msg = saveErrorMessage(err, "Failed to save. Please check the fields below.");
       setErrors({ personal: msg });
       toast.error(msg);
     } finally {
@@ -206,7 +217,7 @@ export default function StudentProfile() {
       toast.success("Skills & Capabilities saved.");
       load();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to save");
+      toast.error(saveErrorMessage(err, "Failed to save"));
     } finally {
       setSaving(false);
     }
@@ -224,7 +235,7 @@ export default function StudentProfile() {
       toast.success("Placement registration saved.");
       load();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to save");
+      toast.error(saveErrorMessage(err, "Failed to save"));
     } finally {
       setSaving(false);
     }

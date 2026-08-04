@@ -129,7 +129,20 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       profileData.placementUpdatedAt = new Date();
     }
 
-    const encryptedProfileData = encryptProfileData(profileData);
+    // Isolated from the outer catch's generic "Failed to save profile" so a misconfigured
+    // PII_ENCRYPTION_KEY (loadKey() throws synchronously here, before any DB write) surfaces as
+    // its own clearly-tagged log line instead of being indistinguishable from a real DB failure —
+    // this exact failure mode is what caused students to see "Failed to save profile" whenever
+    // their edit touched an encrypted field (personalEmail/address/state/district/pincode/
+    // father*/mother*) while the key was unset, and silently succeed otherwise, which is why the
+    // symptom looked intermittent/"partially saved" rather than a hard outage.
+    let encryptedProfileData;
+    try {
+      encryptedProfileData = encryptProfileData(profileData);
+    } catch (encErr) {
+      console.error("[profile.patchMe] PII encryption failed:", { userId: req.user.id, message: encErr.message });
+      return res.status(503).json({ error: "Profile save is temporarily unavailable due to a server configuration issue. Please try again later or contact support." });
+    }
     await prisma.$transaction([
       ...(Object.keys(userData).length ? [prisma.user.update({ where: { id: req.user.id }, data: userData })] : []),
       prisma.studentProfile.upsert({
@@ -164,8 +177,14 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       profile: decryptProfile(await prisma.studentProfile.findUnique({ where: { studentId: req.user.id } })),
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to save profile" });
+    console.error("[profile.patchMe] failed:", { userId: req.user.id, message: err.message, code: err.code, meta: err.meta });
+    // Safety net for a unique-constraint collision (none of the student-editable fields are
+    // unique today, but this keeps the response meaningful rather than a raw 500 if that ever
+    // changes) — same convention as users.js's create/update routes.
+    if (err.code === "P2002") {
+      return res.status(409).json({ error: `That ${Array.isArray(err.meta?.target) ? err.meta.target.join(", ") : "value"} is already in use.` });
+    }
+    res.status(500).json({ error: "Failed to save profile. Please try again, and contact support if the issue persists." });
   }
 });
 
