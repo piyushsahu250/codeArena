@@ -500,7 +500,10 @@ router.get("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN"
     if (!assignment) return;
     const plans = await prisma.lecturePlan.findMany({
       where: { assignmentId: assignment.id },
-      orderBy: [{ scheduleDate: "desc" }, { lectureNumber: "desc" }],
+      // Lecture Number is unique per assignment (assignmentId_lectureNumber) and is the sequence
+      // that actually matters for Course Plan / Lecture List / Faculty View — scheduleDate can
+      // drift out of numeric order whenever a lecture gets rescheduled or backfilled.
+      orderBy: { lectureNumber: "asc" },
       include: { session: { select: { id: true } } },
     });
     res.json(plans);
@@ -882,7 +885,11 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
           },
         },
       },
-      orderBy: [{ session: { plan: { scheduleDate: "desc" } } }, { session: { plan: { lectureNumber: "asc" } } }],
+      // Groups by assignment first, then ascending Lecture Number within each — this report can
+      // span multiple assignments/subjects at once, so a pure lectureNumber sort would interleave
+      // unrelated subjects; grouping by assignment keeps each subject's lectures in numeric order
+      // instead of the scheduleDate-primary sort that let a rescheduled lecture drift out of order.
+      orderBy: [{ session: { plan: { assignmentId: "asc" } } }, { session: { plan: { lectureNumber: "asc" } } }],
       take: 10000, // hard ceiling — export/report views, not a paginated feed
     });
 
@@ -957,7 +964,10 @@ router.get("/my-records", authenticate, requireRole("STUDENT"), async (req, res)
             },
           },
         },
-        orderBy: [{ session: { plan: { scheduleDate: "desc" } } }],
+        // Most-recent-first is the correct default for a personal history feed (kept as the
+        // primary key); Lecture Number is a same-day tiebreak so multiple lectures on one day
+        // still read in numeric order instead of arbitrary DB row order.
+        orderBy: [{ session: { plan: { scheduleDate: "desc" } } }, { session: { plan: { lectureNumber: "desc" } } }],
         take: 5000,
       }),
       prisma.user.findUnique({ where: { id: req.user.id }, select: { institute: { select: { attendanceMinPercent: true } } } }),

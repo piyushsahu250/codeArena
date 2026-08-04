@@ -1272,7 +1272,7 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
             <div key={s.student.id} className="card" style={{ padding: 12, fontSize: 13 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                 <div style={{ cursor: "pointer" }} onClick={() => setExpanded(expanded === s.student.id ? null : s.student.id)}>
-                  <div style={{ fontWeight: 600 }}>{s.student.name} <span className="mono" style={{ fontWeight: 400, fontSize: 11, color: "var(--ink-dim)" }}>{s.student.rollNumber || s.student.email}</span></div>
+                  <div style={{ fontWeight: 600 }}>{s.student.rollNumber && <span className="mono" style={{ marginRight: 6 }}>{s.student.rollNumber}</span>}{s.student.name} <span className="mono" style={{ fontWeight: 400, fontSize: 11, color: "var(--ink-dim)" }}>{s.student.registrationNumber || s.student.email}</span></div>
                   <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
                     Used {s.attemptsUsed}{maxAttempts != null ? `/${maxAttempts}` : ""} · Remaining {s.attemptsRemaining ?? "Unlimited"} · Last attempt {s.lastAttempt ? new Date(s.lastAttempt).toLocaleString() : "—"}
                   </div>

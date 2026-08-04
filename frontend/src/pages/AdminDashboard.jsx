@@ -346,10 +346,10 @@ export default function AdminDashboard() {
                 {form.role === "STUDENT" && (
                   <>
                     <label style={labelStyle}>Registration number (PRN)</label>
-                    <input style={inputStyle} required value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="Permanent unique ID" />
+                    <input style={inputStyle} required maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="9-12 alphanumeric characters" />
 
                     <label style={labelStyle}>Roll number (optional)</label>
-                    <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} placeholder="Auto-filled from PRN's last 3 characters if left blank" />
+                    <input style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Auto-filled from PRN's last 3 characters if left blank" />
 
                     <label style={labelStyle}>Mobile number</label>
                     <input style={inputStyle} required value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />

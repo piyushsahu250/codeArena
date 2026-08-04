@@ -929,7 +929,7 @@ router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "STAF
       moduleCodingTestId: req.params.id,
       ...(req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {}),
     },
-    include: { student: { select: { id: true, name: true, email: true, rollNumber: true } } },
+    include: { student: { select: { id: true, name: true, email: true, rollNumber: true, registrationNumber: true } } },
     orderBy: { startedAt: "desc" },
   });
   res.json(attempts);
@@ -1028,12 +1028,12 @@ router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN"), attach
         moduleCodingTestId: req.params.id,
         ...(req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {}),
       },
-      include: { student: { select: { name: true, email: true, rollNumber: true } } },
+      include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } } },
       orderBy: { startedAt: "desc" },
       take: 5000,
     });
     const rows = attempts.map((a) => ({
-      Student: a.student.name, Email: a.student.email, RollNumber: a.student.rollNumber || "",
+      Student: a.student.name, Email: a.student.email, RollNumber: a.student.rollNumber || "", RegistrationNumber: a.student.registrationNumber || "",
       Attempt: a.attemptNumber, Status: a.status, Score: a.score, Passed: a.passed ? "Yes" : "No",
       Violations: a.violationCount, StartedAt: a.startedAt.toISOString(), SubmittedAt: a.submittedAt ? a.submittedAt.toISOString() : "",
     }));

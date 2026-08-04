@@ -480,7 +480,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
               <div style={{ border: "1px solid var(--line)", borderRadius: 8, marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
                 {studentResults.map((s) => (
                   <div key={s.id} style={{ padding: "8px 10px", fontSize: 13, cursor: "pointer", borderBottom: "1px solid var(--line)" }} onClick={() => { setSelectedStudent(s); setStudentQuery(`${s.name} (${s.rollNumber || s.email})`); setStudentResults([]); }}>
-                    {s.name} — {s.rollNumber || s.email}
+                    {s.rollNumber && <span className="mono">{s.rollNumber}</span>} {s.name} <span className="mono" style={{ color: "var(--ink-dim)" }}>({s.registrationNumber || s.email})</span>
                   </div>
                 ))}
               </div>
@@ -534,8 +534,9 @@ function ExamDetail({ examId, isAdmin, onBack }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                <th style={{ padding: "8px 10px" }}>Student</th>
                 <th style={{ padding: "8px 10px" }}>Roll No.</th>
+                <th style={{ padding: "8px 10px" }}>Student</th>
+                <th style={{ padding: "8px 10px" }}>Registration No. (PRN)</th>
                 <th style={{ padding: "8px 10px" }}>Department</th>
                 <th style={{ padding: "8px 10px" }}>Marks</th>
                 <th style={{ padding: "8px 10px" }}>%</th>
@@ -546,8 +547,9 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             <tbody>
               {entries.map((en) => (
                 <tr key={en.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                  <td className="mono" style={{ padding: "8px 10px" }}>{en.rollNumber || "—"}</td>
                   <td style={{ padding: "8px 10px" }}>{en.studentName}</td>
-                  <td style={{ padding: "8px 10px" }}>{en.rollNumber || "—"}</td>
+                  <td className="mono" style={{ padding: "8px 10px" }}>{en.registrationNumber || "—"}</td>
                   <td style={{ padding: "8px 10px" }}>{en.department || "—"}</td>
                   <td style={{ padding: "8px 10px" }}>{en.obtainedMarks} / {exam.totalMarks}</td>
                   <td style={{ padding: "8px 10px" }}>{en.percentage}%</td>

@@ -211,18 +211,20 @@ export default function AcademicGroups() {
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                  <th style={{ padding: "6px 4px" }}>Name</th>
+                  <th style={{ padding: "6px 4px" }}>Roll no.</th>
+                  <th>Name</th>
+                  <th>Registration No. (PRN)</th>
                   <th>Email</th>
-                  <th>Roll no.</th>
                   <th>New temporary password</th>
                 </tr>
               </thead>
               <tbody>
                 {resetResult.students.map((s) => (
                   <tr key={s.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                    <td style={{ padding: "6px 4px" }}>{s.name}</td>
+                    <td className="mono" style={{ padding: "6px 4px" }}>{s.rollNumber || "—"}</td>
+                    <td>{s.name}</td>
+                    <td className="mono">{s.registrationNumber || "—"}</td>
                     <td className="mono">{s.email}</td>
-                    <td className="mono">{s.rollNumber}</td>
                     <td className="mono" style={{ fontWeight: 700 }}>{s.newPassword}</td>
                   </tr>
                 ))}
@@ -267,18 +269,20 @@ export default function AcademicGroups() {
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
                         <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                          <th style={{ padding: "6px 4px" }}>Name</th>
+                          <th style={{ padding: "6px 4px" }}>Roll no.</th>
+                          <th>Name</th>
+                          <th>Registration No. (PRN)</th>
                           <th>Email</th>
-                          <th>Roll no.</th>
                           <th>Mobile</th>
                         </tr>
                       </thead>
                       <tbody>
                         {roster.map((s) => (
                           <tr key={s.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                            <td style={{ padding: "6px 4px" }}>{s.name}</td>
+                            <td className="mono" style={{ padding: "6px 4px" }}>{s.rollNumber || "—"}</td>
+                            <td>{s.name}</td>
+                            <td className="mono">{s.registrationNumber || "—"}</td>
                             <td className="mono">{s.email}</td>
-                            <td className="mono">{s.rollNumber || "—"}</td>
                             <td className="mono">{s.mobile || "—"}</td>
                           </tr>
                         ))}

@@ -53,9 +53,13 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
         take: LIMIT,
       });
       const basePath = req.user.role === "ADMIN" ? "/admin" : "/staff";
-      // PRN-first display per the platform's standard identifier format — Registration Number is
-      // the permanent unique identifier, Roll Number can legitimately repeat.
-      results.push(...students.map((s) => ({ type: "Student", label: `${s.name} (${s.registrationNumber || s.rollNumber || s.email})`, url: `${basePath}/students/${s.id}` })));
+      // Roll -> Name -> PRN per the platform's standard display order — shows both identifiers
+      // together (not a fallback pick between one or the other) whenever either is set.
+      results.push(...students.map((s) => {
+        const rollPrefix = s.rollNumber ? `${s.rollNumber} — ` : "";
+        const idSuffix = s.registrationNumber || s.email;
+        return { type: "Student", label: `${rollPrefix}${s.name} (${idSuffix})`, url: `${basePath}/students/${s.id}` };
+      }));
 
       // Staff visibility is ADMIN-only, matching Academic Groups/Institutes below — staff-account
       // management elsewhere in the app (user creation/edit) is already admin-only, so this is

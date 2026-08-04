@@ -621,7 +621,7 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
 router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const attempts = await prisma.testAttempt.findMany({
     where: { testId: req.params.id },
-    include: { student: { select: { name: true, email: true, rollNumber: true } } },
+    include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } } },
     orderBy: { totalScore: "desc" },
   });
   res.json(attempts);

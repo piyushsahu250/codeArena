@@ -62,7 +62,7 @@ router.get("/:id/students", authenticate, requireRole("ADMIN", "STAFF"), attachR
 
     const students = await prisma.user.findMany({
       where: { academicGroupId: req.params.id, role: "STUDENT" },
-      select: { id: true, name: true, email: true, rollNumber: true, mobile: true },
+      select: { id: true, name: true, email: true, rollNumber: true, registrationNumber: true, mobile: true },
       orderBy: { name: "asc" },
     });
     res.json({ group, students });
@@ -87,7 +87,7 @@ router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), atta
 
     const students = await prisma.user.findMany({
       where: { academicGroupId: req.params.id, role: "STUDENT" },
-      select: { id: true, name: true, email: true, rollNumber: true },
+      select: { id: true, name: true, email: true, rollNumber: true, registrationNumber: true },
     });
 
     const reset = [];
@@ -100,7 +100,7 @@ router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), atta
         await tx.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
         await recordPasswordChange(tx, student.id, passwordHash, null);
       });
-      reset.push({ id: student.id, name: student.name, email: student.email, rollNumber: student.rollNumber, newPassword });
+      reset.push({ id: student.id, name: student.name, email: student.email, rollNumber: student.rollNumber, registrationNumber: student.registrationNumber, newPassword });
     }
 
     res.json({ resetCount: reset.length, students: reset });

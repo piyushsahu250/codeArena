@@ -305,9 +305,9 @@ export default function StudentSearch({ basePath }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                   {canRegenerate && <input type="checkbox" checked={selected.includes(s.id)} onChange={() => toggle(s.id)} />}
                   <Link to={`${basePath}/students/${s.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{s.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}><span className="mono" style={{ fontWeight: 400, marginRight: 6 }}>{s.rollNumber || "—"}</span>{s.name}</div>
                     <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-                      {s.rollNumber || "—"} · {s.email}
+                      {s.registrationNumber || "—"} · {s.email}
                     </div>
                     <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
                       {s.institute?.name || "—"}

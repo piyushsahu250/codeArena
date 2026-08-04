@@ -9,7 +9,7 @@
  * Background: `rollNumber` was historically used to store the student's Registration Number
  * (PRN) — a permanent, system-wide-unique academic ID — while the real classroom Roll Number
  * (non-unique, used for attendance/seating order) had nowhere to live. This script performs the
- * one-time data migration in four ordered, independently-idempotent passes, STUDENT rows only:
+ * one-time data migration in five ordered, independently-idempotent passes, STUDENT rows only:
  *
  *   1. Copy + reinit — for any student with a blank `registrationNumber` but a real `rollNumber`
  *               (i.e. a row that has never been through this migration before — see idempotency
@@ -39,6 +39,17 @@
  *               `rollNumber` left blank). Sets `rollNumber` to the PRN's last 3 characters. Only
  *               ever fires while `rollNumber` is empty; stops firing permanently once it's set, by
  *               this script or by the student.
+ *   5. Roll-length fix — targets rows structurally unreachable by passes 1 and 4: any student whose
+ *               `registrationNumber` was ALREADY non-null before this migration ever ran (e.g.
+ *               populated by a very old code path, or by a bulk-upload row predating the platform-
+ *               wide 3-character Roll Number cap), so pass 1's WHERE clause (`registrationNumber`
+ *               blank) never fires for it, yet `rollNumber` is still left holding an oversized
+ *               legacy value. Any row where `rollNumber` is already <=3 characters is left
+ *               completely untouched — that's proof of either a prior auto-init/auto-reset or a
+ *               legitimate short value a student deliberately chose, and this pass must never
+ *               revert either. Once fixed here, `rollNumber` is <=3 characters forever, so this
+ *               pass's effective condition (`length > 3`) goes permanently false for that row —
+ *               same self-terminating, idempotent contract as every other pass in this file.
  *
  * Idempotent by construction, same contract as `dedupeRollNumbers.js`: never exits non-zero, never
  * deletes a student, never overwrites a value outside the one-time transition each pass targets.
@@ -125,11 +136,29 @@ async function autoInitRollNumberPass() {
   return { initialized };
 }
 
+async function rollLengthFixPass() {
+  const rows = await prisma.user.findMany({
+    where: { role: "STUDENT", registrationNumber: { not: null }, rollNumber: { not: null } },
+    select: { id: true, registrationNumber: true, rollNumber: true },
+  });
+  let fixed = 0;
+  for (const row of rows) {
+    if (String(row.rollNumber).length <= 3) continue; // already valid — auto-set or a legitimate student override, never touch
+    const reinit = initRollNumberFromRegistration(row.registrationNumber);
+    if (!reinit) continue;
+    await prisma.user.update({ where: { id: row.id }, data: { rollNumber: reinit } });
+    fixed++;
+  }
+  console.log(`[migrateRegistrationNumbers] Roll-length-fix pass: ${fixed} student(s) had an oversized (>3 char) legacy rollNumber reset to their registrationNumber's last 3 characters.`);
+  return { fixed };
+}
+
 async function main() {
   await copyPass();
   await blankNormalizePass();
   await dedupePass();
   await autoInitRollNumberPass();
+  await rollLengthFixPass();
   await prisma.$disconnect();
 }
 

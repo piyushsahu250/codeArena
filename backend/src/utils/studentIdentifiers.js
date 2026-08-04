@@ -4,6 +4,11 @@
 // departments/institutes are expected). Used by the migration script and every route that
 // creates/sorts students, so the "last 3 characters" / numeric-sort rules only live in one place.
 
+// Registration Number (PRN): 9-12 alphanumeric characters, stored exactly as entered.
+const REGISTRATION_NUMBER_RE = /^[A-Za-z0-9]{9,12}$/;
+// Roll Number: capped at 3 characters platform-wide.
+const ROLL_NUMBER_MAX_LENGTH = 3;
+
 // Auto-init a blank Roll Number from the last 3 characters of a Registration Number (PRN), e.g.
 // "2028COMP00123" -> "123". Verbatim last-3-characters (matching the spec's own example), not a
 // smarter digit-extraction — callers only invoke this when rollNumber is currently empty, and must
@@ -37,4 +42,4 @@ function compareRollNumbers(a, b) {
   return String(a?.name || "").localeCompare(String(b?.name || ""));
 }
 
-module.exports = { initRollNumberFromRegistration, compareRollNumbers };
+module.exports = { initRollNumberFromRegistration, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH };

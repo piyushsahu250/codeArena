@@ -168,20 +168,20 @@ export default function BulkUpload() {
                 <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
                   <thead>
                     <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                      <th style={{ padding: "6px 4px" }}>Name</th>
-                      <th>Email</th>
+                      <th style={{ padding: "6px 4px" }}>Roll no.</th>
+                      <th>Name</th>
                       <th>Registration No. (PRN)</th>
-                      <th>Roll no.</th>
+                      <th>Email</th>
                       <th>Temporary password</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.created.map((u, i) => (
                       <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                        <td style={{ padding: "6px 4px" }}>{u.name}</td>
-                        <td className="mono">{u.email}</td>
+                        <td className="mono" style={{ padding: "6px 4px" }}>{u.rollNumber}</td>
+                        <td>{u.name}</td>
                         <td className="mono">{u.registrationNumber}</td>
-                        <td className="mono">{u.rollNumber}</td>
+                        <td className="mono">{u.email}</td>
                         <td className="mono" style={{ fontWeight: 700 }}>{u.generatedPassword}</td>
                       </tr>
                     ))}
@@ -195,10 +195,10 @@ export default function BulkUpload() {
                 style={{ marginTop: 16 }}
                 onClick={() => downloadCsv(
                   "bulk-upload-error-report.csv",
-                  ["Row", "Type", "Name", "Email", "Registration Number", "Reason"],
+                  ["Row", "Type", "Roll Number", "Name", "Registration Number", "Email", "Reason"],
                   [
-                    ...result.duplicates.map((r) => [r.row, "Duplicate", r.name, r.email, r.registrationNumber, r.reason]),
-                    ...result.errors.map((r) => [r.row, "Error", r.name, r.email, r.registrationNumber, r.reason]),
+                    ...result.duplicates.map((r) => [r.row, "Duplicate", r.rollNumber, r.name, r.registrationNumber, r.email, r.reason]),
+                    ...result.errors.map((r) => [r.row, "Error", r.rollNumber, r.name, r.registrationNumber, r.email, r.reason]),
                   ]
                 )}
               >
@@ -226,9 +226,10 @@ function ResultTable({ title, rows, color }) {
         <thead>
           <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
             <th style={{ padding: "6px 4px" }}>Row</th>
+            <th>Roll No.</th>
             <th>Name</th>
-            <th>Email</th>
             <th>Reg. No. (PRN)</th>
+            <th>Email</th>
             <th>Reason</th>
           </tr>
         </thead>
@@ -236,9 +237,10 @@ function ResultTable({ title, rows, color }) {
           {rows.map((r, i) => (
             <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
               <td className="mono" style={{ padding: "6px 4px" }}>{r.row}</td>
+              <td className="mono">{r.rollNumber || "—"}</td>
               <td>{r.name || "—"}</td>
-              <td className="mono">{r.email || "—"}</td>
               <td className="mono">{r.registrationNumber || "—"}</td>
+              <td className="mono">{r.email || "—"}</td>
               <td style={{ color }}>{r.reason}</td>
             </tr>
           ))}

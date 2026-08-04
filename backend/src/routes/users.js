@@ -14,7 +14,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
-const { initRollNumberFromRegistration, compareRollNumbers } = require("../utils/studentIdentifiers");
+const { initRollNumberFromRegistration, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -266,6 +266,12 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
     // gets no such check.
     let normalizedRollNumber = String(rollNumber || "").trim() || null;
     let normalizedRegNumber = String(registrationNumber || "").trim() || null;
+    if (normalizedRegNumber && !REGISTRATION_NUMBER_RE.test(normalizedRegNumber)) {
+      return res.status(400).json({ error: "Registration Number (PRN) must be 9-12 alphanumeric characters" });
+    }
+    if (normalizedRollNumber && normalizedRollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
+      return res.status(400).json({ error: "Roll Number cannot exceed 3 characters" });
+    }
     if (role === "STUDENT" && normalizedRegNumber) {
       const dupReg = await prisma.user.findFirst({ where: { registrationNumber: normalizedRegNumber } });
       if (dupReg) return res.status(409).json({ error: `Registration Number "${normalizedRegNumber}" is already registered to another account` });
@@ -389,6 +395,9 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     // checked. Blank input is normalized to `null`, never left as `""`.
     if (data.rollNumber !== undefined) {
       data.rollNumber = String(data.rollNumber || "").trim() || null;
+      if (data.rollNumber && data.rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
+        return res.status(400).json({ error: "Roll Number cannot exceed 3 characters" });
+      }
     }
     // Registration Number (PRN) IS the platform's sole permanent, system-wide unique identifier
     // (see @@unique([registrationNumber]) on User) — checked before saving so a raw DB constraint
@@ -399,11 +408,20 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
       if (!registrationNumber) {
         data.registrationNumber = null;
       } else {
+        if (!REGISTRATION_NUMBER_RE.test(registrationNumber)) {
+          return res.status(400).json({ error: "Registration Number (PRN) must be 9-12 alphanumeric characters" });
+        }
         if (registrationNumber !== existing.registrationNumber) {
           const dupReg = await prisma.user.findFirst({ where: { registrationNumber, id: { not: existing.id } } });
           if (dupReg) return res.status(409).json({ error: "That Registration Number (PRN) is already registered to another account" });
         }
         data.registrationNumber = registrationNumber;
+        // Whenever the PRN actually changes, Roll Number auto-resets to its last 3 characters —
+        // unless this same request also explicitly supplied a rollNumber, in which case that
+        // explicit value wins (already validated/normalized above).
+        if (registrationNumber !== existing.registrationNumber && req.body.rollNumber === undefined) {
+          data.rollNumber = initRollNumberFromRegistration(registrationNumber);
+        }
       }
     }
     // Same NULL-tolerant per-institute uniqueness (and the same blank->null normalization) as
@@ -573,6 +591,14 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       }
       if (!EMAIL_RE.test(email)) {
         errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Invalid email format" });
+        continue;
+      }
+      if (!REGISTRATION_NUMBER_RE.test(registrationNumber)) {
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Registration Number (PRN) must be 9-12 alphanumeric characters" });
+        continue;
+      }
+      if (rollNumber && rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
+        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Roll Number cannot exceed 3 characters" });
         continue;
       }
 

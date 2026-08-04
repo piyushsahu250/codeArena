@@ -54,7 +54,7 @@ const ENTITIES = {
       const pendingCount = studentOffers.filter((o) => o.verificationStatus === "PENDING").length;
       const highest = studentOffers.reduce((max, o) => (!max || o.offeredPackage > max.offeredPackage ? o : max), null);
       return {
-        Name: u.name, Email: u.email, "Roll Number": u.rollNumber || "", "Registration Number": u.registrationNumber || "",
+        "Roll Number": u.rollNumber || "", Name: u.name, "Registration Number": u.registrationNumber || "", Email: u.email,
         Department: u.academicGroup?.department?.name || u.department || "", Mobile: u.mobile || "", Program: u.program || "",
         "Batch Year": u.academicGroup?.batch || u.batchYear || "", Section: u.academicGroup?.section || u.section || "",
         Institute: u.institute?.name || "",
@@ -97,7 +97,7 @@ const ENTITIES = {
       include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, test: { select: { title: true } } },
     });
     return rows.map((a) => ({
-      Student: a.student.name, Email: a.student.email, "Registration Number": a.student.registrationNumber || "", "Roll Number": a.student.rollNumber || "",
+      "Roll Number": a.student.rollNumber || "", Student: a.student.name, "Registration Number": a.student.registrationNumber || "", Email: a.student.email,
       Test: a.test.title, Score: a.totalScore, Status: a.status, "Tab Switches": a.tabSwitchCount,
       "Started At": a.startedAt.toISOString(), "Submitted At": a.submittedAt ? a.submittedAt.toISOString() : "",
     }));
@@ -157,8 +157,8 @@ const ENTITIES = {
       orderBy: { addedAt: "desc" },
     });
     return members.map((m) => ({
-      "Roll Number": m.student.rollNumber || "", "Registration Number": m.student.registrationNumber || "",
-      Name: m.student.name, Email: m.student.email, "Added Via": m.addedVia, "Added At": m.addedAt.toISOString(),
+      "Roll Number": m.student.rollNumber || "", Name: m.student.name, "Registration Number": m.student.registrationNumber || "",
+      Email: m.student.email, "Added Via": m.addedVia, "Added At": m.addedAt.toISOString(),
     }));
   },
 };

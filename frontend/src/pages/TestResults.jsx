@@ -33,12 +33,13 @@ export default function TestResults() {
   const completedCount = attempts.filter((a) => a.status !== "IN_PROGRESS").length;
 
   function downloadCsv() {
-    const header = ["Rank", "Student", "Email", "Roll no.", "Score", "Status", "Tab switches"];
+    const header = ["Rank", "Roll no.", "Student", "Registration No. (PRN)", "Email", "Score", "Status", "Tab switches"];
     const rows = filtered.map((a) => [
       a.rank,
-      a.student.name,
-      a.student.email,
       a.student.rollNumber || "",
+      a.student.name,
+      a.student.registrationNumber || "",
+      a.student.email,
       a.totalScore,
       a.status,
       a.tabSwitchCount ?? 0,
@@ -81,8 +82,9 @@ export default function TestResults() {
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 13, color: "var(--ink-dim)" }}>
               <th style={{ padding: "8px 4px" }}>Rank</th>
-              <th>Student</th>
               <th>Roll no.</th>
+              <th>Student</th>
+              <th>Registration No. (PRN)</th>
               <th>Score</th>
               <th>Status</th>
               <th>Tab switches</th>
@@ -94,8 +96,9 @@ export default function TestResults() {
               <>
                 <tr key={a.id} style={{ borderBottom: "1px solid var(--line)" }}>
                   <td className="mono" style={{ padding: "10px 4px" }}>{a.rank}</td>
-                  <td>{a.student.name}<br /><span style={{ fontSize: 12, color: "var(--ink-dim)" }}>{a.student.email}</span></td>
                   <td className="mono">{a.student.rollNumber || "—"}</td>
+                  <td>{a.student.name}<br /><span style={{ fontSize: 12, color: "var(--ink-dim)" }}>{a.student.email}</span></td>
+                  <td className="mono">{a.student.registrationNumber || "—"}</td>
                   <td className="mono" style={{ fontWeight: 700 }}>{a.totalScore}</td>
                   <td className="mono" style={{ fontSize: 12 }}>{a.status}</td>
                   <td className="mono" style={{ fontSize: 12, color: a.tabSwitchCount > 0 ? "var(--rust)" : "var(--ink-dim)" }}>{a.tabSwitchCount ?? 0}</td>

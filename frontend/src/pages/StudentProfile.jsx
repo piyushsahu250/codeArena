@@ -462,13 +462,13 @@ export default function StudentProfile() {
           <form onSubmit={savePersonal} className="card" style={{ padding: 20, marginTop: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Demographic Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>First Name</label><input style={inputStyle} required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Last Name</label><input style={inputStyle} required value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div>
+              <div><label style={labelStyle}>First Name</label><input style={inputStyle} value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div>
+              <div><label style={labelStyle}>Last Name</label><input style={inputStyle} value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Email</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Personal Email</label><input style={inputStyle} type="email" required value={form.personalEmail} onChange={(e) => setForm({ ...form, personalEmail: e.target.value })} /></div>
+              <div><label style={labelStyle}>Personal Email</label><input style={inputStyle} type="email" value={form.personalEmail} onChange={(e) => setForm({ ...form, personalEmail: e.target.value })} /></div>
               <div><label style={labelStyle}>College Email</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.email || ""} disabled /></div>
             </div>
 
@@ -476,49 +476,49 @@ export default function StudentProfile() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
               <div><label style={labelStyle}>Institute / College Name</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.institute?.name || ""} disabled /></div>
               <div><label style={labelStyle}>Registration Number (PRN)</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.registrationNumber || ""} disabled /></div>
-              <div><label style={labelStyle}>Roll Number</label><input style={inputStyle} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value })} placeholder="Your classroom roll number" /></div>
+              <div><label style={labelStyle}>Roll Number</label><input style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Max 3 characters" /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Phone</div>
             <label style={labelStyle}>Mobile Number</label>
-            <input style={inputStyle} required value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="+91XXXXXXXXXX" />
+            <input style={inputStyle} value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="+91XXXXXXXXXX" />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Address</div>
             <label style={labelStyle}>Address</label>
-            <textarea style={{ ...inputStyle, minHeight: 60 }} required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>State</label><input style={inputStyle} required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
-              <div><label style={labelStyle}>District</label><input style={inputStyle} required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} /></div>
-              <div><label style={labelStyle}>Pincode</label><input style={inputStyle} required value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></div>
+              <div><label style={labelStyle}>State</label><input style={inputStyle} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
+              <div><label style={labelStyle}>District</label><input style={inputStyle} value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} /></div>
+              <div><label style={labelStyle}>Pincode</label><input style={inputStyle} value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Personal Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={labelStyle}>Gender</label>
-                <select style={inputStyle} required value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                <select style={inputStyle} value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                   <option value="">Select…</option>
                   <option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option>
                 </select>
               </div>
-              <div><label style={labelStyle}>Date of Birth</label><input style={inputStyle} type="date" required value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} max={new Date().toISOString().slice(0, 10)} /></div>
+              <div><label style={labelStyle}>Date of Birth</label><input style={inputStyle} type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} max={new Date().toISOString().slice(0, 10)} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Parents' Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Father's Name</label><input style={inputStyle} required value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Father's Contact Number</label><input style={inputStyle} required value={form.fatherContact} onChange={(e) => setForm({ ...form, fatherContact: e.target.value })} /></div>
-              <div><label style={labelStyle}>Mother's Name</label><input style={inputStyle} required value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Mother's Contact Number</label><input style={inputStyle} required value={form.motherContact} onChange={(e) => setForm({ ...form, motherContact: e.target.value })} /></div>
+              <div><label style={labelStyle}>Father's Name</label><input style={inputStyle} value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value })} /></div>
+              <div><label style={labelStyle}>Father's Contact Number</label><input style={inputStyle} value={form.fatherContact} onChange={(e) => setForm({ ...form, fatherContact: e.target.value })} /></div>
+              <div><label style={labelStyle}>Mother's Name</label><input style={inputStyle} value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value })} /></div>
+              <div><label style={labelStyle}>Mother's Contact Number</label><input style={inputStyle} value={form.motherContact} onChange={(e) => setForm({ ...form, motherContact: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>About</div>
             <label style={labelStyle}>Short Description</label>
-            <textarea style={{ ...inputStyle, minHeight: 70 }} required minLength={10} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} placeholder="A couple of sentences about yourself" />
+            <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} placeholder="A couple of sentences about yourself" />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Profile Picture</div>
             <label style={labelStyle}>Profile Picture URL</label>
-            <input style={inputStyle} required value={form.profilePhotoUrl} onChange={(e) => setForm({ ...form, profilePhotoUrl: e.target.value })} placeholder="https://…" />
+            <input style={inputStyle} value={form.profilePhotoUrl} onChange={(e) => setForm({ ...form, profilePhotoUrl: e.target.value })} placeholder="https://…" />
             {form.profilePhotoUrl && <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginTop: 8 }} />}
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>

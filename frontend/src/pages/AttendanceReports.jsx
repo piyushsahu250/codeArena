@@ -109,7 +109,7 @@ export default function AttendanceReports() {
     }
   }
 
-  const columns = ["Roll Number", "Registration Number", "Student Name", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date"];
+  const columns = ["Roll Number", "Student Name", "Registration Number", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date"];
 
   const filteredRows = useMemo(() => {
     if (!rows || !search.trim()) return rows;
@@ -246,12 +246,12 @@ export default function AttendanceReports() {
                 {filteredRows.map((r, i) => (
                   <div key={i} className="card" style={{ padding: 12, fontSize: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <strong style={{ fontSize: 13 }}>{r["Student Name"]}</strong>
+                      <strong style={{ fontSize: 13 }}><span className="mono">{r["Roll Number"]}</span> — {r["Student Name"]}</strong>
                       <span style={{ fontWeight: 700, color: STATUS_COLORS[r.Status] || "var(--ink)" }}>{r.Status}</span>
                     </div>
                     <div style={{ color: "var(--ink-dim)", marginTop: 4 }}>{r.Subject} · Lecture {r["Lecture #"]} · {r.Date}</div>
                     <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>{r.Department} · {r.Section}</div>
-                    <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>Roll: {r["Roll Number"]} · PRN: {r["Registration Number"]} · Faculty: {r.Faculty}</div>
+                    <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>PRN: {r["Registration Number"]} · Faculty: {r.Faculty}</div>
                   </div>
                 ))}
               </div>

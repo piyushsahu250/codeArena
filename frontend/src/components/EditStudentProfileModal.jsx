@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
+const REGISTRATION_NUMBER_RE = /^[A-Za-z0-9]{9,12}$/;
 
 // The one student-profile edit form used everywhere a manager can edit a student — originally
 // local to StudentPerformance.jsx, extracted so StudentSearch.jsx's hierarchical browse view can
@@ -48,6 +49,8 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
     setError("");
     if (!EMAIL_RE.test(form.email.trim())) return setError("Please enter a valid email address");
     if (form.mobile.trim() && !MOBILE_RE.test(form.mobile.trim())) return setError("Please enter a valid mobile number");
+    if (form.registrationNumber.trim() && !REGISTRATION_NUMBER_RE.test(form.registrationNumber.trim())) return setError("Registration Number (PRN) must be 9-12 alphanumeric characters");
+    if (form.rollNumber.trim().length > 3) return setError("Roll Number cannot exceed 3 characters");
     setSaving(true);
     try {
       await api.patch(`/users/${studentId}`, form);
@@ -97,11 +100,11 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
               </div>
               <div>
                 <label style={labelStyle}>Registration Number (PRN)</label>
-                <input style={inputStyle} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
+                <input style={inputStyle} maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
               </div>
               <div>
                 <label style={labelStyle}>Roll Number</label>
-                <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} placeholder="Classroom roll number" />
+                <input style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Max 3 characters" />
               </div>
               <div>
                 <label style={labelStyle}>Institute</label>

@@ -250,7 +250,8 @@ export default function InterviewReports() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: "left", fontSize: 12, opacity: 0.7 }}>
-                <th style={{ padding: 10 }}>Student</th><th style={{ padding: 10 }}>Roll No.</th>
+                <th style={{ padding: 10 }}>Roll No.</th><th style={{ padding: 10 }}>Student</th>
+                <th style={{ padding: 10 }}>Registration No. (PRN)</th>
                 {user?.role === "ADMIN" && <th style={{ padding: 10 }}>Institute</th>}
                 <th style={{ padding: 10 }}>Group</th><th style={{ padding: 10 }}>Batch</th>
                 <th style={{ padding: 10 }}>Type</th><th style={{ padding: 10 }}>Company</th>
@@ -261,8 +262,9 @@ export default function InterviewReports() {
             <tbody>
               {(rows || []).map((r) => (
                 <tr key={r.sessionId} style={{ borderTop: "1px solid var(--line)" }}>
-                  <td style={{ padding: 10, fontWeight: 600 }}>{r.studentName}</td>
                   <td className="mono" style={{ padding: 10 }}>{r.rollNumber || "—"}</td>
+                  <td style={{ padding: 10, fontWeight: 600 }}>{r.studentName}</td>
+                  <td className="mono" style={{ padding: 10 }}>{r.registrationNumber || "—"}</td>
                   {user?.role === "ADMIN" && <td style={{ padding: 10 }}>{r.institute || "—"}</td>}
                   <td style={{ padding: 10 }}>{r.groupLabel || "—"}</td>
                   <td style={{ padding: 10 }}>{r.batchYear || "—"}</td>

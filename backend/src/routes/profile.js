@@ -4,6 +4,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion, MOBILE_RE, EMAIL_RE, PINCODE_RE } = require("../utils/studentProfileCompletion");
+const { ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
 const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
 const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption");
 
@@ -78,6 +79,9 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     // normalization, same discipline used for this field everywhere else in the platform.
     if ("rollNumber" in userData) {
       userData.rollNumber = String(userData.rollNumber || "").trim() || null;
+      if (userData.rollNumber && userData.rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
+        return res.status(400).json({ error: "Roll Number cannot exceed 3 characters" });
+      }
     }
     // First/Last Name is a UI-only split — joined back into the single User.name field this
     // platform already uses everywhere (audit logs, certificates, emails, dashboards).
