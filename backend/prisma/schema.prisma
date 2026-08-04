@@ -2211,6 +2211,14 @@ model StaffClassAssignment {
   // assignment carries across semesters and an admin can just update it rather than recreating.
   semester String @default("")
 
+  // A class has multiple subjects taught by different faculty, so one academic group now supports
+  // many assignments — one per subject, not one per group. @default("") makes this backward
+  // compatible with every existing row (all pre-dating this field), and since the app-level "one
+  // row per academicGroupId" rule already held before this was added, every existing row's
+  // (academicGroupId, "") pair is automatically unique — no backfill script needed. See
+  // routes/attendance.js's POST/PATCH /admin/staff-assignments for the write-side enforcement.
+  subject String @default("")
+
   assignedAt DateTime @default(now())
 
   lecturePlans LecturePlan[]
@@ -2223,6 +2231,11 @@ model StaffClassAssignment {
   // a brand-new pairing with no legacy rows to worry about, and the spec explicitly requires
   // preventing duplicate attendance-ownership assignments for the same institute within a pool.
   @@unique([talentPoolId, attendanceInstituteId])
+  // One staff per subject per academic group — this is what actually turns "always exactly one
+  // assignment row per group" into "one row per (group, subject) pair." NULL academicGroupId
+  // (talent-pool-only assignments) never collides here since Postgres treats every NULL as
+  // distinct in a composite unique index, same reasoning as the constraint above.
+  @@unique([academicGroupId, subject])
 }
 
 enum LectureType {

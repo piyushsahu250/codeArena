@@ -214,6 +214,7 @@ export default function AttendanceAssignmentDetail() {
       {showPlanModal && (
         <AddPlanModal
           assignmentId={assignmentId}
+          subject={assignment?.subject}
           suggestedNumber={suggestedNumber}
           editingPlan={editingPlan}
           onClose={closePlanModal}
@@ -320,15 +321,18 @@ function PlanCard({ plan, tab, assignmentId, navigate, onEdit, confirming, onAsk
   );
 }
 
-function AddPlanModal({ assignmentId, suggestedNumber, editingPlan, onClose, onSaved }) {
+function AddPlanModal({ assignmentId, subject, suggestedNumber, editingPlan, onClose, onSaved }) {
   const isEdit = !!editingPlan;
   const [mode, setMode] = useState("manual"); // "manual" | "excel"
+  // Subject is always the parent assignment's subject — fixed by which (subject-scoped)
+  // assignment this plan belongs to, never freely typed. The backend enforces this too (it
+  // overrides whatever is sent), so this is purely so the form displays the real value.
   const [form, setForm] = useState(() => editingPlan
     ? {
-        subject: editingPlan.subject, lectureNumber: String(editingPlan.lectureNumber), topic: editingPlan.topic, scheduleDate: editingPlan.scheduleDate.slice(0, 10),
+        subject, lectureNumber: String(editingPlan.lectureNumber), topic: editingPlan.topic, scheduleDate: editingPlan.scheduleDate.slice(0, 10),
         slotLabel: editingPlan.slotLabel, startTime: editingPlan.startTime, endTime: editingPlan.endTime, lectureType: editingPlan.lectureType,
       }
-    : emptyPlanForm(suggestedNumber));
+    : { ...emptyPlanForm(suggestedNumber), subject });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -402,7 +406,7 @@ function AddPlanModal({ assignmentId, suggestedNumber, editingPlan, onClose, onS
           <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
             <div>
               <label style={labelStyle}>Subject</label>
-              <input style={inputStyle} value={form.subject} onChange={setField("subject")} placeholder="e.g. Data Structures" />
+              <input style={{ ...inputStyle, background: "var(--line)" }} value={form.subject} disabled />
             </div>
             <div>
               <label style={labelStyle}>Lecture Number</label>
@@ -451,7 +455,7 @@ function AddPlanModal({ assignmentId, suggestedNumber, editingPlan, onClose, onS
         {!isEdit && mode === "excel" && (
           <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
             <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-              Columns: Subject, Lecture Number, Topic, Schedule Date, Slot, Lecture Type. If Slot is "Other", also
+              Columns: Lecture Number, Topic, Schedule Date, Slot, Lecture Type. If Slot is "Other", also
               fill in Start Time (if Slot is Other) / End Time (if Slot is Other).
             </p>
             <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate(assignmentId)}>Download Template</button>

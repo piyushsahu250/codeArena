@@ -204,16 +204,17 @@ function DepartmentsTab({ departments, instituteId, onChange, setError }) {
 }
 
 // Admin Attendance Assignment: Batch -> Fetch -> table of every academic group in that batch, one
-// row each, "Assigned Staff" as a searchable field (native <datalist>, filters as you type) scoped
-// to this institute's staff. Assigning/re-assigning takes effect immediately — POST
-// /staff-assignments finds any existing assignment for that group and updates its staff in place
-// (one staff per group), so there's never a second row to reconcile.
+// row each. A group now supports multiple staff assignments — one per subject (e.g. Data
+// Structures -> Staff A, Python -> Staff B for the same class) — so each row shows a list of
+// current subject/staff pairs plus a small "Assign" form (Subject + Staff). POST
+// /staff-assignments finds any existing assignment for that (group, subject) pair and updates its
+// staff in place; a different subject always creates a new row instead of replacing anything.
 function GroupAssignmentTab({ staff, instituteId, setError }) {
   const [batches, setBatches] = useState([]);
   const [batchYear, setBatchYear] = useState("");
   const [rows, setRows] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [searchDrafts, setSearchDrafts] = useState({}); // academicGroupId -> in-progress search text
+  const [drafts, setDrafts] = useState({}); // academicGroupId -> { subject, staffSearch }
 
   useEffect(() => {
     setBatchYear("");
@@ -235,27 +236,47 @@ function GroupAssignmentTab({ staff, instituteId, setError }) {
     }
   }
 
-  async function assignStaff(row, staffId) {
-    if (!staffId) return;
+  function draftFor(academicGroupId) {
+    return drafts[academicGroupId] || { subject: "", staffSearch: "" };
+  }
+  function setDraft(academicGroupId, patch) {
+    setDrafts((prev) => ({ ...prev, [academicGroupId]: { ...draftFor(academicGroupId), ...patch } }));
+  }
+
+  async function assignStaff(row) {
+    const draft = draftFor(row.academicGroupId);
+    const subject = draft.subject.trim();
+    const match = staff.find((s) => `${s.name} (${s.email})` === draft.staffSearch);
+    if (!subject || !match) return;
+    setError("");
     try {
-      await api.post("/attendance/admin/staff-assignments", { staffId, academicGroupId: row.academicGroupId, semester: row.assignment?.semester || "1" });
-      setSearchDrafts((prev) => { const next = { ...prev }; delete next[row.academicGroupId]; return next; });
+      const existingSemester = row.assignments.find((a) => a.subject.toLowerCase() === subject.toLowerCase())?.semester;
+      await api.post("/attendance/admin/staff-assignments", {
+        staffId: match.id, academicGroupId: row.academicGroupId, subject, semester: existingSemester || "1",
+      });
+      setDrafts((prev) => { const next = { ...prev }; delete next[row.academicGroupId]; return next; });
       fetchTable();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to assign staff");
     }
   }
 
-  function handleSearchInput(row, text) {
-    setSearchDrafts((prev) => ({ ...prev, [row.academicGroupId]: text }));
-    const match = staff.find((s) => `${s.name} (${s.email})` === text);
-    if (match) assignStaff(row, match.id);
+  async function removeAssignment(assignmentId) {
+    if (!confirm("Remove this staff assignment? Their lecture plans and attendance records for this subject will be deleted too.")) return;
+    setError("");
+    try {
+      await api.delete(`/attendance/admin/staff-assignments/${assignmentId}`);
+      fetchTable();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to remove assignment");
+    }
   }
 
   return (
     <div style={{ marginTop: 20 }}>
       <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
-        Each academic group gets exactly one assigned staff member. Assigning a new staff member replaces the current one.
+        Assign one staff member per subject for each academic group — a class can have multiple staff, each teaching a different subject.
+        Assigning a staff member to a subject that's already assigned reassigns that subject to them.
       </p>
       <div className="card" style={{ padding: 16, marginTop: 10, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 200px" }}>
@@ -280,28 +301,51 @@ function GroupAssignmentTab({ staff, instituteId, setError }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", color: "var(--ink-dim)" }}>
-                {["Department", "Section", "Assigned Staff", "Action"].map((h) => <th key={h} style={{ padding: "8px 10px" }}>{h}</th>)}
+                {["Department", "Section", "Assigned Subjects & Staff", "Assign New Subject"].map((h) => <th key={h} style={{ padding: "8px 10px" }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.academicGroupId} style={{ borderBottom: "1px solid var(--line)" }}>
-                  <td style={{ padding: "8px 10px" }}>{r.department.name}</td>
-                  <td style={{ padding: "8px 10px" }}>{r.section}</td>
-                  <td style={{ padding: "8px 10px" }}>
-                    {r.assignment ? r.assignment.staff.name : <span style={{ color: "var(--ink-dim)" }}>Not Assigned</span>}
-                  </td>
-                  <td style={{ padding: "8px 10px" }}>
-                    <input
-                      style={{ ...inputStyle, maxWidth: 240 }}
-                      list="attendance-staff-options"
-                      placeholder={r.assignment ? "Change Staff…" : "Select Staff…"}
-                      value={searchDrafts[r.academicGroupId] ?? ""}
-                      onChange={(e) => handleSearchInput(r, e.target.value)}
-                    />
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const draft = draftFor(r.academicGroupId);
+                return (
+                  <tr key={r.academicGroupId} style={{ borderBottom: "1px solid var(--line)" }}>
+                    <td style={{ padding: "8px 10px" }}>{r.department.name}</td>
+                    <td style={{ padding: "8px 10px" }}>{r.section}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      {r.assignments.length === 0 ? (
+                        <span style={{ color: "var(--ink-dim)" }}>Not Assigned</span>
+                      ) : (
+                        <div style={{ display: "grid", gap: 4 }}>
+                          {r.assignments.map((a) => (
+                            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span><strong>{a.subject}</strong> — {a.staff.name}</span>
+                              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--rust)" }} onClick={() => removeAssignment(a.id)}>Remove</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <input
+                          style={{ ...inputStyle, maxWidth: 140 }}
+                          placeholder="Subject…"
+                          value={draft.subject}
+                          onChange={(e) => setDraft(r.academicGroupId, { subject: e.target.value })}
+                        />
+                        <input
+                          style={{ ...inputStyle, maxWidth: 200 }}
+                          list="attendance-staff-options"
+                          placeholder="Select Staff…"
+                          value={draft.staffSearch}
+                          onChange={(e) => setDraft(r.academicGroupId, { staffSearch: e.target.value })}
+                        />
+                        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => assignStaff(r)}>Assign</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {rows.length === 0 && (
                 <tr><td colSpan={4} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No academic groups found for this batch.</td></tr>
               )}

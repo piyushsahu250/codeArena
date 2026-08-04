@@ -62,6 +62,7 @@ export default function AttendanceHome() {
                   <>
                     <div style={{ fontSize: 16, fontWeight: 700 }}>{formatAcademicGroupLabel(a.academicGroup, a.class)}</div>
                     <div style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8, display: "grid", gap: 3 }}>
+                      {a.subject && <div>Subject: {a.subject}</div>}
                       <div>Batch: {a.academicGroup?.batch || a.class?.batchYear || "—"}</div>
                       <div>Semester: {a.semester}</div>
                       <div>Section: {a.academicGroup?.section || a.class?.division?.name || "—"}</div>

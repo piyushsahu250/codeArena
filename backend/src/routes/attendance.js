@@ -315,8 +315,8 @@ router.get("/admin/batches", authenticate, requireRole("ADMIN"), attachRequester
 
 // The Admin Attendance Assignment Page's data source: every academic group (Institute+Batch+
 // Department+Section, auto-derived from registered students) for the given institute+batch, each
-// with its department, section, and current staff assignment (at most one, per the "one staff per
-// group" model) joined in a single call.
+// with its department, section, and every current staff assignment (one per subject) joined in a
+// single call.
 router.get("/admin/group-table", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.requesterInstituteId || req.query.instituteId;
@@ -330,7 +330,7 @@ router.get("/admin/group-table", authenticate, requireRole("ADMIN"), attachReque
       where: { instituteId, batch: req.query.batchYear },
       include: {
         department: true,
-        staffAssignments: { include: { staff: { select: { id: true, name: true, email: true } } }, orderBy: { assignedAt: "desc" }, take: 1 },
+        staffAssignments: { include: { staff: { select: { id: true, name: true, email: true } } }, orderBy: { subject: "asc" } },
       },
       orderBy: [{ department: { name: "asc" } }, { section: "asc" }],
     });
@@ -340,7 +340,7 @@ router.get("/admin/group-table", authenticate, requireRole("ADMIN"), attachReque
       batchYear: g.batch,
       department: g.department,
       section: g.section,
-      assignment: g.staffAssignments[0] || null,
+      assignments: g.staffAssignments,
     })));
   } catch (err) {
     console.error(err);
@@ -348,16 +348,20 @@ router.get("/admin/group-table", authenticate, requireRole("ADMIN"), attachReque
   }
 });
 
-// One row per academic group: assigning a staff member who's already assigned elsewhere on this
-// group UPDATES that same row rather than creating a second one — this find-then-update-or-create
-// logic is the sole enforcement point for "one staff per group," deliberately not a DB unique
-// constraint (safer to deploy against any pre-existing rows, and this is the only write path).
+// Multiple staff per academic group — one per subject, not one per group. Assigning a staff
+// member to a subject that's already assigned on this group UPDATES that same row (reassigning
+// that subject to someone else); a different subject on the same group always creates a new row.
+// This find-then-update-or-create logic (keyed by academicGroupId + subject, case-insensitive) is
+// backed by a real DB unique constraint (@@unique([academicGroupId, subject])) as of the subject
+// field's introduction — see schema.prisma's StaffClassAssignment comment.
 router.post("/admin/staff-assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { staffId, academicGroupId } = req.body;
     const semester = String(req.body.semester || "").trim();
+    const subject = String(req.body.subject || "").trim();
     if (!staffId || !academicGroupId) return res.status(400).json({ error: "Both a staff member and an academic group are required" });
     if (!semester) return res.status(400).json({ error: "A semester is required" });
+    if (!subject) return res.status(400).json({ error: "A subject is required" });
 
     const [staff, group] = await Promise.all([
       prisma.user.findUnique({ where: { id: staffId } }),
@@ -369,24 +373,24 @@ router.post("/admin/staff-assignments", authenticate, requireRole("ADMIN"), atta
       return res.status(403).json({ error: "You can only assign staff and groups under your own institute" });
     }
 
-    const existing = await prisma.staffClassAssignment.findFirst({ where: { academicGroupId } });
+    const existing = await prisma.staffClassAssignment.findFirst({ where: { academicGroupId, subject: { equals: subject, mode: "insensitive" } } });
     const assignment = existing
       ? await prisma.staffClassAssignment.update({
           where: { id: existing.id },
-          data: { staffId, semester },
+          data: { staffId, semester, subject },
           include: { staff: { select: { id: true, name: true, email: true } }, academicGroup: { include: { department: true } } },
         })
       : await prisma.staffClassAssignment.create({
-          data: { staffId, academicGroupId, semester },
+          data: { staffId, academicGroupId, semester, subject },
           include: { staff: { select: { id: true, name: true, email: true } }, academicGroup: { include: { department: true } } },
         });
 
     const groupLabel = `${group.department.name} · ${group.section} (${group.batch})`;
     logAudit({
       req, action: AUDIT_ACTIONS.STAFF_CLASS_ASSIGNMENT_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-      instituteId: req.requesterInstituteId, details: { change: existing ? "reassigned" : "assigned", staffId, staffName: staff.name, academicGroupId, groupLabel, semester },
+      instituteId: req.requesterInstituteId, details: { change: existing ? "reassigned" : "assigned", staffId, staffName: staff.name, academicGroupId, groupLabel, subject, semester },
     });
-    notifyPermissionUpdated(prisma, staff, { adminName: req.user.name, change: `assigned to ${groupLabel}, semester ${semester}` }).catch(() => {});
+    notifyPermissionUpdated(prisma, staff, { adminName: req.user.name, change: `assigned to teach ${subject} for ${groupLabel}, semester ${semester}` }).catch(() => {});
 
     res.json(assignment);
   } catch (err) {
@@ -404,14 +408,22 @@ router.patch("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN"),
       return res.status(403).json({ error: "You can only manage assignments under your own institute" });
     }
     const nextSemester = req.body.semester?.trim() || existing.semester;
+    const nextSubject = req.body.subject !== undefined ? String(req.body.subject).trim() : existing.subject;
+    if (!nextSubject) return res.status(400).json({ error: "A subject is required" });
+    if (nextSubject.toLowerCase() !== existing.subject.toLowerCase() && existing.academicGroupId) {
+      const clash = await prisma.staffClassAssignment.findFirst({
+        where: { academicGroupId: existing.academicGroupId, subject: { equals: nextSubject, mode: "insensitive" }, id: { not: existing.id } },
+      });
+      if (clash) return res.status(409).json({ error: `${nextSubject} is already assigned to another staff member for this academic group` });
+    }
     const updated = await prisma.staffClassAssignment.update({
       where: { id: req.params.id },
-      data: { semester: nextSemester },
+      data: { semester: nextSemester, subject: nextSubject },
       include: { staff: { select: { id: true, name: true, email: true } }, academicGroup: { include: { department: true } } },
     });
-    if (nextSemester !== existing.semester) {
+    if (nextSemester !== existing.semester || nextSubject !== existing.subject) {
       const groupLabel = updated.academicGroup ? `${updated.academicGroup.department.name} · ${updated.academicGroup.section} (${updated.academicGroup.batch})` : "your assignment";
-      notifyPermissionUpdated(prisma, updated.staff, { adminName: req.user.name, change: `semester updated to ${nextSemester} for ${groupLabel}` }).catch(() => {});
+      notifyPermissionUpdated(prisma, updated.staff, { adminName: req.user.name, change: `updated to ${nextSubject}, semester ${nextSemester} for ${groupLabel}` }).catch(() => {});
     }
     res.json(updated);
   } catch (err) {
@@ -525,7 +537,9 @@ router.post("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN
     });
     if (dup) return res.status(409).json({ error: `Lecture number ${data.lectureNumber} already exists for this division` });
 
-    const plan = await prisma.lecturePlan.create({ data: { ...data, assignmentId: assignment.id, createdById: req.user.id } });
+    // subject is fixed by which (subject-scoped) assignment this plan is created under — never
+    // trusted from the client, so a plan can never drift from what the assignment declares.
+    const plan = await prisma.lecturePlan.create({ data: { ...data, subject: assignment.subject, assignmentId: assignment.id, createdById: req.user.id } });
     res.json(plan);
   } catch (err) {
     console.error(err);
@@ -538,7 +552,9 @@ router.get("/assignments/:assignmentId/plans/template", authenticate, requireRol
   if (!assignment) return;
   const rows = [
     {
-      Subject: "Data Structures", "Lecture Number": 1, Topic: "Introduction to Arrays", "Schedule Date": "2026-07-25", Slot: "Slot 1",
+      // No Subject column — every imported lecture is created under this specific
+      // (subject-scoped) assignment, so the subject is fixed already (see resolveAssignmentAccess).
+      "Lecture Number": 1, Topic: "Introduction to Arrays", "Schedule Date": "2026-07-25", Slot: "Slot 1",
       "Lecture Type": "Regular Class", "Start Time (if Slot is Other)": "", "End Time (if Slot is Other)": "",
     },
   ];
@@ -571,17 +587,17 @@ router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requir
       const rowNum = i + 2;
       const row = rows[i];
       const lectureNumber = Number(row["Lecture Number"]);
-      const subject = String(row["Subject"] || "").trim();
+      // Subject is no longer read from the sheet — it's fixed by the (subject-scoped) assignment
+      // every imported row is created under, same as the single-plan create/update routes.
       const topic = String(row["Topic"] || "").trim();
       const scheduleDate = normalizeDate(row["Schedule Date"]);
       const slotRaw = String(row["Slot"] || "").trim();
       const lectureTypeRaw = String(row["Lecture Type"] || "").trim();
 
-      if (!lectureNumber && !subject && !topic && !slotRaw && !lectureTypeRaw) continue; // blank row
+      if (!lectureNumber && !topic && !slotRaw && !lectureTypeRaw) continue; // blank row
 
       if (!lectureNumber || lectureNumber < 1) { errors.push({ row: rowNum, reason: "Missing or invalid Lecture Number" }); continue; }
       if (usedNumbers.has(lectureNumber)) { errors.push({ row: rowNum, reason: `Lecture number ${lectureNumber} already exists` }); continue; }
-      if (!subject) { errors.push({ row: rowNum, reason: "Missing Subject" }); continue; }
       if (!topic) { errors.push({ row: rowNum, reason: "Missing Topic" }); continue; }
       if (!scheduleDate) { errors.push({ row: rowNum, reason: "Missing or invalid Schedule Date (use YYYY-MM-DD)" }); continue; }
       if (!SLOT_LABEL_SET.has(slotRaw)) { errors.push({ row: rowNum, reason: `Unrecognized Slot "${slotRaw}"` }); continue; }
@@ -600,7 +616,7 @@ router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requir
       }
 
       usedNumbers.add(lectureNumber);
-      toCreate.push({ assignmentId: assignment.id, createdById: req.user.id, lectureNumber, subject, topic, scheduleDate, lectureType, ...slot });
+      toCreate.push({ assignmentId: assignment.id, createdById: req.user.id, lectureNumber, subject: assignment.subject, topic, scheduleDate, lectureType, ...slot });
     }
 
     let createdCount = 0;
@@ -628,7 +644,8 @@ router.patch("/assignments/:assignmentId/plans/:planId", authenticate, requireRo
     if (!existing || existing.assignmentId !== assignment.id) return res.status(404).json({ error: "Lecture plan not found" });
 
     const merged = {
-      subject: req.body.subject ?? existing.subject,
+      // Same as create — always the parent assignment's subject, never client-supplied.
+      subject: assignment.subject,
       topic: req.body.topic ?? existing.topic,
       scheduleDate: req.body.scheduleDate ?? existing.scheduleDate.toISOString().slice(0, 10),
       lectureNumber: req.body.lectureNumber ?? existing.lectureNumber,
