@@ -33,9 +33,9 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       });
       results.push(...lessons.map((l) => ({ type: "Lesson", label: `${l.title} (${l.module.course.name})`, url: `/learning/${l.module.course.slug}/lesson/${l.id}` })));
 
-      const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { academicGroupId: true, classId: true } });
+      const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { academicGroupId: true, classId: true, instituteId: true } });
       const tests = await prisma.test.findMany({
-        where: { title: insensitive(q), ...testEligibilityWhere(student?.academicGroupId, student?.classId) },
+        where: { title: insensitive(q), ...testEligibilityWhere(student?.academicGroupId, student?.classId, [], student?.instituteId) },
         take: LIMIT,
       });
       results.push(...tests.map((t) => ({ type: "Assessment", label: t.title, url: `/dashboard` })));

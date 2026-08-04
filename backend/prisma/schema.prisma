@@ -102,6 +102,7 @@ model Institute {
   dailyChallenges  DailyChallenge[]
   weeklyChallenges WeeklyChallenge[]
   resultExaminations ResultExamination[]
+  tests            Test[]
 }
 
 model Class {
@@ -277,6 +278,8 @@ model Test {
   difficultyDistribution   Json? // optional { easy, medium, hard } counts that must sum to randomQuestionsPerStudent
   createdBy    User     @relation("TestCreator", fields: [createdById], references: [id])
   createdById  String
+  institute    Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId  String?    // null = platform-wide test, only ever set by a platform-level (instituteId-less) creator — mirrors QuestionFolder.instituteId. Gates the "empty group/class assignment = open to everyone" convention in testEligibility.js so an institute-scoped test can never leak across institutes.
   createdAt    DateTime @default(now())
 
   questions TestQuestion[]
@@ -293,6 +296,7 @@ model Test {
   @@index([isPublished])
   @@index([startTime, endTime])
   @@index([company])
+  @@index([instituteId])
 }
 
 // Join table: which classes a test is assigned to — legacy, superseded by TestAcademicGroup below.

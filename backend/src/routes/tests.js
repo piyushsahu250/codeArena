@@ -113,7 +113,24 @@ function validateRandomConfig(mode, randomQuestionsPerStudent, difficultyDistrib
 // classIds: string[] (optional) — assign the test to specific classes; omitted/empty = open to all classes
 // questionSelectionMode "RANDOM": randomBankFolderId + randomQuestionsPerStudent (+ optional
 // difficultyDistribution) replace questionIds — see resolveQuestionIds/validateRandomConfig above.
-router.post("/", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+// Every submitted academicGroupId must belong to the requester's own institute — mirrors the
+// array-ownership-check convention already used by talentPools.js (instituteIds.every(...)).
+// A no-op for the platform-level admin (req.requesterInstituteId falsy), who may target any group.
+async function assertGroupsBelongToInstitute(academicGroupIds, requesterInstituteId) {
+  if (!requesterInstituteId || !academicGroupIds || academicGroupIds.length === 0) return;
+  const groups = await prisma.academicGroup.findMany({
+    where: { id: { in: academicGroupIds } },
+    select: { id: true, instituteId: true },
+  });
+  const foreign = groups.some((g) => g.instituteId !== requesterInstituteId);
+  if (foreign || groups.length !== academicGroupIds.length) {
+    const err = new Error("You can only assign a test to academic groups under your own institute");
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
+router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       title, code, description, instructions, durationMin, passingMarks, showResults,
@@ -123,6 +140,8 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) =
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
       company,
     } = req.body;
+
+    await assertGroupsBelongToInstitute(academicGroupIds, req.requesterInstituteId);
 
     const mode = SELECTION_MODES.includes(questionSelectionMode) ? questionSelectionMode : "FIXED";
     const resolvedQuestionIds = await resolveQuestionIds(mode, questionIds, randomBankFolderId);
@@ -151,6 +170,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) =
         randomQuestionsPerStudent: mode === "RANDOM" ? Number(randomQuestionsPerStudent) : null,
         difficultyDistribution: mode === "RANDOM" ? difficultyDistribution || null : null,
         createdById: req.user.id,
+        instituteId: req.requesterInstituteId,
         questions: { create: questionCreateData(resolvedQuestionIds, questionTimeLimits) },
         academicGroups: { create: (academicGroupIds || []).map((academicGroupId) => ({ academicGroupId })) },
       },
@@ -159,15 +179,18 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) =
     res.json(test);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to create test" });
+    res.status(err.statusCode || 400).json({ error: err.message || "Failed to create test" });
   }
 });
 
 // --- ADMIN/STAFF: edit an existing test (replaces questions + class assignment) ---
-router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.test.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage tests under your own institute" });
+    }
 
     const {
       title, code, description, instructions, durationMin, passingMarks, showResults,
@@ -177,6 +200,8 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, re
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
       company,
     } = req.body;
+
+    await assertGroupsBelongToInstitute(academicGroupIds, req.requesterInstituteId);
 
     const mode = questionSelectionMode !== undefined
       ? (SELECTION_MODES.includes(questionSelectionMode) ? questionSelectionMode : existing.questionSelectionMode)
@@ -241,18 +266,21 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, re
     res.json(test);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update test" });
+    res.status(err.statusCode || 400).json({ error: err.message || "Failed to update test" });
   }
 });
 
 // --- ADMIN/STAFF: duplicate a test (questions + class assignment cloned, always starts unpublished) ---
-router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const original = await prisma.test.findUnique({
       where: { id: req.params.id },
       include: { questions: true, classes: true, academicGroups: true },
     });
     if (!original) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && original.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only duplicate tests under your own institute" });
+    }
 
     const copy = await prisma.test.create({
       data: {
@@ -267,6 +295,7 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), async
         endTime: original.endTime,
         isPublished: false,
         createdById: req.user.id,
+        instituteId: original.instituteId,
         questions: {
           create: original.questions.map((q) => ({ questionId: q.questionId, order: q.order, timeLimitSec: q.timeLimitSec })),
         },
@@ -350,7 +379,12 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
   if (isStaff) {
     const visible = req.requesterInstituteId
       ? tests.filter((t) => {
-          if (t.classes.length === 0 && t.academicGroups.length === 0) return true; // open to all
+          // A test with zero group/class assignments is only "open to all" within its OWN
+          // institute (or platform-wide if instituteId is null) — never leaks into another
+          // institute's staff test list. See the matching gate in testEligibility.js.
+          if (t.classes.length === 0 && t.academicGroups.length === 0) {
+            return t.instituteId == null || t.instituteId === req.requesterInstituteId;
+          }
           const classMatch = t.classes.some((tc) => tc.class.instituteId === req.requesterInstituteId);
           const groupMatch = t.academicGroups.some((tg) => tg.academicGroup.instituteId === req.requesterInstituteId);
           return classMatch || groupMatch;
@@ -359,9 +393,9 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     return res.json(visible);
   }
 
-  const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true } });
+  const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
   const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
-  const visible = tests.filter((t) => isTestVisibleToStudent(t, student.academicGroupId, student.classId, memberPoolIds));
+  const visible = tests.filter((t) => isTestVisibleToStudent(t, student.academicGroupId, student.classId, memberPoolIds, student.instituteId));
 
   // Surface the student's own attempt status per test so the dashboard can show "Completed"
   // upfront, rather than only after they click Attend and get bounced by a 403.
@@ -377,7 +411,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
 
 // --- Get single test detail (questions without hidden test cases, and without
 // correctAnswer/explanation, for students — those would leak the answer key) ---
-router.get("/:id", authenticate, async (req, res) => {
+router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
   const isStaff = req.user.role === "ADMIN" || req.user.role === "STAFF";
   const test = await prisma.test.findUnique({
     where: { id: req.params.id },
@@ -416,10 +450,14 @@ router.get("/:id", authenticate, async (req, res) => {
   });
   if (!test) return res.status(404).json({ error: "Test not found" });
 
-  if (!isStaff) {
-    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true } });
+  if (isStaff) {
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only view tests under your own institute" });
+    }
+  } else {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
-    const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId, memberPoolIds);
+    const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId, memberPoolIds, student.instituteId);
     if (!allowed) return res.status(404).json({ error: "Test not found" });
 
     // Apply this student's one-time-generated order (set at attempt creation, see POST
@@ -466,9 +504,9 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test || !test.isPublished) return res.status(404).json({ error: "Test not available" });
 
-    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true } });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
-    const allowed = await studentCanAccessTest(prisma, test.id, student.academicGroupId, student.classId, memberPoolIds);
+    const allowed = await studentCanAccessTest(prisma, test.id, student.academicGroupId, student.classId, memberPoolIds, student.instituteId);
     if (!allowed) return res.status(404).json({ error: "Test not available" });
 
     const existing = await prisma.testAttempt.findUnique({
@@ -618,7 +656,12 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
 });
 
 // --- ADMIN/STAFF: leaderboard / results for a test ---
-router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+  if (!test) return res.status(404).json({ error: "Test not found" });
+  if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+    return res.status(403).json({ error: "You can only view results for tests under your own institute" });
+  }
   const attempts = await prisma.testAttempt.findMany({
     where: { testId: req.params.id },
     include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } } },

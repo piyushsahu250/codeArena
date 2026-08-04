@@ -32,7 +32,7 @@ async function computeStudentPerformance(studentId, { maskUnpublished = false } 
     prisma.test.findMany({
       where: {
         isPublished: true,
-        ...testEligibilityWhere(student.academicGroup?.id, student.class?.id, [...memberPoolIds]),
+        ...testEligibilityWhere(student.academicGroup?.id, student.class?.id, [...memberPoolIds], student.institute?.id),
       },
       select: { id: true },
     }),

@@ -12,6 +12,14 @@
 // to everyone until that picker ships. Once nothing writes TestClass anymore this fallback becomes
 // a permanent no-op, not a bug — safe to leave in place rather than requiring a coordinated flip.
 //
+// The "open to everyone" branch is itself bounded by Test.instituteId: a platform-wide test
+// (instituteId null, only ever created by the instituteId-less platform admin) really is open to
+// every student on every institute, but an institute-scoped test with zero group/class assignments
+// is only open to students within that SAME institute — never across institutes. Without this,
+// a staff member at Institute A who leaves the picker empty would leak the test to every other
+// institute; see the schema comment on Test.instituteId. studentInstituteId is the requesting
+// student's own User.instituteId.
+//
 // Talent Pool exclusivity (memberPoolIds, all three functions below) is a separate, overriding
 // axis: a test with any TalentPoolTest row stops being eligible for the "open to everyone" or
 // academicGroup/class branch entirely — it's ONLY reachable via pool membership, even if it also
@@ -19,13 +27,20 @@
 // since an admin assigning a test to a Talent Pool means "only these people," not "these people,
 // plus whatever the group/class rules would otherwise allow."
 
-function testEligibilityWhere(academicGroupId, classId, memberPoolIds = []) {
+function testEligibilityWhere(academicGroupId, classId, memberPoolIds = [], studentInstituteId) {
   return {
     OR: [
       {
         talentPools: { none: {} },
         OR: [
-          { academicGroups: { none: {} }, classes: { none: {} } },
+          {
+            academicGroups: { none: {} },
+            classes: { none: {} },
+            // Passing `instituteId: undefined` to Prisma drops the key entirely (matches every
+            // row) rather than matching nothing, so studentInstituteId must never be spread in
+            // as undefined — omit the second OR branch instead when it's falsy.
+            OR: studentInstituteId ? [{ instituteId: null }, { instituteId: studentInstituteId }] : [{ instituteId: null }],
+          },
           ...(academicGroupId ? [{ academicGroups: { some: { academicGroupId } } }] : []),
           ...(classId ? [{ classes: { some: { classId } } }] : []),
         ],
@@ -36,9 +51,10 @@ function testEligibilityWhere(academicGroupId, classId, memberPoolIds = []) {
 }
 
 // For an already-loaded test that includes `academicGroups: {select:{academicGroupId:true}}`,
-// `classes: {select:{classId:true}}`, and `talentPools: {select:{poolId:true}}` — synchronous, no
-// extra query. memberPoolIds may be a Set or a plain array of the requesting student's pool ids.
-function isTestVisibleToStudent(test, academicGroupId, classId, memberPoolIds) {
+// `classes: {select:{classId:true}}`, `talentPools: {select:{poolId:true}}`, and `instituteId` —
+// synchronous, no extra query. memberPoolIds may be a Set or a plain array of the requesting
+// student's pool ids. studentInstituteId is the requesting student's own instituteId.
+function isTestVisibleToStudent(test, academicGroupId, classId, memberPoolIds, studentInstituteId) {
   const pools = test.talentPools || [];
   if (pools.length > 0) {
     if (!memberPoolIds) return false;
@@ -47,14 +63,16 @@ function isTestVisibleToStudent(test, academicGroupId, classId, memberPoolIds) {
   }
   const groups = test.academicGroups || [];
   const classes = test.classes || [];
-  if (groups.length === 0 && classes.length === 0) return true;
+  if (groups.length === 0 && classes.length === 0) {
+    return test.instituteId == null || test.instituteId === studentInstituteId;
+  }
   if (academicGroupId && groups.some((g) => g.academicGroupId === academicGroupId)) return true;
   if (classId && classes.some((c) => c.classId === classId)) return true;
   return false;
 }
 
 // DB-authoritative check for call sites that only have the IDs, not a preloaded relation.
-async function studentCanAccessTest(prisma, testId, academicGroupId, classId, memberPoolIds) {
+async function studentCanAccessTest(prisma, testId, academicGroupId, classId, memberPoolIds, studentInstituteId) {
   const poolLinks = await prisma.talentPoolTest.count({ where: { testId } });
   if (poolLinks > 0) {
     if (!memberPoolIds) return false;
@@ -67,7 +85,10 @@ async function studentCanAccessTest(prisma, testId, academicGroupId, classId, me
     prisma.testAcademicGroup.count({ where: { testId } }),
     prisma.testClass.count({ where: { testId } }),
   ]);
-  if (groupLinks === 0 && classLinks === 0) return true;
+  if (groupLinks === 0 && classLinks === 0) {
+    const test = await prisma.test.findUnique({ where: { id: testId }, select: { instituteId: true } });
+    return test.instituteId == null || test.instituteId === studentInstituteId;
+  }
   if (academicGroupId) {
     const match = await prisma.testAcademicGroup.findUnique({
       where: { testId_academicGroupId: { testId, academicGroupId } },

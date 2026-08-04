@@ -7,6 +7,7 @@ import { SkeletonGrid } from "../components/Skeleton";
 import FolderPicker from "../components/FolderPicker";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import UploadProgressBar from "../components/UploadProgressBar";
+import { useAuth } from "../context/AuthContext";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -30,6 +31,11 @@ export default function CreateTest() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  // Only the platform-level account (no instituteId — see backend/src/middleware/institute.js)
+  // may ever produce a truly platform-wide test; every institute-scoped Staff/Admin's "leave
+  // empty" default is now institute-bounded server-side (see Test.instituteId in schema.prisma).
+  const isPlatformLevel = !user?.instituteId;
 
   const [questions, setQuestions] = useState([]);
   const [search, setSearch] = useState("");
@@ -303,7 +309,11 @@ export default function CreateTest() {
 
           {groupType === "ACADEMIC" ? (
             <>
-              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>Leave all unchecked to make this test visible to every group (default).</p>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>
+                {isPlatformLevel
+                  ? "Leave all unchecked to make this test visible to every group, platform-wide (default)."
+                  : "Leave all unchecked to make this test visible to every group in your institute (default)."}
+              </p>
               <div style={{ marginTop: 8 }}>
                 <AcademicGroupPicker multi groups={academicGroups} value={academicGroupIds} onChange={setAcademicGroupIds} />
               </div>

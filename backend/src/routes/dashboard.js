@@ -83,7 +83,7 @@ async function getNotifications(student) {
     prisma.test.findMany({
       where: {
         isPublished: true,
-        ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds]),
+        ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId),
       },
       select: { id: true, title: true, startTime: true, createdAt: true },
     }),

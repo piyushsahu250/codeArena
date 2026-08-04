@@ -162,7 +162,8 @@ function eligibleTestsWhere(assignment, now) {
   if (assignment.talentPoolId) {
     return { ...base, talentPools: { some: { poolId: assignment.talentPoolId } } };
   }
-  return { ...base, ...testEligibilityWhere(assignment.academicGroupId, assignment.classId) };
+  const instituteId = assignment.academicGroup?.instituteId || assignment.class?.instituteId;
+  return { ...base, ...testEligibilityWhere(assignment.academicGroupId, assignment.classId, [], instituteId) };
 }
 
 // ===================== Admin: Department CRUD =====================
