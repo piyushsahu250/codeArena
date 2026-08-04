@@ -11,14 +11,20 @@
  * (non-unique, used for attendance/seating order) had nowhere to live. This script performs the
  * one-time data migration in four ordered, independently-idempotent passes, STUDENT rows only:
  *
- *   1. Copy   — for any student with a blank `registrationNumber` but a real `rollNumber`, strip
- *               a trailing `-DUPn` suffix (a scar `dedupeRollNumbers.js` may have already left on
- *               `rollNumber` in a prior deploy) and copy the cleaned value into
- *               `registrationNumber`. `rollNumber` itself is NEVER written by this pass — that is
- *               what makes the whole script safe to re-run on every deploy: once a student has a
- *               non-empty `registrationNumber` (from this script or, going forward, directly at
- *               account-creation time), this pass's WHERE clause goes permanently false for them,
- *               regardless of anything they later do to `rollNumber` via their own profile.
+ *   1. Copy + reinit — for any student with a blank `registrationNumber` but a real `rollNumber`
+ *               (i.e. a row that has never been through this migration before — see idempotency
+ *               note below), strip a trailing `-DUPn` suffix (a scar `dedupeRollNumbers.js` may
+ *               have already left on `rollNumber` in a prior deploy) and copy the cleaned value
+ *               into `registrationNumber`. In the SAME update, `rollNumber` is reset to the last 3
+ *               characters of that cleaned value — every pre-existing student's `rollNumber` holds
+ *               the legacy PRN, not a real classroom number, so leaving it untouched here (an
+ *               earlier version of this pass did) permanently stranded it at the old long value,
+ *               since the separate auto-init pass below only ever fires when `rollNumber` is
+ *               already blank, which it never is for these rows. This is safe specifically because
+ *               `registrationNumber` being blank is proof this row has never been migrated before —
+ *               once it's set (here or at account-creation time going forward), this pass's WHERE
+ *               clause goes permanently false for that student, so a later self-service edit to
+ *               `rollNumber` is never touched or reverted by a subsequent deploy's re-run.
  *   2. Blank-normalize — any lingering `registrationNumber === ""` becomes real `NULL` (defensive;
  *               required before a unique index can be added).
  *   3. Dedupe — group all non-null `registrationNumber`s PLATFORM-WIDE (PRN is system-wide unique,
@@ -27,13 +33,15 @@
  *               appended, exactly like `dedupeRollNumbers.js` does for `rollNumber` today. Every
  *               case is logged (email + institute) — a genuine data-integrity signal worth an
  *               admin's attention, not something to silently sweep away.
- *   4. Roll Number auto-init — for any student with a still-blank `rollNumber` but a real
- *               `registrationNumber`, set `rollNumber` to the last 3 characters of the PRN (e.g.
- *               "2028COMP00123" -> "123"). Only ever fires while `rollNumber` is empty; stops
- *               firing permanently the moment it's set, by this script or by the student.
+ *   4. Roll Number auto-init — defensive fallback only, for any student with a still-blank
+ *               `rollNumber` but a real `registrationNumber` that pass 1 didn't already handle
+ *               (e.g. a row whose `registrationNumber` was populated by some other path with
+ *               `rollNumber` left blank). Sets `rollNumber` to the PRN's last 3 characters. Only
+ *               ever fires while `rollNumber` is empty; stops firing permanently once it's set, by
+ *               this script or by the student.
  *
  * Idempotent by construction, same contract as `dedupeRollNumbers.js`: never exits non-zero, never
- * deletes a student, never overwrites a value that's already populated.
+ * deletes a student, never overwrites a value outside the one-time transition each pass targets.
  */
 const prisma = require("../src/prisma");
 const { initRollNumberFromRegistration } = require("../src/utils/studentIdentifiers");
@@ -47,7 +55,11 @@ async function copyPass() {
   for (const row of rows) {
     const cleaned = String(row.rollNumber || "").replace(/-DUP\d+$/, "").trim();
     if (!cleaned) continue;
-    await prisma.user.update({ where: { id: row.id }, data: { registrationNumber: cleaned } });
+    const reinitRoll = initRollNumberFromRegistration(cleaned);
+    await prisma.user.update({
+      where: { id: row.id },
+      data: { registrationNumber: cleaned, ...(reinitRoll ? { rollNumber: reinitRoll } : {}) },
+    });
     copied++;
   }
   console.log(`[migrateRegistrationNumbers] Copy pass: ${copied} student(s) got registrationNumber populated from rollNumber.`);
