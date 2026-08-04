@@ -64,11 +64,24 @@ async function resolveAcademicGroup({ instituteId, batchYear, departmentName, se
   const key = `${instituteId}::${batch.toLowerCase()}::${deptName.toLowerCase()}::${sectionName.toLowerCase()}`;
   if (cache && cache.has(key)) return cache.get(key);
 
+  // findFirst stays case-insensitive so an existing "Computer Applications" is reused instead of
+  // spawning a case-variant duplicate. But find-then-create alone leaves a race window: two
+  // concurrent requests for the same brand-new department/group (e.g. a double-clicked "Create"
+  // button, or two bulk-upload rows processed in parallel) can both find nothing and both attempt
+  // create(), and the second hits the @@unique constraint as an unhandled P2002 — which is exactly
+  // what previously surfaced to the admin as a generic "Failed to create user" even though nothing
+  // about the student's own data was invalid. upsert() closes that window: the second racer's
+  // create() attempt atomically becomes a no-op update against the row the first racer just
+  // inserted, instead of throwing.
   let department = await prisma.department.findFirst({
     where: { instituteId, name: { equals: deptName, mode: "insensitive" } },
   });
   if (!department) {
-    department = await prisma.department.create({ data: { instituteId, name: deptName } });
+    department = await prisma.department.upsert({
+      where: { instituteId_name: { instituteId, name: deptName } },
+      update: {},
+      create: { instituteId, name: deptName },
+    });
   }
 
   let group = await prisma.academicGroup.findFirst({
@@ -76,8 +89,10 @@ async function resolveAcademicGroup({ instituteId, batchYear, departmentName, se
     include: { department: true },
   });
   if (!group) {
-    group = await prisma.academicGroup.create({
-      data: { instituteId, batch, departmentId: department.id, section: sectionName },
+    group = await prisma.academicGroup.upsert({
+      where: { instituteId_batch_departmentId_section: { instituteId, batch, departmentId: department.id, section: sectionName } },
+      update: {},
+      create: { instituteId, batch, departmentId: department.id, section: sectionName },
       include: { department: true },
     });
   }
@@ -353,8 +368,13 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
 
     res.json({ ...user, generatedPassword, emailSent, emailError });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create user" });
+    console.error("[users.create] failed:", { message: err.message, code: err.code, meta: err.meta });
+    // Safety net for any unique-constraint collision the pre-checks above didn't already catch
+    // (e.g. a race between two concurrent creates) — surfaces as a clean 409, not an opaque 500.
+    if (err.code === "P2002") {
+      return res.status(409).json({ error: `That ${Array.isArray(err.meta?.target) ? err.meta.target.join(", ") : "value"} is already in use.` });
+    }
+    res.status(500).json({ error: "Failed to create user. Please try again, and contact support if the issue persists." });
   }
 });
 
