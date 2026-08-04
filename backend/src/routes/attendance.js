@@ -10,7 +10,7 @@ const { sendExport } = require("../utils/exportFile");
 const { generateAttendancePdf } = require("../utils/attendancePdf");
 const { testEligibilityWhere } = require("../utils/testEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
-const { compareRollNumbers, initRollNumberFromRegistration, REGISTRATION_NUMBER_RE } = require("../utils/studentIdentifiers");
+const { compareRollNumbers } = require("../utils/studentIdentifiers");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -712,113 +712,6 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load attendance execution context" });
-  }
-});
-
-// Shared by the preview/apply routes below: for every roster student with no Registration Number
-// (PRN) yet, derive one from their current Roll Number using an admin-supplied prefix — the
-// pattern this covers is a legacy account whose Roll Number field never held a real PRN (it holds
-// only a short classroom number, sometimes with a `-DUPn` scar from the old pre-split dedup pass),
-// so the platform-wide migration script has nothing to copy for these rows. This is a one-off,
-// admin-triggered, division-scoped backfill — not baked into the automatic boot-time migration —
-// because the prefix is real institutional data (batch/program code), not a generic engineering
-// rule, and must never be guessed or applied outside the division the admin is actually looking at.
-async function computeMissingPrnPlan(assignment, prefix) {
-  const cleanPrefix = String(prefix || "").trim();
-  const roster = await prisma.user.findMany({
-    where: { ...rosterWhereForAssignment(assignment), OR: [{ registrationNumber: null }, { registrationNumber: "" }] },
-    select: { id: true, name: true, rollNumber: true },
-  });
-  const toUpdate = [];
-  const skipped = [];
-  const seen = new Set(); // catches same-request collisions before they'd otherwise hit the DB unique constraint
-  for (const s of roster) {
-    const digits = String(s.rollNumber || "").replace(/-DUP\d+$/, "").replace(/\D/g, "");
-    if (!digits) {
-      skipped.push({ id: s.id, name: s.name, rollNumber: s.rollNumber, reason: "No digits found in Roll Number to derive a PRN from" });
-      continue;
-    }
-    const candidate = `${cleanPrefix}${digits.slice(-3).padStart(3, "0")}`;
-    if (!REGISTRATION_NUMBER_RE.test(candidate)) {
-      skipped.push({ id: s.id, name: s.name, rollNumber: s.rollNumber, reason: `Generated value "${candidate}" is not 9-12 alphanumeric characters` });
-      continue;
-    }
-    if (seen.has(candidate)) {
-      skipped.push({ id: s.id, name: s.name, rollNumber: s.rollNumber, reason: `Duplicate generated PRN "${candidate}" within this batch` });
-      continue;
-    }
-    seen.add(candidate);
-    toUpdate.push({ id: s.id, name: s.name, rollNumber: s.rollNumber, newRegistrationNumber: candidate });
-  }
-  return { toUpdate, skipped };
-}
-
-// ADMIN/STAFF: dry run only, no writes — returns exactly what /backfill-registration-numbers
-// would change, so an admin can review every roll->PRN mapping before committing it.
-router.get("/assignments/:assignmentId/backfill-registration-numbers/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  try {
-    const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
-    if (!assignment) return;
-    const prefix = String(req.query.prefix || "").trim();
-    if (!prefix) return res.status(400).json({ error: "A PRN prefix is required" });
-    const plan = await computeMissingPrnPlan(assignment, prefix);
-    res.json(plan);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to preview PRN backfill" });
-  }
-});
-
-// ADMIN/STAFF: applies the same plan the preview above computed. Re-derives the plan fresh (rather
-// than trusting whatever the client cached from its own preview call) so a student who got a PRN
-// through some other path in between is correctly skipped, not double-written. Roll Number is reset
-// to the new PRN's own last 3 characters afterward — same invariant every other PRN-write path on
-// this platform maintains — so the student's Roll Number keeps matching their PRN going forward.
-router.post("/assignments/:assignmentId/backfill-registration-numbers", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  try {
-    const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
-    if (!assignment) return;
-    const prefix = String(req.body.prefix || "").trim();
-    if (!prefix) return res.status(400).json({ error: "A PRN prefix is required" });
-    const { toUpdate, skipped } = await computeMissingPrnPlan(assignment, prefix);
-
-    const updated = [];
-    for (const row of toUpdate) {
-      const dup = await prisma.user.findFirst({ where: { registrationNumber: row.newRegistrationNumber, id: { not: row.id } } });
-      if (dup) {
-        skipped.push({ ...row, reason: `"${row.newRegistrationNumber}" is already registered to another account` });
-        continue;
-      }
-      await prisma.user.update({
-        where: { id: row.id },
-        data: { registrationNumber: row.newRegistrationNumber, rollNumber: initRollNumberFromRegistration(row.newRegistrationNumber) },
-      });
-      updated.push(row);
-    }
-
-    if (updated.length) {
-      await logAudit({
-        req,
-        action: AUDIT_ACTIONS.USER_MANAGEMENT_CHANGED,
-        actorId: req.user.id,
-        actorName: req.user.name,
-        actorRole: req.user.role,
-        instituteId: assignment.academicGroup?.instituteId || assignment.class?.instituteId || assignment.attendanceInstituteId,
-        details: {
-          subAction: "ATTENDANCE_PRN_BACKFILL",
-          assignmentId: assignment.id,
-          prefix,
-          updatedCount: updated.length,
-          skippedCount: skipped.length,
-          updated: updated.map((r) => ({ studentId: r.id, name: r.name, rollNumber: r.rollNumber, newRegistrationNumber: r.newRegistrationNumber })),
-        },
-      });
-    }
-
-    res.json({ updated, skipped });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to apply PRN backfill" });
   }
 });
 
