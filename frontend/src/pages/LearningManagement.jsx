@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
+import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
@@ -1056,6 +1057,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
             <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} />
             <button className="btn btn-primary" disabled={!bulkFile || bulkImporting}>{bulkImporting ? "Importing…" : "Import"}</button>
           </form>
+          <UploadProgressBar active={bulkImporting} />
           {bulkResult && (
             <div style={{ marginTop: 12 }}>
               <p style={{ fontSize: 13 }}>

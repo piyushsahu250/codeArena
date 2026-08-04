@@ -45,6 +45,8 @@ const FIELD_ALIASES = {
   batchYear: ["batch/year", "batch year", "batch", "year"],
   section: ["section"],
   instituteName: ["institute", "institute name", "college", "college name"],
+  gender: ["gender", "sex"],
+  status: ["status", "account status"],
 };
 
 // Institute -> Batch -> Department -> Section: find-or-create the academic group a student belongs
@@ -96,7 +98,7 @@ function buildHeaderMap(headers) {
   return map;
 }
 
-const TEMPLATE_HEADERS = ["Student Name", "Registration Number (PRN)", "Roll Number", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section"];
+const TEMPLATE_HEADERS = ["Student Name", "Registration Number (PRN)", "Roll Number", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section", "Gender", "Status"];
 
 // Any authenticated user: change their own email and/or password
 router.patch("/me", authenticate, async (req, res) => {
@@ -472,7 +474,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 
 // ADMIN: download a sample .xlsx template for bulk student upload
 router.get("/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
-  const sampleRow = ["John Doe", "MCA2024001", "12", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A"];
+  const sampleRow = ["John Doe", "MCA2024001", "12", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A", "Male", "Active"];
   const sheet = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, sampleRow]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Students");
@@ -551,6 +553,12 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       const batchYear = field(row, "batchYear");
       const section = field(row, "section");
       const instituteName = field(row, "instituteName");
+      const gender = field(row, "gender");
+      const statusRaw = field(row, "status").toLowerCase();
+      // Optional column — defaults to Active (matches every other creation path's implicit
+      // default); any value other than a recognizable "inactive" synonym is treated as Active
+      // rather than silently rejecting the row over a typo in an optional field.
+      const isActive = !["inactive", "disabled", "no"].includes(statusRaw);
 
       if (!name && !registrationNumber && !email) continue; // blank row
 
@@ -603,6 +611,9 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
             program: program || null,
             batchYear: batchYear || null,
             section: section || null,
+            gender: gender || null,
+            isActive,
+            accountStatus: isActive ? "ACTIVE" : "INACTIVE",
             instituteId: institute.id,
             academicGroupId: group.id,
             mustChangePassword: true,

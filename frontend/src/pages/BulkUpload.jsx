@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import UploadProgressBar from "../components/UploadProgressBar";
 
 export default function BulkUpload() {
   const [file, setFile] = useState(null);
@@ -91,7 +92,8 @@ export default function BulkUpload() {
               <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
                 Student Name, Registration Number (PRN), Official Email ID, Institute, Batch/Year — plus optional Roll
                 Number (auto-filled from the last 3 characters of the PRN if left blank), Mobile Number, Department,
-                Program, Section.
+                Program, Section, Gender, and Status (Active/Inactive — defaults to Active). Date of Birth and other
+                personal details are collected separately via each student's own Profile page, not this template.
               </p>
             </div>
             <button className="btn btn-ghost" onClick={downloadTemplate} disabled={downloadingTemplate}>
@@ -118,6 +120,7 @@ export default function BulkUpload() {
             <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={!file || uploading}>
               {uploading ? "Uploading…" : "Upload and create accounts"}
             </button>
+            <UploadProgressBar active={uploading} />
           </form>
         </div>
 

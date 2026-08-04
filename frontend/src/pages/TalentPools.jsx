@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
+import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { useAuth } from "../context/AuthContext";
 
@@ -611,6 +612,7 @@ function BulkImportPanel({ pool, setError, onChange }) {
         <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files[0] || null)} />
         <button className="btn btn-primary" onClick={upload} disabled={!file || uploading}>{uploading ? "Importing…" : "Import"}</button>
       </div>
+      <UploadProgressBar active={uploading} />
 
       {result && (
         <div style={{ marginTop: 16 }}>

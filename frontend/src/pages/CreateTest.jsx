@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import { SkeletonGrid } from "../components/Skeleton";
 import FolderPicker from "../components/FolderPicker";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
+import UploadProgressBar from "../components/UploadProgressBar";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -673,6 +674,7 @@ function BulkUploadModal({ onImported, onClose }) {
           <button className="btn btn-primary" style={{ marginTop: 16, width: "100%" }} disabled={!file || importing}>
             {importing ? "Uploading…" : "Upload"}
           </button>
+          <UploadProgressBar active={importing} />
         </form>
 
         {result && (

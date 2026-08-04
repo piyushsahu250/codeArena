@@ -28,6 +28,7 @@ export default function AttendanceReports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     api.get("/attendance/my-assignments").then((res) => setMyAssignments(res.data)).catch(() => setMyAssignments([]));
@@ -108,7 +109,17 @@ export default function AttendanceReports() {
     }
   }
 
-  const columns = ["Date", "Batch", "Department", "Section", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Roll Number", "Student Name"];
+  const columns = ["Roll Number", "Registration Number", "Student Name", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date"];
+
+  const filteredRows = useMemo(() => {
+    if (!rows || !search.trim()) return rows;
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) =>
+      (r["Roll Number"] || "").toLowerCase().includes(q) ||
+      (r["Registration Number"] || "").toLowerCase().includes(q) ||
+      (r["Student Name"] || "").toLowerCase().includes(q)
+    );
+  }, [rows, search]);
 
   return (
     <div>
@@ -216,15 +227,23 @@ export default function AttendanceReports() {
 
         {rows && (
           <div style={{ marginTop: 24 }}>
-            <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>{rows.length} record(s)</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>{filteredRows.length} of {rows.length} record(s)</p>
+              <input
+                style={{ ...inputStyle, maxWidth: 280 }}
+                placeholder="Search by roll number, registration number, or name…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
 
-            {rows.length === 0 && (
+            {filteredRows.length === 0 && (
               <p style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No records match these filters.</p>
             )}
 
-            {rows.length > 0 && isMobile && (
+            {filteredRows.length > 0 && isMobile && (
               <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-                {rows.map((r, i) => (
+                {filteredRows.map((r, i) => (
                   <div key={i} className="card" style={{ padding: 12, fontSize: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <strong style={{ fontSize: 13 }}>{r["Student Name"]}</strong>
@@ -232,13 +251,13 @@ export default function AttendanceReports() {
                     </div>
                     <div style={{ color: "var(--ink-dim)", marginTop: 4 }}>{r.Subject} · Lecture {r["Lecture #"]} · {r.Date}</div>
                     <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>{r.Department} · {r.Section}</div>
-                    <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>Roll: {r["Roll Number"]} · Faculty: {r.Faculty}</div>
+                    <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>Roll: {r["Roll Number"]} · PRN: {r["Registration Number"]} · Faculty: {r.Faculty}</div>
                   </div>
                 ))}
               </div>
             )}
 
-            {rows.length > 0 && !isMobile && (
+            {filteredRows.length > 0 && !isMobile && (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 12 }}>
                   <thead>
@@ -248,10 +267,10 @@ export default function AttendanceReports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r, i) => (
+                    {filteredRows.map((r, i) => (
                       <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
                         {columns.map((k) => (
-                          <td key={k} style={{ padding: "6px 8px" }} className={k === "Roll Number" ? "mono" : undefined}>{r[k]}</td>
+                          <td key={k} style={{ padding: "6px 8px" }} className={k === "Roll Number" || k === "Registration Number" ? "mono" : undefined}>{r[k]}</td>
                         ))}
                         <td style={{ padding: "6px 8px", fontWeight: 700, color: STATUS_COLORS[r.Status] || "var(--ink)" }}>{r.Status}</td>
                       </tr>

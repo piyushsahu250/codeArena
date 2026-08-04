@@ -8,6 +8,7 @@ import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import CompanyProfilesPanel from "../components/CompanyProfilesPanel";
+import UploadProgressBar from "../components/UploadProgressBar";
 import { CATEGORIES, APTITUDE_CATS } from "../constants/interviewCategories";
 
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 4 };
@@ -32,6 +33,7 @@ export default function InterviewAdmin() {
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
   const [pendingDraftCount, setPendingDraftCount] = useState(0);
   const [importResult, setImportResult] = useState(null);
+  const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
 
   function loadAll() {
@@ -105,12 +107,22 @@ export default function InterviewAdmin() {
     URL.revokeObjectURL(url);
   }
 
+  async function downloadTemplate() {
+    const { data } = await api.get("/interview/admin/questions/bulk-template", { responseType: "blob" });
+    const url = URL.createObjectURL(new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "interview-question-template.xlsx";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async function importCsv(e) {
     const file = e.target.files[0];
     if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
     setImportResult(null);
+    setImporting(true);
     try {
       const { data } = await api.post("/interview/admin/questions/import", formData, { headers: { "Content-Type": "multipart/form-data" } });
       setImportResult(data);
@@ -118,6 +130,7 @@ export default function InterviewAdmin() {
     } catch (err) {
       alert(err.response?.data?.error || "Import failed");
     } finally {
+      setImporting(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   }
@@ -167,18 +180,28 @@ export default function InterviewAdmin() {
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <button className="btn btn-ghost" onClick={exportCsv}>⬇ Export CSV</button>
+            <button className="btn btn-ghost" onClick={downloadTemplate}>⬇ Download Template</button>
             <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>⬆ Import CSV</button>
             <input ref={fileRef} type="file" accept=".csv,.xlsx" style={{ display: "none" }} onChange={importCsv} />
             <button className="btn btn-primary" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add Question"}</button>
           </div>
         </div>
 
+        <UploadProgressBar active={importing} />
+
         {importResult && (
           <div className="card" style={{ padding: 16, marginTop: 12 }}>
             <p style={{ fontSize: 13 }}>
               <strong>{importResult.created}</strong> question{importResult.created === 1 ? "" : "s"} imported
-              out of {importResult.total}.{importResult.errorCount > 0 && ` ${importResult.errorCount} failed.`}
+              out of {importResult.total}.{importResult.skippedCount > 0 && ` ${importResult.skippedCount} skipped as duplicates.`}{importResult.errorCount > 0 && ` ${importResult.errorCount} failed.`}
             </p>
+            {importResult.skipped?.length > 0 && (
+              <div style={{ marginTop: 6, maxHeight: 120, overflowY: "auto" }}>
+                {importResult.skipped.map((s, i) => (
+                  <div key={i} style={{ fontSize: 12, color: "var(--ink-dim)" }} className="mono">Row {s.row}: {s.reason}</div>
+                ))}
+              </div>
+            )}
             {importResult.errors?.length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadErrorReport}>

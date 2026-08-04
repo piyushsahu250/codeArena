@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Folder } from "lucide-react";
 import api from "../api";
 import Navbar from "../components/Navbar";
+import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
 import { useConfirm } from "../context/ConfirmContext";
@@ -542,6 +543,7 @@ export default function QuestionBank() {
                     {importing ? "Importing…" : "Import"}
                   </button>
                 </form>
+                <UploadProgressBar active={importing} />
                 {importResult && (
                   <div style={{ marginTop: 12 }}>
                     <p style={{ fontSize: 14 }}>

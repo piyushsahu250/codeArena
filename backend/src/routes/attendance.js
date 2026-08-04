@@ -691,7 +691,10 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
     const [roster, eligibleTests] = await Promise.all([
       prisma.user.findMany({
         where: rosterWhereForAssignment(assignment),
-        select: { id: true, name: true, rollNumber: true },
+        select: {
+          id: true, name: true, rollNumber: true, registrationNumber: true, profilePhotoUrl: true, department: true,
+          academicGroup: { select: { section: true, department: { select: { name: true } } } },
+        },
       }).then((rows) => rows.sort(compareRollNumbers)), // ascending Roll Number (numeric-aware); this is one division's roster, small enough to sort in JS
       plan.lectureType === "REGULAR"
         ? Promise.resolve([])
@@ -859,7 +862,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
     const records = await prisma.attendanceRecord.findMany({
       where: recordWhere,
       include: {
-        student: { select: { id: true, name: true, rollNumber: true } },
+        student: { select: { id: true, name: true, rollNumber: true, registrationNumber: true } },
         session: {
           include: {
             test: { select: { title: true } },
@@ -899,6 +902,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
         "Lecture Type": LECTURE_TYPE_LABELS[plan.lectureType] || plan.lectureType,
         Test: r.session.test?.title || "",
         "Roll Number": r.student.rollNumber || "",
+        "Registration Number": r.student.registrationNumber || "",
         "Student Name": r.student.name,
         Status: r.status,
       };

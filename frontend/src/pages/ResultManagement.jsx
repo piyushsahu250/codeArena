@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
+import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { useAuth } from "../context/AuthContext";
 
@@ -510,6 +511,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={uploadBulk} disabled={bulkUploading} />
               </label>
             </div>
+            <UploadProgressBar active={bulkUploading} />
             {bulkSummary && (
               <div style={{ marginTop: 12, fontSize: 12 }}>
                 <div>Imported: <strong>{bulkSummary.imported.length}</strong> · Duplicate: <strong>{bulkSummary.duplicate.length}</strong> · Invalid Institute: <strong>{bulkSummary.invalidInstitute.length}</strong> · Invalid Roll Number: <strong>{bulkSummary.invalidRollNumber.length}</strong> · Failed: <strong>{bulkSummary.failed.length}</strong></div>

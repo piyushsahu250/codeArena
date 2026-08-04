@@ -1296,6 +1296,33 @@ function parseHiddenTestCases(raw) {
     .filter(Boolean);
 }
 
+// Download a sample .xlsx template for bulk interview-question import — same column set the
+// /export route produces (so an existing export can always be re-imported), plus one sample row.
+// Previously this route had no template at all; admins had to reverse-engineer the columns from
+// an export, unlike every other question-bank importer in this codebase.
+const INTERVIEW_TEMPLATE_HEADERS = [
+  "category", "subject", "company", "aptitudeCategory", "difficulty", "prompt", "expectedKeywords",
+  "modelAnswer", "options", "correctAnswer", "explanation", "starterCode",
+  "sampleInput1", "sampleOutput1", "sampleExplanation1", "sampleInput2", "sampleOutput2", "sampleExplanation2",
+  "hiddenTestCases", "language",
+];
+router.get("/admin/questions/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+  const sampleRow = [
+    "TECHNICAL", "Operating Systems", "", "", "MEDIUM", "Explain the difference between a process and a thread.",
+    "process|thread|memory|scheduling", "A process is an independent execution unit with its own memory space; a thread is a lightweight unit of execution within a process, sharing its memory.",
+    "", "", "Threads within the same process share the heap and static memory but have their own stack.", "",
+    "", "", "", "", "", "",
+    "", "",
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet([INTERVIEW_TEMPLATE_HEADERS, sampleRow]);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Interview Questions");
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename=interview-question-template.xlsx");
+  res.send(buffer);
+});
+
 router.get("/admin/questions/export", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   const where = { generatedForStudentId: null };
   if (req.query.category) where.category = req.query.category;
@@ -1342,6 +1369,23 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF
 
     let created = 0;
     const errors = [];
+    // Duplicate detection mirrors questions.js's bulk-import pattern (within-file Set +
+    // lazily-loaded existing-prompt Set) — this route had none before, unlike every other
+    // question-bank importer, so re-uploading the same file silently created full duplicates.
+    const skipped = [];
+    const seenPrompts = new Set();
+    const existingPromptsByCategory = new Map(); // category -> Set of existing prompts, loaded lazily
+    async function existingPrompts(category) {
+      if (!existingPromptsByCategory.has(category)) {
+        const existingRows = await prisma.interviewQuestion.findMany({
+          where: { category, generatedForStudentId: null },
+          select: { prompt: true },
+        });
+        existingPromptsByCategory.set(category, new Set(existingRows.map((r) => (r.prompt || "").trim().toLowerCase()).filter(Boolean)));
+      }
+      return existingPromptsByCategory.get(category);
+    }
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 2;
@@ -1354,6 +1398,16 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF
         errors.push({ row: rowNum, reason: "Missing prompt" });
         continue;
       }
+      const promptKey = String(row.prompt).trim().toLowerCase();
+      if (seenPrompts.has(promptKey)) {
+        skipped.push({ row: rowNum, reason: "Duplicate prompt within this file" });
+        continue;
+      }
+      if ((await existingPrompts(category)).has(promptKey)) {
+        skipped.push({ row: rowNum, reason: "A question with this prompt already exists in this category" });
+        continue;
+      }
+      seenPrompts.add(promptKey);
       // Named Sample Input/Output + Hidden Test Cases columns (matching the coding question bank's
       // own bulk-import format) take priority over the legacy raw-JSON "testCases" cell — an admin
       // filling in the friendlier named columns shouldn't need to also know the JSON shape, and a
@@ -1395,7 +1449,7 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF
         errors.push({ row: rowNum, reason: "Failed to create" });
       }
     }
-    res.json({ total: rows.length, created, errorCount: errors.length, errors });
+    res.json({ total: rows.length, created, skippedCount: skipped.length, skipped, errorCount: errors.length, errors });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Import failed" });

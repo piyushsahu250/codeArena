@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { formatAcademicGroupLabel } from "../utils/classLabel";
 import useIsMobile from "../hooks/useIsMobile";
+import UploadProgressBar from "../components/UploadProgressBar";
 
 const SLOTS = [
   { label: "Slot 1", startTime: "09:50", endTime: "10:45" },
@@ -458,6 +459,7 @@ function AddPlanModal({ assignmentId, suggestedNumber, editingPlan, onClose, onS
             <button className="btn btn-primary" onClick={uploadExcel} disabled={!file || uploading}>
               {uploading ? "Uploading…" : "Upload"}
             </button>
+            <UploadProgressBar active={uploading} />
             {uploadError && <p style={{ color: "var(--rust)", fontSize: 12 }}>{uploadError}</p>}
             {uploadResult && (
               <div style={{ fontSize: 12 }}>

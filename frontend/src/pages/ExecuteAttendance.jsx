@@ -15,6 +15,31 @@ const STATUS_OPTIONS = [
 ];
 const STATUS_LABELS = { PRESENT: "Present", ABSENT: "Absent", LATE: "Late", LEAVE: "Leave" };
 
+const SORT_OPTIONS = [
+  { value: "rollNumber", label: "Roll Number" },
+  { value: "name", label: "Student Name" },
+  { value: "registrationNumber", label: "Registration Number" },
+];
+
+// Numeric-aware ascending compare for Roll Number (mirrors backend's compareRollNumbers), plain
+// locale compare for the other two sort keys — students missing the sort field sort last.
+function compareBy(key) {
+  return (a, b) => {
+    const av = a[key], bv = b[key];
+    if (key === "rollNumber") {
+      const an = /^\d+$/.test(av || "") ? Number(av) : null;
+      const bn = /^\d+$/.test(bv || "") ? Number(bv) : null;
+      if (an !== null && bn !== null) return an - bn;
+      if (an !== null) return -1;
+      if (bn !== null) return 1;
+    }
+    if (!av && !bv) return 0;
+    if (!av) return 1;
+    if (!bv) return -1;
+    return String(av).localeCompare(String(bv));
+  };
+}
+
 // 4-way segmented control (Present/Absent/Late/Leave) — default PRESENT for every student, staff
 // only needs to tap the students who weren't simply present.
 function StatusButtons({ status, onChange, compact }) {
@@ -52,6 +77,7 @@ export default function ExecuteAttendance() {
   const [statuses, setStatuses] = useState({}); // studentId -> "PRESENT" | "ABSENT" | "LATE" | "LEAVE"
   const [testId, setTestId] = useState("");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("rollNumber");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -82,10 +108,12 @@ export default function ExecuteAttendance() {
   }, [assignmentId, planId]);
 
   const filteredRoster = useMemo(() => {
-    if (!search.trim()) return roster;
     const q = search.trim().toLowerCase();
-    return roster.filter((s) => s.name.toLowerCase().includes(q) || (s.rollNumber || "").toLowerCase().includes(q));
-  }, [roster, search]);
+    const filtered = !q ? roster : roster.filter((s) =>
+      s.name.toLowerCase().includes(q) || (s.rollNumber || "").toLowerCase().includes(q) || (s.registrationNumber || "").toLowerCase().includes(q)
+    );
+    return sortBy === "rollNumber" ? filtered : [...filtered].sort(compareBy(sortBy));
+  }, [roster, search, sortBy]);
 
   const counts = useMemo(() => {
     const c = { PRESENT: 0, ABSENT: 0, LATE: 0, LEAVE: 0 };
@@ -182,10 +210,18 @@ export default function ExecuteAttendance() {
           </div>
           <input
             style={{ flex: 1, minWidth: 160, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }}
-            placeholder="Search by name or roll number…"
+            placeholder="Search by name, roll number, or registration number…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }}
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            title="Sort by"
+          >
+            {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
+          </select>
         </div>
 
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
@@ -200,9 +236,23 @@ export default function ExecuteAttendance() {
                 className="card"
                 style={{ padding: "10px 14px", display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", gap: isMobile ? 8 : 0 }}
               >
-                <div>
-                  <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginRight: 10 }}>{s.rollNumber || "—"}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{s.name}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {s.profilePhotoUrl ? (
+                    <img src={s.profilePhotoUrl} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--surface-2, #eee)", flexShrink: 0 }} />
+                  )}
+                  <div>
+                    <div>
+                      <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginRight: 10 }}>{s.rollNumber || "—"}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{s.name}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
+                      <span className="mono">{s.registrationNumber || "PRN not set"}</span>
+                      {(s.academicGroup?.department?.name || s.department) && <span> · {s.academicGroup?.department?.name || s.department}</span>}
+                      {s.academicGroup?.section && <span> · Sec {s.academicGroup.section}</span>}
+                    </div>
+                  </div>
                 </div>
                 <StatusButtons status={status} onChange={(v) => setStatus(s.id, v)} compact={isMobile} />
               </div>
