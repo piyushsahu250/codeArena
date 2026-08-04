@@ -83,6 +83,13 @@ export default function ExecuteAttendance() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [auditNote, setAuditNote] = useState("");
+  const [prnModalOpen, setPrnModalOpen] = useState(false);
+  const [prnPrefix, setPrnPrefix] = useState("");
+  const [prnPreview, setPrnPreview] = useState(null);
+  const [prnLoading, setPrnLoading] = useState(false);
+  const [prnApplying, setPrnApplying] = useState(false);
+  const [prnError, setPrnError] = useState("");
+  const [prnResult, setPrnResult] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -120,6 +127,47 @@ export default function ExecuteAttendance() {
     roster.forEach((s) => { c[statuses[s.id] || "PRESENT"]++; });
     return c;
   }, [roster, statuses]);
+
+  const missingPrnCount = useMemo(() => roster.filter((s) => !s.registrationNumber).length, [roster]);
+
+  function openPrnModal() {
+    setPrnPrefix("");
+    setPrnPreview(null);
+    setPrnResult(null);
+    setPrnError("");
+    setPrnModalOpen(true);
+  }
+
+  async function previewPrnBackfill() {
+    if (!prnPrefix.trim()) return setPrnError("Enter a PRN prefix");
+    setPrnLoading(true);
+    setPrnError("");
+    setPrnPreview(null);
+    try {
+      const res = await api.get(`/attendance/assignments/${assignmentId}/backfill-registration-numbers/preview`, { params: { prefix: prnPrefix.trim() } });
+      setPrnPreview(res.data);
+    } catch (err) {
+      setPrnError(err.response?.data?.error || "Failed to preview PRN backfill");
+    } finally {
+      setPrnLoading(false);
+    }
+  }
+
+  async function applyPrnBackfill() {
+    setPrnApplying(true);
+    setPrnError("");
+    try {
+      const res = await api.post(`/attendance/assignments/${assignmentId}/backfill-registration-numbers`, { prefix: prnPrefix.trim() });
+      setPrnResult(res.data);
+      // Refresh the roster in place so the fixed students immediately show their new PRN.
+      const updatedById = new Map(res.data.updated.map((u) => [u.id, u.newRegistrationNumber]));
+      setRoster((prev) => prev.map((s) => (updatedById.has(s.id) ? { ...s, registrationNumber: updatedById.get(s.id), rollNumber: updatedById.get(s.id).slice(-3) } : s)));
+    } catch (err) {
+      setPrnError(err.response?.data?.error || "Failed to apply PRN backfill");
+    } finally {
+      setPrnApplying(false);
+    }
+  }
 
   const requiresTest = plan && plan.lectureType !== "REGULAR";
   const canSave = !requiresTest || !!testId;
@@ -224,6 +272,15 @@ export default function ExecuteAttendance() {
           </select>
         </div>
 
+        {missingPrnCount > 0 && (
+          <div className="card" style={{ padding: "10px 14px", marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, borderColor: "var(--amber)" }}>
+            <span style={{ fontSize: 12.5 }}>
+              <strong>{missingPrnCount}</strong> student{missingPrnCount === 1 ? "" : "s"} in this division {missingPrnCount === 1 ? "is" : "are"} missing a Registration Number (PRN).
+            </span>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={openPrnModal}>Fix Missing PRNs</button>
+          </div>
+        )}
+
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
         {saved && <p style={{ color: "var(--mint)", fontSize: 13, marginTop: 12 }}>Attendance saved.</p>}
 
@@ -269,6 +326,91 @@ export default function ExecuteAttendance() {
           {saving ? "Saving…" : "Save Attendance"}
         </button>
       </div>
+
+      {prnModalOpen && (
+        <div className="ca-modal-overlay" onClick={() => setPrnModalOpen(false)}>
+          <div className="ca-modal" style={{ maxWidth: 640, maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0 }}>Fix Missing PRNs</h3>
+              <button className="btn btn-ghost" onClick={() => setPrnModalOpen(false)}>Close</button>
+            </div>
+            <p style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 8 }}>
+              For every student in this division without a Registration Number (PRN), a new PRN is generated as
+              <span className="mono"> {"{prefix}"} + last 3 digits of their Roll Number</span>. Nothing is written until you review the
+              preview below and click Apply. Students who already have a PRN are never touched.
+            </p>
+
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 14, marginBottom: 4 }}>PRN Prefix</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                className="mono"
+                style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }}
+                placeholder="e.g. 2126PMIM1"
+                value={prnPrefix}
+                onChange={(e) => { setPrnPrefix(e.target.value); setPrnPreview(null); setPrnResult(null); }}
+              />
+              <button className="btn btn-ghost" onClick={previewPrnBackfill} disabled={prnLoading || !prnPrefix.trim()}>
+                {prnLoading ? "Loading…" : "Preview"}
+              </button>
+            </div>
+
+            {prnError && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 10 }}>{prnError}</p>}
+
+            {prnResult ? (
+              <div style={{ marginTop: 14 }}>
+                <p style={{ color: "var(--mint)", fontSize: 13 }}>
+                  Applied — {prnResult.updated.length} PRN{prnResult.updated.length === 1 ? "" : "s"} set{prnResult.skipped.length ? `, ${prnResult.skipped.length} skipped` : ""}.
+                </p>
+                {prnResult.skipped.length > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    {prnResult.skipped.map((r) => (
+                      <div key={r.id} style={{ fontSize: 12, color: "var(--rust)" }}>{r.name}: {r.reason}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : prnPreview ? (
+              <div style={{ marginTop: 14 }}>
+                {prnPreview.toUpdate.length === 0 ? (
+                  <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No students match this prefix pattern.</p>
+                ) : (
+                  <>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+                      <thead>
+                        <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)", color: "var(--ink-dim)" }}>
+                          <th style={{ padding: "4px 4px" }}>Student</th>
+                          <th>Current Roll</th>
+                          <th>New PRN</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {prnPreview.toUpdate.map((r) => (
+                          <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                            <td style={{ padding: "4px 4px" }}>{r.name}</td>
+                            <td className="mono">{r.rollNumber}</td>
+                            <td className="mono" style={{ fontWeight: 700 }}>{r.newRegistrationNumber}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={applyPrnBackfill} disabled={prnApplying}>
+                      {prnApplying ? "Applying…" : `Apply — set ${prnPreview.toUpdate.length} PRN${prnPreview.toUpdate.length === 1 ? "" : "s"}`}
+                    </button>
+                  </>
+                )}
+                {prnPreview.skipped.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }}>Skipped ({prnPreview.skipped.length}):</div>
+                    {prnPreview.skipped.map((r) => (
+                      <div key={r.id} style={{ fontSize: 12, color: "var(--rust)" }}>{r.name}: {r.reason}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
