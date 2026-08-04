@@ -1625,6 +1625,7 @@ function buildAdminSessionWhere(req) {
         { email: { contains: q, mode: "insensitive" } },
         { rollNumber: { contains: q, mode: "insensitive" } },
         { registrationNumber: { contains: q, mode: "insensitive" } },
+        { mobile: { contains: q, mode: "insensitive" } },
       ];
     }
   }

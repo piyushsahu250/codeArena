@@ -321,6 +321,7 @@ router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRe
       { rollNumber: { contains: q, mode: "insensitive" } },
       { registrationNumber: { contains: q, mode: "insensitive" } },
       { email: { contains: q, mode: "insensitive" } },
+      { mobile: { contains: q, mode: "insensitive" } },
     ];
   }
   if (departmentId) studentWhere.academicGroup = { departmentId };

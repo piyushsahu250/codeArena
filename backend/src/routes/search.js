@@ -49,7 +49,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
         : {};
 
       const students = await prisma.user.findMany({
-        where: { role: "STUDENT", ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }, { registrationNumber: insensitive(q) }] },
+        where: { role: "STUDENT", ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }, { registrationNumber: insensitive(q) }, { mobile: insensitive(q) }] },
         take: LIMIT,
       });
       const basePath = req.user.role === "ADMIN" ? "/admin" : "/staff";
