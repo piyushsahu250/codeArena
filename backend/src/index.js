@@ -92,7 +92,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeArena API" }));
+// RENDER_GIT_COMMIT is set automatically by Render on every deploy (no config needed) — exposing
+// it here is the only way to tell "the service is up" apart from "the service is up but running a
+// stale build," since a health check with no version marker can't distinguish the two.
+app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeArena API", commit: process.env.RENDER_GIT_COMMIT || null }));
 
 // Public, boolean-only — lets any page check whether ANTHROPIC_API_KEY is set before showing an
 // AI-feature button, instead of the student clicking it and hitting a raw 503 error message.
