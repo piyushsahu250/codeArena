@@ -346,7 +346,7 @@ export default function AdminDashboard() {
                 {form.role === "STUDENT" && (
                   <>
                     <label style={labelStyle}>Registration number (PRN)</label>
-                    <input style={inputStyle} value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="Permanent unique ID" />
+                    <input style={inputStyle} required value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="Permanent unique ID" />
 
                     <label style={labelStyle}>Roll number (optional)</label>
                     <input style={inputStyle} value={form.rollNumber} onChange={updateField("rollNumber")} placeholder="Auto-filled from PRN's last 3 characters if left blank" />

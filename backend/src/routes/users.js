@@ -241,6 +241,11 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
     }
     if (role === "STUDENT" && !String(mobile || "").trim()) return res.status(400).json({ error: "A mobile number is required for students" });
     if (role === "STUDENT" && !String(batchYear || "").trim()) return res.status(400).json({ error: "A batch is required for students" });
+    // Registration Number (PRN) is the platform's sole permanent unique student identifier —
+    // required at creation (matching bulk-upload's requirement) so a student can never be created
+    // with only a Roll Number filled in, which would otherwise leave PRN permanently unset and the
+    // classroom Roll Number field stuck holding whatever the admin actually meant as the PRN.
+    if (role === "STUDENT" && !String(registrationNumber || "").trim()) return res.status(400).json({ error: "A Registration Number (PRN) is required for students" });
     if (mobile && !MOBILE_RE.test(String(mobile).trim())) return res.status(400).json({ error: "Invalid mobile number" });
 
     const institute = await prisma.institute.findUnique({ where: { id: instituteId } });
