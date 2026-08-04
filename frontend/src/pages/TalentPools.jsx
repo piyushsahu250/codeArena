@@ -603,9 +603,9 @@ function BulkImportPanel({ pool, setError, onChange }) {
   return (
     <div style={{ marginTop: 16 }}>
       <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-        Upload an Excel file with "Institute" and "Registration Number (PRN)" columns (Roll Number is optional).
-        Institutes must be among this pool's configured institutes; students are matched by Registration Number,
-        since Roll Numbers can repeat across departments.
+        Upload an Excel file with "Institute" and "Registration Number (PRN)" columns. Institutes must be among this
+        pool's configured institutes; students are matched by Registration Number only — Roll Number is not a
+        template column.
       </p>
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
         <button className="btn btn-ghost" type="button" onClick={downloadTemplate}>Download Template</button>
@@ -618,13 +618,13 @@ function BulkImportPanel({ pool, setError, onChange }) {
         <div style={{ marginTop: 16 }}>
           <p style={{ fontSize: 13 }}>
             {result.total} row(s) processed — <strong>{result.addedCount}</strong> added, {result.alreadyExistingCount} already existing,{" "}
-            {result.invalidInstituteCount} invalid institute, {result.invalidRollNumberCount} invalid registration number, {result.failedCount} failed.
+            {result.invalidInstituteCount} invalid institute, {result.invalidRegistrationNumberCount} invalid registration number, {result.failedCount} failed.
           </p>
           {[
             ["Added", result.added, "var(--mint)"],
             ["Already Existing", result.alreadyExisting, "var(--ink-dim)"],
             ["Invalid Institute", result.invalidInstitute, "var(--rust)"],
-            ["Invalid Registration Number", result.invalidRollNumber, "var(--rust)"],
+            ["Invalid Registration Number", result.invalidRegistrationNumber, "var(--rust)"],
             ["Failed", result.failed, "var(--rust)"],
           ].filter(([, rows]) => rows.length > 0).map(([title, rows, color]) => (
             <div key={title} style={{ marginTop: 12 }}>
@@ -641,7 +641,7 @@ function BulkImportPanel({ pool, setError, onChange }) {
                     {rows.map((r) => (
                       <tr key={r.row} style={{ borderTop: "1px solid var(--line)" }}>
                         <td style={{ padding: "4px 8px" }}>{r.row}</td><td style={{ padding: "4px 8px" }}>{r.institute}</td>
-                        <td style={{ padding: "4px 8px" }}>{r.rollNumber}</td><td style={{ padding: "4px 8px" }}>{r.name || r.reason}</td>
+                        <td style={{ padding: "4px 8px" }}>{r.registrationNumber}</td><td style={{ padding: "4px 8px" }}>{r.name || r.reason}</td>
                       </tr>
                     ))}
                   </tbody>

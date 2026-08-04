@@ -463,10 +463,12 @@ router.get("/admin/examinations/:id/entries/:entryId/marksheet.pdf", authenticat
 // every row into exactly one outcome" loop).
 // ============================================================
 
+// Roll Number is deliberately NOT a mapped column — Registration Number (PRN) is the sole student
+// identifier for this import (matching is PRN-only; see the row loop below), and Roll Number is
+// never a bulk-upload input anywhere on the platform.
 const BULK_IMPORT_FIELD_ALIASES = {
   instituteName: ["institute", "institute name", "college", "college name"],
   registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
-  rollNumber: ["roll number", "roll no", "rollno", "roll no."],
   obtainedMarks: ["marks obtained", "marks", "obtained marks", "score"],
 };
 function normalizeBulkImportHeader(h) {
@@ -486,8 +488,8 @@ router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("A
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
-    const headers = ["Institute Name", "Registration Number (PRN)", "Roll Number", "Marks Obtained"];
-    const sampleRow = [examination.institute.name, "2024COMP001", "12", Math.round(examination.totalMarks * 0.8)];
+    const headers = ["Institute Name", "Registration Number (PRN)", "Marks Obtained"];
+    const sampleRow = [examination.institute.name, "2024COMP001", Math.round(examination.totalMarks * 0.8)];
     const sheet = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Results");
@@ -522,7 +524,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
 
     const headerMap = buildBulkImportHeaderMap(Object.keys(rows[0]));
     if (!headerMap.instituteName || !headerMap.registrationNumber || !headerMap.obtainedMarks) {
-      return res.status(400).json({ error: 'The file must have "Institute Name", "Registration Number (PRN)", and "Marks Obtained" columns. Roll Number is optional (Registration Number is now the match key, since Roll Numbers can repeat).' });
+      return res.status(400).json({ error: 'The file must have "Institute Name", "Registration Number (PRN)", and "Marks Obtained" columns.' });
     }
 
     const institutes = await prisma.institute.findMany({ select: { id: true, name: true } });
@@ -531,7 +533,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
     const existingEntries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id }, select: { studentId: true } });
     const existingStudentIds = new Set(existingEntries.map((e) => e.studentId));
 
-    const imported = [], duplicate = [], invalidInstitute = [], invalidRollNumber = [], failed = [];
+    const imported = [], duplicate = [], invalidInstitute = [], invalidRegistrationNumber = [], failed = [];
     const toCreate = [];
     const seen = new Set();
 
@@ -540,43 +542,43 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
       const row = rows[i];
       const instituteNameRaw = String(row[headerMap.instituteName] || "").trim();
       const registrationNumberRaw = String(row[headerMap.registrationNumber] || "").trim();
-      const rollNumberRaw = headerMap.rollNumber ? String(row[headerMap.rollNumber] || "").trim() : "";
       const marksRaw = row[headerMap.obtainedMarks];
       if (!instituteNameRaw && !registrationNumberRaw && marksRaw === "") continue; // skip fully blank rows
 
       try {
         if (!instituteNameRaw || !registrationNumberRaw) {
-          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: "Institute Name and Registration Number (PRN) are both required." });
+          failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: "Institute Name and Registration Number (PRN) are both required." });
           continue;
         }
         const institute = instituteByName.get(instituteNameRaw.toLowerCase());
         if (!institute) {
-          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `Institute "${instituteNameRaw}" was not found.` });
+          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: `Institute "${instituteNameRaw}" was not found.` });
           continue;
         }
         if (req.requesterInstituteId && institute.id !== req.requesterInstituteId) {
-          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `"${instituteNameRaw}" is not your institute.` });
+          invalidInstitute.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: `"${instituteNameRaw}" is not your institute.` });
           continue;
         }
 
         const marks = Number(marksRaw);
         if (!Number.isFinite(marks) || marks < 0 || marks > examination.totalMarks) {
-          failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `Marks Obtained must be a number between 0 and ${examination.totalMarks}.` });
+          failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: `Marks Obtained must be a number between 0 and ${examination.totalMarks}.` });
           continue;
         }
 
         // Matched by Registration Number (PRN), the platform's sole unique student identifier —
-        // Roll Number is not used for matching since it legitimately repeats across departments.
+        // Roll Number is never accepted as an import column since it legitimately repeats across
+        // departments and is auto-generated from the PRN, not entered manually.
         const student = await prisma.user.findFirst({
           where: { role: "STUDENT", instituteId: institute.id, registrationNumber: registrationNumberRaw },
           select: { id: true, name: true },
         });
         if (!student) {
-          invalidRollNumber.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: `No student with Registration Number "${registrationNumberRaw}" was found at ${institute.name}.` });
+          invalidRegistrationNumber.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: `No student with Registration Number "${registrationNumberRaw}" was found at ${institute.name}.` });
           continue;
         }
         if (existingStudentIds.has(student.id) || seen.has(student.id)) {
-          duplicate.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, name: student.name });
+          duplicate.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name });
           continue;
         }
 
@@ -586,9 +588,9 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
           examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, percentage, passed,
           enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
         });
-        imported.push({ row: rowNum, institute: instituteNameRaw, rollNumber: rollNumberRaw || registrationNumberRaw, name: student.name, obtainedMarks: marks });
+        imported.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name, obtainedMarks: marks });
       } catch (rowErr) {
-        failed.push({ row: rowNum, institute: instituteNameRaw, rollNumber: registrationNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
+        failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
       }
     }
 
@@ -597,10 +599,10 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_ENTRIES_BULK_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: examination.instituteId,
-      details: { examinationId: req.params.id, importedCount: imported.length, duplicateCount: duplicate.length, invalidInstituteCount: invalidInstitute.length, invalidRollNumberCount: invalidRollNumber.length, failedCount: failed.length },
+      details: { examinationId: req.params.id, importedCount: imported.length, duplicateCount: duplicate.length, invalidInstituteCount: invalidInstitute.length, invalidRegistrationNumberCount: invalidRegistrationNumber.length, failedCount: failed.length },
     });
 
-    res.json({ imported, duplicate, invalidInstitute, invalidRollNumber, failed, totalRows: rows.length });
+    res.json({ imported, duplicate, invalidInstitute, invalidRegistrationNumber, failed, totalRows: rows.length });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to import results" });

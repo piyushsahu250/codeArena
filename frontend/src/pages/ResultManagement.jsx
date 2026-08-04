@@ -502,7 +502,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
         {bulkOpen && (
           <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--line)", borderRadius: 8 }}>
             <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-              Columns: <strong>Institute Name</strong>, <strong>Roll Number (or PRN)</strong>, <strong>Marks Obtained</strong>.
+              Columns: <strong>Institute Name</strong>, <strong>Registration Number (PRN)</strong>, <strong>Marks Obtained</strong>. Students are
+              matched by Registration Number only — Roll Number is not a template column.
             </p>
             <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center" }}>
               <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadTemplate}>Download Template</button>
@@ -514,12 +515,12 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             <UploadProgressBar active={bulkUploading} />
             {bulkSummary && (
               <div style={{ marginTop: 12, fontSize: 12 }}>
-                <div>Imported: <strong>{bulkSummary.imported.length}</strong> · Duplicate: <strong>{bulkSummary.duplicate.length}</strong> · Invalid Institute: <strong>{bulkSummary.invalidInstitute.length}</strong> · Invalid Roll Number: <strong>{bulkSummary.invalidRollNumber.length}</strong> · Failed: <strong>{bulkSummary.failed.length}</strong></div>
-                {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRollNumber, ...bulkSummary.failed].length > 0 && (
+                <div>Imported: <strong>{bulkSummary.imported.length}</strong> · Duplicate: <strong>{bulkSummary.duplicate.length}</strong> · Invalid Institute: <strong>{bulkSummary.invalidInstitute.length}</strong> · Invalid Registration Number: <strong>{bulkSummary.invalidRegistrationNumber.length}</strong> · Failed: <strong>{bulkSummary.failed.length}</strong></div>
+                {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRegistrationNumber, ...bulkSummary.failed].length > 0 && (
                   <details style={{ marginTop: 8 }}>
                     <summary style={{ cursor: "pointer" }}>View failed rows</summary>
                     <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
-                      {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRollNumber, ...bulkSummary.failed].map((r, i) => (
+                      {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRegistrationNumber, ...bulkSummary.failed].map((r, i) => (
                         <div key={i} style={{ color: "var(--rust)" }}>Row {r.row}: {r.reason}</div>
                       ))}
                     </div>

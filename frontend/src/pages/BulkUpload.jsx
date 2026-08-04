@@ -90,10 +90,11 @@ export default function BulkUpload() {
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>Required columns</div>
               <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
-                Student Name, Registration Number (PRN), Official Email ID, Institute, Batch/Year — plus optional Roll
-                Number (auto-filled from the last 3 characters of the PRN if left blank), Mobile Number, Department,
-                Program, Section, Gender, and Status (Active/Inactive — defaults to Active). Date of Birth and other
-                personal details are collected separately via each student's own Profile page, not this template.
+                Student Name, Registration Number (PRN), Official Email ID, Institute, Batch/Year — plus optional Mobile
+                Number, Department, Program, Section, Gender, and Status (Active/Inactive — defaults to Active). Roll
+                Number is not a template column — it's generated automatically from the last 3 characters of the
+                Registration Number after import. Date of Birth and other personal details are collected separately
+                via each student's own Profile page, not this template.
               </p>
             </div>
             <button className="btn btn-ghost" onClick={downloadTemplate} disabled={downloadingTemplate}>

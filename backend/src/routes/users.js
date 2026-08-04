@@ -33,11 +33,13 @@ const SELECT_FIELDS = {
 };
 
 
-// Maps flexible spreadsheet header text -> our field names
+// Maps flexible spreadsheet header text -> our field names. Roll Number is deliberately NOT a
+// mapped input column — it's never entered manually during bulk upload, only auto-generated from
+// the Registration Number (PRN) after import (see the row loop below); a "Roll Number" column in
+// an uploaded file is simply ignored, same as any other unrecognized column.
 const FIELD_ALIASES = {
   name: ["student name", "name", "full name"],
   registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
-  rollNumber: ["roll number", "roll no", "rollno", "roll no."],
   email: ["official email id", "email", "email id", "official email"],
   mobile: ["mobile number", "mobile", "phone", "phone number"],
   department: ["department", "dept"],
@@ -98,7 +100,9 @@ function buildHeaderMap(headers) {
   return map;
 }
 
-const TEMPLATE_HEADERS = ["Student Name", "Registration Number (PRN)", "Roll Number", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section", "Gender", "Status"];
+// Roll Number is intentionally absent — it's never a bulk-upload input, only auto-generated from
+// the Registration Number (PRN)'s last 3 characters after import.
+const TEMPLATE_HEADERS = ["Student Name", "Registration Number (PRN)", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section", "Gender", "Status"];
 
 // Any authenticated user: change their own email and/or password
 router.patch("/me", authenticate, async (req, res) => {
@@ -497,7 +501,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 
 // ADMIN: download a sample .xlsx template for bulk student upload
 router.get("/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
-  const sampleRow = ["John Doe", "MCA2024001", "12", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A", "Male", "Active"];
+  const sampleRow = ["John Doe", "MCA2024001", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A", "Male", "Active"];
   const sheet = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, sampleRow]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Students");
@@ -532,7 +536,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
     const headerMap = buildHeaderMap(Object.keys(rows[0]));
     if (!headerMap.name || !headerMap.registrationNumber || !headerMap.email) {
       return res.status(400).json({
-        error: "Missing required columns. The file must include Student Name, Registration Number (PRN), and Official Email ID. Roll Number is optional — leave it blank and it will be auto-populated from the last 3 characters of the Registration Number.",
+        error: "Missing required columns. The file must include Student Name, Registration Number (PRN), and Official Email ID. Roll Number is not a file column — it's auto-generated from the last 3 characters of the Registration Number.",
       });
     }
     if (!headerMap.instituteName || !headerMap.batchYear) {
@@ -568,7 +572,10 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       const row = rows[i];
       const name = field(row, "name");
       const registrationNumber = field(row, "registrationNumber");
-      let rollNumber = field(row, "rollNumber");
+      // Never read from a "Roll Number" file column — always derived from the Registration
+      // Number's last 3 characters, matching the single-create and admin-edit paths' auto-reset
+      // behavior (see initRollNumberFromRegistration).
+      const rollNumber = initRollNumberFromRegistration(registrationNumber) || "";
       const email = field(row, "email").toLowerCase();
       const mobile = field(row, "mobile");
       const department = field(row, "department");
@@ -597,11 +604,6 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
         errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Registration Number (PRN) must be 9-12 alphanumeric characters" });
         continue;
       }
-      if (rollNumber && rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Roll Number cannot exceed 3 characters" });
-        continue;
-      }
-
       const institute = instituteByName.get(instituteName.toLowerCase());
       if (!institute) {
         errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: `Institute "${instituteName}" was not found. Create it first in Institute Management.` });
@@ -626,8 +628,6 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
 
       seenEmails.add(email);
       seenRegNumbers.add(regKey);
-
-      if (!rollNumber) rollNumber = initRollNumberFromRegistration(registrationNumber) || "";
 
       const generatedPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
