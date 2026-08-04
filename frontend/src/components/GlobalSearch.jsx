@@ -11,6 +11,7 @@ export default function GlobalSearch() {
   const navigate = useNavigate();
   const boxRef = useRef(null);
   const debounceRef = useRef(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     function onClickOutside(e) {
@@ -24,11 +25,16 @@ export default function GlobalSearch() {
     clearTimeout(debounceRef.current);
     if (q.trim().length < 2) { setResults([]); return; }
     debounceRef.current = setTimeout(() => {
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       api.get("/search", { params: { q } })
-        .then((res) => { setResults(res.data.results); setOpen(true); })
-        .catch(() => setResults([]))
-        .finally(() => setLoading(false));
+        .then((res) => {
+          if (requestId !== requestIdRef.current) return; // a newer request already fired — discard this stale response
+          setResults(res.data.results);
+          setOpen(true);
+        })
+        .catch(() => { if (requestId === requestIdRef.current) setResults([]); })
+        .finally(() => { if (requestId === requestIdRef.current) setLoading(false); });
     }, 300);
     return () => clearTimeout(debounceRef.current);
   }, [q]);
