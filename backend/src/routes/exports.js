@@ -153,12 +153,32 @@ const ENTITIES = {
     if (!query.poolId) return [];
     const members = await prisma.talentPoolMember.findMany({
       where: { poolId: query.poolId },
-      include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } } },
+      include: {
+        student: {
+          select: {
+            name: true, email: true, rollNumber: true, registrationNumber: true,
+            academicGroup: { select: { batch: true, department: { select: { name: true } } } },
+          },
+        },
+      },
       orderBy: { addedAt: "desc" },
     });
+    const studentIds = members.map((m) => m.studentId);
+    const [profiles, resumes] = await Promise.all([
+      prisma.studentProfile.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, placementParticipation: true } }),
+      prisma.resume.findMany({ where: { studentId: { in: studentIds } }, select: { studentId: true, skills: true } }),
+    ]);
+    const placementByStudent = new Map(profiles.map((p) => [p.studentId, p.placementParticipation]));
+    const skillsByStudent = new Map(
+      resumes.map((r) => [r.studentId, Array.isArray(r.skills) ? r.skills.map((s) => s.name).filter(Boolean).join(", ") : ""])
+    );
     return members.map((m) => ({
       "Roll Number": m.student.rollNumber || "", Name: m.student.name, "Registration Number": m.student.registrationNumber || "",
-      Email: m.student.email, "Added Via": m.addedVia, "Added At": m.addedAt.toISOString(),
+      Email: m.student.email, Department: m.student.academicGroup?.department?.name || "", Batch: m.student.academicGroup?.batch || "",
+      "Placement Status": placementByStudent.get(m.studentId) === "INTERESTED" ? "Registered"
+        : placementByStudent.get(m.studentId) === "NOT_INTERESTED" ? "Not Registered" : "Not Set",
+      Skills: skillsByStudent.get(m.studentId) || "",
+      "Added Via": m.addedVia, "Added At": m.addedAt.toISOString(),
     }));
   },
 };

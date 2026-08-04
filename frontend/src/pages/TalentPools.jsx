@@ -298,12 +298,34 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
   const [members, setMembers] = useState([]);
   const [mode, setMode] = useState(0);
   const [memberSearch, setMemberSearch] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [placementStatus, setPlacementStatus] = useState("");
+  const [departments, setDepartments] = useState([]);
 
   function loadMembers() {
-    api.get(`/talent-pools/${poolId}/members`, { params: { search: memberSearch.trim() || undefined } })
-      .then((res) => setMembers(res.data)).catch(() => setMembers([]));
+    api.get(`/talent-pools/${poolId}/members`, {
+      params: {
+        search: memberSearch.trim() || undefined,
+        departmentId: departmentId || undefined,
+        placementStatus: placementStatus || undefined,
+      },
+    }).then((res) => setMembers(res.data)).catch(() => setMembers([]));
   }
-  useEffect(loadMembers, [poolId, memberSearch]);
+  useEffect(loadMembers, [poolId, memberSearch, departmentId, placementStatus]);
+
+  // Department options come from the pool's own configured institutes' academic groups — same
+  // source BrowseAddPanel below already uses, just deduplicated by department rather than kept
+  // per-section, since this filter narrows the member list by department alone.
+  useEffect(() => {
+    const instituteIds = (pool.institutes || []).map((i) => i.instituteId);
+    setDepartmentId("");
+    if (!instituteIds.length) { setDepartments([]); return; }
+    Promise.all(instituteIds.map((id) => api.get("/academic-groups", { params: { instituteId: id } }).then((res) => res.data).catch(() => [])))
+      .then((results) => {
+        const groups = results.flat();
+        setDepartments([...new Map(groups.map((g) => [g.department.id, g.department])).values()].sort((a, b) => a.name.localeCompare(b.name)));
+      });
+  }, [pool.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function removeMember(studentId) {
     setError("");
@@ -337,10 +359,25 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
       {mode === 2 && !isAdmin && <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>Bulk Import is an Admin-only action.</p>}
       {mode === 3 && <TransferPanel pool={pool} pools={pools} members={members} setError={setError} onChange={() => { loadMembers(); onChange(); }} />}
 
-      <div style={{ display: "flex", gap: 8, marginTop: 24, alignItems: "flex-end" }}>
+      <div style={{ display: "flex", gap: 8, marginTop: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 260px" }}>
           <label style={labelStyle}>Filter current members</label>
-          <input style={inputStyle} placeholder="Search by name, roll number, or email…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
+          <input style={inputStyle} placeholder="Search by name, roll number, PRN, email, or mobile…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
+        </div>
+        <div style={{ flex: "0 1 200px" }}>
+          <label style={labelStyle}>Department</label>
+          <select style={inputStyle} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+            <option value="">All departments</option>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: "0 1 180px" }}>
+          <label style={labelStyle}>Placement Status</label>
+          <select style={inputStyle} value={placementStatus} onChange={(e) => setPlacementStatus(e.target.value)}>
+            <option value="">All</option>
+            <option value="INTERESTED">Registered</option>
+            <option value="NOT_INTERESTED">Not Registered</option>
+          </select>
         </div>
       </div>
       <h3 style={{ fontSize: 15, marginTop: 12 }}>Members ({members.length})</h3>

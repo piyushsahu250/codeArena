@@ -277,6 +277,11 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     }
 
     const updated = await prisma.talentPool.update({ where: { id: pool.id }, data, include: INSTITUTES_INCLUDE });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.TALENT_POOL_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId || poolInstituteIds(pool)[0] || null,
+      details: { poolId: pool.id, name: updated.name, changedFields: Object.keys(data) },
+    });
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -312,7 +317,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitu
 router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
-  const { search, departmentId } = req.query;
+  const { search, departmentId, batch, section, academicGroupId, instituteId, placementStatus } = req.query;
   const studentWhere = {};
   if (search && search.trim()) {
     const q = search.trim();
@@ -324,7 +329,19 @@ router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRe
       { mobile: { contains: q, mode: "insensitive" } },
     ];
   }
-  if (departmentId) studentWhere.academicGroup = { departmentId };
+  // academicGroupId is a direct, exact-group filter — mutually exclusive in practice with
+  // department/batch/section (the UI offers one or the other), but if both were somehow sent the
+  // exact id narrows correctly either way since Prisma ANDs sibling where keys.
+  if (academicGroupId) studentWhere.academicGroupId = academicGroupId;
+  else if (departmentId || batch || section) {
+    studentWhere.academicGroup = {
+      ...(departmentId ? { departmentId } : {}),
+      ...(batch ? { batch } : {}),
+      ...(section ? { section } : {}),
+    };
+  }
+  if (instituteId) studentWhere.instituteId = instituteId;
+  if (placementStatus) studentWhere.studentProfile = { placementParticipation: placementStatus };
 
   // No skip/take pagination here (unlike most list routes) — this same response also feeds the
   // memberIds Set the Search/Browse/Transfer panels use to know which students are already
@@ -721,6 +738,7 @@ router.post("/:id/tests", authenticate, requireRole("ADMIN"), attachRequesterIns
       instituteId: poolInstituteIds(pool)[0] || null, details: { poolId: pool.id, poolName: pool.name, testId, testTitle: test.title },
     });
     invalidate(`talentPoolLeaderboard:${pool.id}`);
+    invalidate(`talentPoolRank:${pool.id}`);
     res.json(link);
   } catch (err) {
     console.error(err);
@@ -733,6 +751,7 @@ router.delete("/:id/tests/:testId", authenticate, requireRole("ADMIN"), attachRe
   if (!pool) return;
   await prisma.talentPoolTest.deleteMany({ where: { poolId: pool.id, testId: req.params.testId } });
   invalidate(`talentPoolLeaderboard:${pool.id}`);
+  invalidate(`talentPoolRank:${pool.id}`);
   res.json({ success: true });
 });
 
@@ -760,6 +779,7 @@ router.post("/:id/interview-configs", authenticate, requireRole("ADMIN"), attach
       req, action: AUDIT_ACTIONS.TALENT_POOL_ASSESSMENT_ASSIGNED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: poolInstituteIds(pool)[0] || null, details: { poolId: pool.id, poolName: pool.name, interviewConfigId: created.id, label: created.label },
     });
+    invalidate(`talentPoolInterviewRank:${pool.id}`);
     res.json(created);
   } catch (err) {
     console.error(err);
@@ -967,7 +987,7 @@ router.get("/:id/report.pdf", authenticate, requireRole("ADMIN", "STAFF"), attac
       return {
         rollNumber: m.student.rollNumber, registrationNumber: m.student.registrationNumber, name: m.student.name, addedVia: m.addedVia,
         rank: rank.rank, totalStudents: rank.totalStudents,
-        scorePercent: null,
+        scorePercent: rank.percent,
         attendancePercent: denom > 0 ? Math.round(((present + late) / denom) * 100) : null,
       };
     })
