@@ -9,6 +9,7 @@ import { useToast } from "../context/ToastContext";
 
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
+const linkButtonStyle = { background: "none", border: "none", padding: 0, font: "inherit", color: "var(--amber-dark)", textDecoration: "underline", cursor: "pointer" };
 
 // Shared by every save handler on this page so "no response at all" (offline/DNS/CORS — axios
 // never got a response object) reads as a connectivity problem instead of the misleading default
@@ -426,9 +427,10 @@ export default function StudentProfile() {
           <div className="card" style={{ padding: 16, marginTop: 16, background: "#FCEFD9", border: "1px solid var(--amber)" }}>
             <strong>Complete your Personal Academic &amp; Info to continue.</strong>
             <p style={{ fontSize: 13, marginTop: 4, marginBottom: 0 }}>
-              Every other section of CodeArena unlocks once this reaches 90% completion. Fill in the fields below,
-              including at least one education record under "Career History &amp; Education" — feel free to
-              finish the rest afterward.
+              Every other section of CodeArena unlocks once this reaches 80% completion. Fill in the fields below,
+              including at least one education record under "Career History &amp; Education" and at least one
+              uploaded document under the <button type="button" onClick={() => setTab("documents")} style={{ ...linkButtonStyle }}>Documents</button> tab
+              — feel free to finish the rest afterward.
             </p>
           </div>
         )}
@@ -442,12 +444,25 @@ export default function StudentProfile() {
             <div style={{ height: "100%", width: `${percent}%`, background: percent === 100 ? "var(--mint)" : "var(--amber)", transition: "width 0.3s" }} />
           </div>
           {data?.completion && !data.completion.complete && (() => {
-            const missingProfile = data.completion.missingFields;
+            // Every check is tagged with the actual page it's filled in on (see
+            // studentProfileCompletion.js) — DOCUMENTS lives on this page's own "Documents" tab,
+            // not the currently-open "personal" tab, so lumping it into one "missing on this page"
+            // line was actively misleading: a student staring at the Personal Info form would see
+            // a field name they can't find anywhere on screen. PROFILE and RESUME checks (the
+            // latter is "education," which this personal tab also edits inline further down) stay
+            // together since both are genuinely visible without switching tabs.
+            const missingHere = data.completion.missingFields.filter((f) => f.section !== "DOCUMENTS");
+            const missingDocs = data.completion.missingFields.filter((f) => f.section === "DOCUMENTS");
             return (
               <div style={{ marginTop: 8 }}>
-                {missingProfile.length > 0 && (
+                {missingHere.length > 0 && (
                   <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0" }}>
-                    Missing on this page: {missingProfile.map((f) => f.label).join(", ")}
+                    Missing on this page: {missingHere.map((f) => f.label).join(", ")}
+                  </p>
+                )}
+                {missingDocs.length > 0 && (
+                  <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0" }}>
+                    Missing on the <button type="button" onClick={() => setTab("documents")} style={linkButtonStyle}>Documents</button> tab: {missingDocs.map((f) => f.label).join(", ")}
                   </p>
                 )}
               </div>

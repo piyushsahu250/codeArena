@@ -21,7 +21,7 @@ const PINCODE_RE = /^[0-9]{4,10}$/;
 // mandatory checklist, rather than being blocked on the very last field or two — `complete` below
 // still means literally 100% (used for admin reporting and the mandatoryCompletedAt timestamp),
 // `unlocked` is the separate, looser threshold that actually gates navigation.
-const UNLOCK_THRESHOLD_PERCENT = 90;
+const UNLOCK_THRESHOLD_PERCENT = 80;
 
 const MANDATORY_FIELD_CHECKS = [
   { key: "name", label: "Full name (first and last)", section: "PROFILE", check: (u) => !!u.name && u.name.trim().split(/\s+/).length >= 2 },
