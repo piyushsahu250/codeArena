@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import api from "../api";
@@ -99,8 +100,11 @@ export default function MyResults() {
                 </div>
               </div>
 
-              {r.allowPdfDownload && (
-                <div style={{ marginTop: 16 }}>
+              <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link to={`/results/${r.entryId}`} className="btn btn-primary" style={{ fontSize: 13 }}>
+                  View Marksheet
+                </Link>
+                {r.allowPdfDownload && (
                   <button
                     className="btn btn-ghost"
                     style={{ fontSize: 13 }}
@@ -109,8 +113,8 @@ export default function MyResults() {
                   >
                     {downloadingId === r.entryId ? "Downloading…" : "Download Marksheet (PDF)"}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>

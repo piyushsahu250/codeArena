@@ -11,6 +11,7 @@ const { generateAttendancePdf } = require("../utils/attendancePdf");
 const { testEligibilityWhere } = require("../utils/testEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { compareRollNumbers } = require("../utils/studentIdentifiers");
+const { computeAttendancePercent } = require("../utils/attendanceStats");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -22,17 +23,6 @@ const LECTURE_TYPE_LABELS = { REGULAR: "Regular Class", PRACTICE_TEST: "Practice
 // already-populated column's type is exactly the kind of schema change that broke two deploys
 // earlier this session; app-layer validation carries zero migration risk.
 const ATTENDANCE_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"];
-
-// LEAVE is excluded from the denominator (an approved leave neither helps nor hurts the
-// percentage); LATE counts toward presence (the student was there, just tardy).
-function computeAttendancePercent(counts) {
-  const present = counts.PRESENT || 0;
-  const absent = counts.ABSENT || 0;
-  const late = counts.LATE || 0;
-  const denominator = present + absent + late;
-  if (denominator === 0) return null;
-  return Math.round(((present + late) / denominator) * 100);
-}
 
 const SLOTS = [
   { label: "Slot 1", startTime: "09:50", endTime: "10:45" },

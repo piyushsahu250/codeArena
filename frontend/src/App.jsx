@@ -51,6 +51,8 @@ import ResultManagement from "./pages/ResultManagement";
 import StaffClerkManagement from "./pages/StaffClerkManagement";
 import StaffClerkProfile from "./pages/StaffClerkProfile";
 import MyResults from "./pages/MyResults";
+import MarksheetView from "./pages/MarksheetView";
+import MarksheetVerify from "./pages/MarksheetVerify";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ForceChangePassword from "./pages/ForceChangePassword";
@@ -165,11 +167,13 @@ export default function App() {
           <Route path="/interview/verify/:code" element={<InterviewVerify />} />
           <Route path="/learning/certificate/verify/:code" element={<CourseCertificateVerify />} />
           <Route path="/certificate/verify/:code" element={<CertificateVerify />} />
+          <Route path="/results/verify/:code" element={<MarksheetVerify />} />
           <Route path="/account" element={<Protected><AccountSettings /></Protected>} />
           <Route path="/certificates" element={<Protected roles={["STUDENT"]}><MyCertificates /></Protected>} />
           <Route path="/attendance" element={<Protected roles={["STUDENT"]}><MyAttendance /></Protected>} />
           <Route path="/talent-pools" element={<Protected roles={["STUDENT"]}><MyTalentPools /></Protected>} />
           <Route path="/results" element={<Protected roles={["STUDENT"]}><MyResults /></Protected>} />
+          <Route path="/results/:entryId" element={<Protected roles={["STUDENT"]}><MarksheetView /></Protected>} />
 
           {/* Student */}
           <Route path="/profile" element={<Protected roles={["STUDENT"]}><StudentProfile /></Protected>} />

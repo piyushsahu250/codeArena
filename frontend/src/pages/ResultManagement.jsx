@@ -11,9 +11,9 @@ const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border
 const STATUS_COLORS = { DRAFT: "var(--ink-dim)", PUBLISHED: "var(--mint)", UNPUBLISHED: "var(--rust)" };
 
 const EMPTY_FORM = {
-  title: "", description: "", instituteId: "", batch: "", divisions: "", examDate: "", publishDate: "",
+  title: "", description: "", instituteId: "", batch: "", divisions: "", semester: "", examDate: "", publishDate: "",
   totalMarks: "", passingMarks: "", passingPercent: "", passLabel: "Pass", failLabel: "Fail",
-  allowPdfDownload: true, visibility: "SAVE_DRAFT",
+  allowPdfDownload: true, showRank: false, showClassAverage: false, showAttendance: false, visibility: "SAVE_DRAFT",
 };
 
 // Admin (full: create/edit/publish/unpublish/delete examinations) and Staff/Clerk (institute-
@@ -150,7 +150,7 @@ export default function ResultManagement() {
                   <label style={labelStyle}>Description (Optional)</label>
                   <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                   <div>
                     <label style={labelStyle}>Batch (Optional)</label>
                     <input style={inputStyle} value={form.batch} onChange={(e) => setForm((f) => ({ ...f, batch: e.target.value }))} placeholder="e.g. 2025-2028" />
@@ -158,6 +158,10 @@ export default function ResultManagement() {
                   <div>
                     <label style={labelStyle}>Division(s) (Optional)</label>
                     <input style={inputStyle} value={form.divisions} onChange={(e) => setForm((f) => ({ ...f, divisions: e.target.value }))} placeholder="e.g. A, B" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Semester (Optional)</label>
+                    <input style={inputStyle} value={form.semester} onChange={(e) => setForm((f) => ({ ...f, semester: e.target.value }))} placeholder="e.g. Semester 5" />
                   </div>
                 </div>
                 {departments.length > 0 && (
@@ -210,6 +214,23 @@ export default function ResultManagement() {
                   <input type="checkbox" checked={form.allowPdfDownload} onChange={(e) => setForm((f) => ({ ...f, allowPdfDownload: e.target.checked }))} />
                   Allow students to download a PDF marksheet
                 </label>
+                <div>
+                  <label style={labelStyle}>Premium Marksheet Extras (Optional)</label>
+                  <div style={{ display: "flex", gap: 14, fontSize: 13, flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="checkbox" checked={form.showRank} onChange={(e) => setForm((f) => ({ ...f, showRank: e.target.checked }))} />
+                      Show rank on marksheet
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="checkbox" checked={form.showClassAverage} onChange={(e) => setForm((f) => ({ ...f, showClassAverage: e.target.checked }))} />
+                      Show class average
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="checkbox" checked={form.showAttendance} onChange={(e) => setForm((f) => ({ ...f, showAttendance: e.target.checked }))} />
+                      Show attendance %
+                    </label>
+                  </div>
+                </div>
                 <div>
                   <label style={labelStyle}>Result Visibility</label>
                   <div style={{ display: "flex", gap: 14, fontSize: 13 }}>
@@ -286,6 +307,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [marks, setMarks] = useState("");
   const [grade, setGrade] = useState("");
+  const [remarks, setRemarks] = useState("");
   const [savingEntry, setSavingEntry] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkSummary, setBulkSummary] = useState(null);
@@ -317,8 +339,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
     setSavingEntry(true);
     setError("");
     try {
-      await api.post(`/results/admin/examinations/${examId}/entries`, { studentId: selectedStudent.id, obtainedMarks: Number(marks), grade: grade || undefined });
-      setSelectedStudent(null); setStudentQuery(""); setMarks(""); setGrade(""); setAddingEntry(false);
+      await api.post(`/results/admin/examinations/${examId}/entries`, { studentId: selectedStudent.id, obtainedMarks: Number(marks), grade: grade || undefined, remarks: remarks || undefined });
+      setSelectedStudent(null); setStudentQuery(""); setMarks(""); setGrade(""); setRemarks(""); setAddingEntry(false);
       loadEntries();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to save entry");
@@ -387,6 +409,16 @@ function ExamDetail({ examId, isAdmin, onBack }) {
       loadExam();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to unpublish");
+    }
+  }
+
+  async function previewMarksheet(entryId) {
+    try {
+      const res = await api.get(`/results/admin/examinations/${examId}/entries/${entryId}/marksheet.pdf`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      window.open(url, "_blank");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to load marksheet preview");
     }
   }
 
@@ -496,6 +528,10 @@ function ExamDetail({ examId, isAdmin, onBack }) {
               </div>
               <button className="btn btn-primary" disabled={!selectedStudent || !marks || savingEntry} onClick={saveEntry}>{savingEntry ? "Saving…" : "Save"}</button>
             </div>
+            <div style={{ marginTop: 10 }}>
+              <label style={labelStyle}>Remarks (Optional)</label>
+              <input style={inputStyle} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder='e.g. "Excellent performance"' />
+            </div>
           </div>
         )}
 
@@ -542,6 +578,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 <th style={{ padding: "8px 10px" }}>Marks</th>
                 <th style={{ padding: "8px 10px" }}>%</th>
                 <th style={{ padding: "8px 10px" }}>Result</th>
+                <th style={{ padding: "8px 10px" }}>Remarks</th>
+                <th style={{ padding: "8px 10px" }}>Marksheet ID</th>
                 <th style={{ padding: "8px 10px" }}></th>
               </tr>
             </thead>
@@ -557,7 +595,12 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                   <td style={{ padding: "8px 10px" }}>
                     <span style={{ color: en.passed ? "var(--mint)" : "var(--rust)", fontWeight: 700 }}>{en.passed ? exam.passLabel : exam.failLabel}</span>
                   </td>
-                  <td style={{ padding: "8px 10px" }}>
+                  <td style={{ padding: "8px 10px", maxWidth: 160 }}>{en.remarks || "—"}</td>
+                  <td className="mono" style={{ padding: "8px 10px", fontSize: 11 }}>{en.verificationCode || "—"}</td>
+                  <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                    <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={() => previewMarksheet(en.id)}>
+                      Preview
+                    </button>
                     {exam.canEdit && (
                       <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => removeEntry(en.id)}>Remove</button>
                     )}
@@ -565,7 +608,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 </tr>
               ))}
               {entries.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>No entries yet.</td></tr>
+                <tr><td colSpan={9} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>No entries yet.</td></tr>
               )}
             </tbody>
           </table>

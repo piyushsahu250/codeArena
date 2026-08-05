@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 
 const emptyForm = { name: "", code: "", address: "", contact: "" };
-const emptyEditForm = { name: "", code: "", address: "", contact: "", passwordExpiryDays: "", passwordHistoryDepth: 3, singleSessionOnly: false, aiHintsEnabled: false, requireProfileCompletion: false };
+const emptyEditForm = { name: "", code: "", address: "", contact: "", passwordExpiryDays: "", passwordHistoryDepth: 3, singleSessionOnly: false, aiHintsEnabled: false, requireProfileCompletion: false, marksheetSignatories: [] };
 
 export default function InstituteManagement() {
   const [institutes, setInstitutes] = useState([]);
@@ -49,7 +49,28 @@ export default function InstituteManagement() {
       passwordExpiryDays: inst.passwordExpiryDays ?? "", passwordHistoryDepth: inst.passwordHistoryDepth ?? 3,
       singleSessionOnly: !!inst.singleSessionOnly, aiHintsEnabled: !!inst.aiHintsEnabled,
       requireProfileCompletion: !!inst.requireProfileCompletion,
+      marksheetSignatories: Array.isArray(inst.marksheetSignatories) ? inst.marksheetSignatories : [],
     });
+  }
+
+  function addSignatory() {
+    if (editForm.marksheetSignatories.length >= 4) return;
+    setEditForm({ ...editForm, marksheetSignatories: [...editForm.marksheetSignatories, { title: "", name: "", signatureImageUrl: "" }] });
+  }
+  function removeSignatory(i) {
+    setEditForm({ ...editForm, marksheetSignatories: editForm.marksheetSignatories.filter((_, idx) => idx !== i) });
+  }
+  function updateSignatory(i, field, value) {
+    setEditForm({
+      ...editForm,
+      marksheetSignatories: editForm.marksheetSignatories.map((s, idx) => (idx === i ? { ...s, [field]: value } : s)),
+    });
+  }
+  function handleSignatureFile(i, file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => updateSignatory(i, "signatureImageUrl", reader.result);
+    reader.readAsDataURL(file);
   }
 
   async function saveEdit(id) {
@@ -183,6 +204,29 @@ export default function InstituteManagement() {
                       <input type="checkbox" checked={editForm.requireProfileCompletion} onChange={(e) => setEditForm({ ...editForm, requireProfileCompletion: e.target.checked })} />
                       Require Student Profile Completion (blocks all other access until Personal Academic &amp; Info is complete)
                     </label>
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1", marginTop: 8, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--ink-dim)", marginBottom: 8 }}>
+                      Marksheet Signatories (up to 4)
+                    </div>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {editForm.marksheetSignatories.map((sig, i) => (
+                        <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", border: "1px solid var(--line)", borderRadius: 8, padding: 8 }}>
+                          <input style={{ ...inputStyle, width: 160 }} placeholder="Title (e.g. Principal)" value={sig.title} onChange={(e) => updateSignatory(i, "title", e.target.value)} />
+                          <input style={{ ...inputStyle, width: 160 }} placeholder="Name" value={sig.name} onChange={(e) => updateSignatory(i, "name", e.target.value)} />
+                          <label className="btn btn-ghost" style={{ fontSize: 12, cursor: "pointer" }}>
+                            {sig.signatureImageUrl ? "Change signature image" : "Upload signature image"}
+                            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleSignatureFile(i, e.target.files[0])} />
+                          </label>
+                          {sig.signatureImageUrl && <img src={sig.signatureImageUrl} alt="" style={{ height: 24, objectFit: "contain" }} />}
+                          <button type="button" className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => removeSignatory(i)}>Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                    {editForm.marksheetSignatories.length < 4 && (
+                      <button type="button" className="btn btn-ghost" style={{ fontSize: 12, marginTop: 8 }} onClick={addSignatory}>+ Add Signatory</button>
+                    )}
                   </div>
 
                   <div style={{ display: "flex", gap: 8, gridColumn: "1 / -1" }}>

@@ -5,11 +5,14 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { sendExport } = require("../utils/exportFile");
 const { generateMarksheetPdf } = require("../utils/resultMarksheetPdf");
+const { buildMarksheetData } = require("../utils/resultMarksheetData");
+const { generateMarksheetCode } = require("../utils/resultCode");
 const { notifyResultPublished } = require("../utils/notifications");
+const QRCode = require("qrcode");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -18,6 +21,9 @@ const STUDENT_SELECT = {
   id: true, name: true, rollNumber: true, registrationNumber: true, instituteId: true,
   academicGroup: { select: { batch: true, section: true, department: { select: { id: true, name: true } } } },
 };
+// Marksheet-only variant — profilePhotoUrl is a data URL, kept out of STUDENT_SELECT so it never
+// leaks into every existing list/search/export response that spreads that constant.
+const MARKSHEET_STUDENT_SELECT = { ...STUDENT_SELECT, profilePhotoUrl: true };
 
 // ============================================================
 // Shared helpers
@@ -46,7 +52,7 @@ function canEditEntries(examination, user) {
 async function loadExaminationScoped(req, res, id) {
   const examination = await prisma.resultExamination.findUnique({
     where: { id },
-    include: { departments: { include: { department: { select: { id: true, name: true } } } }, institute: { select: { id: true, name: true, logoUrl: true } } },
+    include: { departments: { include: { department: { select: { id: true, name: true } } } }, institute: { select: { id: true, name: true, code: true, logoUrl: true, marksheetSignatories: true } } },
   });
   if (!examination) { res.status(404).json({ error: "Examination not found" }); return null; }
   if (req.requesterInstituteId && examination.instituteId !== req.requesterInstituteId) {
@@ -70,6 +76,8 @@ function serializeEntry(entry) {
     percentage: entry.percentage,
     passed: entry.passed,
     grade: entry.grade,
+    remarks: entry.remarks,
+    verificationCode: entry.verificationCode,
     source: entry.source,
     enteredByName: entry.enteredByName,
     createdAt: entry.createdAt,
@@ -111,22 +119,67 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
   }
 });
 
+// Shared ownership/publish/download-enabled gate for all three of a student's own marksheet
+// surfaces (JSON preview, PDF download, QR image) — kept in one place so the three routes below
+// can never drift on who's allowed to see what.
+async function loadOwnMarksheetEntry(req, res, { requireDownloadEnabled }) {
+  const entry = await prisma.resultEntry.findUnique({
+    where: { id: req.params.entryId },
+    include: { examination: { include: { institute: true } }, student: { select: MARKSHEET_STUDENT_SELECT } },
+  });
+  if (!entry || entry.studentId !== req.user.id) { res.status(404).json({ error: "Result not found" }); return null; }
+  if (entry.examination.status !== "PUBLISHED") { res.status(403).json({ error: "This result is not published yet" }); return null; }
+  if (requireDownloadEnabled && !entry.examination.allowPdfDownload) {
+    res.status(403).json({ error: "Marksheet download isn't enabled for this examination" });
+    return null;
+  }
+  return entry;
+}
+
+router.get("/me/:entryId", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const entry = await loadOwnMarksheetEntry(req, res, { requireDownloadEnabled: false });
+    if (!entry) return;
+    const data = await buildMarksheetData({
+      examination: entry.examination, entry, student: entry.student, institute: entry.examination.institute,
+      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load marksheet" });
+  }
+});
+
+router.get("/me/:entryId/qr.png", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const entry = await loadOwnMarksheetEntry(req, res, { requireDownloadEnabled: false });
+    if (!entry) return;
+    const data = await buildMarksheetData({
+      examination: entry.examination, entry, student: entry.student, institute: entry.examination.institute,
+      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
+    });
+    const buffer = await QRCode.toBuffer(data.verifyUrl, { margin: 1, width: 200 });
+    res.setHeader("Content-Type", "image/png");
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate QR code" });
+  }
+});
+
 router.get("/me/:entryId/marksheet.pdf", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const entry = await prisma.resultEntry.findUnique({
-      where: { id: req.params.entryId },
-      include: { examination: { include: { institute: true } }, student: { select: STUDENT_SELECT } },
+    const entry = await loadOwnMarksheetEntry(req, res, { requireDownloadEnabled: true });
+    if (!entry) return;
+    const data = await buildMarksheetData({
+      examination: entry.examination, entry, student: entry.student, institute: entry.examination.institute,
+      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
     });
-    if (!entry || entry.studentId !== req.user.id) return res.status(404).json({ error: "Result not found" });
-    if (entry.examination.status !== "PUBLISHED") return res.status(403).json({ error: "This result is not published yet" });
-    if (!entry.examination.allowPdfDownload) return res.status(403).json({ error: "Marksheet download isn't enabled for this examination" });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="marksheet-${entry.examinationId}.pdf"`);
-    generateMarksheetPdf({
-      examination: entry.examination, entry, student: entry.student, institute: entry.examination.institute,
-      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
-    }, res);
+    await generateMarksheetPdf(data, res);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to generate marksheet" });
@@ -134,10 +187,46 @@ router.get("/me/:entryId/marksheet.pdf", authenticate, requireRole("STUDENT"), a
 });
 
 // ============================================================
+// Public verification (no auth) — mirrors certificates.js's GET /verify/:code exactly. Gated on
+// PUBLISHED status (not just "code exists") so unpublishing a result also revokes its public
+// verifiability, the same posture certificates.js takes toward a REVOKED certificate. Discloses
+// only the same minimal field set certificates.js's verify route already discloses publicly — no
+// PRN/roll/email/photo.
+// ============================================================
+
+router.get("/verify/:code", async (req, res) => {
+  try {
+    const entry = await prisma.resultEntry.findUnique({
+      where: { verificationCode: req.params.code },
+      include: { examination: { include: { institute: { select: { name: true } } } }, student: { select: { name: true } } },
+    });
+    if (!entry || entry.examination.status !== "PUBLISHED") {
+      return res.json({ valid: false, error: "No published marksheet found with this ID" });
+    }
+    res.json({
+      valid: true,
+      studentName: entry.student.name,
+      institute: entry.examination.institute?.name || null,
+      examinationTitle: entry.examination.title,
+      obtainedMarks: entry.obtainedMarks,
+      totalMarks: entry.examination.totalMarks,
+      percentage: entry.percentage,
+      result: entry.passed ? entry.examination.passLabel : entry.examination.failLabel,
+      publishedAt: entry.examination.publishedAt,
+      verificationCode: entry.verificationCode,
+      verificationTimestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ valid: false, error: "Verification failed" });
+  }
+});
+
+// ============================================================
 // Admin: examination CRUD + publish lifecycle
 // ============================================================
 
-const EXAM_FIELDS = ["title", "description", "batch", "divisions", "examDate", "publishDate", "totalMarks", "passingMarks", "passingPercent", "passLabel", "failLabel", "allowPdfDownload"];
+const EXAM_FIELDS = ["title", "description", "batch", "divisions", "semester", "examDate", "publishDate", "totalMarks", "passingMarks", "passingPercent", "passLabel", "failLabel", "allowPdfDownload", "showRank", "showClassAverage", "showAttendance"];
 function pickExamData(body) {
   const data = {};
   for (const key of EXAM_FIELDS) if (body[key] !== undefined) data[key] = body[key];
@@ -146,6 +235,9 @@ function pickExamData(body) {
   if (data.passingPercent !== undefined) data.passingPercent = data.passingPercent === null || data.passingPercent === "" ? null : Number(data.passingPercent);
   if (data.examDate !== undefined) data.examDate = new Date(data.examDate);
   if (data.publishDate !== undefined) data.publishDate = data.publishDate ? new Date(data.publishDate) : null;
+  if (data.showRank !== undefined) data.showRank = !!data.showRank;
+  if (data.showClassAverage !== undefined) data.showClassAverage = !!data.showClassAverage;
+  if (data.showAttendance !== undefined) data.showAttendance = !!data.showAttendance;
   return data;
 }
 
@@ -365,7 +457,7 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
       return res.status(403).json({ error: "This examination is no longer in Draft — only an Admin can update its results now" });
     }
 
-    const { studentId, obtainedMarks, grade } = req.body;
+    const { studentId, obtainedMarks, grade, remarks } = req.body;
     if (!studentId) return res.status(400).json({ error: "studentId is required" });
     const marks = Number(obtainedMarks);
     if (!Number.isFinite(marks) || marks < 0) return res.status(400).json({ error: "obtainedMarks must be a non-negative number" });
@@ -378,12 +470,14 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
     }
 
     const { percentage, passed } = computeResult(marks, examination);
+    const verificationCode = await generateMarksheetCode({ instituteCode: examination.institute?.code });
     const entry = await prisma.resultEntry.upsert({
       where: { examinationId_studentId: { examinationId: req.params.id, studentId } },
-      update: { obtainedMarks: marks, percentage, passed, grade: grade || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL" },
-      create: { examinationId: req.params.id, studentId, obtainedMarks: marks, percentage, passed, grade: grade || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL" },
+      update: { obtainedMarks: marks, percentage, passed, grade: grade || null, remarks: remarks || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL" },
+      create: { examinationId: req.params.id, studentId, obtainedMarks: marks, percentage, passed, grade: grade || null, remarks: remarks || null, verificationCode, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL" },
       include: { student: { select: STUDENT_SELECT } },
     });
+    invalidate(`resultExamStats:${req.params.id}`);
     res.json(serializeEntry(entry));
   } catch (err) {
     console.error(err);
@@ -403,6 +497,7 @@ router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRo
 
     const data = {};
     if (req.body.grade !== undefined) data.grade = req.body.grade || null;
+    if (req.body.remarks !== undefined) data.remarks = req.body.remarks || null;
     if (req.body.obtainedMarks !== undefined) {
       const marks = Number(req.body.obtainedMarks);
       if (!Number.isFinite(marks) || marks < 0) return res.status(400).json({ error: "obtainedMarks must be a non-negative number" });
@@ -414,6 +509,7 @@ router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRo
     data.enteredByName = req.user.name;
 
     const entry = await prisma.resultEntry.update({ where: { id: req.params.entryId }, data, include: { student: { select: STUDENT_SELECT } } });
+    invalidate(`resultExamStats:${req.params.id}`);
     res.json(serializeEntry(entry));
   } catch (err) {
     console.error(err);
@@ -431,6 +527,7 @@ router.delete("/admin/examinations/:id/entries/:entryId", authenticate, requireR
     const existingEntry = await prisma.resultEntry.findUnique({ where: { id: req.params.entryId } });
     if (!existingEntry || existingEntry.examinationId !== req.params.id) return res.status(404).json({ error: "Entry not found" });
     await prisma.resultEntry.delete({ where: { id: req.params.entryId } });
+    invalidate(`resultExamStats:${req.params.id}`);
     res.json({ message: "Entry removed" });
   } catch (err) {
     console.error(err);
@@ -438,19 +535,61 @@ router.delete("/admin/examinations/:id/entries/:entryId", authenticate, requireR
   }
 });
 
+async function loadAdminMarksheetEntry(req, res) {
+  const examination = await loadExaminationScoped(req, res, req.params.id);
+  if (!examination) return null;
+  const entry = await prisma.resultEntry.findUnique({ where: { id: req.params.entryId }, include: { student: { select: MARKSHEET_STUDENT_SELECT } } });
+  if (!entry || entry.examinationId !== req.params.id) { res.status(404).json({ error: "Entry not found" }); return null; }
+  return { examination, entry };
+}
+
+router.get("/admin/examinations/:id/entries/:entryId/marksheet", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const loaded = await loadAdminMarksheetEntry(req, res);
+    if (!loaded) return;
+    const { examination, entry } = loaded;
+    const data = await buildMarksheetData({
+      examination, entry, student: entry.student, institute: examination.institute,
+      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load marksheet preview" });
+  }
+});
+
+router.get("/admin/examinations/:id/entries/:entryId/qr.png", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const loaded = await loadAdminMarksheetEntry(req, res);
+    if (!loaded) return;
+    const { examination, entry } = loaded;
+    const data = await buildMarksheetData({
+      examination, entry, student: entry.student, institute: examination.institute,
+      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
+    });
+    const buffer = await QRCode.toBuffer(data.verifyUrl, { margin: 1, width: 200 });
+    res.setHeader("Content-Type", "image/png");
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate QR code" });
+  }
+});
+
 router.get("/admin/examinations/:id/entries/:entryId/marksheet.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
-    const examination = await loadExaminationScoped(req, res, req.params.id);
-    if (!examination) return;
-    const entry = await prisma.resultEntry.findUnique({ where: { id: req.params.entryId }, include: { student: { select: STUDENT_SELECT } } });
-    if (!entry || entry.examinationId !== req.params.id) return res.status(404).json({ error: "Entry not found" });
+    const loaded = await loadAdminMarksheetEntry(req, res);
+    if (!loaded) return;
+    const { examination, entry } = loaded;
+    const data = await buildMarksheetData({
+      examination, entry, student: entry.student, institute: examination.institute,
+      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="marksheet-preview-${entry.id}.pdf"`);
-    generateMarksheetPdf({
-      examination, entry, student: entry.student, institute: examination.institute,
-      department: entry.student.academicGroup?.department?.name, division: entry.student.academicGroup?.section,
-    }, res);
+    await generateMarksheetPdf(data, res);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to generate marksheet preview" });
@@ -594,7 +733,10 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
       }
     }
 
-    if (toCreate.length) await prisma.resultEntry.createMany({ data: toCreate, skipDuplicates: true });
+    if (toCreate.length) {
+      await prisma.resultEntry.createMany({ data: toCreate, skipDuplicates: true });
+      invalidate(`resultExamStats:${req.params.id}`);
+    }
 
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_ENTRIES_BULK_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,

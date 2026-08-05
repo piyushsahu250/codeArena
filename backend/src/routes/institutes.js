@@ -49,7 +49,12 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
     const existing = await prisma.institute.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Institute not found" });
 
-    const { name, code, address, contact, isActive, logoUrl, passwordExpiryDays, passwordHistoryDepth, singleSessionOnly, aiHintsEnabled, requireProfileCompletion } = req.body;
+    const { name, code, address, contact, isActive, logoUrl, passwordExpiryDays, passwordHistoryDepth, singleSessionOnly, aiHintsEnabled, requireProfileCompletion, marksheetSignatories } = req.body;
+    if (marksheetSignatories !== undefined && marksheetSignatories !== null) {
+      if (!Array.isArray(marksheetSignatories) || marksheetSignatories.length > 4 || marksheetSignatories.some((s) => !s || typeof s !== "object" || !String(s.name || "").trim() || !String(s.title || "").trim())) {
+        return res.status(400).json({ error: "Signatories must be a list of up to 4 entries, each with a name and title" });
+      }
+    }
     if (name && name.trim() !== existing.name) {
       const dup = await prisma.institute.findUnique({ where: { name: name.trim() } });
       if (dup) return res.status(409).json({ error: "An institute with this name already exists" });
@@ -75,6 +80,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
         singleSessionOnly: singleSessionOnly !== undefined ? !!singleSessionOnly : existing.singleSessionOnly,
         aiHintsEnabled: aiHintsEnabled !== undefined ? !!aiHintsEnabled : existing.aiHintsEnabled,
         requireProfileCompletion: requireProfileCompletion !== undefined ? !!requireProfileCompletion : existing.requireProfileCompletion,
+        marksheetSignatories: marksheetSignatories !== undefined ? marksheetSignatories : existing.marksheetSignatories,
       },
     });
     invalidate("institutes:");
