@@ -387,8 +387,8 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 32, marginTop: 32, alignItems: "start" }}>
-          <form onSubmit={handleCreate} className="card" style={{ padding: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 32, marginTop: 32, alignItems: "start" }}>
+          <form onSubmit={handleCreate} className="card" style={{ padding: 24, maxWidth: 520 }}>
             <h3 style={{ fontSize: 16, marginBottom: 16 }}>Create account</h3>
 
             {institutes.length === 0 ? (
