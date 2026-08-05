@@ -607,7 +607,12 @@ router.get("/admin/examinations/:id/entries/:entryId/marksheet.pdf", authenticat
 // never a bulk-upload input anywhere on the platform.
 const BULK_IMPORT_FIELD_ALIASES = {
   instituteName: ["institute", "institute name", "college", "college name"],
-  registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
+  // "registration number (prn)" is included because it's this bulk-template's own header below —
+  // normalizeBulkImportHeader strips ALL non-alphanumeric chars (no space substitution, unlike
+  // users.js's normalizeHeader), so "Registration Number (PRN)" collapses to "registrationnumberprn",
+  // which without this alias never matched anything and made the platform's own template fail its
+  // own "missing required columns" check.
+  registrationNumber: ["registration number", "registration number (prn)", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
   obtainedMarks: ["marks obtained", "marks", "obtained marks", "score"],
 };
 function normalizeBulkImportHeader(h) {
