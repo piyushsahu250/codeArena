@@ -39,7 +39,10 @@ const SELECT_FIELDS = {
 // an uploaded file is simply ignored, same as any other unrecognized column.
 const FIELD_ALIASES = {
   name: ["student name", "name", "full name"],
-  registrationNumber: ["registration number", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
+  // "registration number prn" is what the downloaded sample template's own header,
+  // "Registration Number (PRN)", normalizes to (normalizeHeader collapses "(" / ")" to spaces) —
+  // without it here, the platform's own template fails its own "missing required columns" check.
+  registrationNumber: ["registration number", "registration number prn", "registration no", "reg no", "reg. no", "prn", "prn no", "prn number"],
   email: ["official email id", "email", "email id", "official email"],
   mobile: ["mobile number", "mobile", "phone", "phone number"],
   department: ["department", "dept"],

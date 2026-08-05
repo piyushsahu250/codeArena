@@ -356,12 +356,15 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN"), async (req, res)
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING") return res.status(400).json({ error: "Only coding questions can be scheduled as a challenge" });
 
+    // Not a plain upsert: Prisma rejects null values inside a compound-unique where selector
+    // (date_instituteId_academicGroupId) even though instituteId/academicGroupId are nullable
+    // columns — "Argument `instituteId` must not be null." findFirst has no such restriction,
+    // so look the row up that way and fall back to create/update explicitly.
     const scopeKey = { date: dayStart(date), instituteId: instituteId || null, academicGroupId: academicGroupId || null };
-    const dc = await prisma.dailyChallenge.upsert({
-      where: { date_instituteId_academicGroupId: scopeKey },
-      update: { questionId },
-      create: { ...scopeKey, questionId },
-    });
+    const existing = await prisma.dailyChallenge.findFirst({ where: scopeKey });
+    const dc = existing
+      ? await prisma.dailyChallenge.update({ where: { id: existing.id }, data: { questionId } })
+      : await prisma.dailyChallenge.create({ data: { ...scopeKey, questionId } });
     res.json(dc);
   } catch (err) {
     console.error(err);
@@ -434,12 +437,13 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING") return res.status(400).json({ error: "Only coding questions can be scheduled as a challenge" });
 
+    // Same null-in-compound-unique-where limitation as POST /admin/daily above — findFirst +
+    // explicit create/update instead of upsert.
     const scopeKey = { weekStart: isoWeekStart(weekStart), instituteId: instituteId || null, academicGroupId: academicGroupId || null };
-    const wc = await prisma.weeklyChallenge.upsert({
-      where: { weekStart_instituteId_academicGroupId: scopeKey },
-      update: { questionId },
-      create: { ...scopeKey, questionId },
-    });
+    const existing = await prisma.weeklyChallenge.findFirst({ where: scopeKey });
+    const wc = existing
+      ? await prisma.weeklyChallenge.update({ where: { id: existing.id }, data: { questionId } })
+      : await prisma.weeklyChallenge.create({ data: { ...scopeKey, questionId } });
     res.json(wc);
   } catch (err) {
     console.error(err);
