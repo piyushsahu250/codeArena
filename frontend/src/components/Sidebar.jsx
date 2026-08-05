@@ -40,6 +40,7 @@ const MENU = {
       { label: "Student Search", to: "/clerk/students", icon: Users },
       { label: "Company Master", to: "/clerk/companies", icon: Building },
       { label: "Results", to: "/clerk/results", icon: ClipboardList },
+      { label: "Audit Log", to: "/clerk/audit-log", icon: History },
     ] },
     { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
   ],

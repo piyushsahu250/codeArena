@@ -773,10 +773,14 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
     const role = ["STUDENT", "STAFF", "CLERK", "ADMIN"].includes(req.query.role) ? req.query.role : undefined;
+    const { documentType, documentVerificationStatus } = req.query;
 
     const where = {
       ...(role ? { role } : {}),
       ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
+      ...(documentType || documentVerificationStatus
+        ? { studentDocuments: { some: { ...(documentType ? { documentType } : {}), ...(documentVerificationStatus ? { verificationStatus: documentVerificationStatus } : {}) } } }
+        : {}),
       OR: [
         { id: q },
         { rollNumber: { contains: q, mode: "insensitive" } },
@@ -819,7 +823,7 @@ router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
 // with no way to see further students in a large section).
 router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
-    const { departmentId, section, batch, placementParticipation, offerVerificationStatus } = req.query;
+    const { departmentId, section, batch, placementParticipation, offerVerificationStatus, documentType, documentVerificationStatus } = req.query;
     if (!departmentId || !section) return res.status(400).json({ error: "Department and Section are required" });
     const instituteId = req.requesterInstituteId || req.query.instituteId;
     if (!instituteId) return res.status(400).json({ error: "Institute is required" });
@@ -844,6 +848,9 @@ router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
       academicGroupId: { in: groups.map((g) => g.id) },
       ...(placementParticipation ? { studentProfile: { placementParticipation } } : {}),
       ...(offerVerificationStatus ? { placementOffers: { some: { verificationStatus: offerVerificationStatus } } } : {}),
+      ...(documentType || documentVerificationStatus
+        ? { studentDocuments: { some: { ...(documentType ? { documentType } : {}), ...(documentVerificationStatus ? { verificationStatus: documentVerificationStatus } : {}) } } }
+        : {}),
     };
 
     // Ascending Roll Number is numeric-aware ("1, 2, 3 ... 60", not lexicographic), which Prisma's
@@ -904,12 +911,14 @@ router.get("/password-reset-history", authenticate, requireRole("ADMIN", "STAFF"
   }
 });
 
-// ADMIN/STAFF: general-purpose, searchable/filterable/exportable audit trail — the enterprise
-// spec's requirement over and above the narrow password-reset-only view above. Staff are scoped
-// to their own institute the same way as everywhere else on this platform; an unscoped platform
-// Admin sees every institute. Same "capped operational log, not a paginated archive" convention
-// as the routes around it, at a slightly higher cap since this view covers every action type.
-router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+// ADMIN/STAFF/CLERK: general-purpose, searchable/filterable/exportable audit trail — the
+// enterprise spec's requirement over and above the narrow password-reset-only view above.
+// Staff/Clerk are scoped to their own institute the same way as everywhere else on this
+// platform; an unscoped platform Admin sees every institute. CLERK included so Clerk can view
+// document-verification history (Document Verification permission review). Same "capped
+// operational log, not a paginated archive" convention as the routes around it, at a slightly
+// higher cap since this view covers every action type.
+router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { action, studentId, from, to, format } = req.query;
     const where = {
@@ -947,10 +956,10 @@ router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
   }
 });
 
-// ADMIN/STAFF: distinct action names currently in the log, for the filter dropdown on the audit
-// log page — read from real data rather than hardcoding AUDIT_ACTIONS, since legacy rows (e.g.
-// REATTEMPT_GRANTED, STUDENT_PROFILE_UPDATED) predate that catalogue.
-router.get("/audit-log/actions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+// ADMIN/STAFF/CLERK: distinct action names currently in the log, for the filter dropdown on the
+// audit log page — read from real data rather than hardcoding AUDIT_ACTIONS, since legacy rows
+// (e.g. REATTEMPT_GRANTED, STUDENT_PROFILE_UPDATED) predate that catalogue.
+router.get("/audit-log/actions", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const rows = await prisma.auditLog.findMany({
       where: req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {},

@@ -6,6 +6,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validateDocumentInput, DOCUMENT_TYPES } = require("../utils/documentValidation");
 const { fetchExternalUrl } = require("../utils/safeFetch");
+const { notifyDocumentVerification } = require("../utils/notifications");
 
 const router = express.Router();
 
@@ -156,6 +157,9 @@ router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
     if (!["VERIFIED", "REJECTED", "REUPLOAD_REQUIRED"].includes(status)) {
       return res.status(400).json({ error: "status must be VERIFIED, REJECTED, or REUPLOAD_REQUIRED" });
     }
+    if (status !== "VERIFIED" && !reason?.trim()) {
+      return res.status(400).json({ error: "A remark is required when rejecting or requesting re-upload" });
+    }
 
     const doc = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!doc) return res.status(404).json({ error: "Document not found" });
@@ -169,14 +173,19 @@ router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
         verifiedByUserId: req.user.id,
         verifiedByName: req.user.name,
         verifiedAt: new Date(),
-        rejectionReason: status !== "VERIFIED" ? (reason || null) : null,
+        rejectionReason: status !== "VERIFIED" ? reason.trim() : null,
       },
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.DOCUMENT_VERIFIED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       studentId: doc.studentId, instituteId: student.instituteId,
-      details: { documentId: doc.id, documentType: doc.documentType, previousStatus: doc.verificationStatus, status, reason: status !== "VERIFIED" ? (reason || null) : null },
+      details: {
+        documentId: doc.id, documentType: doc.documentType, documentLabel: doc.label,
+        studentName: student.name, registrationNumber: student.registrationNumber,
+        previousStatus: doc.verificationStatus, status, reason: status !== "VERIFIED" ? reason.trim() : null,
+      },
     });
+    await notifyDocumentVerification(prisma, student, { document: doc, status, verifierName: req.user.name, reason: status !== "VERIFIED" ? reason.trim() : null });
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -184,13 +193,72 @@ router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
   }
 });
 
-// ADMIN/STAFF: remove a document regardless of verification status — the student-side DELETE above
-// is deliberately locked once a document is VERIFIED, but staff overseeing placement records still
-// need a way to remove one (e.g. it was verified against the wrong file, or is no longer needed).
-// Separate path from the student route above so this never collides with (or accidentally widens)
-// that STUDENT-only handler. CLERK is deliberately excluded — Clerk's document responsibilities
-// are view/download/verify/remarks, never irreversible deletion (see the Clerk RBAC review).
-router.delete("/:id/admin", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+// Bulk counterpart to PATCH /:id/verify above — same status/reason validation and per-document
+// authorization, but skips (rather than fails the whole batch on) any document that's missing or
+// belongs to a student outside the requester's institute, mirroring the skip-and-report idiom
+// used elsewhere on this platform for batch operations (e.g. question bank bulk-delete).
+router.post("/bulk-verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { documentIds, status, reason } = req.body;
+    if (!Array.isArray(documentIds) || documentIds.length === 0) {
+      return res.status(400).json({ error: "documentIds must be a non-empty array" });
+    }
+    if (!["VERIFIED", "REJECTED", "REUPLOAD_REQUIRED"].includes(status)) {
+      return res.status(400).json({ error: "status must be VERIFIED, REJECTED, or REUPLOAD_REQUIRED" });
+    }
+    if (status !== "VERIFIED" && !reason?.trim()) {
+      return res.status(400).json({ error: "A remark is required when rejecting or requesting re-upload" });
+    }
+
+    let verifiedCount = 0;
+    let skipped = 0;
+    for (const documentId of documentIds) {
+      const doc = await prisma.studentDocument.findUnique({ where: { id: documentId } });
+      if (!doc) { skipped++; continue; }
+      const student = await prisma.user.findUnique({ where: { id: doc.studentId } });
+      if (!student || student.role !== "STUDENT" || (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId)) {
+        skipped++;
+        continue;
+      }
+
+      const updated = await prisma.studentDocument.update({
+        where: { id: documentId },
+        data: {
+          verificationStatus: status,
+          verifiedByUserId: req.user.id,
+          verifiedByName: req.user.name,
+          verifiedAt: new Date(),
+          rejectionReason: status !== "VERIFIED" ? reason.trim() : null,
+        },
+      });
+      await logAudit({
+        req, action: AUDIT_ACTIONS.DOCUMENT_VERIFIED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+        studentId: doc.studentId, instituteId: student.instituteId,
+        details: {
+          documentId: doc.id, documentType: doc.documentType, documentLabel: doc.label,
+          studentName: student.name, registrationNumber: student.registrationNumber,
+          previousStatus: doc.verificationStatus, status, reason: status !== "VERIFIED" ? reason.trim() : null, bulk: true,
+        },
+      });
+      await notifyDocumentVerification(prisma, student, { document: updated, status, verifierName: req.user.name, reason: status !== "VERIFIED" ? reason.trim() : null });
+      verifiedCount++;
+    }
+
+    res.json({ verifiedCount, skipped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to bulk verify documents" });
+  }
+});
+
+// ADMIN-only: remove a document regardless of verification status — the student-side DELETE above
+// is deliberately locked once a document is VERIFIED, but Admin retains an override to remove one
+// (e.g. it was verified against the wrong file, or is no longer needed). Separate path from the
+// student route above so this never collides with (or accidentally widens) that STUDENT-only
+// handler. STAFF and CLERK are both deliberately excluded — their document responsibilities are
+// view/download/verify/remarks, never irreversible deletion (see the Document Verification
+// permission review).
+router.delete("/:id/admin", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const doc = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!doc) return res.status(404).json({ error: "Document not found" });

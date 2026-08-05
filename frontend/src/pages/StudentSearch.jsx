@@ -51,6 +51,9 @@ export default function StudentSearch({ basePath }) {
   const [browseBatch, setBrowseBatch] = useState("");
   const [browsePlacementParticipation, setBrowsePlacementParticipation] = useState("");
   const [browseVerificationStatus, setBrowseVerificationStatus] = useState("");
+  const [browseDocumentType, setBrowseDocumentType] = useState("");
+  const [browseDocumentStatus, setBrowseDocumentStatus] = useState("");
+  const [docTypes, setDocTypes] = useState([]);
   const [exporting, setExporting] = useState(false);
   const [browsePageMeta, setBrowsePageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
   const [lastMode, setLastMode] = useState(null); // "search" | "browse" — controls whether Prev/Next renders
@@ -71,6 +74,10 @@ export default function StudentSearch({ basePath }) {
   useEffect(() => {
     if (user?.role === "ADMIN") api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
   }, [user?.role]);
+
+  useEffect(() => {
+    api.get("/documents/types").then((res) => setDocTypes(res.data)).catch(() => setDocTypes([]));
+  }, []);
 
   // Loads the academic-group list for whichever institute is in scope — explicitly for Admin
   // (only once one is picked), immediately for Staff (the backend scopes it to their own
@@ -98,7 +105,12 @@ export default function StudentSearch({ basePath }) {
     setError("");
     setSelected([]);
     try {
-      const { data } = await api.get("/users/search", { params: { q: term, role: "STUDENT" } });
+      const { data } = await api.get("/users/search", {
+        params: {
+          q: term, role: "STUDENT",
+          documentType: browseDocumentType || undefined, documentVerificationStatus: browseDocumentStatus || undefined,
+        },
+      });
       setResults(data.rows);
       setLastMode("search");
     } catch (err) {
@@ -119,6 +131,7 @@ export default function StudentSearch({ basePath }) {
           instituteId: browseInstituteId || undefined, departmentId: browseDepartmentId, section: browseSection,
           batch: browseBatch || undefined, placementParticipation: browsePlacementParticipation || undefined,
           offerVerificationStatus: browseVerificationStatus || undefined,
+          documentType: browseDocumentType || undefined, documentVerificationStatus: browseDocumentStatus || undefined,
           page, pageSize: 50,
         },
       });
@@ -281,6 +294,23 @@ export default function StudentSearch({ basePath }) {
                 <option value="">All students</option>
                 <option value="VERIFIED">Has Verified Offer</option>
                 <option value="PENDING">Has Pending Offer</option>
+              </select>
+            </div>
+            <div style={{ flex: "1 1 170px" }}>
+              <label style={labelStyle}>Document Type</label>
+              <select style={inputStyle} value={browseDocumentType} onChange={(e) => setBrowseDocumentType(e.target.value)}>
+                <option value="">All document types</option>
+                {docTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: "1 1 170px" }}>
+              <label style={labelStyle}>Document Status</label>
+              <select style={inputStyle} value={browseDocumentStatus} onChange={(e) => setBrowseDocumentStatus(e.target.value)}>
+                <option value="">All statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="VERIFIED">Verified</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="REUPLOAD_REQUIRED">Re-upload Required</option>
               </select>
             </div>
             <button className="btn btn-primary" onClick={() => handleFetch(1)} disabled={!browseDepartmentId || !browseSection || browsing}>

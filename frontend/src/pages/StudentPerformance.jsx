@@ -49,6 +49,8 @@ export default function StudentPerformance({ basePath }) {
   const [documents, setDocuments] = useState(null); // from GET /documents/student/:studentId
   const [verifyingDocId, setVerifyingDocId] = useState(null);
   const [docReasonDraft, setDocReasonDraft] = useState({}); // documentId -> text
+  const [selectedDocIds, setSelectedDocIds] = useState([]);
+  const [bulkVerifying, setBulkVerifying] = useState(false);
 
   function load() {
     api.get(`/users/${studentId}/performance`)
@@ -117,15 +119,47 @@ export default function StudentPerformance({ basePath }) {
   }
 
   async function verifyDocument(docId, status) {
+    const reason = (docReasonDraft[docId] || "").trim();
+    if (status !== "VERIFIED" && !reason) {
+      toast.error("A remark is required when rejecting or requesting re-upload");
+      return;
+    }
     setVerifyingDocId(docId);
     try {
-      await api.patch(`/documents/${docId}/verify`, { status, reason: status !== "VERIFIED" ? (docReasonDraft[docId] || "") : undefined });
+      await api.patch(`/documents/${docId}/verify`, { status, reason: status !== "VERIFIED" ? reason : undefined });
       toast.success(status === "VERIFIED" ? "Document verified." : status === "REJECTED" ? "Document rejected." : "Re-upload requested.");
       loadDocuments();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to update verification");
     } finally {
       setVerifyingDocId(null);
+    }
+  }
+
+  function toggleDocSelected(docId) {
+    setSelectedDocIds((prev) => (prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]));
+  }
+
+  async function bulkVerifyDocuments(status) {
+    if (selectedDocIds.length === 0) return;
+    let reason;
+    if (status !== "VERIFIED") {
+      reason = (docReasonDraft.bulk || "").trim();
+      if (!reason) {
+        toast.error("A remark is required when rejecting or requesting re-upload");
+        return;
+      }
+    }
+    setBulkVerifying(true);
+    try {
+      const { data } = await api.post("/documents/bulk-verify", { documentIds: selectedDocIds, status, reason });
+      toast.success(`${data.verifiedCount} document${data.verifiedCount === 1 ? "" : "s"} updated${data.skipped ? `, ${data.skipped} skipped` : ""}.`);
+      setSelectedDocIds([]);
+      loadDocuments();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Bulk verification failed");
+    } finally {
+      setBulkVerifying(false);
     }
   }
 
@@ -513,15 +547,35 @@ export default function StudentPerformance({ basePath }) {
         {isManager && documents && documents.length > 0 && (
           <div className="card" style={{ padding: 20, marginTop: 20 }}>
             <h3 style={{ fontSize: 16, marginBottom: 12 }}>Documents</h3>
+            {selectedDocIds.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 10px", marginBottom: 10, background: "var(--card-bg, #F7F5EF)", borderRadius: 8 }}>
+                <span style={{ fontSize: 12 }}>{selectedDocIds.length} selected</span>
+                <button className="btn btn-primary" style={{ fontSize: 11, padding: "3px 8px" }} disabled={bulkVerifying} onClick={() => bulkVerifyDocuments("VERIFIED")}>Verify Selected</button>
+                <input
+                  placeholder="Reason (for reject / re-upload)"
+                  style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid var(--line)", width: 180 }}
+                  value={docReasonDraft.bulk || ""}
+                  onChange={(e) => setDocReasonDraft({ ...docReasonDraft, bulk: e.target.value })}
+                />
+                <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }} disabled={bulkVerifying} onClick={() => bulkVerifyDocuments("REJECTED")}>Reject Selected</button>
+                <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} disabled={bulkVerifying} onClick={() => bulkVerifyDocuments("REUPLOAD_REQUIRED")}>Request Re-upload (Selected)</button>
+                <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => setSelectedDocIds([])}>Clear</button>
+              </div>
+            )}
             <div style={{ display: "grid", gap: 8 }}>
               {documents.map((d) => {
                 const typeLabel = docTypes.find((t) => t.value === d.documentType)?.label || d.documentType;
                 return (
                   <div key={d.id} className="card" style={{ padding: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{typeLabel}{d.label ? ` — ${d.label}` : ""}</div>
-                        <a href={d.documentLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View document →</a>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        {d.verificationStatus === "PENDING" && (
+                          <input type="checkbox" checked={selectedDocIds.includes(d.id)} onChange={() => toggleDocSelected(d.id)} style={{ marginTop: 4 }} />
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{typeLabel}{d.label ? ` — ${d.label}` : ""}</div>
+                          <a href={d.documentLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View document →</a>
+                        </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <span className="badge" style={{ color: VERIFICATION_COLOR[d.verificationStatus] || "var(--rust)", fontWeight: 700 }}>
@@ -568,7 +622,7 @@ export default function StudentPerformance({ basePath }) {
                               {verifyingDocId === d.id ? "…" : "Download"}
                             </button>
                           )}
-                          {(user.role === "ADMIN" || user.role === "STAFF") && (
+                          {user.role === "ADMIN" && (
                             <button
                               className="btn btn-ghost"
                               style={{ fontSize: 11, padding: "3px 8px", color: "var(--rust)" }}

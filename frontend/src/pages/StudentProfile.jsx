@@ -819,9 +819,17 @@ export default function StudentProfile() {
                           <div>
                             <div style={{ fontWeight: 600, fontSize: 13.5 }}>{typeLabel}{d.label ? ` — ${d.label}` : ""}</div>
                             <a href={d.documentLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--mint)" }}>View document →</a>
+                            <div style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+                              Uploaded {new Date(d.createdAt).toLocaleDateString()}
+                            </div>
                           </div>
                           <div style={{ textAlign: "right" }}>
                             <span className="badge" style={{ color: DOC_VERIFICATION_COLOR[d.verificationStatus], fontWeight: 700 }}>{DOC_VERIFICATION_LABEL[d.verificationStatus]}</span>
+                            {d.verifiedByName && d.verifiedAt && (
+                              <div style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+                                By {d.verifiedByName} on {new Date(d.verifiedAt).toLocaleDateString()}
+                              </div>
+                            )}
                             {(d.verificationStatus === "REJECTED" || d.verificationStatus === "REUPLOAD_REQUIRED") && d.rejectionReason && (
                               <p style={{ fontSize: 11, color: "var(--rust)", marginTop: 4, maxWidth: 220 }}>{d.rejectionReason}</p>
                             )}

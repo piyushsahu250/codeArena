@@ -163,7 +163,30 @@ async function notifyPasswordResetByAdmin(prisma, user, { adminName }) {
   ]);
 }
 
+// Document Verification module — fired from studentDocuments.js's PATCH /:id/verify and
+// POST /bulk-verify once a Staff/Clerk/Admin sets a document's status. Same
+// Promise.all([notify, emailStudent]) shape as notifyResultPublished above.
+async function notifyDocumentVerification(prisma, student, { document, status, verifierName, reason }) {
+  const link = "/profile";
+  const label = document.label || document.documentType;
+  let message, subject, bodyHtml;
+  if (status === "VERIFIED") {
+    message = `Your document "${label}" has been verified by ${verifierName}`;
+    subject = `Document verified: "${label}"`;
+    bodyHtml = `<p>Hi ${student.name},</p><p>Your document <strong>${label}</strong> has been verified by ${verifierName}.</p><p><a href="${FRONTEND_URL}${link}">View your Documents</a></p>`;
+  } else {
+    const actionLabel = status === "REJECTED" ? "rejected" : "sent back for re-upload";
+    message = `Your document "${label}" was ${actionLabel} by ${verifierName}${reason ? ` — ${reason}` : ""}`;
+    subject = `Document requires your attention: "${label}"`;
+    bodyHtml = `<p>Hi ${student.name},</p><p>Your document <strong>${label}</strong> was ${actionLabel} by ${verifierName}.</p>${reason ? `<p><strong>Remarks:</strong> ${reason}</p>` : ""}<p><a href="${FRONTEND_URL}${link}">View your Documents</a></p>`;
+  }
+  await Promise.all([
+    notify(prisma, { recipientId: student.id, type: "DOCUMENT_VERIFICATION", message, link }),
+    emailStudent(prisma, student, subject, bodyHtml, "DOCUMENT_VERIFICATION"),
+  ]);
+}
+
 module.exports = {
   notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished,
-  notifyResultPublished, notifyAccountStatusChanged, notifyPermissionUpdated, notifyPasswordResetByAdmin,
+  notifyResultPublished, notifyAccountStatusChanged, notifyPermissionUpdated, notifyPasswordResetByAdmin, notifyDocumentVerification,
 };
