@@ -18,7 +18,12 @@ const router = express.Router();
 // that simply went empty is handled separately by deleteAcademicGroupIfEmpty() (utils/academicGroups.js),
 // called from users.js's PATCH /:id and DELETE /:id.
 
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+// CLERK included: StudentSearch.jsx's "browse by Institute · Department · Section" panel (shared
+// by Admin/Staff/Clerk) calls this to populate the Department/Section dropdowns — without CLERK
+// here, that call 403'd and was silently swallowed by the frontend's .catch(() => setGroups([])),
+// leaving the Department dropdown permanently empty and the Fetch button permanently unusable for
+// Clerk (it stays disabled until both a department and section are picked).
+router.get("/", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   const where = {};
   if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
   else if (req.query.instituteId) where.instituteId = req.query.instituteId;

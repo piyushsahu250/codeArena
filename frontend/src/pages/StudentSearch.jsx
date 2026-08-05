@@ -45,6 +45,8 @@ export default function StudentSearch({ basePath }) {
   const [institutes, setInstitutes] = useState([]);
   const [browseInstituteId, setBrowseInstituteId] = useState("");
   const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState("");
   const [browseDepartmentId, setBrowseDepartmentId] = useState("");
   const [browseSection, setBrowseSection] = useState("");
   const [browsing, setBrowsing] = useState(false);
@@ -79,19 +81,28 @@ export default function StudentSearch({ basePath }) {
     api.get("/documents/types").then((res) => setDocTypes(res.data)).catch(() => setDocTypes([]));
   }, []);
 
-  // Loads the academic-group list for whichever institute is in scope — explicitly for Admin
-  // (only once one is picked), immediately for Staff (the backend scopes it to their own
-  // institute regardless of what's passed, so no instituteId param is needed at all).
-  useEffect(() => {
+  function loadGroups() {
     if (user?.role === "ADMIN" && !browseInstituteId) {
       setGroups([]);
+      setGroupsError("");
       return;
     }
+    setGroupsLoading(true);
+    setGroupsError("");
     api
       .get("/academic-groups", user?.role === "ADMIN" ? { params: { instituteId: browseInstituteId } } : {})
       .then((res) => setGroups(res.data))
-      .catch(() => setGroups([]));
-  }, [user?.role, browseInstituteId]);
+      .catch((err) => {
+        setGroups([]);
+        setGroupsError(err.response?.data?.error || "Failed to load departments/sections. Try again.");
+      })
+      .finally(() => setGroupsLoading(false));
+  }
+
+  // Loads the academic-group list for whichever institute is in scope — explicitly for Admin
+  // (only once one is picked), immediately for Staff/Clerk (the backend scopes it to their own
+  // institute regardless of what's passed, so no instituteId param is needed at all).
+  useEffect(loadGroups, [user?.role, browseInstituteId]);
 
   const departments = [...new Map(groups.map((g) => [g.department.id, g.department])).values()].sort((a, b) => a.name.localeCompare(b.name));
   const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.section))].sort();
@@ -260,9 +271,11 @@ export default function StudentSearch({ basePath }) {
                 style={inputStyle}
                 value={browseDepartmentId}
                 onChange={(e) => { setBrowseDepartmentId(e.target.value); setBrowseSection(""); }}
-                disabled={user?.role === "ADMIN" && !browseInstituteId}
+                disabled={(user?.role === "ADMIN" && !browseInstituteId) || groupsLoading || !!groupsError}
               >
-                <option value="">Select department…</option>
+                <option value="">
+                  {groupsLoading ? "Loading departments…" : groupsError ? "Failed to load — see below" : departments.length === 0 ? "No departments found" : "Select department…"}
+                </option>
                 {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
@@ -320,6 +333,14 @@ export default function StudentSearch({ basePath }) {
               {exporting ? "Exporting…" : "Export to Excel"}
             </button>
           </div>
+          {groupsError && (
+            <p style={{ color: "var(--rust)", fontSize: 12.5, marginTop: 10 }}>
+              {groupsError}{" "}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px", marginLeft: 4 }} onClick={loadGroups}>
+                Retry
+              </button>
+            </p>
+          )}
         </div>
 
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
