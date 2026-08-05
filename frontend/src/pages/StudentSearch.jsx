@@ -8,6 +8,23 @@ import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 
+// Search term, browse filters, and the last fetched result set are persisted to sessionStorage
+// (keyed per basePath, so Admin/Staff/Clerk never leak into each other) so that navigating into a
+// student's profile — e.g. to verify a document/certificate — and then hitting Back restores
+// exactly where the admin/staff/clerk left off, instead of resetting every filter and forcing a
+// re-fetch for each student they check. sessionStorage (not localStorage) so this naturally clears
+// when the tab closes rather than persisting indefinitely.
+const PERSIST_PREFIX = "studentSearchState:";
+
+function loadPersisted(basePath) {
+  try {
+    const raw = sessionStorage.getItem(PERSIST_PREFIX + basePath);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 function downloadCsv(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
@@ -28,8 +45,9 @@ export default function StudentSearch({ basePath }) {
   const { user } = useAuth();
   const canRegenerate = user?.role === "ADMIN"; // matches the backend's ADMIN-only bulk-regenerate-password route
   const canEditProfile = user?.role === "ADMIN"; // matches the backend's ADMIN-only PATCH /users/:id
-  const [q, setQ] = useState("");
-  const [results, setResults] = useState(null);
+  const persisted = loadPersisted(basePath);
+  const [q, setQ] = useState(persisted.q || "");
+  const [results, setResults] = useState(persisted.results ?? null);
   const [error, setError] = useState("");
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -43,22 +61,22 @@ export default function StudentSearch({ basePath }) {
   // applied server-side automatically, same scoping the search box above already relies on), so
   // the picker only renders for Admin.
   const [institutes, setInstitutes] = useState([]);
-  const [browseInstituteId, setBrowseInstituteId] = useState("");
+  const [browseInstituteId, setBrowseInstituteId] = useState(persisted.browseInstituteId || "");
   const [groups, setGroups] = useState([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState("");
-  const [browseDepartmentId, setBrowseDepartmentId] = useState("");
-  const [browseSection, setBrowseSection] = useState("");
+  const [browseDepartmentId, setBrowseDepartmentId] = useState(persisted.browseDepartmentId || "");
+  const [browseSection, setBrowseSection] = useState(persisted.browseSection || "");
   const [browsing, setBrowsing] = useState(false);
-  const [browseBatch, setBrowseBatch] = useState("");
-  const [browsePlacementParticipation, setBrowsePlacementParticipation] = useState("");
-  const [browseVerificationStatus, setBrowseVerificationStatus] = useState("");
-  const [browseDocumentType, setBrowseDocumentType] = useState("");
-  const [browseDocumentStatus, setBrowseDocumentStatus] = useState("");
+  const [browseBatch, setBrowseBatch] = useState(persisted.browseBatch || "");
+  const [browsePlacementParticipation, setBrowsePlacementParticipation] = useState(persisted.browsePlacementParticipation || "");
+  const [browseVerificationStatus, setBrowseVerificationStatus] = useState(persisted.browseVerificationStatus || "");
+  const [browseDocumentType, setBrowseDocumentType] = useState(persisted.browseDocumentType || "");
+  const [browseDocumentStatus, setBrowseDocumentStatus] = useState(persisted.browseDocumentStatus || "");
   const [docTypes, setDocTypes] = useState([]);
   const [exporting, setExporting] = useState(false);
-  const [browsePageMeta, setBrowsePageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
-  const [lastMode, setLastMode] = useState(null); // "search" | "browse" — controls whether Prev/Next renders
+  const [browsePageMeta, setBrowsePageMeta] = useState(persisted.browsePageMeta || { page: 1, totalPages: 1, total: 0 });
+  const [lastMode, setLastMode] = useState(persisted.lastMode || null); // "search" | "browse" — controls whether Prev/Next renders
   const [searchParams] = useSearchParams();
 
   // Deep-link support — e.g. the Admin Dashboard's "Check test completion" lookup box links here
@@ -107,6 +125,21 @@ export default function StudentSearch({ basePath }) {
   const departments = [...new Map(groups.map((g) => [g.department.id, g.department])).values()].sort((a, b) => a.name.localeCompare(b.name));
   const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.section))].sort();
   const batches = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.batch))].filter(Boolean).sort();
+
+  // Keeps the sessionStorage snapshot in sync with every filter/result change (see loadPersisted
+  // above) — so Back from a student's profile lands here with the same search/filters/results
+  // still showing, instead of resetting and forcing a re-fetch for every student checked.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(PERSIST_PREFIX + basePath, JSON.stringify({
+        q, results, lastMode, browseInstituteId, browseDepartmentId, browseSection, browseBatch,
+        browsePlacementParticipation, browseVerificationStatus, browseDocumentType, browseDocumentStatus, browsePageMeta,
+      }));
+    } catch {}
+  }, [
+    basePath, q, results, lastMode, browseInstituteId, browseDepartmentId, browseSection, browseBatch,
+    browsePlacementParticipation, browseVerificationStatus, browseDocumentType, browseDocumentStatus, browsePageMeta,
+  ]);
 
   async function handleSearch(e, termOverride) {
     e?.preventDefault?.();
