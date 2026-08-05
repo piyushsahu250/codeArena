@@ -508,10 +508,12 @@ export default function QuestionBank() {
                 <option value="">All types</option>
                 {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              <select style={selectStyle} value={createdById} onChange={(e) => setCreatedById(e.target.value)}>
-                <option value="">Created by (anyone)</option>
-                {meta.creators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              {meta.creators.length > 0 && (
+                <select style={selectStyle} value={createdById} onChange={(e) => setCreatedById(e.target.value)}>
+                  <option value="">Created by (anyone)</option>
+                  {meta.creators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>

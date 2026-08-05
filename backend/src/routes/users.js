@@ -482,11 +482,21 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     const changedFields = Object.keys(data).filter((f) => String(existing[f] ?? "") !== String(data[f] ?? ""));
     const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
 
+    // A pure activate/deactivate toggle (via this same generic edit route — no dedicated route
+    // needed since isActive is already in EDITABLE_FIELDS) gets the same specific audit action
+    // staffClerk.js's dedicated STAFF/CLERK status-toggle route already uses, instead of the
+    // generic *_PROFILE_UPDATED, so "who deactivated this account and when" is answerable for
+    // every role, not just Staff/Clerk.
+    const isActiveToggled = data.isActive !== undefined && data.isActive !== existing.isActive;
+    const auditAction = isActiveToggled
+      ? (data.isActive ? "ACCOUNT_ACTIVATED" : "ACCOUNT_DEACTIVATED")
+      : existing.role === "STUDENT" ? "STUDENT_PROFILE_UPDATED" : "USER_PROFILE_UPDATED";
+
     const [updated] = await prisma.$transaction([
       prisma.user.update({ where: { id: existing.id }, data, select: SELECT_FIELDS }),
       prisma.auditLog.create({
         data: {
-          action: existing.role === "STUDENT" ? "STUDENT_PROFILE_UPDATED" : "USER_PROFILE_UPDATED",
+          action: auditAction,
           adminId: req.user.id,
           adminName: admin?.name || req.user.email,
           details: {
@@ -749,37 +759,52 @@ router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequester
   }
 });
 
-// ADMIN/STAFF: search students by ID, roll number, name, or official email — institute-scoped
-// accounts only ever match students under their own institute. Powers the Student Performance
-// Dashboard's search box; results are capped and meant for picking one student, not browsing.
+// ADMIN/STAFF/CLERK: search users of any role by PRN/Employee ID/Name/Email/Mobile — institute-
+// scoped accounts only ever match users under their own institute (Super Admin sees all).
+// Optional ?role= narrows to one role (STUDENT/STAFF/CLERK/ADMIN); omitted searches all four.
+// Real DB-level pagination via ?page/?pageSize (default 20), not an in-memory fetch-then-slice —
+// this is the one cross-role search surface for Admin User Search & Delete, reusing the same
+// { rows, page, pageSize, total, totalPages } shape questions.js's GET / and staffClerk.js's
+// GET / already return.
 router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const q = String(req.query.q || "").trim();
-    if (!q) return res.json([]);
-    const students = await prisma.user.findMany({
-      where: {
-        role: "STUDENT",
-        ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
-        OR: [
-          { id: q },
-          { rollNumber: { contains: q, mode: "insensitive" } },
-          { registrationNumber: { contains: q, mode: "insensitive" } },
-          { name: { contains: q, mode: "insensitive" } },
-          { email: { contains: q, mode: "insensitive" } },
-          { mobile: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      select: {
-        id: true, name: true, email: true, rollNumber: true, registrationNumber: true,
-        institute: { select: { name: true } },
-        class: { select: { name: true, batchYear: true } },
-        academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
-      },
-      orderBy: { name: "asc" },
-      take: 200, // wider pool than the 20 actually returned, so the ascending-Roll-Number sort below picks the true top 20 among matches rather than just re-ordering whichever 20 happened to sort first by name
-    });
-    students.sort(compareRollNumbers);
-    res.json(students.slice(0, 20));
+    if (!q) return res.json({ rows: [], page: 1, pageSize: 20, total: 0, totalPages: 0 });
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+    const role = ["STUDENT", "STAFF", "CLERK", "ADMIN"].includes(req.query.role) ? req.query.role : undefined;
+
+    const where = {
+      ...(role ? { role } : {}),
+      ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
+      OR: [
+        { id: q },
+        { rollNumber: { contains: q, mode: "insensitive" } },
+        { registrationNumber: { contains: q, mode: "insensitive" } },
+        { employeeId: { contains: q, mode: "insensitive" } },
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { mobile: { contains: q, mode: "insensitive" } },
+      ],
+    };
+
+    const [rows, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true, name: true, email: true, role: true, rollNumber: true, registrationNumber: true,
+          employeeId: true, mobile: true, isActive: true, accountStatus: true,
+          institute: { select: { name: true } },
+          class: { select: { name: true, batchYear: true } },
+          academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
+        },
+        orderBy: { name: "asc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.user.count({ where }),
+    ]);
+    res.json({ rows, page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Search failed" });
@@ -1250,11 +1275,17 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
     } else {
       // Certificate/InterviewCertificate are also Restrict (not Cascade) — a certificate is
       // proof of something the student actually earned, so it must not be silently destroyed by
-      // deleting the account. Checked before the transaction rather than caught from it, since
-      // failing partway through would otherwise leave Submission/TestAttempt already deleted.
-      const [certCount, interviewCertCount] = await Promise.all([
+      // deleting the account. TestAttempt (assessment history) and AttendanceRecord are checked
+      // the same way — previously only certificates were checked here, so a student with test
+      // attempts but no certificate was silently, permanently deleted along with their entire
+      // assessment history, and AttendanceRecord.student is onDelete: Cascade at the schema level
+      // (so it would have vanished with zero warning, not even an error). Any of these existing
+      // blocks permanent deletion; the admin is expected to deactivate the account instead.
+      const [certCount, interviewCertCount, testAttemptCount, attendanceRecordCount] = await Promise.all([
         prisma.certificate.count({ where: { studentId: req.params.id } }),
         prisma.interviewCertificate.count({ where: { studentId: req.params.id } }),
+        prisma.testAttempt.count({ where: { studentId: req.params.id } }),
+        prisma.attendanceRecord.count({ where: { studentId: req.params.id } }),
       ]);
       if (certCount > 0 || interviewCertCount > 0) {
         const total = certCount + interviewCertCount;
@@ -1262,14 +1293,26 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
           error: `This student has earned ${total} certificate${total === 1 ? "" : "s"}. Revoke or reassign ${total === 1 ? "it" : "them"} first, then delete the account.`,
         });
       }
-      await prisma.$transaction([
-        prisma.submission.deleteMany({ where: { studentId: req.params.id } }),
-        prisma.testAttempt.deleteMany({ where: { studentId: req.params.id } }),
-        prisma.user.delete({ where: { id: req.params.id } }),
-      ]);
+      if (testAttemptCount > 0) {
+        return res.status(409).json({
+          error: `This account has ${testAttemptCount} test attempt${testAttemptCount === 1 ? "" : "s"} on record. This action cannot be undone, and academic records like this are best preserved — it is recommended to deactivate the account instead.`,
+        });
+      }
+      if (attendanceRecordCount > 0) {
+        return res.status(409).json({
+          error: `This account has ${attendanceRecordCount} attendance record${attendanceRecordCount === 1 ? "" : "s"} on record. This action cannot be undone, and academic records like this are best preserved — it is recommended to deactivate the account instead.`,
+        });
+      }
+      await prisma.user.delete({ where: { id: req.params.id } });
       // The student's academic group may now be empty — see the matching comment in PATCH /:id.
       await deleteAcademicGroupIfEmpty(user.academicGroupId);
     }
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.USER_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      studentId: user.id, instituteId: user.instituteId,
+      details: { deletedUserRole: user.role, deletedUserName: user.name },
+    });
 
     res.json({ success: true });
   } catch (err) {

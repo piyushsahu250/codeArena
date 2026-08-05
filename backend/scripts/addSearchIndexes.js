@@ -23,6 +23,7 @@ const TRIGRAM_INDEXES = [
   { name: "user_rollnumber_trgm_idx", table: "User", column: "rollNumber" },
   { name: "user_registrationnumber_trgm_idx", table: "User", column: "registrationNumber" },
   { name: "user_mobile_trgm_idx", table: "User", column: "mobile" },
+  { name: "user_employeeid_trgm_idx", table: "User", column: "employeeId" },
   { name: "course_name_trgm_idx", table: "Course", column: "name" },
   { name: "question_title_trgm_idx", table: "Question", column: "title" },
   { name: "question_description_trgm_idx", table: "Question", column: "description" },

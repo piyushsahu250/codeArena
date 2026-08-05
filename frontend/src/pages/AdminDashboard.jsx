@@ -36,6 +36,39 @@ export default function AdminDashboard() {
   const [lookupError, setLookupError] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
 
+  // Cross-role account search (PRN/Employee ID/Name/Email/Mobile) — separate from the plain
+  // `users` list above (which stays as-is, still feeding the create-form's Batch/Department/
+  // Section autocomplete). When a search is active, the account list below renders these
+  // DB-paginated results instead of the full unfiltered list.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchRole, setSearchRole] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchTotalPages, setSearchTotalPages] = useState(1);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searching, setSearching] = useState(false);
+
+  function runSearch(page) {
+    if (!searchQuery.trim()) { setSearchResults(null); return; }
+    setSearching(true);
+    api.get("/users/search", { params: { q: searchQuery.trim(), role: searchRole || undefined, page, pageSize: 20 } })
+      .then((res) => {
+        setSearchResults(res.data.rows);
+        setSearchTotalPages(res.data.totalPages);
+        setSearchTotal(res.data.total);
+      })
+      .catch(() => setSearchResults([]))
+      .finally(() => setSearching(false));
+  }
+
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults(null); return; }
+    const t = setTimeout(() => runSearch(searchPage), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery, searchRole, searchPage]);
+
+  useEffect(() => { setSearchPage(1); }, [searchQuery, searchRole]);
+
   function load() {
     api.get("/users", { params: { pageSize: 500 } }).then((res) => setUsers(res.data.rows));
     api.get("/admin/stats").then((res) => setStats(res.data));
@@ -105,15 +138,44 @@ export default function AdminDashboard() {
   }
 
   async function handleDelete(id, name) {
-    const ok = await confirmDialog({ title: "Delete account?", message: `This permanently removes ${name}'s account. This action cannot be undone.`, confirmLabel: "Delete", danger: true });
+    const ok = await confirmDialog({
+      title: "Delete account?",
+      message: "Are you sure you want to delete this user? This action cannot be undone. If the account contains academic records, it is recommended to deactivate the account instead.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!ok) return;
     try {
       await api.delete(`/users/${id}`);
       load();
+      refreshSearch();
       toast.success("Account deleted successfully.");
     } catch (err) {
+      if (err.response?.status === 409) {
+        const deactivateInstead = await confirmDialog({
+          title: "Can't permanently delete",
+          message: `${err.response.data?.error || "This account has related records and can't be permanently deleted."} Deactivate it instead?`,
+          confirmLabel: "Deactivate",
+          danger: false,
+        });
+        if (deactivateInstead) {
+          try {
+            await api.patch(`/users/${id}`, { isActive: false });
+            load();
+            refreshSearch();
+            toast.success(`${name}'s account has been deactivated.`);
+          } catch (err2) {
+            toast.error(err2.response?.data?.error || "Failed to deactivate account");
+          }
+        }
+        return;
+      }
       toast.error(err.response?.data?.error || "Failed to delete account");
     }
+  }
+
+  function refreshSearch() {
+    if (searchQuery.trim()) runSearch(searchPage);
   }
 
   async function handleResetPassword(u) {
@@ -448,41 +510,87 @@ export default function AdminDashboard() {
           </form>
 
           <div>
-            <h3 style={{ fontSize: 16, marginBottom: 16 }}>All accounts ({users.length})</h3>
-            <div style={{ display: "grid", gap: 10 }}>
-              {users.map((u) => (
-                <div key={u.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{u.name}</div>
-                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{u.email}</div>
-                    <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                      {u.institute?.name || "—"}
-                      {u.academicGroup ? ` · ${u.academicGroup.department?.name} · ${u.academicGroup.section} (${u.academicGroup.batch})` : (u.class?.name ? ` · ${u.class.name}${u.class.batchYear ? ` (${u.class.batchYear})` : ""}` : "")}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span className="badge">{u.role}</span>
-                    {u.role === "STUDENT" && (
-                      <button
-                        onClick={() => handleResetPassword(u)}
-                        className="btn btn-ghost"
-                        style={{ fontSize: 12, padding: "4px 10px" }}
-                      >
-                        Reset password
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDelete(u.id, u.name)}
-                      style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <h3 style={{ fontSize: 16, marginBottom: 10 }}>All accounts</h3>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              <input
+                style={{ ...inputStyle, flex: "1 1 220px" }}
+                placeholder="Search by PRN / Employee ID / Name / Email / Mobile…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <select style={{ ...inputStyle, width: 140 }} value={searchRole} onChange={(e) => setSearchRole(e.target.value)}>
+                <option value="">All roles</option>
+                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {searchQuery.trim() && (
+                <button type="button" className="btn btn-ghost" onClick={() => { setSearchQuery(""); setSearchRole(""); }}>
+                  Clear
+                </button>
+              )}
             </div>
+
+            {searchQuery.trim() ? (
+              <>
+                <p style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 10 }}>
+                  {searching ? "Searching…" : `${searchTotal} result${searchTotal === 1 ? "" : "s"}`}
+                </p>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {(searchResults || []).map((u) => (
+                    <UserRow key={u.id} u={u} onResetPassword={handleResetPassword} onDelete={handleDelete} />
+                  ))}
+                </div>
+                {searchTotalPages > 1 && (
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginTop: 16 }}>
+                    <button className="btn btn-ghost" disabled={searchPage <= 1} onClick={() => setSearchPage((p) => p - 1)}>Prev</button>
+                    <span style={{ fontSize: 13 }}>Page {searchPage} of {searchTotalPages}</span>
+                    <button className="btn btn-ghost" disabled={searchPage >= searchTotalPages} onClick={() => setSearchPage((p) => p + 1)}>Next</button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {users.map((u) => (
+                  <UserRow key={u.id} u={u} onResetPassword={handleResetPassword} onDelete={handleDelete} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function UserRow({ u, onResetPassword, onDelete }) {
+  return (
+    <div className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>{u.name}</div>
+        <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{u.email}</div>
+        <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+          {u.institute?.name || "—"}
+          {u.academicGroup ? ` · ${u.academicGroup.department?.name} · ${u.academicGroup.section} (${u.academicGroup.batch})` : (u.class?.name ? ` · ${u.class.name}${u.class.batchYear ? ` (${u.class.batchYear})` : ""}` : "")}
+          {(u.registrationNumber || u.employeeId) ? ` · ${u.registrationNumber ? `PRN ${u.registrationNumber}` : `ID ${u.employeeId}`}` : ""}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {u.isActive === false && <span className="badge" style={{ background: "var(--rust)", color: "#fff" }}>Inactive</span>}
+        <span className="badge">{u.role}</span>
+        {u.role === "STUDENT" && (
+          <button
+            onClick={() => onResetPassword(u)}
+            className="btn btn-ghost"
+            style={{ fontSize: 12, padding: "4px 10px" }}
+          >
+            Reset password
+          </button>
+        )}
+        <button
+          onClick={() => onDelete(u.id, u.name)}
+          style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }}
+        >
+          Delete
+        </button>
       </div>
     </div>
   );

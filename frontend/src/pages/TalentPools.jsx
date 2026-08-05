@@ -410,8 +410,8 @@ function SearchAddPanel({ pool, members, setError, onChange }) {
     if (!q.trim()) return;
     setSearching(true);
     try {
-      const { data } = await api.get("/users/search", { params: { q: q.trim() } });
-      setResults(data.filter((u) => u.role === "STUDENT"));
+      const { data } = await api.get("/users/search", { params: { q: q.trim(), role: "STUDENT" } });
+      setResults(data.rows);
       setSelected([]);
     } catch (err) {
       setError(err.response?.data?.error || "Search failed");

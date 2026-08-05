@@ -98,8 +98,8 @@ export default function StudentSearch({ basePath }) {
     setError("");
     setSelected([]);
     try {
-      const { data } = await api.get("/users/search", { params: { q: term } });
-      setResults(data);
+      const { data } = await api.get("/users/search", { params: { q: term, role: "STUDENT" } });
+      setResults(data.rows);
       setLastMode("search");
     } catch (err) {
       setError(err.response?.data?.error || "Search failed");

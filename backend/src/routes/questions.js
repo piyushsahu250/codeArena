@@ -6,25 +6,11 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
+const { questionVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
-
-// null requesterInstituteId (the seeded platform-level Super Admin) sees every institute's
-// questions/folders unfiltered. An institute-scoped requester sees their own institute's rows
-// PLUS legacy/shared rows (instituteId: null) — see the schema comment on Question.instituteId
-// for why nulls stay visible rather than becoming invisible to everyone but the Super Admin.
-function instituteVisibilityWhere(requesterInstituteId) {
-  return requesterInstituteId ? { OR: [{ instituteId: requesterInstituteId }, { instituteId: null }] } : {};
-}
-
-// Ownership check for writes: a null requesterInstituteId (Super Admin) may edit anything; an
-// institute-scoped requester may only touch rows already scoped to their own institute (not even
-// legacy null-instituteId rows — editing/deleting shared legacy content is Super Admin-only, to
-// avoid one institute silently mutating content every other institute currently sees).
-function ownsRow(requesterInstituteId, row) {
-  return !requesterInstituteId || row.instituteId === requesterInstituteId;
-}
 
 const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL"];
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
@@ -137,8 +123,8 @@ function normalizeCorrectIndices(raw, options, isMulti) {
   return isMulti ? unique : unique.slice(0, 1);
 }
 
-function buildWhere(query, requesterInstituteId) {
-  const where = { AND: [instituteVisibilityWhere(requesterInstituteId)] };
+function buildWhere(query, req) {
+  const where = { AND: [questionVisibilityWhere(req)] };
   if (query.subject) where.subject = query.subject;
   if (query.topic) where.topic = query.topic;
   if (query.difficulty && DIFFICULTIES.includes(query.difficulty)) where.difficulty = query.difficulty;
@@ -192,7 +178,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
 
     if (folderId) {
       const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
-      if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+      if (!folder || !ownsQuestionRow(req, folder)) {
         return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
       }
     }
@@ -200,7 +186,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
     if (!allowDuplicate) {
       const duplicate = await prisma.question.findFirst({
         where: {
-          ...instituteVisibilityWhere(req.requesterInstituteId),
+          ...questionVisibilityWhere(req),
           folderId: folderId || null,
           description: { equals: description.trim(), mode: "insensitive" },
         },
@@ -300,6 +286,10 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
     }
 
     const question = await prisma.question.create({ data, include: { testCases: true } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { questionId: question.id, title: question.title || question.description.slice(0, 60) },
+    });
     res.json(question);
   } catch (err) {
     console.error(err);
@@ -310,7 +300,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
 // Question Bank: list with search + filters. Paginated — an institute's bank can run into the
 // thousands of questions, and rendering/transferring the whole thing on every load doesn't scale.
 router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const where = buildWhere(req.query, req.requesterInstituteId);
+  const where = buildWhere(req.query, req);
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 100));
   const [questions, total] = await Promise.all([
@@ -329,11 +319,16 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
 // Distinct subjects/topics/creators — powers the filter dropdowns. Scoped the same way the list
 // is, so the dropdowns never surface a value that only exists in another institute's bank.
 router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const visible = instituteVisibilityWhere(req.requesterInstituteId);
+  const visible = questionVisibilityWhere(req);
+  // A STAFF requester only ever sees their own + legacy content anyway (see
+  // questionVisibilityWhere), so surfacing other creators' identities here would be pointless —
+  // skip the query rather than compute a list nobody's Question Bank view can act on.
   const [subjects, topics, creatorIds] = await Promise.all([
     prisma.question.findMany({ where: { ...visible, subject: { not: null } }, select: { subject: true }, distinct: ["subject"] }),
     prisma.question.findMany({ where: { ...visible, topic: { not: null } }, select: { topic: true }, distinct: ["topic"] }),
-    prisma.question.findMany({ where: { ...visible, createdById: { not: null } }, select: { createdById: true }, distinct: ["createdById"] }),
+    req.user.role === "STAFF"
+      ? Promise.resolve([])
+      : prisma.question.findMany({ where: { ...visible, createdById: { not: null } }, select: { createdById: true }, distinct: ["createdById"] }),
   ]);
   const creators = creatorIds.length
     ? await prisma.user.findMany({ where: { id: { in: creatorIds.map((c) => c.createdById) } }, select: { id: true, name: true } })
@@ -352,7 +347,7 @@ router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachR
 
 router.get("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const folders = await prisma.questionFolder.findMany({
-    where: instituteVisibilityWhere(req.requesterInstituteId),
+    where: questionVisibilityWhere(req),
     include: { _count: { select: { questions: true, children: true } } },
     orderBy: { name: "asc" },
   });
@@ -365,13 +360,13 @@ router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachReque
   const { category, description, parentId } = req.body;
   if (parentId) {
     const parent = await prisma.questionFolder.findUnique({ where: { id: parentId } });
-    if (!parent || !ownsRow(req.requesterInstituteId, parent)) {
+    if (!parent || !ownsQuestionRow(req, parent)) {
       return res.status(403).json({ error: "That parent folder isn't in your institute's question bank" });
     }
   }
   try {
     const folder = await prisma.questionFolder.create({
-      data: { name, category: category || null, description: description || null, parentId: parentId || null, instituteId: req.requesterInstituteId },
+      data: { name, category: category || null, description: description || null, parentId: parentId || null, instituteId: req.requesterInstituteId, createdById: req.user.id },
     });
     res.json(folder);
   } catch (err) {
@@ -384,7 +379,7 @@ router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachReque
 router.patch("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
-  if (!ownsRow(req.requesterInstituteId, folder)) return res.status(403).json({ error: "Not your institute's folder" });
+  if (!ownsQuestionRow(req, folder)) return res.status(403).json({ error: "Not your institute's folder" });
   const data = {};
   if (req.body.name !== undefined) {
     const name = String(req.body.name).trim();
@@ -428,7 +423,7 @@ async function collectDescendantFolders(rootId) {
 router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
-  if (!ownsRow(req.requesterInstituteId, folder)) return res.status(403).json({ error: "Not your institute's folder" });
+  if (!ownsQuestionRow(req, folder)) return res.status(403).json({ error: "Not your institute's folder" });
 
   const folderIds = await collectDescendantFolders(folder.id);
   const questions = await prisma.question.findMany({ where: { folderId: { in: folderIds } }, select: { id: true } });
@@ -450,7 +445,7 @@ router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "ST
 router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
-  if (!ownsRow(req.requesterInstituteId, folder)) return res.status(403).json({ error: "Not your institute's folder" });
+  if (!ownsQuestionRow(req, folder)) return res.status(403).json({ error: "Not your institute's folder" });
 
   const folderIds = await collectDescendantFolders(folder.id); // BFS order: root first, deepest last
   const questions = await prisma.question.findMany({ where: { folderId: { in: folderIds } } });
@@ -458,6 +453,14 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
   let deletedQuestionCount = 0;
   const remainingByFolder = new Map();
   for (const q of questions) {
+    // A STAFF requester's recursive delete must never touch another staff member's private
+    // questions, even ones nested inside a shared/legacy folder the requester is otherwise
+    // allowed to delete — skip-and-count exactly like the FK-restrict (P2003/P2014) case below,
+    // so that folder simply survives with only the untouched content left in it.
+    if (!ownsQuestionRow(req, q)) {
+      remainingByFolder.set(q.folderId, (remainingByFolder.get(q.folderId) || 0) + 1);
+      continue;
+    }
     try {
       await prisma.question.delete({ where: { id: q.id } });
       deletedQuestionCount++;
@@ -470,7 +473,8 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
     }
   }
 
-  const folderRows = await prisma.questionFolder.findMany({ where: { id: { in: folderIds } }, select: { id: true, parentId: true } });
+  const folderRows = await prisma.questionFolder.findMany({ where: { id: { in: folderIds } } });
+  const folderById = new Map(folderRows.map((f) => [f.id, f]));
   const parentOf = new Map(folderRows.map((f) => [f.id, f.parentId]));
   const hasRemainingChild = new Map();
 
@@ -478,7 +482,11 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
   // Reversed BFS order = deepest folders first, so a folder's children are always resolved
   // before the folder itself is considered for deletion.
   for (const id of [...folderIds].reverse()) {
-    const deletable = !(remainingByFolder.get(id) > 0) && !hasRemainingChild.get(id);
+    // Same staff-ownership guard as questions above — a sub-folder another staff member created
+    // (nested under a shared/legacy parent the requester CAN otherwise delete) is left in place
+    // even if it's now empty, since it's still theirs to keep or remove.
+    const notOwned = !ownsQuestionRow(req, folderById.get(id));
+    const deletable = !notOwned && !(remainingByFolder.get(id) > 0) && !hasRemainingChild.get(id);
     if (deletable) {
       await prisma.questionFolder.delete({ where: { id } });
       deletedFolderCount++;
@@ -486,6 +494,13 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
       const parentId = parentOf.get(id);
       if (parentId) hasRemainingChild.set(parentId, true);
     }
+  }
+
+  if (deletedQuestionCount > 0) {
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { bulk: true, count: deletedQuestionCount, folderId: folder.id },
+    });
   }
 
   res.json({
@@ -508,8 +523,22 @@ router.post("/folders/:id/merge", authenticate, requireRole("ADMIN", "STAFF"), a
     prisma.questionFolder.findUnique({ where: { id: targetId } }),
   ]);
   if (!source || !target) return res.status(404).json({ error: "Folder not found" });
-  if (!ownsRow(req.requesterInstituteId, source) || !ownsRow(req.requesterInstituteId, target)) {
+  if (!ownsQuestionRow(req, source) || !ownsQuestionRow(req, target)) {
     return res.status(403).json({ error: "Not your institute's folder" });
+  }
+  // Merge deletes the source folder outright afterward, so — unlike the recursive delete above —
+  // there's no clean way to partially merge: a question/child-folder excluded from the reassign
+  // would either get silently dumped into Uncategorized (Question.folderId is onDelete: SetNull)
+  // or the source's organization would be destroyed out from under another staff member's content
+  // without their consent. Block the whole operation instead if the source isn't entirely the
+  // requester's own (+ legacy/shared) content.
+  const [sourceQuestions, sourceChildFolders] = await Promise.all([
+    prisma.question.findMany({ where: { folderId: sourceId } }),
+    prisma.questionFolder.findMany({ where: { parentId: sourceId } }),
+  ]);
+  const hasForeignContent = sourceQuestions.some((q) => !ownsQuestionRow(req, q)) || sourceChildFolders.some((f) => !ownsQuestionRow(req, f));
+  if (hasForeignContent) {
+    return res.status(403).json({ error: "This question bank contains another staff member's questions or sub-banks and can't be merged" });
   }
   await prisma.$transaction([
     prisma.question.updateMany({ where: { folderId: sourceId }, data: { folderId: targetId } }),
@@ -527,12 +556,12 @@ router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   const folderId = req.body.folderId || null;
   if (folderId) {
     const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
-    if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+    if (!folder || !ownsQuestionRow(req, folder)) {
       return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
     }
   }
   const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
-  const movableIds = owned.filter((q) => ownsRow(req.requesterInstituteId, q)).map((q) => q.id);
+  const movableIds = owned.filter((q) => ownsQuestionRow(req, q)).map((q) => q.id);
   if (movableIds.length === 0) return res.status(403).json({ error: "None of the selected questions are in your institute's question bank" });
   await prisma.question.updateMany({ where: { id: { in: movableIds } }, data: { folderId } });
   res.json({ movedCount: movableIds.length, skippedCount: questionIds.length - movableIds.length });
@@ -549,7 +578,7 @@ router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachR
   const blocked = [];
   let deletedCount = 0;
   for (const q of owned) {
-    if (!ownsRow(req.requesterInstituteId, q)) continue;
+    if (!ownsQuestionRow(req, q)) continue;
     try {
       await prisma.question.delete({ where: { id: q.id } });
       deletedCount++;
@@ -562,6 +591,12 @@ router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachR
     }
   }
   const skippedCount = questionIds.length - deletedCount - blocked.length;
+  if (deletedCount > 0) {
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { bulk: true, count: deletedCount },
+    });
+  }
   res.json({ deletedCount, skippedCount, blocked });
 });
 
@@ -576,7 +611,7 @@ router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   if (!folderId) return res.status(400).json({ error: "A destination question bank is required" });
 
   const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
-  if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+  if (!folder || !ownsQuestionRow(req, folder)) {
     return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
   }
 
@@ -584,7 +619,7 @@ router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   let copiedCount = 0;
   let skippedCount = questionIds.length - owned.length;
   for (const q of owned) {
-    if (!ownsRow(req.requesterInstituteId, q) || q.folderId === folderId) { skippedCount++; continue; }
+    if (!ownsQuestionRow(req, q) || q.folderId === folderId) { skippedCount++; continue; }
     const { id, questionNumber, createdAt, testCases, folderId: _f, instituteId: _i, createdById: _c, ...rest } = q;
     await prisma.question.create({
       data: {
@@ -606,13 +641,13 @@ router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachReq
 // is left untouched.
 router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
-  if (!folder || !ownsRow(req.requesterInstituteId, folder)) return res.status(404).json({ error: "Question bank not found" });
+  if (!folder || !ownsQuestionRow(req, folder)) return res.status(404).json({ error: "Question bank not found" });
 
   const questions = await prisma.question.findMany({ where: { folderId: folder.id } });
   const blocked = [];
   let clearedCount = 0;
   for (const q of questions) {
-    if (!ownsRow(req.requesterInstituteId, q)) continue;
+    if (!ownsQuestionRow(req, q)) continue;
     try {
       await prisma.question.delete({ where: { id: q.id } });
       clearedCount++;
@@ -693,11 +728,11 @@ router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
     ? await prisma.question.findMany({
         where: {
           id: { in: Array.isArray(req.query.questionIds) ? req.query.questionIds : String(req.query.questionIds).split(",").map((s) => s.trim()).filter(Boolean) },
-          ...instituteVisibilityWhere(req.requesterInstituteId),
+          ...questionVisibilityWhere(req),
         },
         orderBy: { questionNumber: "asc" },
       })
-    : await prisma.question.findMany({ where: buildWhere(req.query, req.requesterInstituteId), orderBy: { questionNumber: "asc" } });
+    : await prisma.question.findMany({ where: buildWhere(req.query, req), orderBy: { questionNumber: "asc" } });
 
   const rows = questions.map((q) => {
     const options = Array.isArray(q.options) ? q.options : [];
@@ -721,6 +756,11 @@ router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Questions");
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+  await logAudit({
+    req, action: AUDIT_ACTIONS.QUESTION_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+    instituteId: req.requesterInstituteId, details: { count: questions.length },
+  });
 
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", "attachment; filename=question-bank-export.xlsx");
@@ -780,7 +820,7 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
     const folderId = req.body.folderId || null;
     if (folderId) {
       const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
-      if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+      if (!folder || !ownsQuestionRow(req, folder)) {
         return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
       }
     }
@@ -815,7 +855,7 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
       const key = fId || "";
       if (!existingDescriptionsByFolder.has(key)) {
         const rows = await prisma.question.findMany({
-          where: { folderId: fId || null, ...instituteVisibilityWhere(req.requesterInstituteId) },
+          where: { folderId: fId || null, ...questionVisibilityWhere(req) },
           select: { description: true },
         });
         existingDescriptionsByFolder.set(key, new Set(rows.map((r) => (r.description || "").trim().toLowerCase()).filter(Boolean)));
@@ -894,6 +934,12 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
       }
     }
 
+    if (created.length > 0) {
+      await logAudit({
+        req, action: AUDIT_ACTIONS.QUESTION_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+        instituteId: req.requesterInstituteId, details: { count: created.length, folderId },
+      });
+    }
     res.json({
       total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
       skipped, errors, created,
@@ -949,7 +995,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
     const defaultFolderId = req.body.folderId || null;
     if (defaultFolderId) {
       const folder = await prisma.questionFolder.findUnique({ where: { id: defaultFolderId } });
-      if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+      if (!folder || !ownsQuestionRow(req, folder)) {
         return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
       }
     }
@@ -983,7 +1029,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       const key = folderId || "";
       if (!existingTitlesByFolder.has(key)) {
         const rows = await prisma.question.findMany({
-          where: { folderId: folderId || null, questionType: "CODING", ...instituteVisibilityWhere(req.requesterInstituteId) },
+          where: { folderId: folderId || null, questionType: "CODING", ...questionVisibilityWhere(req) },
           select: { title: true },
         });
         existingTitlesByFolder.set(key, new Set(rows.map((r) => (r.title || "").toLowerCase()).filter(Boolean)));
@@ -996,11 +1042,11 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       const key = name.toLowerCase();
       if (folderIdByName.has(key)) return folderIdByName.get(key);
       let folder = await prisma.questionFolder.findFirst({
-        where: { name: { equals: name, mode: "insensitive" }, ...instituteVisibilityWhere(req.requesterInstituteId) },
+        where: { name: { equals: name, mode: "insensitive" }, ...questionVisibilityWhere(req) },
       });
       if (!folder) {
         folder = await prisma.questionFolder.create({
-          data: { name, instituteId: req.requesterInstituteId },
+          data: { name, instituteId: req.requesterInstituteId, createdById: req.user.id },
         });
       }
       folderIdByName.set(key, folder.id);
@@ -1161,6 +1207,12 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       }
     }
 
+    if (created.length > 0) {
+      await logAudit({
+        req, action: AUDIT_ACTIONS.QUESTION_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+        instituteId: req.requesterInstituteId, details: { count: created.length, coding: true },
+      });
+    }
     res.json({
       total: rows.length,
       createdCount: created.length,
@@ -1183,7 +1235,7 @@ router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterI
   });
   // 404 (not 403) on a cross-institute id — doesn't confirm whether the id exists at all,
   // consistent with how the list endpoint already just omits rows it can't show.
-  if (!question || !ownsRow(req.requesterInstituteId, question)) return res.status(404).json({ error: "Question not found" });
+  if (!question || !ownsQuestionRow(req, question)) return res.status(404).json({ error: "Question not found" });
   res.json(question);
 });
 
@@ -1191,7 +1243,7 @@ router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterI
 router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.question.findUnique({ where: { id: req.params.id } });
-    if (!existing || !ownsRow(req.requesterInstituteId, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
 
     const {
       title, description, subject, topic, questionType, difficulty, points, explanation,
@@ -1203,7 +1255,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
 
     if (folderId !== undefined && folderId !== null && folderId !== existing.folderId) {
       const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
-      if (!folder || !ownsRow(req.requesterInstituteId, folder)) {
+      if (!folder || !ownsQuestionRow(req, folder)) {
         return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
       }
     }
@@ -1301,6 +1353,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     }
 
     const question = await prisma.question.update({ where: { id: existing.id }, data, include: { testCases: true } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { questionId: question.id, title: question.title || question.description.slice(0, 60) },
+    });
     res.json(question);
   } catch (err) {
     console.error(err);
@@ -1311,8 +1367,12 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
 router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.question.findUnique({ where: { id: req.params.id } });
-    if (!existing || !ownsRow(req.requesterInstituteId, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
     await prisma.question.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { questionId: existing.id, title: existing.title || existing.description.slice(0, 60) },
+    });
     res.json({ success: true });
   } catch (err) {
     if (err.code === "P2003" || err.code === "P2014") {

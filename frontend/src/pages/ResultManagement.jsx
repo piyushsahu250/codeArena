@@ -307,7 +307,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   useEffect(() => {
     if (!studentQuery.trim()) { setStudentResults([]); return; }
     const t = setTimeout(() => {
-      api.get("/users/search", { params: { q: studentQuery.trim() } }).then((res) => setStudentResults(res.data)).catch(() => setStudentResults([]));
+      api.get("/users/search", { params: { q: studentQuery.trim(), role: "STUDENT" } }).then((res) => setStudentResults(res.data.rows)).catch(() => setStudentResults([]));
     }, 300);
     return () => clearTimeout(t);
   }, [studentQuery]);

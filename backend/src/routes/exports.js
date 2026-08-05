@@ -4,6 +4,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { sendExport } = require("../utils/exportFile");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { questionVisibilityWhere } = require("../utils/questionVisibility");
 
 const router = express.Router();
 
@@ -133,9 +134,9 @@ const ENTITIES = {
     }));
   },
 
-  questions: async (instituteId) => {
+  questions: async (instituteId, query, req) => {
     const rows = await prisma.question.findMany({
-      where: instituteId ? { OR: [{ instituteId }, { instituteId: null }] } : {},
+      where: questionVisibilityWhere(req),
       take: MAX_ROWS,
       orderBy: { createdAt: "desc" },
       select: { title: true, subject: true, topic: true, questionType: true, difficulty: true, points: true, createdAt: true },
@@ -196,7 +197,7 @@ router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), att
   }
 
   try {
-    const rows = await builder(req.requesterInstituteId, req.query);
+    const rows = await builder(req.requesterInstituteId, req.query, req);
     await logAudit({
       req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: req.requesterInstituteId, details: { entity: req.params.entity, format: req.query.format || "csv", rowCount: rows.length },

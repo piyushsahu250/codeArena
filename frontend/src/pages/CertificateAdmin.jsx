@@ -41,7 +41,7 @@ export default function CertificateAdmin({ basePath }) {
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
     const t = setTimeout(() => {
-      api.get("/users/search", { params: { q: query.trim() } }).then((res) => setResults(res.data)).catch(() => setResults([]));
+      api.get("/users/search", { params: { q: query.trim(), role: "STUDENT" } }).then((res) => setResults(res.data.rows)).catch(() => setResults([]));
     }, 300);
     return () => clearTimeout(t);
   }, [query]);

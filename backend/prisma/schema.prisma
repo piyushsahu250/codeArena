@@ -179,6 +179,7 @@ model User {
   attempts     TestAttempt[]
   submissions  Submission[]
   createdQuestions Question[]
+  createdQuestionFolders QuestionFolder[]
 
   lessonProgress LessonProgress[]
   certificates    Certificate[]
@@ -568,12 +569,21 @@ model QuestionFolder {
   children    QuestionFolder[] @relation("FolderHierarchy")
   createdAt   DateTime @default(now())
 
+  // Staff-private Question Bank workspaces. Nullable and NOT backfilled, same reasoning as
+  // Question.createdById above it — every folder created before this field existed stays
+  // createdById: null, which questionVisibility.js's questionVisibilityWhere treats as shared/
+  // legacy (visible+editable by any institute staff) rather than "belongs to nobody," so no
+  // pre-existing folder tree disappears the moment this ships. Only folders created going
+  // forward become genuinely private to the staff member who made them.
+  createdBy   User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
   questions Question[]
   randomBankTests Test[]
 
   @@index([parentId])
-
   @@index([instituteId])
+  @@index([createdById])
 }
 
 model TestCase {
