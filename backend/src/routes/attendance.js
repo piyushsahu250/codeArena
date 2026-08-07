@@ -699,22 +699,29 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
     if (!plan || plan.assignmentId !== assignment.id) return res.status(404).json({ error: "Lecture plan not found" });
 
     const now = new Date();
-    const [roster, eligibleTests] = await Promise.all([
-      prisma.user.findMany({
+    // Sequential, not Promise.all: staff across an institute tend to open this page in a burst at
+    // the start of every lecture slot, and each concurrent Promise.all here checks out two pool
+    // connections at once per request — the same pool-contention shape that caused login's
+    // "unable to start a transaction in the given time" (see prisma.js/auth.js). These two reads
+    // are independent and cheap, so running them one after another trades a few ms of latency for
+    // materially less pool pressure during exactly that burst.
+    const roster = await prisma.user
+      .findMany({
         where: rosterWhereForAssignment(assignment),
         select: {
           id: true, name: true, rollNumber: true, registrationNumber: true, profilePhotoUrl: true, department: true,
           academicGroup: { select: { section: true, department: { select: { name: true } } } },
         },
-      }).then((rows) => rows.sort(compareRollNumbers)), // ascending Roll Number (numeric-aware); this is one division's roster, small enough to sort in JS
+      })
+      .then((rows) => rows.sort(compareRollNumbers)); // ascending Roll Number (numeric-aware); this is one division's roster, small enough to sort in JS
+    const eligibleTests =
       plan.lectureType === "REGULAR"
-        ? Promise.resolve([])
-        : prisma.test.findMany({
+        ? []
+        : await prisma.test.findMany({
             where: eligibleTestsWhere(assignment, now),
             select: { id: true, title: true },
             orderBy: { title: "asc" },
-          }),
-    ]);
+          });
 
     res.json({ plan, roster, eligibleTests });
   } catch (err) {
@@ -952,34 +959,35 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
 // there is no query parameter that could widen this to another student's records.
 router.get("/my-records", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const [records, student] = await Promise.all([
-      prisma.attendanceRecord.findMany({
-        where: { studentId: req.user.id },
-        include: {
-          session: {
-            include: {
-              test: { select: { title: true } },
-              plan: {
-                include: {
-                  assignment: {
-                    include: {
-                      class: { include: { division: { include: { department: true } } } },
-                      academicGroup: { include: { department: true } },
-                    },
+    // Sequential, not Promise.all — same pool-contention reasoning as auth.js's login route: many
+    // students can load this page in the same burst, and stacking parallel queries multiplies
+    // peak pool connections needed per request.
+    const records = await prisma.attendanceRecord.findMany({
+      where: { studentId: req.user.id },
+      include: {
+        session: {
+          include: {
+            test: { select: { title: true } },
+            plan: {
+              include: {
+                assignment: {
+                  include: {
+                    class: { include: { division: { include: { department: true } } } },
+                    academicGroup: { include: { department: true } },
                   },
                 },
               },
             },
           },
         },
-        // Most-recent-first is the correct default for a personal history feed (kept as the
-        // primary key); Lecture Number is a same-day tiebreak so multiple lectures on one day
-        // still read in numeric order instead of arbitrary DB row order.
-        orderBy: [{ session: { plan: { scheduleDate: "desc" } } }, { session: { plan: { lectureNumber: "desc" } } }],
-        take: 5000,
-      }),
-      prisma.user.findUnique({ where: { id: req.user.id }, select: { institute: { select: { attendanceMinPercent: true } } } }),
-    ]);
+      },
+      // Most-recent-first is the correct default for a personal history feed (kept as the
+      // primary key); Lecture Number is a same-day tiebreak so multiple lectures on one day
+      // still read in numeric order instead of arbitrary DB row order.
+      orderBy: [{ session: { plan: { scheduleDate: "desc" } } }, { session: { plan: { lectureNumber: "desc" } } }],
+      take: 5000,
+    });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { institute: { select: { attendanceMinPercent: true } } } });
 
     const bySubjectCounts = {};
     const rows = records.map((r) => {
