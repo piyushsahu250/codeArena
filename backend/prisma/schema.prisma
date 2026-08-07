@@ -316,6 +316,11 @@ model TestClass {
   classId String
 
   @@unique([testId, classId])
+  // The composite unique above is only efficient for lookups keyed off testId (its leading
+  // column) — but GET /tests filters by classId across every test at once (one student loading
+  // their test list), the opposite direction. Without this, that filter falls back to scanning
+  // every TestClass row.
+  @@index([classId])
 }
 
 // Join table: which academic groups (Institute+Batch+Department+Section) a test is assigned to.
@@ -328,6 +333,12 @@ model TestAcademicGroup {
   academicGroupId String
 
   @@unique([testId, academicGroupId])
+  // Same reasoning as TestClass.classId below — the composite unique only helps testId-first
+  // lookups. GET /tests, dashboard.js, and studentPerformance.js all now filter by a student's
+  // own academicGroupId across every test in the platform (testEligibilityWhere), the direction
+  // this index actually serves. This is the batch/section this whole eligibility check runs for
+  // on every test-list load, exam start, and dashboard load — worth it at real scale.
+  @@index([academicGroupId])
 }
 
 // ===================================================================
