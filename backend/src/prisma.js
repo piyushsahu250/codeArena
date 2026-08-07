@@ -23,7 +23,13 @@ function withConnectionLimit(url) {
   if (!url) return url;
   const params = [];
   if (!/[?&]connection_limit=/.test(url)) params.push("connection_limit=10");
-  if (!/[?&]pool_timeout=/.test(url)) params.push("pool_timeout=20");
+  // 30s (was 20s) — a queued request that can't get a connection immediately now waits longer
+  // before giving up. Combined with the login route being fully serialized (see auth.js) and its
+  // non-essential writes (audit log, mustChangePassword flag) now fire-and-forget instead of
+  // blocking the response, each login holds a connection for less time and needs fewer of them,
+  // so a queued request during a whole-class login burst is now far more likely to get served
+  // within the window instead of hard-failing with "unable to start a transaction."
+  if (!/[?&]pool_timeout=/.test(url)) params.push("pool_timeout=30");
   if (params.length === 0) return url;
   return `${url}${url.includes("?") ? "&" : "?"}${params.join("&")}`;
 }

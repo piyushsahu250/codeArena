@@ -72,7 +72,10 @@ router.post("/login", loginLimiter, async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      await logAudit({ req, action: AUDIT_ACTIONS.LOGIN_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { email } });
+      // Fire-and-forget (logAudit already catches its own errors) — the response to a wrong
+      // password doesn't need to wait on an audit-log write, and this is one fewer DB round-trip
+      // held open during a login burst.
+      logAudit({ req, action: AUDIT_ACTIONS.LOGIN_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { email } });
       return res.status(401).json({ error: "Incorrect password." });
     }
 
@@ -97,10 +100,16 @@ router.post("/login", loginLimiter, async (req, res) => {
     const expired = isPasswordExpired(user, user.institute?.passwordExpiryDays);
     const mustChangePassword = user.mustChangePassword || expired;
     if (expired && !user.mustChangePassword) {
-      await prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: true } }).catch(() => {});
+      // Fire-and-forget — the response already carries the correct mustChangePassword value
+      // (computed above from `expired`, not from this write), so the client doesn't need to wait
+      // on this persisting before proceeding.
+      prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: true } }).catch(() => {});
     }
 
-    await logAudit({ req, action: AUDIT_ACTIONS.LOGIN, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { isFirstLogin, isNewDevice } });
+    // Fire-and-forget (logAudit already catches its own errors) — trims one more DB round-trip
+    // off the login critical path during a login burst; the audit record still lands, just not
+    // before the response is sent.
+    logAudit({ req, action: AUDIT_ACTIONS.LOGIN, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { isFirstLogin, isNewDevice } });
     maybeSendLoginAlert(user, req, isFirstLogin, isNewDevice); // fire-and-forget — see comment above
 
     // Student Profile Completion gating — mirrors mustChangePassword's shape exactly (a boolean
