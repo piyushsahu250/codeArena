@@ -45,30 +45,49 @@ async function computeStudentPerformance(studentId, { maskUnpublished = false } 
   const assignedTestIds = new Set(assignedTests.map((t) => t.id));
 
   const testIds = [...new Set(attempts.map((a) => a.testId))];
-  const allQuestionIds = [...new Set(attempts.flatMap((a) => a.submissions.map((s) => s.questionId)))];
-  const [testsRaw, questions] = await Promise.all([
-    testIds.length
-      ? prisma.test.findMany({
-          where: { id: { in: testIds } },
-          select: {
-            id: true, title: true, showResults: true,
-            questions: { select: { question: { select: { points: true } } } },
-          },
-        })
-      : Promise.resolve([]),
-    allQuestionIds.length
-      ? prisma.question.findMany({
-          where: { id: { in: allQuestionIds } },
-          select: { id: true, questionType: true, subject: true },
-        })
-      : Promise.resolve([]),
-  ]);
+  const testsRaw = testIds.length
+    ? await prisma.test.findMany({
+        where: { id: { in: testIds } },
+        select: {
+          id: true, title: true, showResults: true,
+          questions: { select: { questionId: true } },
+        },
+      })
+    : [];
   const testMap = new Map(testsRaw.map((t) => [t.id, t]));
+
+  // A test's questionOrder is locked in per-attempt at start time (see tests.js POST /:id/start)
+  // and must stay the source of truth for max score forever after — if an admin edits the test
+  // later (removes/replaces a question, or in RANDOM mode changes the bank folder), that must
+  // never retroactively change an already-started or already-completed attempt's denominator.
+  // Falls back to the test's current question set only for legacy attempts that predate
+  // questionOrder (all attempts since have it). Same root cause and fix as GET /tests/:id, which
+  // hydrates a student's locked-in question list the same way instead of intersecting against
+  // the test's current state.
+  const assignedIdsByAttempt = new Map(
+    attempts.map((a) => {
+      const test = testMap.get(a.testId);
+      const ids = Array.isArray(a.questionOrder) && a.questionOrder.length > 0
+        ? a.questionOrder
+        : (test?.questions || []).map((tq) => tq.questionId);
+      return [a.id, ids];
+    })
+  );
+  const allQuestionIds = [...new Set([
+    ...attempts.flatMap((a) => a.submissions.map((s) => s.questionId)),
+    ...[...assignedIdsByAttempt.values()].flat(),
+  ])];
+  const questions = allQuestionIds.length
+    ? await prisma.question.findMany({
+        where: { id: { in: allQuestionIds } },
+        select: { id: true, questionType: true, subject: true, points: true },
+      })
+    : [];
   const questionMap = new Map(questions.map((q) => [q.id, q]));
 
   const testHistory = attempts.map((a) => {
     const test = testMap.get(a.testId);
-    const maxScore = (test?.questions || []).reduce((s, q) => s + (q.question?.points || 0), 0);
+    const maxScore = (assignedIdsByAttempt.get(a.id) || []).reduce((s, qId) => s + (questionMap.get(qId)?.points || 0), 0);
     const finalized = a.status !== "IN_PROGRESS";
     const masked = maskUnpublished && test && test.showResults === false;
     const percentage = maxScore > 0 ? round1((a.totalScore / maxScore) * 100) : 0;

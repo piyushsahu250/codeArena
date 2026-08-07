@@ -481,6 +481,35 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
     });
     if (attempt?.questionOrder) {
       const byId = new Map(test.questions.map((tq) => [tq.questionId, tq]));
+      // A question locked into this student's questionOrder at attempt-start time can end up
+      // missing from `test.questions` later — the admin edited the test afterward (removed a
+      // question, or in RANDOM mode changed the bank folder). Once a question is assigned to a
+      // student it must stay visible/gradable for them regardless of later edits (fairness — an
+      // admin edit shouldn't retroactively shrink an already-started or already-completed
+      // attempt), so any id not currently on the test is fetched directly from Question instead
+      // of being silently dropped. This was the root cause of some students seeing fewer
+      // questions than they were actually assigned.
+      const missingIds = attempt.questionOrder.filter((qId) => !byId.has(qId));
+      if (missingIds.length > 0) {
+        const missingQuestions = await prisma.question.findMany({
+          where: { id: { in: missingIds } },
+          select: {
+            id: true, questionNumber: true, title: true, description: true, subject: true, topic: true,
+            questionType: true, difficulty: true, points: true, timeLimitMs: true, starterCode: true,
+            starterCodeByLanguage: true, evaluationType: true, functionSignature: true, options: true,
+            correctAnswer: isStaff, explanation: isStaff,
+            testCases: { where: isStaff ? {} : { isHidden: false } },
+          },
+        });
+        for (const q of missingQuestions) byId.set(q.id, { questionId: q.id, question: q });
+        const stillMissing = missingIds.filter((qId) => !byId.has(qId));
+        if (stillMissing.length > 0) {
+          // Only reachable if the Question row itself was hard-deleted, not just unassigned from
+          // this test — genuinely nothing left to show. Logged so this is diagnosable instead of
+          // a silent "why does my count not match" report.
+          console.error(`[tests] attempt for student ${req.user.id} on test ${test.id} references deleted question(s): ${stillMissing.join(", ")}`);
+        }
+      }
       test.questions = attempt.questionOrder.map((qId) => byId.get(qId)).filter(Boolean);
     }
     if (attempt?.optionOrder) {
