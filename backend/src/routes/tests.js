@@ -4,7 +4,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { gradePendingCodingSubmissions } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
-const { isTestVisibleToStudent, studentCanAccessTest } = require("../utils/testEligibility");
+const { isTestVisibleToStudent, studentCanAccessTest, testEligibilityWhere } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 
 const router = express.Router();
@@ -337,8 +337,39 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), async 
 // creator — scoped to their own institute unless they're platform-level) ---
 router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
   const isStaff = req.user.role === "ADMIN" || req.user.role === "STAFF";
+
+  // Filtered DB-side (not "load every test on the platform, then filter in JS") — this list used
+  // to fetch every Test row plus its full class/academicGroup/institute/department relation tree
+  // regardless of who was asking, then discarded most of it in memory. At real scale (many
+  // institutes, many tests) that made this endpoint slow for everyone and, under load, slow enough
+  // to time out for some students — surfacing as "page loading, test not visible." Same shape of
+  // bug as the old leaderboard full-table-scan fix.
+  let where;
+  if (isStaff) {
+    // A test with zero group/class assignments is only "open to all" within its OWN institute (or
+    // platform-wide if instituteId is null) — never leaks into another institute's staff test
+    // list. Mirrors the matching gate in testEligibility.js.
+    where = req.requesterInstituteId
+      ? {
+          OR: [
+            { classes: { some: { class: { instituteId: req.requesterInstituteId } } } },
+            { academicGroups: { some: { academicGroup: { instituteId: req.requesterInstituteId } } } },
+            {
+              classes: { none: {} },
+              academicGroups: { none: {} },
+              OR: [{ instituteId: null }, { instituteId: req.requesterInstituteId }],
+            },
+          ],
+        }
+      : {};
+  } else {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
+    const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
+    where = { isPublished: true, ...testEligibilityWhere(student.academicGroupId, student.classId, memberPoolIds, student.instituteId) };
+  }
+
   const tests = await prisma.test.findMany({
-    where: isStaff ? {} : { isPublished: true },
+    where,
     orderBy: { startTime: "asc" },
     include: {
       _count: { select: { questions: true, attempts: true } },
@@ -376,35 +407,16 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     },
   });
 
-  if (isStaff) {
-    const visible = req.requesterInstituteId
-      ? tests.filter((t) => {
-          // A test with zero group/class assignments is only "open to all" within its OWN
-          // institute (or platform-wide if instituteId is null) — never leaks into another
-          // institute's staff test list. See the matching gate in testEligibility.js.
-          if (t.classes.length === 0 && t.academicGroups.length === 0) {
-            return t.instituteId == null || t.instituteId === req.requesterInstituteId;
-          }
-          const classMatch = t.classes.some((tc) => tc.class.instituteId === req.requesterInstituteId);
-          const groupMatch = t.academicGroups.some((tg) => tg.academicGroup.instituteId === req.requesterInstituteId);
-          return classMatch || groupMatch;
-        })
-      : tests;
-    return res.json(visible);
-  }
-
-  const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
-  const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
-  const visible = tests.filter((t) => isTestVisibleToStudent(t, student.academicGroupId, student.classId, memberPoolIds, student.instituteId));
+  if (isStaff) return res.json(tests);
 
   // Surface the student's own attempt status per test so the dashboard can show "Completed"
   // upfront, rather than only after they click Attend and get bounced by a 403.
   const myAttempts = await prisma.testAttempt.findMany({
-    where: { studentId: req.user.id, testId: { in: visible.map((t) => t.id) } },
+    where: { studentId: req.user.id, testId: { in: tests.map((t) => t.id) } },
     select: { testId: true, status: true },
   });
   const statusByTest = Object.fromEntries(myAttempts.map((a) => [a.testId, a.status]));
-  const withStatus = visible.map((t) => ({ ...t, myStatus: statusByTest[t.id] || null }));
+  const withStatus = tests.map((t) => ({ ...t, myStatus: statusByTest[t.id] || null }));
 
   res.json(withStatus);
 });
