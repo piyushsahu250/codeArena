@@ -676,7 +676,13 @@ router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   }
   const attempts = await prisma.testAttempt.findMany({
     where: { testId: req.params.id },
-    include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } } },
+    include: {
+      student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } },
+      // Just questionId, not the full row — this is what lets the leaderboard show "Attempted:
+      // X of Y" per student (a saved Submission row = attempted, regardless of verdict), the
+      // exact number staff need to confirm a completed attempt actually has every answer saved.
+      submissions: { select: { questionId: true } },
+    },
     orderBy: { totalScore: "desc" },
   });
   res.json(attempts);
