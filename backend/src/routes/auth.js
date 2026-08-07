@@ -76,10 +76,16 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json({ error: "Incorrect password." });
     }
 
-    const [priorSessionCount, deviceSeenBefore] = await Promise.all([
-      prisma.loginSession.count({ where: { userId: user.id } }),
-      prisma.loginSession.findFirst({ where: { userId: user.id, browser: parseDevice(req.headers["user-agent"]).browser, os: parseDevice(req.headers["user-agent"]).os } }),
-    ]);
+    // Sequential, not Promise.all: this platform's Prisma pool is deliberately small
+    // (connection_limit — see prisma.js), and every simultaneous query in a login request
+    // checks out its own connection at once. Under a burst of concurrent logins (a whole class/
+    // batch signing in within the same minute), stacking parallel queries multiplies the peak
+    // connections needed per request and was the direct cause of "Transaction API error: unable
+    // to start a transaction in the given time." These two reads are cheap and independent, so
+    // running them one after another costs a few extra ms of latency in exchange for materially
+    // less pool contention during exactly the bursts that were failing.
+    const priorSessionCount = await prisma.loginSession.count({ where: { userId: user.id } });
+    const deviceSeenBefore = await prisma.loginSession.findFirst({ where: { userId: user.id, browser: parseDevice(req.headers["user-agent"]).browser, os: parseDevice(req.headers["user-agent"]).os } });
     const isFirstLogin = priorSessionCount === 0;
     const isNewDevice = !isFirstLogin && !deviceSeenBefore;
 
@@ -107,11 +113,10 @@ router.post("/login", loginLimiter, async (req, res) => {
     let profileComplete = true;
     if (user.role === "STUDENT" && user.institute?.requireProfileCompletion) {
       requireProfileCompletion = true;
-      const [studentProfile, resume, documents] = await Promise.all([
-        prisma.studentProfile.findUnique({ where: { studentId: user.id } }),
-        prisma.resume.findUnique({ where: { studentId: user.id }, select: { education: true, fullName: true, email: true } }),
-        prisma.studentDocument.findMany({ where: { studentId: user.id }, select: { id: true } }),
-      ]);
+      // Sequential for the same pool-contention reason as the session lookups above.
+      const studentProfile = await prisma.studentProfile.findUnique({ where: { studentId: user.id } });
+      const resume = await prisma.resume.findUnique({ where: { studentId: user.id }, select: { education: true, fullName: true, email: true } });
+      const documents = await prisma.studentDocument.findMany({ where: { studentId: user.id }, select: { id: true } });
       profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume, documents).unlocked;
     }
 

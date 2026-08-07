@@ -6,13 +6,26 @@ const { PrismaClient } = require("@prisma/client");
 // auto-detected pool can end up far larger than this container can realistically use. A bigger
 // pool here doesn't make queries faster (Postgres work is still bottlenecked by the same 0.1 CPU),
 // it just means more idle connections competing for Neon's connection limit and a larger, less
-// predictable memory footprint on a 512MB box. connection_limit=5 is a conservative floor safe on
-// any Postgres plan's connection limit, appended here (not hardcoded into DATABASE_URL itself) so
-// it applies automatically without editing the secret in Render's dashboard, and is skipped
-// entirely if the URL already specifies one.
+// predictable memory footprint on a 512MB box.
+//
+// connection_limit was originally set to 5, but that turned out too tight for real traffic: an
+// entire class/batch logging in within the same minute (POST /auth/login fires 2-4 queries
+// concurrently per request — see auth.js) saturated the pool and Prisma's default 10s
+// pool_timeout expired before a connection freed up, surfacing to students as "Transaction API
+// error: unable to start a transaction in the given time" and a login page that never loads.
+// connection_limit=10 gives meaningfully more concurrent headroom while staying well under any
+// Postgres free-tier's connection cap; pool_timeout=20 also gives queued requests more time to
+// get a connection during a burst instead of failing outright the moment 10 are briefly busy.
+// Both are appended here (not hardcoded into DATABASE_URL itself) so they apply automatically
+// without editing the secret in Render's dashboard, and are skipped if the URL already specifies
+// them.
 function withConnectionLimit(url) {
-  if (!url || /[?&]connection_limit=/.test(url)) return url;
-  return `${url}${url.includes("?") ? "&" : "?"}connection_limit=5`;
+  if (!url) return url;
+  const params = [];
+  if (!/[?&]connection_limit=/.test(url)) params.push("connection_limit=10");
+  if (!/[?&]pool_timeout=/.test(url)) params.push("pool_timeout=20");
+  if (params.length === 0) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}${params.join("&")}`;
 }
 
 // Shared across all routes — a separate PrismaClient per file each opens its own
