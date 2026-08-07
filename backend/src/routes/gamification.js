@@ -23,24 +23,21 @@ function streakStillLive(lastActiveDate) {
 router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const studentId = req.user.id;
-    // These three are independent reads — student, totalXp, and streakRow don't depend on each
-    // other — so they run in parallel instead of as three sequential round-trips. (The second
-    // Promise.all below still has to wait for `student` first, since computeGroupRank needs
-    // student.academicGroupId.)
-    const [student, totalXp, streakRow] = await Promise.all([
-      prisma.user.findUnique({ where: { id: studentId } }),
-      getTotalXp(studentId),
-      prisma.studentStreak.findUnique({ where: { studentId } }),
-    ]);
+    // Sequential, not Promise.all — this page is linked straight off the student dashboard, so
+    // many students can open it in the same short window (e.g. after a leaderboard/XP
+    // announcement). Same pool-contention reasoning as auth.js/dashboard.js; computeGroupRank is
+    // still cheap on a cache hit (see groupRank.js's 60s cache), so this mainly matters for the
+    // other four direct Prisma reads.
+    const student = await prisma.user.findUnique({ where: { id: studentId } });
+    const totalXp = await getTotalXp(studentId);
+    const streakRow = await prisma.studentStreak.findUnique({ where: { studentId } });
     const level = computeLevel(totalXp);
     const currentStreak = streakStillLive(streakRow?.lastActiveDate) ? streakRow.currentStreak : 0;
 
-    const [earnedBadges, allBadges, history, { rank, totalStudents }] = await Promise.all([
-      prisma.studentBadge.findMany({ where: { studentId }, include: { badge: true }, orderBy: { earnedAt: "desc" } }),
-      prisma.badge.findMany({ where: { isActive: true }, orderBy: [{ category: "asc" }, { name: "asc" }] }),
-      prisma.xpEvent.findMany({ where: { studentId }, orderBy: { createdAt: "desc" }, take: 50 }),
-      computeGroupRank(studentId, student.academicGroupId),
-    ]);
+    const earnedBadges = await prisma.studentBadge.findMany({ where: { studentId }, include: { badge: true }, orderBy: { earnedAt: "desc" } });
+    const allBadges = await prisma.badge.findMany({ where: { isActive: true }, orderBy: [{ category: "asc" }, { name: "asc" }] });
+    const history = await prisma.xpEvent.findMany({ where: { studentId }, orderBy: { createdAt: "desc" }, take: 50 });
+    const { rank, totalStudents } = await computeGroupRank(studentId, student.academicGroupId);
     const earnedIds = new Set(earnedBadges.map((b) => b.badgeId));
 
     res.json({

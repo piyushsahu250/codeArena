@@ -22,13 +22,14 @@ const STUDENT_PROFILE_FIELDS = [
   "placementParticipation", "placementDeclineReason", "placementDeclineOther",
 ];
 
+// Sequential, not Promise.all — GET /profile/me is checked on nearly every protected page load
+// (App.jsx's profile-completion gate), so every student's session can fire this repeatedly in a
+// short window. Same pool-contention reasoning as auth.js/dashboard.js.
 async function loadCompletionInputs(studentId) {
-  const [user, studentProfile, resume, documents] = await Promise.all([
-    prisma.user.findUnique({ where: { id: studentId }, include: { institute: { select: { name: true } } } }),
-    prisma.studentProfile.findUnique({ where: { studentId } }),
-    prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true } }),
-    prisma.studentDocument.findMany({ where: { studentId }, select: { id: true } }),
-  ]);
+  const user = await prisma.user.findUnique({ where: { id: studentId }, include: { institute: { select: { name: true } } } });
+  const studentProfile = await prisma.studentProfile.findUnique({ where: { studentId } });
+  const resume = await prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true } });
+  const documents = await prisma.studentDocument.findMany({ where: { studentId }, select: { id: true } });
   return { user, studentProfile: decryptProfile(studentProfile), resume, documents };
 }
 

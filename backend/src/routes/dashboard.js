@@ -137,28 +137,31 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
     const student = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    const [perf, rank, streak, certificatesEarned, recentActivity, notifications, javaCourse] = await Promise.all([
-      computeStudentPerformance(student.id, { maskUnpublished: true }),
-      computeGroupRank(student.id, student.academicGroupId),
-      getCodingStreak(student.id),
-      prisma.certificate.count({ where: { studentId: student.id } }),
-      getRecentActivity(student.id),
-      getNotifications(student),
-      prisma.course.findUnique({ where: { slug: "java" } }),
-    ]);
+    // Sequential, not Promise.all — this is the single highest-traffic route on the platform
+    // (every student's dashboard load), and each of these already fans out into its own 2-4-way
+    // Promise.all internally (computeStudentPerformance, getRecentActivity, getNotifications).
+    // Running all 7 at once could spike one request to 10+ simultaneous pool connections; a burst
+    // of students loading their dashboard together (start of day/class) is exactly the shape of
+    // load that exhausted the pool for login and attendance before those were fixed the same way
+    // (see auth.js/attendance.js). A few hundred ms of added latency per request is worth it.
+    const perf = await computeStudentPerformance(student.id, { maskUnpublished: true });
     // computeStudentPerformance only returns null if the student row vanished between the
     // findUnique above and this call (e.g. deleted by an admin mid-request) — vanishingly rare,
     // but worth a clear error over a null-dereference crash a few lines down.
     if (!perf) return res.status(404).json({ error: "Student not found" });
+    const rank = await computeGroupRank(student.id, student.academicGroupId);
+    const streak = await getCodingStreak(student.id);
+    const certificatesEarned = await prisma.certificate.count({ where: { studentId: student.id } });
+    const recentActivity = await getRecentActivity(student.id);
+    const notifications = await getNotifications(student);
+    const javaCourse = await prisma.course.findUnique({ where: { slug: "java" } });
 
     let learningProgressPercent = 0;
     if (javaCourse) {
-      const [totalLessons, completedLessons] = await Promise.all([
-        prisma.lesson.count({ where: { module: { courseId: javaCourse.id } } }),
-        prisma.lessonProgress.count({
-          where: { studentId: student.id, status: "COMPLETED", lesson: { module: { courseId: javaCourse.id } } },
-        }),
-      ]);
+      const totalLessons = await prisma.lesson.count({ where: { module: { courseId: javaCourse.id } } });
+      const completedLessons = await prisma.lessonProgress.count({
+        where: { studentId: student.id, status: "COMPLETED", lesson: { module: { courseId: javaCourse.id } } },
+      });
       learningProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
     }
 

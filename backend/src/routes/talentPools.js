@@ -111,23 +111,25 @@ router.get("/my-pools", authenticate, requireRole("STUDENT"), async (req, res) =
     },
   });
 
-  const result = await Promise.all(
-    memberships.map(async (m) => {
-      const [testRank, interviewRank] = await Promise.all([
-        computeTalentPoolRank(req.user.id, m.poolId),
-        computeTalentPoolInterviewRank(req.user.id, m.poolId),
-      ]);
-      return {
-        pool: { id: m.pool.id, name: m.pool.name, description: m.pool.description },
-        addedVia: m.addedVia,
-        addedAt: m.addedAt,
-        exclusiveTests: m.pool.testAssignments.map((t) => t.test),
-        interviewConfigs: m.pool.interviewConfigs,
-        testRank,
-        interviewRank,
-      };
-    })
-  );
+  // Sequential, not Promise.all(map(...)) — each membership fans out into its own rank lookups
+  // (each of which is itself a 2-way Promise.all internally), so a student in several pools could
+  // fire many simultaneous pool connections from one request. Same pool-contention reasoning as
+  // auth.js/dashboard.js; this route is hit by every student opening "My Talent Pools" at once
+  // after a pool announcement.
+  const result = [];
+  for (const m of memberships) {
+    const testRank = await computeTalentPoolRank(req.user.id, m.poolId);
+    const interviewRank = await computeTalentPoolInterviewRank(req.user.id, m.poolId);
+    result.push({
+      pool: { id: m.pool.id, name: m.pool.name, description: m.pool.description },
+      addedVia: m.addedVia,
+      addedAt: m.addedAt,
+      exclusiveTests: m.pool.testAssignments.map((t) => t.test),
+      interviewConfigs: m.pool.interviewConfigs,
+      testRank,
+      interviewRank,
+    });
+  }
   res.json(result);
 });
 
