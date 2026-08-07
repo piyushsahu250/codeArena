@@ -628,13 +628,36 @@ function buildBulkImportHeaderMap(headers) {
   return map;
 }
 
+// academicGroupId is optional for backward compatibility (any existing caller that doesn't pass
+// one still gets the old single-sample-row template), but the admin UI always passes one now —
+// the whole point of this route is to pre-fill the template with a real roster instead of making
+// the admin build their own student list.
 router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
-    const headers = ["Institute Name", "Registration Number (PRN)", "Marks Obtained"];
-    const sampleRow = [examination.institute.name, "2024COMP001", Math.round(examination.totalMarks * 0.8)];
-    const sheet = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+    const headers = ["Institute Name", "Student Name", "Registration Number (PRN)", "Marks Obtained"];
+
+    let dataRows;
+    const { academicGroupId } = req.query;
+    if (academicGroupId) {
+      const group = await prisma.academicGroup.findUnique({ where: { id: academicGroupId }, select: { instituteId: true } });
+      if (!group || group.instituteId !== examination.instituteId) {
+        return res.status(400).json({ error: "That Academic Group doesn't belong to this examination's institute." });
+      }
+      const students = await prisma.user.findMany({
+        where: { role: "STUDENT", academicGroupId },
+        select: { name: true, registrationNumber: true },
+        orderBy: { name: "asc" },
+      });
+      if (students.length === 0) return res.status(400).json({ error: "That Academic Group has no students yet." });
+      // Marks Obtained left blank — this is what the admin fills in before re-uploading.
+      dataRows = students.map((s) => [examination.institute.name, s.name, s.registrationNumber || "", ""]);
+    } else {
+      dataRows = [[examination.institute.name, "", "2024COMP001", Math.round(examination.totalMarks * 0.8)]];
+    }
+
+    const sheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Results");
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
@@ -671,14 +694,13 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
       return res.status(400).json({ error: 'The file must have "Institute Name", "Registration Number (PRN)", and "Marks Obtained" columns.' });
     }
 
-    const institutes = await prisma.institute.findMany({ select: { id: true, name: true } });
+    const institutes = await prisma.institute.findMany({ select: { id: true, name: true, code: true } });
     const instituteByName = new Map(institutes.map((i) => [i.name.toLowerCase().trim(), i]));
 
     const existingEntries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id }, select: { studentId: true } });
     const existingStudentIds = new Set(existingEntries.map((e) => e.studentId));
 
     const imported = [], duplicate = [], invalidInstitute = [], invalidRegistrationNumber = [], failed = [];
-    const toCreate = [];
     const seen = new Set();
 
     for (let i = 0; i < rows.length; i++) {
@@ -721,27 +743,40 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
           invalidRegistrationNumber.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: `No student with Registration Number "${registrationNumberRaw}" was found at ${institute.name}.` });
           continue;
         }
-        if (existingStudentIds.has(student.id) || seen.has(student.id)) {
+        // "Duplicate" means the same PRN appears more than once in THIS uploaded file — the
+        // second occurrence is skipped (existing house policy, unchanged). A PRN that already has
+        // a ResultEntry from an earlier import/manual entry is NOT a duplicate here: this route
+        // is now also how an admin re-uploads the same pre-filled template to correct marks, so an
+        // existing entry for this student gets its marks updated instead of being skipped.
+        if (seen.has(student.id)) {
           duplicate.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name });
           continue;
         }
-
         seen.add(student.id);
+
         const { percentage, passed } = computeResult(marks, examination);
-        toCreate.push({
-          examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, percentage, passed,
-          enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
-        });
-        imported.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name, obtainedMarks: marks });
+        const isUpdate = existingStudentIds.has(student.id);
+        if (isUpdate) {
+          await prisma.resultEntry.update({
+            where: { examinationId_studentId: { examinationId: req.params.id, studentId: student.id } },
+            data: { obtainedMarks: marks, percentage, passed, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT" },
+          });
+        } else {
+          const verificationCode = await generateMarksheetCode({ instituteCode: institute.code });
+          await prisma.resultEntry.create({
+            data: {
+              examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, percentage, passed, verificationCode,
+              enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
+            },
+          });
+        }
+        imported.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name, obtainedMarks: marks, updated: isUpdate });
       } catch (rowErr) {
         failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
       }
     }
 
-    if (toCreate.length) {
-      await prisma.resultEntry.createMany({ data: toCreate, skipDuplicates: true });
-      invalidate(`resultExamStats:${req.params.id}`);
-    }
+    if (imported.length) invalidate(`resultExamStats:${req.params.id}`);
 
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_ENTRIES_BULK_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,

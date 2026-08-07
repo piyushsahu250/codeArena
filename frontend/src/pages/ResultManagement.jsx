@@ -314,6 +314,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [publishing, setPublishing] = useState(false);
+  const [academicGroups, setAcademicGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState("");
 
   function loadExam() {
     api.get(`/results/admin/examinations/${examId}`).then((res) => setExam(res.data)).catch((err) => setError(err.response?.data?.error || "Failed to load examination"));
@@ -325,6 +327,14 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   useEffect(() => {
     api.get("/results/admin/analytics", { params: { examinationId: examId } }).then((res) => setAnalytics(res.data)).catch(() => setAnalytics(null));
   }, [examId, entries.length]);
+
+  // Scoped to this examination's own institute — an exam always belongs to exactly one institute
+  // already (exam.institute.name is shown above), so the "Select Institute" step of the template
+  // workflow is implicit here; only Academic Group needs its own picker.
+  useEffect(() => {
+    if (!exam?.instituteId) return;
+    api.get("/academic-groups", { params: { instituteId: exam.instituteId } }).then((res) => setAcademicGroups(res.data)).catch(() => setAcademicGroups([]));
+  }, [exam?.instituteId]);
 
   useEffect(() => {
     if (!studentQuery.trim()) { setStudentResults([]); return; }
@@ -360,10 +370,44 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   }
 
   async function downloadTemplate() {
-    const res = await api.get(`/results/admin/examinations/${examId}/bulk-template`, { responseType: "blob" });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
+    try {
+      const res = await api.get(`/results/admin/examinations/${examId}/bulk-template`, {
+        params: selectedGroupId ? { academicGroupId: selectedGroupId } : {},
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url; link.download = "result-bulk-import-template.xlsx";
+      document.body.appendChild(link); link.click(); link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      // A blob-typed error response body needs decoding before its .error message is readable.
+      const text = err.response?.data instanceof Blob ? await err.response.data.text() : null;
+      const message = text ? JSON.parse(text).error : err.response?.data?.error;
+      alert(message || "Failed to generate template");
+    }
+  }
+
+  // Combines every non-success bucket into one CSV, tagging each row with which bucket it came
+  // from — same pattern as BulkUpload.jsx's error report (the closest existing precedent for a
+  // report spanning multiple failure categories in one file).
+  function downloadErrorReport() {
+    if (!bulkSummary) return;
+    const tagged = [
+      ...bulkSummary.invalidInstitute.map((r) => ({ ...r, type: "Invalid Institute Name" })),
+      ...bulkSummary.invalidRegistrationNumber.map((r) => ({ ...r, type: "Invalid PRN" })),
+      ...bulkSummary.duplicate.map((r) => ({ ...r, type: "Duplicate Record" })),
+      ...bulkSummary.failed.map((r) => ({ ...r, type: "Failed Row" })),
+    ];
+    if (tagged.length === 0) return;
+    const header = ["Row", "Type", "Institute", "Registration Number (PRN)", "Reason"];
+    const rows = tagged.map((r) => [r.row, r.type, r.institute || "", r.registrationNumber || "", r.reason || (r.type === "Duplicate Record" ? "Same PRN already appears earlier in this file." : "")]);
+    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url; link.download = "result-bulk-import-template.xlsx";
+    link.href = url; link.download = `result-import-errors-${examId}.csv`;
     document.body.appendChild(link); link.click(); link.remove();
     window.URL.revokeObjectURL(url);
   }
@@ -538,11 +582,26 @@ function ExamDetail({ examId, isAdmin, onBack }) {
         {bulkOpen && (
           <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--line)", borderRadius: 8 }}>
             <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-              Columns: <strong>Institute Name</strong>, <strong>Registration Number (PRN)</strong>, <strong>Marks Obtained</strong>. Students are
-              matched by Registration Number only — Roll Number is not a template column.
+              Select an Academic Group to download a template pre-filled with every student in that group —
+              Institute Name, Student Name, and Registration Number (PRN) are filled in for you; just enter{" "}
+              <strong>Marks Obtained</strong> and re-upload the same file. Students are matched by Registration
+              Number only — Student Name is shown for verification and Roll Number is never used for matching.
             </p>
-            <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center" }}>
-              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadTemplate}>Download Template</button>
+
+            <div style={{ maxWidth: 320, marginTop: 10 }}>
+              <label style={labelStyle}>Academic Group</label>
+              <select style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                <option value="">Select a batch/department/section…</option>
+                {academicGroups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.batch} · {g.department?.name} · {g.section} ({g._count?.users ?? 0} students)</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
+              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadTemplate} disabled={!selectedGroupId} title={!selectedGroupId ? "Select an Academic Group first" : undefined}>
+                Download Template
+              </button>
               <label className="btn btn-primary" style={{ fontSize: 12, cursor: "pointer" }}>
                 {bulkUploading ? "Uploading…" : "Upload File"}
                 <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={uploadBulk} disabled={bulkUploading} />
@@ -551,16 +610,31 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             <UploadProgressBar active={bulkUploading} />
             {bulkSummary && (
               <div style={{ marginTop: 12, fontSize: 12 }}>
-                <div>Imported: <strong>{bulkSummary.imported.length}</strong> · Duplicate: <strong>{bulkSummary.duplicate.length}</strong> · Invalid Institute: <strong>{bulkSummary.invalidInstitute.length}</strong> · Invalid Registration Number: <strong>{bulkSummary.invalidRegistrationNumber.length}</strong> · Failed: <strong>{bulkSummary.failed.length}</strong></div>
-                {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRegistrationNumber, ...bulkSummary.failed].length > 0 && (
-                  <details style={{ marginTop: 8 }}>
-                    <summary style={{ cursor: "pointer" }}>View failed rows</summary>
-                    <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
-                      {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRegistrationNumber, ...bulkSummary.failed].map((r, i) => (
-                        <div key={i} style={{ color: "var(--rust)" }}>Row {r.row}: {r.reason}</div>
-                      ))}
-                    </div>
-                  </details>
+                <div>
+                  Successfully Updated: <strong style={{ color: "var(--mint)" }}>{bulkSummary.imported.length}</strong> ·
+                  {" "}Invalid PRNs: <strong>{bulkSummary.invalidRegistrationNumber.length}</strong> ·
+                  {" "}Invalid Institute Names: <strong>{bulkSummary.invalidInstitute.length}</strong> ·
+                  {" "}Duplicate Records: <strong>{bulkSummary.duplicate.length}</strong> ·
+                  {" "}Failed Rows: <strong>{bulkSummary.failed.length}</strong>
+                </div>
+                {(bulkSummary.invalidInstitute.length + bulkSummary.invalidRegistrationNumber.length + bulkSummary.duplicate.length + bulkSummary.failed.length) > 0 && (
+                  <>
+                    <button className="btn btn-ghost" style={{ fontSize: 11, marginTop: 8 }} onClick={downloadErrorReport}>⬇ Download error report (CSV)</button>
+                    <details style={{ marginTop: 8 }}>
+                      <summary style={{ cursor: "pointer" }}>View skipped/failed rows</summary>
+                      <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
+                        {[...bulkSummary.invalidInstitute, ...bulkSummary.invalidRegistrationNumber].map((r, i) => (
+                          <div key={`ii-${i}`} style={{ color: "var(--rust)" }}>Row {r.row}: {r.reason}</div>
+                        ))}
+                        {bulkSummary.duplicate.map((r, i) => (
+                          <div key={`d-${i}`} style={{ color: "var(--amber-dark)" }}>Row {r.row}: Duplicate — {r.name} ({r.registrationNumber}) already appears earlier in this file.</div>
+                        ))}
+                        {bulkSummary.failed.map((r, i) => (
+                          <div key={`f-${i}`} style={{ color: "var(--rust)" }}>Row {r.row}: {r.reason}</div>
+                        ))}
+                      </div>
+                    </details>
+                  </>
                 )}
               </div>
             )}
