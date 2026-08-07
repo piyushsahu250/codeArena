@@ -81,10 +81,11 @@ async function studentCanAccessTest(prisma, testId, academicGroupId, classId, me
     const match = await prisma.talentPoolTest.findFirst({ where: { testId, poolId: { in: ids } } });
     return !!match;
   }
-  const [groupLinks, classLinks] = await Promise.all([
-    prisma.testAcademicGroup.count({ where: { testId } }),
-    prisma.testClass.count({ where: { testId } }),
-  ]);
+  // Sequential, not Promise.all — this runs on POST /tests/:id/start, the "Begin Test" click,
+  // which is exactly the most synchronized moment on the whole platform: a full class clicking
+  // Start at the scheduled exam time. Same pool-contention reasoning as auth.js/dashboard.js.
+  const groupLinks = await prisma.testAcademicGroup.count({ where: { testId } });
+  const classLinks = await prisma.testClass.count({ where: { testId } });
   if (groupLinks === 0 && classLinks === 0) {
     const test = await prisma.test.findUnique({ where: { id: testId }, select: { instituteId: true } });
     return test.instituteId == null || test.instituteId === studentInstituteId;

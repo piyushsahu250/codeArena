@@ -61,13 +61,18 @@ async function recomputeAttemptScore(attemptId) {
 async function gradePendingCodingSubmissions(attemptId) {
   const pending = await prisma.submission.findMany({ where: { attemptId, verdict: "PENDING" } });
 
-  await Promise.all(
-    pending.map(async (sub) => {
-      const question = await prisma.question.findUnique({ where: { id: sub.questionId }, include: { testCases: true } });
-      if (!question) return;
-      await gradeCodingSubmission(sub, question);
-    })
-  );
+  // Sequential, not Promise.all — every student on a test shares the same deadline (duration
+  // measured from their own start, but tests are almost always started in the same narrow
+  // window), so finalize calls cluster far more tightly than even the login burst did. A
+  // Promise.all here turned one student's N un-submitted coding questions into N simultaneous
+  // pool connections, at the exact moment the whole class's finalize requests were already
+  // landing together — this was the single most likely real-world trigger for "unable to start
+  // a transaction in the given time" during an actual exam.
+  for (const sub of pending) {
+    const question = await prisma.question.findUnique({ where: { id: sub.questionId }, include: { testCases: true } });
+    if (!question) continue;
+    await gradeCodingSubmission(sub, question);
+  }
 
   await recomputeAttemptScore(attemptId);
 }

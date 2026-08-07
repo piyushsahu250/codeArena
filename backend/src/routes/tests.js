@@ -513,7 +513,13 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
 router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const testId = req.params.id;
-    const test = await prisma.test.findUnique({ where: { id: testId } });
+    // Fetched once with the questions include up front (not re-fetched later only for a brand-new
+    // attempt) — this route is hit by a whole class clicking "Begin Test" at the exact scheduled
+    // start time, so trimming one redundant round-trip here matters more than it would elsewhere.
+    const test = await prisma.test.findUnique({
+      where: { id: testId },
+      include: { questions: { include: { question: { select: { id: true, questionType: true, options: true, difficulty: true } } } } },
+    });
     if (!test || !test.isPublished) return res.status(404).json({ error: "Test not available" });
 
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
@@ -551,12 +557,21 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
         if (record.status === "ABSENT") return res.status(403).json({ error: "You have been marked absent for this test and cannot start it." });
       }
 
-      const testWithQuestions = await prisma.test.findUnique({
-        where: { id: testId },
-        include: { questions: { include: { question: { select: { id: true, questionType: true, options: true, difficulty: true } } } } },
-      });
-      const { questionOrder, optionOrder } = buildAttemptOrder(testWithQuestions);
-      attempt = await prisma.testAttempt.create({ data: { testId, studentId: req.user.id, questionOrder, optionOrder } });
+      const { questionOrder, optionOrder } = buildAttemptOrder(test);
+      try {
+        attempt = await prisma.testAttempt.create({ data: { testId, studentId: req.user.id, questionOrder, optionOrder } });
+      } catch (err) {
+        // A double-click or a client retry (slow response during the exam-start burst, the client
+        // gives up and tries again) can race two /start calls for the same student+test — the
+        // second hits the testId_studentId unique constraint. Not an error: just return the
+        // attempt the first request already created, instead of a 500 that leaves the student
+        // stuck on "Could not start test" for something that actually succeeded.
+        if (err.code === "P2002") {
+          attempt = await prisma.testAttempt.findUnique({ where: { testId_studentId: { testId, studentId: req.user.id } } });
+        } else {
+          throw err;
+        }
+      }
     }
     // Include already-saved submissions (auto-saved MCQ answers, locked coding submissions)
     // so a page refresh mid-test restores exactly where the candidate left off.
@@ -691,7 +706,7 @@ router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), attachRe
 // --- STUDENT: view their own result for a test, respecting the test's showResults toggle ---
 router.get("/:id/my-result", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const test = await prisma.test.findUnique({ where: { id: req.params.id } });
+    const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { id: true, showResults: true, passingMarks: true } });
     if (!test) return res.status(404).json({ error: "Test not found" });
 
     const attempt = await prisma.testAttempt.findUnique({
