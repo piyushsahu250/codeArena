@@ -8,6 +8,7 @@ const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCod
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { questionVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -157,7 +158,7 @@ router.post("/preview-starter-code", authenticate, requireRole("ADMIN", "STAFF")
     for (const lang of supported) starterCodeByLanguage[lang] = generateStarterCode(lang, functionSignature);
     res.json({ starterCodeByLanguage, supportedLanguages: supported });
   } catch (err) {
-    res.status(400).json({ error: err.message || "Invalid function signature" });
+    res.status(400).json({ error: safeErrorMessage(err, "Invalid function signature") });
   }
 });
 
@@ -293,7 +294,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
     res.json(question);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to create question" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to create question") });
   }
 });
 
@@ -930,7 +931,7 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
         (await existingDescriptions(folderId)).add(descKey);
         created.push(question);
       } catch (err) {
-        errors.push({ row: rowNum, reason: err.message || "Failed to create question" });
+        errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
       }
     }
 
@@ -1203,7 +1204,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
         titles.add(titleKey);
         created.push(question);
       } catch (err) {
-        errors.push({ row: rowNum, reason: err.message || "Failed to create question" });
+        errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
       }
     }
 
@@ -1360,7 +1361,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     res.json(question);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update question" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update question") });
   }
 });
 

@@ -43,9 +43,14 @@ router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
   }
 });
 
-// ADMIN: edit details, or toggle active/inactive
-router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+// ADMIN: edit details, or toggle active/inactive. Institute-scoped Admins may only edit their
+// own institute — same ownership check as GET /:id/profile-completion-stats below; an unscoped
+// Platform Admin (no instituteId) may edit any institute.
+router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    if (req.requesterInstituteId && req.requesterInstituteId !== req.params.id) {
+      return res.status(403).json({ error: "You can only manage your own institute's settings" });
+    }
     const existing = await prisma.institute.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Institute not found" });
 
@@ -92,9 +97,13 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   }
 });
 
-// ADMIN: delete an institute — only if no dependent classes or users exist
-router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+// ADMIN: delete an institute — only if no dependent classes or users exist. Same ownership
+// scoping as PATCH /:id above — an institute-scoped Admin cannot delete a different institute.
+router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    if (req.requesterInstituteId && req.requesterInstituteId !== req.params.id) {
+      return res.status(403).json({ error: "You can only manage your own institute's settings" });
+    }
     // A class with zero enrolled users carries no real data to lose (its only other links —
     // TestClass, StaffClassAssignment — cascade harmlessly, same reasoning as
     // deleteAcademicGroupIfEmpty() for AcademicGroup/Department). Clearing these first means an
@@ -130,9 +139,12 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
 // how many of its students are actively learning each one, certificates issued, and coding-
 // assessment performance. Course counts per institute are small, so per-course stats are computed
 // with a plain loop rather than a single aggregate query.
-router.get("/:id/course-analytics", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/:id/course-analytics", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.params.id;
+    if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {
+      return res.status(403).json({ error: "You can only view your own institute's data" });
+    }
     const institute = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true, name: true } });
     if (!institute) return res.status(404).json({ error: "Institute not found" });
 

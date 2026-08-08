@@ -21,6 +21,7 @@ const { COMPANIES } = require("../utils/companies");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -1103,7 +1104,7 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), asy
     res.json(q);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to create question" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to create question") });
   }
 });
 
@@ -1154,7 +1155,7 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF")
     res.json(q);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update question" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update question") });
   }
 });
 

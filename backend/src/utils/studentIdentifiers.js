@@ -19,6 +19,25 @@ function initRollNumberFromRegistration(registrationNumber) {
   return cleaned.slice(-3);
 }
 
+// Roll Number must be unique within one Academic Group (Institute + Batch + Department + Section)
+// but duplicates ARE expected across different groups — so collision-avoidance is scoped by
+// whatever `takenRollNumbers` set the caller passes in (that group's other students' current Roll
+// Numbers). Tries the default last-3-characters first, then slides that 3-character window one
+// position left through the rest of the PRN on each collision — every candidate is always a real
+// substring of this student's own PRN, so the platform's "never a DUP prefix" rule is never
+// violated. Falls back to the plain last-3 value (accepting a rare residual collision) only if the
+// entire PRN is exhausted, rather than blocking account creation outright.
+function resolveRollNumberAvoidingCollisions(registrationNumber, takenRollNumbers) {
+  const cleaned = String(registrationNumber || "").trim();
+  if (cleaned.length < 3) return null;
+  const taken = takenRollNumbers instanceof Set ? takenRollNumbers : new Set(takenRollNumbers || []);
+  for (let end = cleaned.length; end - 3 >= 0; end--) {
+    const candidate = cleaned.slice(end - 3, end);
+    if (!taken.has(candidate)) return candidate;
+  }
+  return cleaned.slice(-3);
+}
+
 // Ascending Roll Number comparator for bounded, already-fetched lists (a class roster, one Talent
 // Pool's members, one exam's entries). Numeric roll numbers sort first in ascending numeric order
 // ("1, 2, 3 ... 60", not lexicographic "1, 10, 2..."); non-numeric or blank values sort last, tied
@@ -42,4 +61,4 @@ function compareRollNumbers(a, b) {
   return String(a?.name || "").localeCompare(String(b?.name || ""));
 }
 
-module.exports = { initRollNumberFromRegistration, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH };
+module.exports = { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH };

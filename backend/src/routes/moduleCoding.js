@@ -13,6 +13,7 @@ const { resolveCodingFields } = require("../utils/functionHarness");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -848,7 +849,7 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
         seenTitles.add(titleKey);
         created.push(question);
       } catch (err) {
-        errors.push({ row: rowNum, reason: err.message || "Failed to create question" });
+        errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
       }
     }
 

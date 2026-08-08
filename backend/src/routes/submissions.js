@@ -6,6 +6,7 @@ const { judgeSubmission } = require("../utils/judge");
 const { runQueued, getQueueStatus } = require("../utils/queue");
 const { gradePendingCodingSubmissions, gradeCodingSubmission, recomputeAttemptScore } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 
@@ -105,7 +106,7 @@ router.post("/run", authenticate, requireRole("STUDENT"), execLimiter, async (re
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Execution failed" });
+    res.status(500).json({ error: safeErrorMessage(err, "Failed to run your code. Please try again in a moment.") });
   }
 });
 
@@ -150,7 +151,7 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
     res.json({ status: "SAVED" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Autosave failed" });
+    res.status(500).json({ error: safeErrorMessage(err, "Failed to save your code — your latest changes may not be saved. Please try again.") });
   }
 });
 
@@ -192,7 +193,7 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
     res.json(sanitizeCodingResult(result));
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Submission failed" });
+    res.status(500).json({ error: safeErrorMessage(err, "Failed to submit your code. Please try again — if this keeps happening, contact your proctor.") });
   }
 });
 
@@ -264,7 +265,7 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
     res.json({ submissionId: submission.id, execution: sanitizeSubmitResponse(question, result) });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Submission failed" });
+    res.status(500).json({ error: safeErrorMessage(err, "Failed to save your answer. Please try again.") });
   }
 });
 
@@ -325,7 +326,7 @@ router.post("/finalize/:attemptId", authenticate, requireRole("STUDENT"), async 
     res.json({ ...updated, gamification });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to submit test" });
+    res.status(500).json({ error: safeErrorMessage(err, "Failed to submit your test. Please try again immediately — if this persists, contact your proctor so your submission isn't lost.") });
   }
 });
 

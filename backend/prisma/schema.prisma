@@ -2340,6 +2340,7 @@ model LecturePlan {
   @@unique([assignmentId, lectureNumber])
   @@unique([assignmentId, testId])
   @@index([assignmentId, scheduleDate])
+  @@index([createdById])
 }
 
 // The "Execute Attendance" record — created only once a plan's attendance is actually marked
@@ -2365,6 +2366,7 @@ model AttendanceSession {
   records AttendanceRecord[]
 
   @@index([testId])
+  @@index([markedById])
 }
 
 model AttendanceRecord {

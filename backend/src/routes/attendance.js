@@ -12,6 +12,7 @@ const { testEligibilityWhere } = require("../utils/testEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { compareRollNumbers } = require("../utils/studentIdentifiers");
 const { computeAttendancePercent } = require("../utils/attendanceStats");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -677,7 +678,7 @@ router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requir
         await prisma.lecturePlan.create({ data });
         createdCount++;
       } catch (err) {
-        errors.push({ row: "-", reason: `Failed to save lecture ${data.lectureNumber}: ${err.message || "unknown error"}` });
+        errors.push({ row: "-", reason: `Failed to save lecture ${data.lectureNumber}: ${safeErrorMessage(err, "unknown error")}` });
       }
     }
 

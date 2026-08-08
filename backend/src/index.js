@@ -162,6 +162,22 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/results", resultManagementRoutes);
 app.use("/api/staff-clerk", staffClerkRoutes);
 
+// Global 4-arg error handler — must be mounted after every route above so any error a route
+// hands to next(err) (or an unhandled synchronous throw) lands here instead of Express's default
+// HTML/plain-text handler. This is specifically what makes Multer's file-size-limit error (thrown
+// by the upload middleware BEFORE a route's own try/catch ever runs, on every bulk-upload route
+// across the platform) come back as clean JSON instead of a raw response the frontend can't parse.
+app.use((err, req, res, next) => {
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "File size exceeds the allowed limit (5 MB). Please upload a smaller file." });
+  }
+  if (err?.name === "MulterError") {
+    return res.status(400).json({ error: "File upload failed. Please check the file and try again." });
+  }
+  logger.error("unhandled route error", { message: err?.message, stack: err?.stack, path: req.path });
+  res.status(err?.statusCode || 500).json({ error: "Something went wrong. Please try again." });
+});
+
 process.on("uncaughtException", (err) => {
   logger.error("uncaughtException", { message: err?.message, stack: err?.stack });
   recordProcessError(err, "uncaughtException");

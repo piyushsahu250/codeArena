@@ -13,6 +13,7 @@ router.get("/", authenticate, async (req, res) => {
     const companies = await prisma.company.findMany({
       where: { isActive: true },
       orderBy: { name: "asc" },
+      take: 2000,
     });
     res.json(companies);
   } catch (err) {

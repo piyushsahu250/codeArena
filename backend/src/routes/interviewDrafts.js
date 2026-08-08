@@ -5,6 +5,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateQuestionDrafts, generateCompanyPatternNote } = require("../utils/interviewDraftGenerator");
 const { COMPANIES } = require("../utils/companies");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN
   } catch (err) {
     console.error(err);
     if (err.notConfigured) return res.status(503).json({ error: err.message });
-    res.status(400).json({ error: err.message || "Failed to generate drafts" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to generate drafts") });
   }
 });
 
@@ -65,7 +66,7 @@ router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "
     res.json(updated);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update draft" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update draft") });
   }
 });
 
@@ -122,7 +123,7 @@ router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("AD
     res.json(question);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to approve draft" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to approve draft") });
   }
 });
 
@@ -167,7 +168,7 @@ router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN"
   } catch (err) {
     console.error(err);
     if (err.notConfigured) return res.status(503).json({ error: err.message });
-    res.status(400).json({ error: err.message || "Failed to generate pattern note" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to generate pattern note") });
   }
 });
 
@@ -189,7 +190,7 @@ router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "S
     res.json(updated);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update pattern note" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update pattern note") });
   }
 });
 

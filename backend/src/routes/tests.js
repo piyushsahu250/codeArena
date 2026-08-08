@@ -6,6 +6,7 @@ const { gradePendingCodingSubmissions } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
 const { isTestVisibleToStudent, studentCanAccessTest, testEligibilityWhere } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 
@@ -179,7 +180,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
     res.json(test);
   } catch (err) {
     console.error(err);
-    res.status(err.statusCode || 400).json({ error: err.message || "Failed to create test" });
+    res.status(err.statusCode || 400).json({ error: safeErrorMessage(err, "Failed to create test") });
   }
 });
 
@@ -266,7 +267,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     res.json(test);
   } catch (err) {
     console.error(err);
-    res.status(err.statusCode || 400).json({ error: err.message || "Failed to update test" });
+    res.status(err.statusCode || 400).json({ error: safeErrorMessage(err, "Failed to update test") });
   }
 });
 

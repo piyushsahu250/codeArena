@@ -13,6 +13,7 @@ const { askClaude } = require("../utils/aiClient");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
+const { safeErrorMessage } = require("../utils/errors");
 const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
@@ -1265,7 +1266,7 @@ router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN"), async 
     res.json(q);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to create practice question" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to create practice question") });
   }
 });
 
@@ -1343,7 +1344,7 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN"), async (req, re
     res.json(q);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update practice question" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update practice question") });
   }
 });
 

@@ -14,7 +14,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
-const { initRollNumberFromRegistration, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
+const { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -101,6 +101,31 @@ async function resolveAcademicGroup({ instituteId, batchYear, departmentName, se
   }
   if (cache) cache.set(key, group);
   return group;
+}
+
+// Roll Number must be unique within one Academic Group (Institute+Batch+Department+Section) but
+// duplicates ARE expected across different groups — so every lookup here is scoped by
+// academicGroupId, never platform-wide (that's Registration Number's job, enforced via the DB's
+// own @@unique([registrationNumber])).
+async function fetchTakenRollNumbers(academicGroupId, excludeUserId) {
+  if (!academicGroupId) return new Set();
+  const rows = await prisma.user.findMany({
+    where: { academicGroupId, role: "STUDENT", rollNumber: { not: null }, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
+    select: { rollNumber: true },
+  });
+  return new Set(rows.map((r) => r.rollNumber));
+}
+
+// Used only when an admin manually types/edits a Roll Number (not the auto-derive path) — a
+// same-group collision is a real human mistake, so it's rejected outright with a specific error
+// rather than silently resolved, per the platform's error-message-quality standard.
+async function findRollNumberClash(academicGroupId, rollNumber, excludeUserId) {
+  if (!academicGroupId || !rollNumber) return null;
+  const clash = await prisma.user.findFirst({
+    where: { academicGroupId, role: "STUDENT", rollNumber, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
+    select: { name: true },
+  });
+  return clash?.name || null;
 }
 
 function normalizeHeader(str) {
@@ -283,9 +308,9 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
 
     // Registration Number (PRN) is the platform's sole permanent, system-wide unique student
     // identifier (see @@unique([registrationNumber]) on User) — checked before create rather than
-    // left to surface as a raw DB constraint error. Roll Number is intentionally NOT unique
-    // (classroom number, duplicates across departments/institutes are expected by design), so it
-    // gets no such check.
+    // left to surface as a raw DB constraint error. Roll Number is unique only within one Academic
+    // Group (Institute+Batch+Department+Section) — duplicates across different groups are expected
+    // by design, but a collision inside the SAME group is not allowed.
     let normalizedRollNumber = String(rollNumber || "").trim() || null;
     let normalizedRegNumber = String(registrationNumber || "").trim() || null;
     if (normalizedRegNumber && !REGISTRATION_NUMBER_RE.test(normalizedRegNumber)) {
@@ -298,8 +323,14 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
       const dupReg = await prisma.user.findFirst({ where: { registrationNumber: normalizedRegNumber } });
       if (dupReg) return res.status(409).json({ error: `Registration Number "${normalizedRegNumber}" is already registered to another account` });
     }
-    if (role === "STUDENT" && !normalizedRollNumber && normalizedRegNumber) {
-      normalizedRollNumber = initRollNumberFromRegistration(normalizedRegNumber);
+    if (role === "STUDENT" && normalizedRollNumber) {
+      // Manually supplied Roll Number: reject a same-group collision outright rather than silently
+      // resolving it — this is an explicit human entry, so a clear error is the correct UX.
+      const clashName = await findRollNumberClash(academicGroup?.id, normalizedRollNumber, null);
+      if (clashName) return res.status(409).json({ error: `Roll Number "${normalizedRollNumber}" is already used by ${clashName} in this Batch/Department/Section — choose a different Roll Number.` });
+    } else if (role === "STUDENT" && normalizedRegNumber) {
+      const taken = await fetchTakenRollNumbers(academicGroup?.id, null);
+      normalizedRollNumber = resolveRollNumberAvoidingCollisions(normalizedRegNumber, taken);
     }
     if (String(employeeId || "").trim()) {
       const dupEmployee = await prisma.user.findFirst({ where: { instituteId, employeeId: String(employeeId).trim() } });
@@ -417,9 +448,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     if (data.mobile !== undefined && data.mobile !== null && data.mobile !== "") {
       if (!MOBILE_RE.test(String(data.mobile).trim())) return res.status(400).json({ error: "Invalid mobile number" });
     }
-    // Roll Number is intentionally NOT unique (classroom number — duplicates across departments/
-    // institutes are expected by design), so it's only ever normalized here, never uniqueness-
-    // checked. Blank input is normalized to `null`, never left as `""`.
+    // Roll Number is unique only within one Academic Group (Institute+Batch+Department+Section) —
+    // duplicates across different groups are expected by design. Normalized here (blank -> null,
+    // never left as ""); the actual same-group collision check happens further down, once the
+    // student's final target Academic Group is known (it may itself be changing in this request).
     if (data.rollNumber !== undefined) {
       data.rollNumber = String(data.rollNumber || "").trim() || null;
       if (data.rollNumber && data.rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
@@ -443,12 +475,9 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
           if (dupReg) return res.status(409).json({ error: "That Registration Number (PRN) is already registered to another account" });
         }
         data.registrationNumber = registrationNumber;
-        // Whenever the PRN actually changes, Roll Number auto-resets to its last 3 characters —
-        // unless this same request also explicitly supplied a rollNumber, in which case that
-        // explicit value wins (already validated/normalized above).
-        if (registrationNumber !== existing.registrationNumber && req.body.rollNumber === undefined) {
-          data.rollNumber = initRollNumberFromRegistration(registrationNumber);
-        }
+        // Whenever the PRN actually changes, Roll Number auto-resets from it (collision-checked
+        // against the target Academic Group further down) — unless this same request also
+        // explicitly supplied a rollNumber, in which case that explicit value wins.
       }
     }
     // Same NULL-tolerant per-institute uniqueness (and the same blank->null normalization) as
@@ -480,6 +509,34 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
         section: data.section !== undefined ? data.section : existing.section,
       });
       data.academicGroupId = group.id;
+    }
+
+    // Roll Number same-group collision check/resolution — runs last, once the student's final
+    // target Academic Group (possibly just re-resolved above) and final Registration Number are
+    // both known.
+    if (existing.role === "STUDENT") {
+      const targetAcademicGroupId = data.academicGroupId !== undefined ? data.academicGroupId : existing.academicGroupId;
+      const rollNumberExplicitlyEdited = req.body.rollNumber !== undefined;
+      const prnChanged = data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber;
+      const groupChanged = data.academicGroupId !== undefined && data.academicGroupId !== existing.academicGroupId;
+
+      if (rollNumberExplicitlyEdited) {
+        if (data.rollNumber) {
+          const clashName = await findRollNumberClash(targetAcademicGroupId, data.rollNumber, existing.id);
+          if (clashName) return res.status(409).json({ error: `Roll Number "${data.rollNumber}" is already used by ${clashName} in this Batch/Department/Section — choose a different Roll Number.` });
+        }
+      } else if (prnChanged) {
+        const taken = await fetchTakenRollNumbers(targetAcademicGroupId, existing.id);
+        data.rollNumber = resolveRollNumberAvoidingCollisions(data.registrationNumber, taken);
+      } else if (groupChanged && existing.rollNumber) {
+        // Student moved to a different group without touching Roll Number or PRN — only re-derive
+        // if the existing value actually collides with someone already in the NEW group; otherwise
+        // leave it untouched (don't overwrite valid data that doesn't need fixing).
+        const taken = await fetchTakenRollNumbers(targetAcademicGroupId, existing.id);
+        if (taken.has(existing.rollNumber) && existing.registrationNumber) {
+          data.rollNumber = resolveRollNumberAvoidingCollisions(existing.registrationNumber, taken);
+        }
+      }
     }
 
     const changedFields = Object.keys(data).filter((f) => String(existing[f] ?? "") !== String(data[f] ?? ""));
@@ -593,6 +650,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
     const seenRegNumbers = new Set();
     const instituteByName = new Map(institutes.map((i) => [i.name.toLowerCase(), i]));
     const groupCache = new Map(); // reused across rows sharing the same (institute, batch, department, section)
+    const groupRollNumberCache = new Map(); // academicGroupId -> Set of Roll Numbers already used in that group (DB + rows already created this run)
 
     const created = [];
     const duplicates = [];
@@ -607,7 +665,9 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       const registrationNumber = field(row, "registrationNumber");
       // Never read from a "Roll Number" file column — always derived from the Registration
       // Number's last 3 characters, matching the single-create and admin-edit paths' auto-reset
-      // behavior (see initRollNumberFromRegistration).
+      // behavior. This is only a preview for error/duplicate row reporting below — the actual
+      // saved value is resolved for same-group collisions once the row's Academic Group is known
+      // (see the try block further down).
       const rollNumber = initRollNumberFromRegistration(registrationNumber) || "";
       const email = field(row, "email").toLowerCase();
       const mobile = field(row, "mobile");
@@ -667,9 +727,15 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
 
       try {
         const group = await resolveAcademicGroup({ instituteId: institute.id, batchYear, departmentName: department, section }, groupCache);
+        if (!groupRollNumberCache.has(group.id)) {
+          groupRollNumberCache.set(group.id, await fetchTakenRollNumbers(group.id, null));
+        }
+        const takenInGroup = groupRollNumberCache.get(group.id);
+        const finalRollNumber = resolveRollNumberAvoidingCollisions(registrationNumber, takenInGroup);
+        if (finalRollNumber) takenInGroup.add(finalRollNumber);
         const user = await prisma.user.create({
           data: {
-            name, email, registrationNumber, rollNumber: rollNumber || null, passwordHash, role: "STUDENT",
+            name, email, registrationNumber, rollNumber: finalRollNumber || null, passwordHash, role: "STUDENT",
             mobile: mobile || null,
             department: department || null,
             program: program || null,

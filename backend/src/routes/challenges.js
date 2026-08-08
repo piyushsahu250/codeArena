@@ -6,6 +6,7 @@ const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { processGamification } = require("../utils/gamification");
 const { resolveMostSpecificChallenge, loadStudentScope } = require("../utils/challengeScoping");
+const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
 
@@ -331,7 +332,7 @@ router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req,
     res.json(dc);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update scheduled challenge" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update scheduled challenge") });
   }
 });
 
@@ -368,7 +369,7 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN"), async (req, res)
     res.json(dc);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to schedule daily challenge" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to schedule daily challenge") });
   }
 });
 
@@ -412,7 +413,7 @@ router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN"), async (req
     res.json(wc);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to update scheduled challenge" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to update scheduled challenge") });
   }
 });
 
@@ -447,7 +448,7 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res
     res.json(wc);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: err.message || "Failed to schedule weekly challenge" });
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to schedule weekly challenge") });
   }
 });
 
