@@ -71,7 +71,12 @@ export default function AttendanceHome() {
                   </>
                 )}
                 <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => navigate(`/staff/attendance/${a.id}?tab=plans&addPlan=1`)}>Add Plan</button>
+                  {/* Talent Pool attendance plans are auto-generated from the pool's assigned
+                      assessments (see routes/attendance.js's syncTalentPoolPlans) — there's
+                      nothing to manually add here, unlike the regular division workflow. */}
+                  {!a.talentPoolId && (
+                    <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => navigate(`/staff/attendance/${a.id}?tab=plans&addPlan=1`)}>Add Plan</button>
+                  )}
                   <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate(`/staff/attendance/${a.id}?tab=mark`)}>Mark Attendance</button>
                 </div>
               </div>

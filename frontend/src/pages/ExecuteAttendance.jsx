@@ -94,9 +94,13 @@ export default function ExecuteAttendance() {
         setEligibleTests(eligibleTests);
         const next = {};
         roster.forEach((s) => (next[s.id] = "PRESENT"));
+        // A Talent-Pool auto-generated plan already carries its own testId (see schema.prisma) —
+        // pre-select it even before a session exists, so the fixed-test label below always has a
+        // value to show and `save()` never needs the (never-rendered) dropdown for these plans.
+        if (plan.testId) setTestId(plan.testId);
         if (plan.session) {
           plan.session.records.forEach((r) => (next[r.studentId] = r.status));
-          setTestId(plan.session.testId || "");
+          setTestId(plan.session.testId || plan.testId || "");
           const who = plan.session.updatedBy?.name || plan.session.markedBy?.name;
           const when = plan.session.updatedBy ? plan.session.updatedAt : plan.session.markedAt;
           if (who) setAuditNote(`Last updated by ${who} at ${new Date(when).toLocaleString()}`);
@@ -183,7 +187,17 @@ export default function ExecuteAttendance() {
           {auditNote && <p style={{ fontSize: 12, color: "var(--amber)", marginTop: 6 }}>{auditNote}</p>}
         </div>
 
-        {requiresTest && (
+        {/* A Talent-Pool auto-generated plan already knows exactly which Test it represents (see
+            schema.prisma's LecturePlan.testId) — nothing to pick, so show it as a fixed label
+            instead of the manual-workflow's dropdown. */}
+        {requiresTest && plan.testId && (
+          <div className="card" style={{ padding: 16, marginTop: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Assessment</div>
+            <div style={{ fontSize: 13 }}>{plan.test?.title || "This assessment"}</div>
+          </div>
+        )}
+
+        {requiresTest && !plan.testId && (
           <div className="card" style={{ padding: 16, marginTop: 20 }}>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Select Test</label>
             <select

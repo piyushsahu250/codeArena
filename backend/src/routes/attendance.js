@@ -156,6 +156,56 @@ function eligibleTestsWhere(assignment, now) {
   return { ...base, ...testEligibilityWhere(assignment.academicGroupId, assignment.classId, [], instituteId) };
 }
 
+// Talent Pool attendance owners never manually click "Add Plan" (see the frontend change hiding
+// that button for talentPoolId assignments) — instead, one LecturePlan is kept in sync per
+// attendance-mandatory Test currently assigned to the pool, so the assigned staff always sees
+// exactly as many plans as the pool has mandatory assessments, with no manual creation step. Only
+// ever creates plans (never edits/deletes existing ones — if a test stops being attendance-
+// mandatory or gets unassigned from the pool, its already-generated plan/session/records are left
+// alone, same "don't retroactively erase attendance history" posture the rest of this module
+// already takes). Idempotent: safe to call on every plans-list load.
+async function syncTalentPoolPlans(assignment) {
+  if (!assignment.talentPoolId) return;
+  const poolTests = await prisma.talentPoolTest.findMany({
+    where: { poolId: assignment.talentPoolId, test: { attendanceMandatory: true } },
+    select: { test: { select: { id: true, title: true, startTime: true, endTime: true } } },
+  });
+  if (poolTests.length === 0) return;
+
+  const existingPlans = await prisma.lecturePlan.findMany({
+    where: { assignmentId: assignment.id },
+    select: { testId: true, lectureNumber: true },
+  });
+  const existingTestIds = new Set(existingPlans.filter((p) => p.testId).map((p) => p.testId));
+  const missing = poolTests.filter(({ test }) => !existingTestIds.has(test.id));
+  if (missing.length === 0) return;
+
+  let nextLectureNumber = existingPlans.length ? Math.max(...existingPlans.map((p) => p.lectureNumber)) + 1 : 1;
+  for (const { test } of missing) {
+    await prisma.lecturePlan
+      .create({
+        data: {
+          assignmentId: assignment.id,
+          testId: test.id,
+          lectureNumber: nextLectureNumber++,
+          subject: assignment.subject,
+          topic: test.title,
+          scheduleDate: normalizeDate(new Date(test.startTime).toISOString().slice(0, 10)),
+          slotLabel: "Other",
+          startTime: new Date(test.startTime).toISOString().slice(11, 16),
+          endTime: new Date(test.endTime).toISOString().slice(11, 16),
+          lectureType: "EXAM",
+          createdById: assignment.staffId,
+        },
+      })
+      .catch((err) => {
+        // A concurrent sync (two tabs/requests racing) can hit the (assignmentId, testId) unique
+        // constraint — safe to ignore, that's exactly what keeps this idempotent.
+        if (err.code !== "P2002") throw err;
+      });
+  }
+}
+
 // ===================== Admin: Department CRUD =====================
 
 router.get("/admin/departments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
@@ -501,13 +551,14 @@ router.get("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN"
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
+    await syncTalentPoolPlans(assignment);
     const plans = await prisma.lecturePlan.findMany({
       where: { assignmentId: assignment.id },
       // Lecture Number is unique per assignment (assignmentId_lectureNumber) and is the sequence
       // that actually matters for Course Plan / Lecture List / Faculty View — scheduleDate can
       // drift out of numeric order whenever a lecture gets rescheduled or backfilled.
       orderBy: { lectureNumber: "asc" },
-      include: { session: { select: { id: true } } },
+      include: { session: { select: { id: true } }, test: { select: { id: true, title: true } } },
     });
     res.json(plans);
   } catch (err) {
@@ -520,6 +571,13 @@ router.post("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
+    // Talent Pool attendance plans are auto-generated from the pool's assigned tests (see
+    // syncTalentPoolPlans) — manual creation is blocked here the same way the frontend already
+    // hides the "Add Plan" button for these assignments, so a direct API call can't create a
+    // conflicting/orphaned plan with no linked test.
+    if (assignment.talentPoolId) {
+      return res.status(400).json({ error: "Talent Pool attendance plans are generated automatically from the pool's assigned assessments — there's nothing to add manually." });
+    }
     const { data, error } = validatePlanInput(req.body);
     if (error) return res.status(400).json({ error });
 
@@ -556,6 +614,9 @@ router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requir
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
+    if (assignment.talentPoolId) {
+      return res.status(400).json({ error: "Talent Pool attendance plans are generated automatically from the pool's assigned assessments — there's nothing to bulk-upload." });
+    }
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     let workbook;
@@ -686,6 +747,7 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
     const plan = await prisma.lecturePlan.findUnique({
       where: { id: req.params.planId },
       include: {
+        test: { select: { id: true, title: true } }, // set only on a Talent-Pool auto-generated plan — see schema.prisma
         session: {
           include: {
             records: { select: { studentId: true, status: true } },
@@ -714,8 +776,11 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
         },
       })
       .then((rows) => rows.sort(compareRollNumbers)); // ascending Roll Number (numeric-aware); this is one division's roster, small enough to sort in JS
+    // A Talent-Pool auto-generated plan already carries its own testId (see schema.prisma), so
+    // there's nothing to pick — skip the eligible-test query entirely and let the frontend render
+    // that one test as a fixed label instead of a dropdown.
     const eligibleTests =
-      plan.lectureType === "REGULAR"
+      plan.testId || plan.lectureType === "REGULAR"
         ? []
         : await prisma.test.findMany({
             where: eligibleTestsWhere(assignment, now),
@@ -741,9 +806,13 @@ router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate,
 
     // Practice Test / Exam lectures must be linked to a real, currently-eligible test — re-derived
     // server-side (never trusts the client's already-filtered dropdown) so a stale/expired/
-    // non-mandatory test id can't be slipped through.
+    // non-mandatory test id can't be slipped through. A Talent-Pool auto-generated plan already
+    // has its testId fixed at creation (see schema.prisma) — trust that directly instead of
+    // re-deriving from eligibleTestsWhere, since the client never even shows a picker for it.
     let testId = null;
-    if (plan.lectureType !== "REGULAR") {
+    if (plan.testId) {
+      testId = plan.testId;
+    } else if (plan.lectureType !== "REGULAR") {
       const now = new Date();
       const eligible = await prisma.test.findMany({
         where: eligibleTestsWhere(assignment, now),

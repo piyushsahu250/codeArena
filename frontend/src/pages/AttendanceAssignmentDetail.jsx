@@ -148,11 +148,19 @@ export default function AttendanceAssignmentDetail() {
           <button className={`btn ${tab === "mark" ? "btn-dark" : "btn-ghost"}`} style={{ borderRadius: "8px 8px 0 0" }} onClick={() => setTab("mark")}>Mark Attendance</button>
         </div>
 
-        {tab === "plans" && (
+        {/* Talent Pool attendance plans are auto-generated from the pool's assigned assessments
+            (see routes/attendance.js's syncTalentPoolPlans) — no manual add/bulk-upload entry
+            point for these, unlike the regular division workflow. */}
+        {tab === "plans" && !assignment?.talentPoolId && (
           <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
             <button className="btn btn-primary" onClick={openAddPlan}>+ Add Plan</button>
             <button className="btn btn-ghost" onClick={() => downloadTemplate(assignmentId)}>Download Excel Template</button>
           </div>
+        )}
+        {tab === "plans" && assignment?.talentPoolId && (
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 20 }}>
+            These attendance plans are generated automatically, one per attendance-mandatory assessment assigned to this Talent Pool.
+          </p>
         )}
 
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 16 }}>{error}</p>}

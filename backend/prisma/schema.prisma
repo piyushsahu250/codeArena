@@ -299,6 +299,9 @@ model Test {
   // Attendance Management: when Lecture Type = Exam, a session can link back to the Test being
   // administered, so exam attendance is tied to the actual test rather than duplicated.
   attendanceSessions AttendanceSession[]
+  // Talent Pool attendance: the auto-generated LecturePlan (if any) that represents this Test for
+  // a pool's attendance owner — see LecturePlan.testId.
+  lecturePlans       LecturePlan[]
 
   @@index([createdById])
   @@index([isPublished])
@@ -2318,6 +2321,15 @@ model LecturePlan {
   startTime    String // e.g. "09:50"
   endTime      String // e.g. "10:45"
   lectureType  LectureType @default(REGULAR)
+  // Set only for a Talent Pool attendance owner's auto-generated plans (see routes/attendance.js's
+  // syncTalentPoolPlans) — pins this plan to the exact Test it represents, so re-syncing is
+  // idempotent (never creates a second plan for the same test) and Execute can skip the manual
+  // eligible-test dropdown, already knowing which Test to mark attendance for. Always null for the
+  // regular, manually-created division/class plans this model was originally built for — the
+  // @@unique below only constrains rows where it's actually set (Postgres treats every NULL as
+  // distinct), so it can never collide with the existing regular-plan workflow.
+  test         Test?       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId       String?
   createdBy    User     @relation("LecturePlanCreatedBy", fields: [createdById], references: [id])
   createdById  String
   createdAt    DateTime @default(now())
@@ -2326,6 +2338,7 @@ model LecturePlan {
   session AttendanceSession?
 
   @@unique([assignmentId, lectureNumber])
+  @@unique([assignmentId, testId])
   @@index([assignmentId, scheduleDate])
 }
 
