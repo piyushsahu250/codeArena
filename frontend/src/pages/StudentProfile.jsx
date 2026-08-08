@@ -532,14 +532,14 @@ export default function StudentProfile() {
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Parents' Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Father's Name</label><input style={inputStyle} value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Father's Contact Number</label><input style={inputStyle} value={form.fatherContact} onChange={(e) => setForm({ ...form, fatherContact: e.target.value })} /></div>
-              <div><label style={labelStyle}>Mother's Name</label><input style={inputStyle} value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Mother's Contact Number</label><input style={inputStyle} value={form.motherContact} onChange={(e) => setForm({ ...form, motherContact: e.target.value })} /></div>
+              <div><label style={labelStyle}>Father's Name *</label><input style={inputStyle} value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value })} /></div>
+              <div><label style={labelStyle}>Father's Contact Number *</label><input style={inputStyle} value={form.fatherContact} onChange={(e) => setForm({ ...form, fatherContact: e.target.value })} /></div>
+              <div><label style={labelStyle}>Mother's Name *</label><input style={inputStyle} value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value })} /></div>
+              <div><label style={labelStyle}>Mother's Contact Number *</label><input style={inputStyle} value={form.motherContact} onChange={(e) => setForm({ ...form, motherContact: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>About</div>
-            <label style={labelStyle}>Short Description</label>
+            <label style={labelStyle}>Short Description *</label>
             <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} placeholder="A couple of sentences about yourself" />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Profile Picture</div>
