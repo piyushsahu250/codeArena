@@ -33,6 +33,7 @@ Single `main` branch, direct pushes deploy both backend (Render) and frontend (V
   - `frontend`: `npm install`, `npm run build`.
   - This gate does **not** replace Render/Vercel's own deploy — it's an additional catch-before-it-ships check.
 - No separate staging environment — `main` deploys straight to production for both frontend and backend.
+- **`.github/workflows/docs-sync.yml`** (added 2026-08-08): runs daily (03:00 UTC), on `workflow_dispatch`, and on any push to `main` touching `backend/prisma/schema.prisma` or `backend/src/routes/**`. Executes `scripts/docSync.js`, which recounts API endpoints and Prisma models/enums directly from source and compares them to `docs/platform-manifest.json`. If they've drifted, it updates the manifest's counts and appends a dated `docs/CHANGELOG.md` entry, then commits as `github-actions[bot]`. **Scope is deliberately narrow**: this is a mechanical count-check, not an AI rewrite — it never touches prose in the other 40 doc files. A drift entry is a signal that a human (or an AI session with repo access) still needs to update the relevant narrative docs; see [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) for that checklist.
 
 ## Build Process
 

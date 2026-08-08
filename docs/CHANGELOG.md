@@ -47,6 +47,7 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 
 ### Documentation
 - Created the full `/docs` documentation set for the first time (this entry) — 41 files, [README.md](README.md), [AI_HANDOVER.md](AI_HANDOVER.md), [platform-manifest.json](platform-manifest.json), and everything cross-referenced from them.
+- Added `scripts/docSync.js` + `.github/workflows/docs-sync.yml`: a scheduled (daily 03:00 UTC) + schema/route-triggered job that mechanically recounts API endpoints and Prisma models/enums and auto-commits an update to `platform-manifest.json` + this file when they've drifted from what's recorded. **This does not use AI and does not rewrite prose** — it only keeps three numeric facts honest; narrative doc updates (steps 1-9 of [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)'s checklist) are still manual. Documenting this explicitly so it is never mistaken for full documentation automation.
 
 ### Testing
 - No automated test suite exists; all fixes above were verified via code review plus a live deploy + `/api/health` commit-hash poll (backend commits `e4bf8a1`, `d67d7ef`; frontend commit `994c5b5` via Vercel auto-deploy). See [TESTING.md](TESTING.md).

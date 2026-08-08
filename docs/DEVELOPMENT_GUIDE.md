@@ -41,6 +41,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the full process. In short: commit, push 
 10. Bump [platform-manifest.json](platform-manifest.json)'s `documentationVersion` (patch bump for a small fix, minor bump for a new feature, major bump for an architectural change) and `lastUpdated` date.
 11. Never silently edit documentation without a corresponding [CHANGELOG.md](CHANGELOG.md) entry recording *why*.
 
+**Partial automation exists for step 10's counts only** (added 2026-08-08): `.github/workflows/docs-sync.yml` runs daily and on schema/route changes, recounting API endpoints and Prisma models/enums from source and auto-committing an update to `platform-manifest.json` + a CHANGELOG.md entry if they've drifted. It does **not** perform steps 1-9 — it cannot tell you *why* a count changed or update any prose doc. Treat its CHANGELOG entries as a todo list, not a completed update.
+
 ## Verifying Before Trusting a Claim in Any Doc
 
 Per [README.md](README.md)'s accuracy policy: a memory or doc entry that names a specific function, file, route, or flag is a claim that it existed *at the time it was written*. Before recommending or relying on it for something the user will act on, check the file still exists / the route is still there / the flag is still read — code changes; documentation can go stale. If you find a discrepancy, fix the documentation (with a CHANGELOG entry) rather than silently trusting either the stale doc or your own assumption.

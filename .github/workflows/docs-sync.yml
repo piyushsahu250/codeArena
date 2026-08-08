@@ -1,0 +1,44 @@
+name: Docs Sync
+
+# Detects mechanical drift between the codebase and docs/platform-manifest.json (API endpoint
+# count, Prisma model/enum count) and commits an update + a CHANGELOG.md entry when it finds any.
+#
+# This is intentionally NOT an AI rewrite of documentation prose. It only recomputes facts that
+# can be counted directly from source (grep-style), and the CHANGELOG entry it writes explicitly
+# flags which prose docs need a human pass — it never edits narrative content (business rules,
+# known issues, module descriptions, security posture, etc.). See docs/DEVELOPMENT_GUIDE.md
+# "Updating This Documentation Set" for the full manual checklist this does not replace.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/prisma/schema.prisma'
+      - 'backend/src/routes/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  docs-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run doc drift check
+        run: node scripts/docSync.js
+      - name: Commit changes if any were made
+        run: |
+          if git diff --quiet -- docs/; then
+            echo "No doc changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/platform-manifest.json docs/CHANGELOG.md
+          git commit -m "docs: auto-sync platform-manifest.json counts [skip ci]"
+          git push
