@@ -4,7 +4,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { gradePendingCodingSubmissions } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
-const { isTestVisibleToStudent, studentCanAccessTest, testEligibilityWhere } = require("../utils/testEligibility");
+const { isTestVisibleToStudent, testEligibilityWhere } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 
@@ -548,13 +548,25 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     // start time, so trimming one redundant round-trip here matters more than it would elsewhere.
     const test = await prisma.test.findUnique({
       where: { id: testId },
-      include: { questions: { include: { question: { select: { id: true, questionType: true, options: true, difficulty: true } } } } },
+      include: {
+        classes: { select: { classId: true } },
+        academicGroups: { select: { academicGroupId: true } },
+        talentPools: { select: { poolId: true } },
+        questions: { include: { question: { select: { id: true, questionType: true, options: true, difficulty: true } } } },
+      },
     });
     if (!test || !test.isPublished) return res.status(404).json({ error: "Test not available" });
 
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
-    const allowed = await studentCanAccessTest(prisma, test.id, student.academicGroupId, student.classId, memberPoolIds, student.instituteId);
+    // Eligibility relations are now loaded above in the same query as the test itself, so this
+    // uses the synchronous, already-loaded check (isTestVisibleToStudent) instead of the
+    // DB-authoritative one (studentCanAccessTest), which used to re-query talentPoolTest/
+    // testAcademicGroup/testClass counts plus a redundant second test fetch — 4 extra sequential
+    // round-trips on the single most synchronized endpoint on the platform (a whole class hitting
+    // "Begin Test" within the same few seconds). Same eligibility rules either way — see the
+    // "already-loaded" vs "DB-authoritative" comments in testEligibility.js.
+    const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId, memberPoolIds, student.instituteId);
     if (!allowed) return res.status(404).json({ error: "Test not available" });
 
     const existing = await prisma.testAttempt.findUnique({
