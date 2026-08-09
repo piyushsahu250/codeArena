@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const prisma = require("../prisma");
 const { parseDevice } = require("./auditLog");
 const cache = require("./cache");
+const { getClientIp } = require("./clientIp");
 
 const TOKEN_TTL = "12h";
 // isSessionActive runs on every authenticated request platform-wide — caching it turns "one DB
@@ -31,7 +32,7 @@ async function createSession({ user, req, singleSessionOnly }) {
   const { browser, os, device } = parseDevice(req.headers["user-agent"]);
   await prisma.$transaction([
     prisma.loginSession.create({
-      data: { userId: user.id, token: jti, ip: req.ip || null, device, browser, os },
+      data: { userId: user.id, token: jti, ip: getClientIp(req) || null, device, browser, os },
     }),
     prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }),
   ]);

@@ -1,4 +1,5 @@
 const prisma = require("../prisma");
+const { getClientIp } = require("./clientIp");
 
 // Coarse User-Agent parsing — this platform only needs enough precision for an admin skimming a
 // login-history list to recognize "that's not my usual browser," not full device fingerprinting.
@@ -101,7 +102,7 @@ async function logAudit({ req, action, actorId, actorName, actorRole, studentId,
         adminId: actorId || "system",
         adminName: actorName || "System",
         adminRole: actorRole || null,
-        ipAddress: req?.ip || null,
+        ipAddress: req ? getClientIp(req) : null,
         deviceInfo: req ? parseDevice(req.headers["user-agent"]).summary : null,
         studentId: studentId || null,
         instituteId: instituteId || null,

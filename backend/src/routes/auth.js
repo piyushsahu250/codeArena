@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const prisma = require("../prisma");
 const { dbRateLimit } = require("../utils/dbRateLimit");
+const { getClientIp } = require("../utils/clientIp");
 const { sendMail, sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { createSession, endSession } = require("../utils/sessions");
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../utils/auditLog");
@@ -41,7 +42,7 @@ const loginLimiter = dbRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   skipSuccessful: true,
-  keyGenerator: (req) => `login:${req.ip}:${String(req.body?.email || "").toLowerCase()}`,
+  keyGenerator: (req) => `login:${getClientIp(req)}:${String(req.body?.email || "").toLowerCase()}`,
   message: { error: "Too many login attempts. Please try again later." },
 });
 
@@ -53,7 +54,7 @@ const loginLimiter = dbRateLimit({
 const forgotPasswordLimiter = dbRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 3,
-  keyGenerator: (req) => `forgot-password:${req.ip}`,
+  keyGenerator: (req) => `forgot-password:${getClientIp(req)}`,
   message: { error: "Too many password reset requests. Please try again later." },
 });
 
