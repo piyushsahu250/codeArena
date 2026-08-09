@@ -1,8 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
+const { dbRateLimit } = require("../utils/dbRateLimit");
 const { sendMail, sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { createSession, endSession } = require("../utils/sessions");
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../utils/auditLog");
@@ -30,28 +30,30 @@ const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
 // Keyed by IP+email (not just IP) so a shared campus/lab IP doesn't get one collective lockout
 // budget shared across every student behind it, while still capping how fast any single email can
 // be brute-forced from one source. The global limiter in index.js (600/5min) is far too loose to
-// stop credential-stuffing against one account. skipSuccessfulRequests means a legitimate user
-// logging in a few times in a row (multiple devices, a page refresh) never eats into their own
-// failed-attempt budget — only non-2xx responses (wrong password, account not found, etc.) count.
-const loginLimiter = rateLimit({
+// stop credential-stuffing against one account. skipSuccessful means a legitimate user logging in
+// a few times in a row (multiple devices, a page refresh) never eats into their own failed-attempt
+// budget — only non-2xx responses (wrong password, account not found, etc.) count.
+//
+// Backed by the database (dbRateLimit), not express-rate-limit's in-memory store: live testing
+// against the deployed backend showed the in-memory version's remaining-attempts count resetting
+// mid-window across sequential requests — see dbRateLimit.js for the full explanation.
+const loginLimiter = dbRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-  keyGenerator: (req) => `${req.ip}:${String(req.body?.email || "").toLowerCase()}`,
+  skipSuccessful: true,
+  keyGenerator: (req) => `login:${req.ip}:${String(req.body?.email || "").toLowerCase()}`,
   message: { error: "Too many login attempts. Please try again later." },
 });
 
 // Separate from loginLimiter deliberately — different abuse shape (triggering unwanted emails to
 // a real inbox, not credential guessing) and a much tighter threshold makes sense here regardless
-// of what email was requested, so this is IP-only (no per-email keying) — express-rate-limit's
-// default keyGenerator already uses req.ip, which respects the `trust proxy` setting in index.js.
-const forgotPasswordLimiter = rateLimit({
+// of what email was requested, so this is IP-only (no per-email keying). skipSuccessful is
+// deliberately NOT set here: this route always returns 200 by design (enumeration protection), so
+// "skip successful" would mean nothing is ever counted — every request must count.
+const forgotPasswordLimiter = dbRateLimit({
   windowMs: 15 * 60 * 1000,
   max: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
+  keyGenerator: (req) => `forgot-password:${req.ip}`,
   message: { error: "Too many password reset requests. Please try again later." },
 });
 

@@ -2380,3 +2380,20 @@ model AttendanceRecord {
   @@unique([sessionId, studentId])
   @@index([studentId])
 }
+
+// Backs a Postgres-based rate limiter (backend/src/utils/dbRateLimit.js) for the login and
+// forgot-password endpoints specifically. Live testing against the deployed backend showed
+// express-rate-limit's in-memory store does not reliably enforce its limit there — the remaining-
+// attempts counter was observed resetting mid-window across sequential requests, consistent with
+// more than one backend process each holding its own independent in-memory Map. A database every
+// deployment already has is correct regardless of how many app processes exist; other, lower-
+// sensitivity limiters in this codebase (the global limiter in index.js, the code-execution
+// limiters in submissions.js/moduleCoding.js) still use express-rate-limit's in-memory store and
+// were not changed here, since this fix was scoped to the two endpoints actually reported.
+model RateLimitHit {
+  id        String   @id @default(uuid())
+  key       String // e.g. "login:<ip>:<email>" or "forgot-password:<ip>" — see dbRateLimit.js
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
