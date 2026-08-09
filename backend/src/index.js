@@ -43,10 +43,19 @@ const resultManagementRoutes = require("./routes/resultManagement");
 const staffClerkRoutes = require("./routes/staffClerk");
 
 const app = express();
-// Render sits in front of this service behind a reverse proxy — without trusting it, req.ip
-// resolves to the proxy's own address instead of the real client IP, which breaks IP-keyed rate
-// limiting fairness and makes every audit-log/login-session IP identical and useless.
-app.set("trust proxy", 1);
+// There are TWO proxy hops in front of this service, not one — confirmed directly via a
+// temporary debug route that echoed X-Forwarded-For across repeated requests: Cloudflare's edge
+// (its IP changes per request/edge node) sits in front of Render's own internal load balancer
+// (which itself bounces between at least two internal addresses). With trust proxy=1, Express
+// only trusted the innermost hop (Render's own proxy) and used ITS address as req.ip — meaning
+// req.ip was effectively random per request (whichever internal Render node handled it), never
+// the real client. This silently broke every IP-keyed mechanism in the app: the login/forgot-
+// password rate limiters (each request landed in a different bucket, so the limit never
+// triggered), the global rate limiter's IP fallback, and the IP recorded on AuditLog/LoginSession
+// rows. Trusting 2 hops walks back through both proxies to the address Cloudflare itself reports
+// as the original client (confirmed stable across every test request), which is what req.ip
+// should have been resolving to all along.
+app.set("trust proxy", 2);
 app.use(helmet());
 app.use(compression());
 // Scoped to the known frontend origin(s) rather than reflecting any caller — same FRONTEND_URL
@@ -100,17 +109,6 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeAren
 // Public, boolean-only — lets any page check whether ANTHROPIC_API_KEY is set before showing an
 // AI-feature button, instead of the student clicking it and hitting a raw 503 error message.
 app.get("/api/ai/status", (req, res) => res.json({ configured: isAiConfigured() }));
-
-// TEMPORARY diagnostic route — investigating why req.ip appears unstable across sequential
-// requests from the same client (breaking IP-keyed rate limiting). Returns only proxy-chain
-// metadata, nothing sensitive. Remove once the cause is confirmed.
-app.get("/api/_debug/ip", (req, res) => res.json({
-  reqIp: req.ip,
-  reqIps: req.ips,
-  xForwardedFor: req.headers["x-forwarded-for"] || null,
-  cfConnectingIp: req.headers["cf-connecting-ip"] || null,
-  trustProxySetting: app.get("trust proxy"),
-}));
 
 // Global floor well above any legitimate per-user traffic pattern (dashboard loads fire several
 // parallel GETs; this is not meant to constrain normal use, just block runaway scripts/scraping).
