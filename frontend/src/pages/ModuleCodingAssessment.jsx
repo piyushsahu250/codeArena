@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
-import api from "../api";
+import api, { API_BASE_URL } from "../api";
 import { useGamification } from "../context/GamificationContext";
 import { useProctoring } from "../hooks/useProctoring";
 import useIsMobile from "../hooks/useIsMobile";
@@ -271,8 +271,7 @@ export default function ModuleCodingAssessment() {
   function keepaliveSave(path, body) {
     try {
       const token = localStorage.getItem("token");
-      const base = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-      fetch(`${base}${path}`, {
+      fetch(`${API_BASE_URL}${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(body),

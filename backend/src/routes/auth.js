@@ -20,17 +20,39 @@ function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+// A syntactically valid but unowned bcrypt hash (the well-known "password" fixture from bcrypt's
+// own test suite) — compared against on a login attempt for an email that doesn't exist, so the
+// route does genuine bcrypt work either way. Without this, "no such account" would return faster
+// than "wrong password" (skips the compare entirely), which is itself a timing side-channel an
+// attacker could use to enumerate valid emails even with an identical response body.
+const DUMMY_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
 // Keyed by IP+email (not just IP) so a shared campus/lab IP doesn't get one collective lockout
 // budget shared across every student behind it, while still capping how fast any single email can
 // be brute-forced from one source. The global limiter in index.js (600/5min) is far too loose to
-// stop credential-stuffing against one account.
+// stop credential-stuffing against one account. skipSuccessfulRequests means a legitimate user
+// logging in a few times in a row (multiple devices, a page refresh) never eats into their own
+// failed-attempt budget — only non-2xx responses (wrong password, account not found, etc.) count.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   keyGenerator: (req) => `${req.ip}:${String(req.body?.email || "").toLowerCase()}`,
-  message: { error: "Too many login attempts. Please wait a few minutes and try again." },
+  message: { error: "Too many login attempts. Please try again later." },
+});
+
+// Separate from loginLimiter deliberately — different abuse shape (triggering unwanted emails to
+// a real inbox, not credential guessing) and a much tighter threshold makes sense here regardless
+// of what email was requested, so this is IP-only (no per-email keying) — express-rate-limit's
+// default keyGenerator already uses req.ip, which respects the `trust proxy` setting in index.js.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many password reset requests. Please try again later." },
 });
 
 // Best-effort, non-blocking — a login alert failing to send must never fail or slow the login
@@ -67,17 +89,24 @@ router.post("/login", loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email }, include: { institute: true } });
-    if (!user) return res.status(401).json({ error: "Email not found." });
-    if (!user.isActive) return res.status(403).json({ error: "This account has been deactivated. Contact your administrator." });
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      // Fire-and-forget (logAudit already catches its own errors) — the response to a wrong
-      // password doesn't need to wait on an audit-log write, and this is one fewer DB round-trip
-      // held open during a login burst.
-      logAudit({ req, action: AUDIT_ACTIONS.LOGIN_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { email } });
-      return res.status(401).json({ error: "Incorrect password." });
+    // Both "no such account" and "wrong password" run through bcrypt.compare (against the real
+    // hash if the account exists, DUMMY_HASH otherwise) and return the exact same message, so
+    // neither the response text nor its timing tells a caller whether a given email is registered.
+    // isActive is deliberately checked AFTER the password, not before: it only fires once someone
+    // has already proven they know the correct password for a real account, so a deactivated
+    // account's status is never revealed to someone who's just guessing.
+    const valid = await bcrypt.compare(password || "", user ? user.passwordHash : DUMMY_HASH);
+    if (!user || !valid) {
+      if (user) {
+        // Fire-and-forget (logAudit already catches its own errors) — the response to a wrong
+        // password doesn't need to wait on an audit-log write, and this is one fewer DB round-trip
+        // held open during a login burst.
+        logAudit({ req, action: AUDIT_ACTIONS.LOGIN_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { email } });
+      }
+      return res.status(401).json({ error: "Invalid email or password." });
     }
+    if (!user.isActive) return res.status(403).json({ error: "This account has been deactivated. Contact your administrator." });
 
     // Sequential, not Promise.all: this platform's Prisma pool is deliberately small
     // (connection_limit — see prisma.js), and every simultaneous query in a login request
@@ -151,7 +180,7 @@ router.post("/logout", authenticate, async (req, res) => {
 // email exists, so this endpoint itself doesn't leak account existence (the
 // login endpoint already does, per product requirement, but no need to widen
 // that surface here too).
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required" });

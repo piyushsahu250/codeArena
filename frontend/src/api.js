@@ -1,7 +1,15 @@
 import axios from "axios";
 
+// Single source of truth for the backend origin — every environment (local dev, staging,
+// production) sets VITE_API_URL at build time; the localhost fallback only ever applies when
+// running the Vite dev server with no .env, never in a deployed build. Exported so the two
+// call sites that need a raw fetch() instead of this axios instance (keepaliveSave in
+// TestTaking.jsx / ModuleCodingAssessment.jsx, which need fetch's `keepalive` flag that axios
+// doesn't expose) don't each duplicate this same fallback expression.
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
