@@ -55,3 +55,8 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 ---
 
 *Entries before 2026-08-08 are not individually logged here — this changelog was introduced on this date. Prior project history exists in the repository's git log and in [FIXED_ISSUES.md](FIXED_ISSUES.md)'s "Pre-existing fixes" summary section, but was not retroactively broken into dated changelog entries during this initial documentation pass.*
+
+## 2026-08-09 (auto-detected drift)
+- Database model count: 76 -> 77 (review DATABASE.md, DATA_DICTIONARY.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
