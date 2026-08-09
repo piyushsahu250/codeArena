@@ -101,6 +101,17 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeAren
 // AI-feature button, instead of the student clicking it and hitting a raw 503 error message.
 app.get("/api/ai/status", (req, res) => res.json({ configured: isAiConfigured() }));
 
+// TEMPORARY diagnostic route — investigating why req.ip appears unstable across sequential
+// requests from the same client (breaking IP-keyed rate limiting). Returns only proxy-chain
+// metadata, nothing sensitive. Remove once the cause is confirmed.
+app.get("/api/_debug/ip", (req, res) => res.json({
+  reqIp: req.ip,
+  reqIps: req.ips,
+  xForwardedFor: req.headers["x-forwarded-for"] || null,
+  cfConnectingIp: req.headers["cf-connecting-ip"] || null,
+  trustProxySetting: app.get("trust proxy"),
+}));
+
 // Global floor well above any legitimate per-user traffic pattern (dashboard loads fire several
 // parallel GETs; this is not meant to constrain normal use, just block runaway scripts/scraping).
 // Expensive routes (judge execution, etc.) already carry their own tighter per-route limiters.
