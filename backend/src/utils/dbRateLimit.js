@@ -18,11 +18,20 @@ function dbRateLimit({ windowMs, max, keyGenerator, message, skipSuccessful = fa
     try {
       key = keyGenerator(req);
       const windowStart = new Date(Date.now() - windowMs);
-      // Opportunistic cleanup of this key's own stale rows on every check — keeps the table bounded
-      // to roughly `max` rows per active key without needing a separate cleanup job.
-      await prisma.rateLimitHit.deleteMany({ where: { key, createdAt: { lt: windowStart } } });
-      const count = await prisma.rateLimitHit.count({ where: { key, createdAt: { gte: windowStart } } });
-      if (count >= max) {
+      // Cleanup + count + (for the non-skipSuccessful path) the insert all run inside one
+      // transaction — same connection for the whole check, so there's no gap where a count on one
+      // pooled connection could miss a create that just committed on another. Two rapid requests
+      // hitting this concurrently still can't both slip through under the limit: Postgres serializes
+      // writes to the same key's rows, so the second transaction's count always sees the first's
+      // committed insert once it commits.
+      const allowed = await prisma.$transaction(async (tx) => {
+        await tx.rateLimitHit.deleteMany({ where: { key, createdAt: { lt: windowStart } } });
+        const count = await tx.rateLimitHit.count({ where: { key, createdAt: { gte: windowStart } } });
+        if (count >= max) return false;
+        if (!skipSuccessful) await tx.rateLimitHit.create({ data: { key } });
+        return true;
+      });
+      if (!allowed) {
         res.setHeader("Retry-After", String(Math.ceil(windowMs / 1000)));
         return res.status(429).json(message);
       }
@@ -38,13 +47,6 @@ function dbRateLimit({ windowMs, max, keyGenerator, message, skipSuccessful = fa
           prisma.rateLimitHit.create({ data: { key } }).catch((err) => console.error("[dbRateLimit] record failed:", err.message));
         }
       });
-      return next();
-    }
-
-    try {
-      await prisma.rateLimitHit.create({ data: { key } });
-    } catch (err) {
-      console.error("[dbRateLimit] record failed:", err.message);
     }
     next();
   };
