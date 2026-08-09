@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const { timingMiddleware, recordProcessError } = require("./utils/metrics");
 const logger = require("./utils/logger");
 const { isConfigured: isAiConfigured } = require("./utils/aiClient");
+const prisma = require("./prisma");
 
 const authRoutes = require("./routes/auth");
 const testRoutes = require("./routes/tests");
@@ -109,6 +110,22 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeAren
 // Public, boolean-only — lets any page check whether ANTHROPIC_API_KEY is set before showing an
 // AI-feature button, instead of the student clicking it and hitting a raw 503 error message.
 app.get("/api/ai/status", (req, res) => res.json({ configured: isAiConfigured() }));
+
+// TEMPORARY diagnostic route — the DB-backed rate limiter isn't blocking after its threshold in
+// live testing even with a correct, stable req.ip. Exercises prisma.rateLimitHit directly (count
+// then create) with the raw error surfaced, to confirm whether the model/table itself works
+// against the live database. Remove once the cause is confirmed.
+app.get("/api/_debug/ratelimit", async (req, res) => {
+  const key = "debug-test-key";
+  try {
+    const before = await prisma.rateLimitHit.count({ where: { key } });
+    const created = await prisma.rateLimitHit.create({ data: { key } });
+    const after = await prisma.rateLimitHit.count({ where: { key } });
+    res.json({ ok: true, before, after, createdId: created.id, reqIp: req.ip });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message, code: err.code, meta: err.meta });
+  }
+});
 
 // Global floor well above any legitimate per-user traffic pattern (dashboard loads fire several
 // parallel GETs; this is not meant to constrain normal use, just block runaway scripts/scraping).
