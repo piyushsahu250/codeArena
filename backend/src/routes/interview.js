@@ -172,21 +172,36 @@ async function pickQuestions(category, config, count, options = {}) {
 
   const fullWhere = { ...hardWhere, ...softWhere };
   let pool = await prisma.interviewQuestion.findMany({ where: excludeIds.length ? { ...fullWhere, id: { notIn: excludeIds } } : fullWhere });
-  let usedFallback = false;
   if (pool.length === 0 && excludeIds.length > 0) {
     // Drop the anti-repeat exclusion first — a repeat is a smaller compromise than falling all
     // the way back to the general (non-company) pool below.
     pool = await prisma.interviewQuestion.findMany({ where: fullWhere });
   }
-  if (pool.length === 0 && Object.keys(softWhere).length > 0) {
-    pool = await prisma.interviewQuestion.findMany({ where: excludeIds.length ? { ...hardWhere, id: { notIn: excludeIds } } : hardWhere });
-    if (pool.length === 0) pool = await prisma.interviewQuestion.findMany({ where: hardWhere });
-    usedFallback = true;
-  }
 
   const n = count || SESSION_QUESTION_COUNT[category] || 6;
   const categoryWeights = options.companyProfile?.categoryWeights?.[category];
-  const items = categoryWeights ? weightedSample(pool, categoryWeights, n) : shuffle(pool).slice(0, n);
+  let usedFallback = false;
+  let items;
+
+  if (pool.length >= n || Object.keys(softWhere).length === 0) {
+    // Either the soft-filtered (e.g. company) pool already has enough, or there's no soft filter
+    // in play at all — no fallback needed.
+    items = categoryWeights ? weightedSample(pool, categoryWeights, n) : shuffle(pool).slice(0, n);
+  } else {
+    // Fewer soft-filtered matches than needed (this is the common case for most companies, which
+    // are seeded with only 1-3 questions per category). Previously this only backfilled from the
+    // general pool when the company-specific pool was completely EMPTY (pool.length === 0) — a
+    // company with e.g. 1 of 2 needed CODING questions fell through neither fallback branch and
+    // silently returned just that 1 question, one short. Now: every company-specific question
+    // found is always kept (never randomly dropped by a reshuffle across the combined pool), and
+    // the remaining slots are topped up from the general pool.
+    usedFallback = true;
+    let general = await prisma.interviewQuestion.findMany({ where: excludeIds.length ? { ...hardWhere, id: { notIn: excludeIds } } : hardWhere });
+    if (general.length === 0) general = await prisma.interviewQuestion.findMany({ where: hardWhere });
+    const haveIds = new Set(pool.map((q) => q.id));
+    const filler = shuffle(general.filter((q) => !haveIds.has(q.id)));
+    items = [...pool, ...filler].slice(0, n);
+  }
   return { items, usedFallback };
 }
 

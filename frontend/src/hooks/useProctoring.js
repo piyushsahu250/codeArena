@@ -5,6 +5,16 @@ import * as blazeface from "@tensorflow-models/blazeface";
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
 const VIOLATION_DEDUPE_MS = 1200; // collapses e.g. fullscreenchange+visibilitychange firing together into one event
+// Entering fullscreen via requestFullscreen() is itself a browser-level transition — on some
+// OS/browser combinations it can cause a transient, spurious `visibilitychange` (document.hidden
+// flips true for a frame) and/or the very first `fullscreenchange` settling a beat later than
+// React's commit that attaches these listeners. Each is a distinct violation TYPE with its own
+// independent dedupe timer (see lastViolationAtRef below), so without a grace window a single,
+// genuine "click Begin Interview" could fire FULLSCREEN_EXIT and TAB_SWITCH back-to-back a few
+// hundred ms apart — two of the three strikes needed to auto-terminate — before the student has
+// done anything. This only suppresses the two transition-prone types, only for a few seconds
+// right after activation, and never suppresses a real mid-interview tab switch or fullscreen exit.
+const ACTIVATION_GRACE_MS = 3000;
 
 // Shared proctoring primitives for a locked-down assessment — extracted so both the exam
 // (TestTaking.jsx, unchanged, still has its own inline copy) and the new module coding
@@ -19,10 +29,23 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   const onViolationRef = useRef(onViolation);
   onViolationRef.current = onViolation;
 
+  // Marks the moment `active` most recently flipped true — the anchor for ACTIVATION_GRACE_MS.
+  const activatedAtRef = useRef(null);
+  useEffect(() => {
+    activatedAtRef.current = active ? Date.now() : null;
+  }, [active]);
+
   const lastViolationAtRef = useRef({});
   const report = useCallback(
     (type) => {
       if (!active) return;
+      if (
+        (type === "FULLSCREEN_EXIT" || type === "TAB_SWITCH") &&
+        activatedAtRef.current &&
+        Date.now() - activatedAtRef.current < ACTIVATION_GRACE_MS
+      ) {
+        return; // fullscreen-entry transition artifact, not a real violation — see ACTIVATION_GRACE_MS above
+      }
       const now = Date.now();
       const last = lastViolationAtRef.current[type] || 0;
       if (now - last < VIOLATION_DEDUPE_MS) return;
