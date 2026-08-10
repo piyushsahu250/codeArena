@@ -22,6 +22,7 @@ const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
+const logger = require("../utils/logger");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -295,6 +296,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
         .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
         .map((a) => questions.find((q) => q.id === a.questionId))
         .filter(Boolean);
+      logger.info("INTERVIEW_RESUMED", { sessionId: existing.id, studentId: req.user.id, questionCount: ordered.length });
       return res.json({ session: existing, questions: ordered.map(sanitizeQuestion), resumed: true });
     }
 
@@ -412,6 +414,11 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       data: questions.map((q) => ({ sessionId: session.id, questionId: q.id, skipped: true })),
     });
 
+    logger.info("INTERVIEW_CREATED", {
+      sessionId: session.id, studentId: req.user.id,
+      type: session.isMock ? "MOCK" : session.isResumeBased ? "RESUME_BASED" : session.isCompanyRound ? "COMPANY_ROUND" : session.talentPoolConfigId ? "TALENT_POOL" : session.category,
+      company: session.config?.company || null, questionCount: questions.length, usedFallback: !!session.config?.generalFallbackCategories?.length,
+    });
     res.json({ session, questions: questions.map(sanitizeQuestion), resumed: false });
   } catch (err) {
     console.error(err);
@@ -646,6 +653,8 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), async 
       update: { answerText: answerText ?? null, code: code ?? null, language: language ?? null, skipped: !!skipped, timeTakenSec: timeTakenSec ?? null, score, breakdown: breakdown ?? undefined },
       create: { sessionId: session.id, questionId, answerText: answerText ?? null, code: code ?? null, language: language ?? null, skipped: !!skipped, timeTakenSec: timeTakenSec ?? null, score, breakdown: breakdown ?? undefined },
     });
+    // Correlates on sessionId/questionId only — never the answer text/code itself.
+    logger.info("ANSWER_SAVED", { sessionId: session.id, questionId, category: question.category, skipped: !!skipped, score });
 
     let followUpQuestion = null;
     try {
@@ -732,6 +741,7 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
     const updatedSession = await prisma.interviewSession.update({
       where: { id: session.id }, data: { currentRoundNumber: nextRound.roundNumber, roundResults },
     });
+    logger.info("ROUND_ADVANCED", { sessionId: session.id, roundNumber: nextRound.roundNumber, category: nextRound.category, questionCount: picked.items.length, usedFallback: picked.usedFallback });
 
     res.json({ eliminated: false, completed: false, session: updatedSession, nextRoundQuestions: picked.items.map(sanitizeQuestion) });
   } catch (err) {
@@ -757,6 +767,9 @@ async function finalizeSession(session, { status = "COMPLETED", terminationReaso
       where: { sessionId: session.id }, update: built, create: { sessionId: session.id, studentId: session.studentId, ...built },
     }),
   ]);
+  logger.info(status === "TERMINATED" ? "INTERVIEW_TERMINATED" : "INTERVIEW_COMPLETED", {
+    sessionId: session.id, studentId: session.studentId, terminationReason, overallScore: report.overallScore,
+  });
 
   // Notify the student their report is ready — scoped to Mock/Company Round sessions only
   // (the "full interview experience" types), not every quick single-category practice drill,
@@ -822,6 +835,7 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
 
     const violationCount = penalized ? session.violationCount + 1 : session.violationCount;
     if (penalized) await prisma.interviewSession.update({ where: { id: session.id }, data: { violationCount } });
+    logger.info("VIOLATION_RECORDED", { sessionId: session.id, type, penalized, violationCount });
 
     const terminated = penalized && violationCount >= MAX_INTERVIEW_VIOLATIONS;
     if (terminated) {
