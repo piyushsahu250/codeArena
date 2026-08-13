@@ -806,9 +806,9 @@ export default function StudentPerformance({ basePath }) {
 
 function Field({ label, value, mono }) {
   return (
-    <div>
+    <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
-      <div className={mono ? "mono" : undefined} style={{ fontSize: 14, marginTop: 2 }}>{value || "—"}</div>
+      <div className={mono ? "mono" : undefined} style={{ fontSize: 14, marginTop: 2, overflowWrap: "anywhere" }}>{value || "—"}</div>
     </div>
   );
 }
