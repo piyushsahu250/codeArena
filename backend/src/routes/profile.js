@@ -28,7 +28,7 @@ const STUDENT_PROFILE_FIELDS = [
 async function loadCompletionInputs(studentId) {
   const user = await prisma.user.findUnique({ where: { id: studentId }, include: { institute: { select: { name: true } } } });
   const studentProfile = await prisma.studentProfile.findUnique({ where: { studentId } });
-  const resume = await prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true } });
+  const resume = await prisma.resume.findUnique({ where: { studentId }, select: { education: true, fullName: true, email: true, linkedin: true } });
   const documents = await prisma.studentDocument.findMany({ where: { studentId }, select: { id: true } });
   return { user, studentProfile: decryptProfile(studentProfile), resume, documents };
 }
@@ -52,6 +52,7 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       profile: studentProfile,
       hasResume: !!(resume?.fullName && resume?.email),
       educationCount: Array.isArray(resume?.education) ? resume.education.length : 0,
+      linkedin: resume?.linkedin || null,
       completion,
     });
   } catch (err) {
@@ -211,6 +212,7 @@ router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), 
       profile: studentProfile,
       hasResume: !!(resume?.fullName && resume?.email),
       education: Array.isArray(resume?.education) ? resume.education : [],
+      linkedin: resume?.linkedin || null,
       completion,
     });
   } catch (err) {

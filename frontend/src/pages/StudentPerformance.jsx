@@ -425,6 +425,7 @@ export default function StudentPerformance({ basePath }) {
               <div style={{ flex: 1, minWidth: 260, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
                 <Field label="Gender" value={placementProfile.user?.gender} />
                 <Field label="Personal Email" value={placementProfile.profile?.personalEmail} mono />
+                <Field label="LinkedIn" value={placementProfile.linkedin} link />
                 <Field label="Date of Birth" value={placementProfile.profile?.dob ? new Date(placementProfile.profile.dob).toLocaleDateString() : null} />
                 <Field label="Address" value={placementProfile.profile?.address} />
                 <Field label="State" value={placementProfile.profile?.state} />
@@ -804,11 +805,19 @@ export default function StudentPerformance({ basePath }) {
   );
 }
 
-function Field({ label, value, mono }) {
+function Field({ label, value, mono, link }) {
+  // A bare handle like "linkedin.com/in/xyz" (no scheme) is a valid href target for a browser,
+  // but not a valid absolute URL for the anchor to resolve relative to the current page — prepend
+  // https:// so it always opens the profile itself rather than a codearena-app.vercel.app/... 404.
+  const href = link && value ? (/^https?:\/\//i.test(value) ? value : `https://${value}`) : null;
   return (
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
-      <div className={mono ? "mono" : undefined} style={{ fontSize: 14, marginTop: 2, overflowWrap: "anywhere" }}>{value || "—"}</div>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, marginTop: 2, display: "block", overflowWrap: "anywhere" }}>{value}</a>
+      ) : (
+        <div className={mono ? "mono" : undefined} style={{ fontSize: 14, marginTop: 2, overflowWrap: "anywhere" }}>{value || "—"}</div>
+      )}
     </div>
   );
 }
