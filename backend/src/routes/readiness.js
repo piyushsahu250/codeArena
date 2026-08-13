@@ -390,11 +390,13 @@ function breakdownBy(reports, keyFn) {
   })).sort((a, b) => b.count - a.count);
 }
 
-// ADMIN/STAFF/CLERK: institute-wide (or filtered) readiness analytics — class/subject/department/
+// ADMIN/STAFF: institute-wide (or filtered) readiness analytics — class/subject/department/
 // batch comparison, BTL distribution, topic weaknesses, at-risk students. Mirrors
 // resultManagement.js's admin/analytics template: one shared filtered-load function feeding a
 // generic breakdown helper, wrapped in cached() with an institute+querystring cache key.
-router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+// CLERK is deliberately excluded — this is academic/cognitive-performance data, outside the
+// placement/document workflow scope Clerk is otherwise limited to.
+router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteKey = req.requesterInstituteId || "all";
     const filterKey = JSON.stringify(req.query);

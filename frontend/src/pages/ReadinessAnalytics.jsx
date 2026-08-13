@@ -1,0 +1,205 @@
+import { useEffect, useMemo, useState } from "react";
+import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import Navbar from "../components/Navbar";
+import ChalkUnderline from "../components/ChalkUnderline";
+import api from "../api";
+
+const inputStyle = { padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 };
+const labelStyle = { fontSize: 11, fontWeight: 600, color: "var(--ink-dim)", display: "block", marginBottom: 4 };
+const LEVEL_COLORS = {
+  EXCELLENTLY_READY: "#16a34a", JOB_READY: "#22c55e", NEARLY_READY: "#84cc16",
+  DEVELOPING: "#f59e0b", NEEDS_IMPROVEMENT: "#f97316", FOUNDATION_REQUIRED: "#dc2626",
+};
+const BTL_LABELS = { 1: "BTL1 Remember", 2: "BTL2 Understand", 3: "BTL3 Apply", 4: "BTL4 Analyze", 5: "BTL5 Evaluate", 6: "BTL6 Create" };
+
+function KpiCard({ label, value }) {
+  return (
+    <div className="card" style={{ padding: 18 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)", textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>{value}</div>
+    </div>
+  );
+}
+
+// Admin/Staff readiness analytics — institute-wide (or filtered) view over the Employability &
+// Readiness module's ReadinessReport rows, sourced entirely from the RA4 admin/analytics route
+// (already institute-scoped + 60s cached server-side). This page renders only; every number is
+// something the backend already computed, per the module's "one centralized scoring engine, UI
+// must never disagree" rule.
+export default function ReadinessAnalytics() {
+  const [subjects, setSubjects] = useState([]);
+  const [subjectId, setSubjectId] = useState("");
+  const [assessmentMode, setAssessmentMode] = useState("");
+  const [analytics, setAnalytics] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.get("/readiness/admin/subjects").then((res) => setSubjects(res.data)).catch(() => {});
+  }, []);
+
+  const selectedSubject = subjects.find((s) => s.id === subjectId);
+  const modeOptions = Array.isArray(selectedSubject?.assessmentModes) ? selectedSubject.assessmentModes : [];
+
+  const queryParams = useMemo(() => {
+    const p = {};
+    if (subjectId) p.subjectId = subjectId;
+    if (assessmentMode) p.assessmentMode = assessmentMode;
+    return p;
+  }, [subjectId, assessmentMode]);
+
+  useEffect(() => {
+    api.get("/readiness/admin/analytics", { params: queryParams })
+      .then((res) => setAnalytics(res.data))
+      .catch((err) => setError(err.response?.data?.error || "Failed to load analytics"));
+  }, [queryParams]);
+
+  const levelData = analytics ? Object.entries(analytics.readinessLevelDistribution).map(([level, count]) => ({ level: level.replace(/_/g, " "), count, color: LEVEL_COLORS[level] || "#6b7280" })) : [];
+  const btlData = analytics ? [1, 2, 3, 4, 5, 6].filter((l) => analytics.btlAverages[l] != null).map((l) => ({ level: BTL_LABELS[l], average: analytics.btlAverages[l] })) : [];
+
+  return (
+    <div>
+      <Navbar />
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px" }}>
+        <h1>Readiness Analytics</h1>
+        <ChalkUnderline />
+        <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
+          Institute-wide Employability &amp; Readiness Assessment performance — topic weaknesses, BTL distribution, and students needing intervention.
+        </p>
+
+        <div className="card" style={{ padding: 16, marginTop: 24, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <label style={labelStyle}>Subject</label>
+            <select style={inputStyle} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setAssessmentMode(""); }}>
+              <option value="">All subjects</option>
+              {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Assessment Mode</label>
+            <select style={inputStyle} value={assessmentMode} onChange={(e) => setAssessmentMode(e.target.value)} disabled={!subjectId}>
+              <option value="">All modes</option>
+              {modeOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {error && <p style={{ color: "var(--rust)", marginTop: 16 }}>{error}</p>}
+        {!analytics && !error && <p style={{ color: "var(--ink-dim)", marginTop: 24 }}>Loading…</p>}
+
+        {analytics && analytics.totalAssessments === 0 && (
+          <div className="card" style={{ padding: 24, marginTop: 24, textAlign: "center", color: "var(--ink-dim)" }}>
+            No completed assessments match these filters yet.
+          </div>
+        )}
+
+        {analytics && analytics.totalAssessments > 0 && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 24 }}>
+              <KpiCard label="Total Assessments" value={analytics.totalAssessments} />
+              <KpiCard label="Students Assessed" value={analytics.studentsAssessed} />
+              <KpiCard label="Average Readiness" value={`${analytics.averageReadiness}%`} />
+              <KpiCard label="At-Risk Students" value={analytics.atRiskStudents.length} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 32 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <h3 style={{ fontSize: 14 }}>Readiness Level Distribution</h3>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={levelData} dataKey="count" nameKey="level" cx="50%" cy="50%" outerRadius={90} label>
+                      {levelData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip /><Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="card" style={{ padding: 16 }}>
+                <h3 style={{ fontSize: 14 }}>Average BTL Performance</h3>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={btlData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="level" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Bar dataKey="average" fill="var(--mint)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                {btlData.length === 0 && <p style={{ fontSize: 12, color: "var(--ink-dim)", textAlign: "center", marginTop: 8 }}>No BTL data yet.</p>}
+              </div>
+            </div>
+
+            {analytics.topicWeaknesses.length > 0 && (
+              <>
+                <h2 style={{ marginTop: 40 }}>Weakest Topics</h2>
+                <ChalkUnderline />
+                <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
+                  {analytics.topicWeaknesses.map((t, i) => (
+                    <div key={i} className="card" style={{ padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{t.topic}</span>
+                      <span style={{ fontSize: 13 }}>{t.averageAccuracy}% avg · {t.studentsAssessed} student(s)</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {["departmentWise", "batchWise", "sectionWise", "subjectWise"].some((k) => analytics[k]?.length > 0) && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 40 }}>
+                {[["departmentWise", "By Department"], ["batchWise", "By Batch"], ["sectionWise", "By Section"], ["subjectWise", "By Subject"]].map(([key, label]) => (
+                  analytics[key]?.length > 0 && (
+                    <div key={key} className="card" style={{ padding: 16 }}>
+                      <h3 style={{ fontSize: 14 }}>{label}</h3>
+                      <div style={{ marginTop: 10 }}>
+                        {analytics[key].map((row, i) => (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < analytics[key].length - 1 ? "1px solid var(--line)" : "none", fontSize: 13 }}>
+                            <span>{row.key}</span>
+                            <span style={{ fontWeight: 700 }}>{row.averageScore}% <span style={{ fontWeight: 400, color: "var(--ink-dim)" }}>({row.count})</span></span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
+            )}
+
+            {analytics.atRiskStudents.length > 0 && (
+              <>
+                <h2 style={{ marginTop: 40 }}>Students Needing Intervention</h2>
+                <ChalkUnderline />
+                <div style={{ overflowX: "auto", marginTop: 16 }}>
+                  <table className="mono" style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
+                        <th style={{ padding: 8 }}>Name</th>
+                        <th style={{ padding: 8 }}>Reg. No.</th>
+                        <th style={{ padding: 8 }}>Subject</th>
+                        <th style={{ padding: 8 }}>Score</th>
+                        <th style={{ padding: 8 }}>Level</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.atRiskStudents.map((s) => (
+                        <tr key={`${s.studentId}-${s.subject}`} style={{ borderBottom: "1px solid var(--line)" }}>
+                          <td style={{ padding: 8 }}>{s.name}</td>
+                          <td style={{ padding: 8 }}>{s.registrationNumber}</td>
+                          <td style={{ padding: 8 }}>{s.subject}</td>
+                          <td style={{ padding: 8 }}>{s.overallScore}%</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: "#fff", background: LEVEL_COLORS[s.readinessLevel] || "#6b7280" }}>
+                              {s.readinessLevel.replace(/_/g, " ")}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
