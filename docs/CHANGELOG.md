@@ -60,3 +60,9 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 - Database model count: 76 -> 77 (review DATABASE.md, DATA_DICTIONARY.md)
 - This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
 - Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
+
+## 2026-08-13 (auto-detected drift)
+- Database model count: 77 -> 81 (review DATABASE.md, DATA_DICTIONARY.md)
+- Database enum count: 19 -> 20 (review DATABASE.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
