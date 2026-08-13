@@ -2148,6 +2148,7 @@ model AcademicGroup {
   courseAssignments CourseAcademicGroupAssignment[]
   dailyChallenges  DailyChallenge[]
   weeklyChallenges WeeklyChallenge[]
+  readinessSubjectAssignments ReadinessSubjectAcademicGroup[]
 
   @@unique([instituteId, batch, departmentId, section])
   @@index([instituteId])
@@ -2528,9 +2529,34 @@ model ReadinessSubject {
   updatedAt DateTime @updatedAt
 
   assessments ReadinessAssessment[]
+  academicGroupAssignments ReadinessSubjectAcademicGroup[]
 
   @@index([instituteId])
   @@index([createdById])
+}
+
+// Fine-grained grant: subject visible/startable only for students in this specific AcademicGroup
+// (Institute+Batch+Department+Section) — mirrors CourseAcademicGroupAssignment exactly. Empty
+// assignment set for a subject = open to the whole institute (or platform, if instituteId null),
+// same "empty = open" convention as TestAcademicGroup/CourseAcademicGroupAssignment, so every
+// pre-existing subject keeps working unchanged until an admin explicitly assigns it.
+model ReadinessSubjectAcademicGroup {
+  id               String           @id @default(uuid())
+  subject          ReadinessSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId        String
+  academicGroup    AcademicGroup    @relation(fields: [academicGroupId], references: [id], onDelete: Cascade)
+  academicGroupId  String
+  // Optional further narrowing to one free-text program within the assigned group — matches
+  // User.program's own convention (no FK anywhere on this platform, not part of AcademicGroup's
+  // identity). Null = every program within the assigned academicGroup is eligible.
+  program          String?
+  assignedByUserId String
+  assignedByName   String
+  createdAt        DateTime         @default(now())
+
+  @@unique([subjectId, academicGroupId, program])
+  @@index([subjectId])
+  @@index([academicGroupId])
 }
 
 // One student's attempt at a subject readiness assessment. Mirrors InterviewSession's shape: a

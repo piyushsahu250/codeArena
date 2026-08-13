@@ -10,7 +10,11 @@ function levelLabel(level) {
 // Same section order as the student-facing ReadinessReport.jsx page (routes/readiness.js's
 // buildReadinessReport is the single source of every number here — this generator only renders
 // it, same "one centralized scoring engine" rule as every other report on this platform).
-function generateReadinessReportPdf({ studentName, subjectName, assessmentMode, submittedAt, report }, res) {
+//
+// academicContext (optional — the caller resolves it live off student.academicGroup/student.program
+// at generation time, per this module's "no denormalized academic snapshot" convention) renders
+// the Institute/Batch/Department/Section/Program line every generated report is required to carry.
+function generateReadinessReportPdf({ studentName, subjectName, assessmentMode, submittedAt, report, academicContext }, res) {
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   doc.pipe(res);
   drawReportLogoBadge(doc);
@@ -18,6 +22,7 @@ function generateReadinessReportPdf({ studentName, subjectName, assessmentMode, 
   doc.font("Helvetica-Bold").fontSize(20).fillColor("#1C3D5A").text("Readiness Assessment Report");
   doc.font("Helvetica").fontSize(10).fillColor("#333");
   doc.text(`Student: ${studentName}`);
+  if (academicContext) doc.text(academicContext);
   doc.text(`Subject: ${subjectName}`);
   doc.text(`Assessment Mode: ${levelLabel(assessmentMode)}`);
   doc.text(`Date: ${submittedAt ? new Date(submittedAt).toLocaleString() : "—"}`);

@@ -102,6 +102,9 @@ export default function ReadinessReport() {
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
           {assessment.assessmentMode.replace(/_/g, " ")} · Submitted {assessment.submittedAt ? new Date(assessment.submittedAt).toLocaleString() : "—"}
         </p>
+        {assessment.academicContext && (
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>{assessment.academicContext}</p>
+        )}
 
         <div className="card" style={{ padding: 28, marginTop: 24, textAlign: "center", background: `${color}14`, border: `1px solid ${color}55` }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-dim)", letterSpacing: "0.04em" }}>OVERALL READINESS</div>

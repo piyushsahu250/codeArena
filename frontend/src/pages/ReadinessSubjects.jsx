@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 
@@ -56,18 +57,44 @@ export default function ReadinessSubjects() {
   const [coverage, setCoverage] = useState(null); // { subjectId, ...} for whichever subject was last checked
   const [checkingCoverage, setCheckingCoverage] = useState(null);
 
+  // Academic-group isolation (spec: assessments must be assigned to specific Institute+Batch+
+  // Department+Section groups, never accidentally open to everyone) — academicGroups feeds both
+  // the AcademicGroupPicker in the edit view and the list-view Batch/Department/Section filters.
+  const [academicGroups, setAcademicGroups] = useState([]);
+  const [assignments, setAssignments] = useState([]); // current subject's ReadinessSubjectAcademicGroup rows, only while editing
+  const [pickerGroupIds, setPickerGroupIds] = useState([]);
+  const [pickerProgram, setPickerProgram] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [removingGroupId, setRemovingGroupId] = useState(null);
+  const [filterBatch, setFilterBatch] = useState("");
+  const [filterDepartmentId, setFilterDepartmentId] = useState("");
+  const [filterSection, setFilterSection] = useState("");
+
+  const departmentOptions = useMemo(() => {
+    const map = new Map();
+    academicGroups.forEach((g) => g.department && map.set(g.department.id, g.department.name));
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [academicGroups]);
+  const batchOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.batch))].sort().reverse(), [academicGroups]);
+  const sectionOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.section))].sort(), [academicGroups]);
+
   function load() {
-    api.get("/readiness/admin/subjects").then((res) => setSubjects(res.data)).catch(() => toast.error("Failed to load subjects"));
+    api.get("/readiness/admin/subjects", { params: { batch: filterBatch || undefined, departmentId: filterDepartmentId || undefined, section: filterSection || undefined } })
+      .then((res) => setSubjects(res.data)).catch(() => toast.error("Failed to load subjects"));
   }
-  useEffect(load, []);
+  useEffect(load, [filterBatch, filterDepartmentId, filterSection]);
+  useEffect(() => { api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => {}); }, []);
 
   function startCreate() {
     setForm(emptyForm());
     setWarning("");
+    setAssignments([]);
+    setPickerGroupIds([]);
+    setPickerProgram("");
     setEditingId("NEW");
   }
 
-  function startEdit(s) {
+  function applySubjectToForm(s) {
     setForm({
       name: s.name, code: s.code || "", department: s.department || "", program: s.program || "",
       description: s.description || "",
@@ -81,8 +108,53 @@ export default function ReadinessSubjects() {
       isActive: s.isActive,
       certificateEnabled: !!s.certificateEnabled, certificateMinLevel: s.certificateMinLevel || "JOB_READY",
     });
+    setAssignments(s.academicGroupAssignments || []);
+  }
+
+  async function startEdit(s) {
     setWarning("");
+    setPickerGroupIds([]);
+    setPickerProgram("");
     setEditingId(s.id);
+    try {
+      const res = await api.get(`/readiness/admin/subjects/${s.id}`);
+      applySubjectToForm(res.data);
+    } catch {
+      toast.error("Failed to load subject detail");
+      applySubjectToForm(s);
+    }
+  }
+
+  async function assignGroups() {
+    if (!pickerGroupIds.length) return;
+    setAssigning(true);
+    try {
+      await api.post(`/readiness/admin/subjects/${editingId}/assignments`, {
+        assignments: pickerGroupIds.map((academicGroupId) => ({ academicGroupId, program: pickerProgram.trim() || null })),
+      });
+      const res = await api.get(`/readiness/admin/subjects/${editingId}`);
+      setAssignments(res.data.academicGroupAssignments || []);
+      setPickerGroupIds([]);
+      setPickerProgram("");
+      toast.success("Academic group(s) assigned.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to assign academic groups");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function unassignGroup(academicGroupId) {
+    setRemovingGroupId(academicGroupId);
+    try {
+      await api.delete(`/readiness/admin/subjects/${editingId}/assignments`, { data: { academicGroupIds: [academicGroupId] } });
+      setAssignments((prev) => prev.filter((a) => a.academicGroupId !== academicGroupId));
+      toast.success("Academic group removed.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to remove academic group");
+    } finally {
+      setRemovingGroupId(null);
+    }
   }
 
   function distributionSum() {
@@ -133,10 +205,20 @@ export default function ReadinessSubjects() {
         isActive: form.isActive,
         certificateEnabled: form.certificateEnabled, certificateMinLevel: form.certificateEnabled ? form.certificateMinLevel : null,
       };
-      const res = editingId === "NEW" ? await api.post("/readiness/admin/subjects", payload) : await api.patch(`/readiness/admin/subjects/${editingId}`, payload);
+      const wasNew = editingId === "NEW";
+      const res = wasNew ? await api.post("/readiness/admin/subjects", payload) : await api.patch(`/readiness/admin/subjects/${editingId}`, payload);
       if (res.data.warning) setWarning(res.data.warning);
-      toast.success(editingId === "NEW" ? "Subject created." : "Subject updated.");
-      setEditingId(null);
+      toast.success(wasNew ? "Subject created — now assign it to academic groups below." : "Subject updated.");
+      if (wasNew) {
+        // Stay on the edit screen so the admin can immediately assign academic groups — a brand
+        // new subject with zero assignments is "open to the entire institute" until they do, per
+        // the platform's empty-assignment convention, so prompting right away avoids accidental
+        // wide-open subjects.
+        setEditingId(res.data.subject.id);
+        setAssignments([]);
+      } else {
+        setEditingId(null);
+      }
       load();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to save subject");
@@ -184,10 +266,37 @@ export default function ReadinessSubjects() {
 
         {editingId === null && (
           <div style={{ marginTop: 20 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+              <div style={{ flex: "1 1 140px" }}>
+                <label style={{ ...labelStyle, marginTop: 0 }}>Batch</label>
+                <select style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}>
+                  <option value="">All batches</option>
+                  {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: "1 1 180px" }}>
+                <label style={{ ...labelStyle, marginTop: 0 }}>Department</label>
+                <select style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)}>
+                  <option value="">All departments</option>
+                  {departmentOptions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: "1 1 140px" }}>
+                <label style={{ ...labelStyle, marginTop: 0 }}>Section</label>
+                <select style={inputStyle} value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+                  <option value="">All sections</option>
+                  {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              {(filterBatch || filterDepartmentId || filterSection) && (
+                <button className="btn btn-ghost" style={{ ...smallBtn, alignSelf: "flex-end" }} onClick={() => { setFilterBatch(""); setFilterDepartmentId(""); setFilterSection(""); }}>Clear filters</button>
+              )}
+            </div>
+
             {subjects === null ? (
               <p className="mono" style={{ opacity: 0.7 }}>Loading…</p>
             ) : subjects.length === 0 ? (
-              <p style={{ opacity: 0.7 }}>No subjects yet — create one to start building Readiness assessments.</p>
+              <p style={{ opacity: 0.7 }}>No subjects match — create one, or clear the filters above.</p>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
                 {subjects.map((s) => (
@@ -196,6 +305,9 @@ export default function ReadinessSubjects() {
                       <div>
                         <strong>{s.name}</strong>{s.code ? <span className="mono" style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>{s.code}</span> : null}
                         {!s.isActive && <span className="badge" style={{ marginLeft: 8, background: "var(--rust)" }}>Inactive</span>}
+                        <span className="badge" style={{ marginLeft: 8, background: s._count?.academicGroupAssignments ? "var(--mint, #2e7d32)" : "var(--amber)" }}>
+                          {s._count?.academicGroupAssignments ? `Assigned to ${s._count.academicGroupAssignments} group(s)` : "Open to entire institute"}
+                        </span>
                         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
                           {(s.department || "Any department")} · {(s.program || "Any program")} · {Array.isArray(s.topics) ? s.topics.length : 0} topics · {Array.isArray(s.assessmentModes) ? s.assessmentModes.length : 0} modes
                         </div>
@@ -249,6 +361,46 @@ export default function ReadinessSubjects() {
 
             <label style={labelStyle}>Description</label>
             <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+
+            <div className="card" style={{ padding: 14, marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Assign to Academic Groups</div>
+              <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+                {assignments.length === 0
+                  ? "No groups assigned yet — this subject is currently open to every student in the institute. Assign specific Institute/Batch/Department/Section groups below to restrict it."
+                  : "Only students in the assigned groups below (matching the group's program, if one is set) can see and start this assessment."}
+              </p>
+
+              {editingId === "NEW" ? (
+                <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>Save the subject first — you'll be able to assign academic groups right after.</p>
+              ) : (
+                <>
+                  {assignments.length > 0 && (
+                    <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+                      {assignments.map((a) => (
+                        <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "var(--paper-alt, #f7f5f0)", borderRadius: 8, padding: "6px 10px" }}>
+                          <span>
+                            {a.academicGroup?.institute?.name} · {a.academicGroup?.batch} · {a.academicGroup?.department?.name} · Section {a.academicGroup?.section}
+                            {a.program ? ` · ${a.program}` : ""}
+                          </span>
+                          <button type="button" className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} disabled={removingGroupId === a.academicGroupId} onClick={() => unassignGroup(a.academicGroupId)}>
+                            {removingGroupId === a.academicGroupId ? "Removing…" : "Remove"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                    <AcademicGroupPicker multi groups={academicGroups} value={pickerGroupIds} onChange={setPickerGroupIds} />
+                    <label style={{ ...labelStyle, marginTop: 10 }}>Program (optional — blank applies to every program in the selected groups)</label>
+                    <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
+                    <button type="button" className="btn btn-primary" style={{ ...smallBtn, marginTop: 10 }} disabled={!pickerGroupIds.length || assigning} onClick={assignGroups}>
+                      {assigning ? "Assigning…" : `Assign ${pickerGroupIds.length || ""} Selected Group(s)`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="card" style={{ padding: 14, marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>Topics &amp; Subtopics</div>

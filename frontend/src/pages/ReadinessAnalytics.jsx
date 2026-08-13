@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import api from "../api";
 
 const inputStyle = { padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 };
@@ -34,9 +35,29 @@ export default function ReadinessAnalytics() {
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
 
+  // Academic-context filters (spec section 13/14) — narrows the dashboard to a Batch/Department/
+  // Section, same data source (GET /academic-groups) the assignment picker uses. Compare mode is a
+  // separate, explicit opt-in (section 15) — never blends automatically with the normal filtered view.
+  const [academicGroups, setAcademicGroups] = useState([]);
+  const [filterBatch, setFilterBatch] = useState("");
+  const [filterDepartmentId, setFilterDepartmentId] = useState("");
+  const [filterSection, setFilterSection] = useState("");
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareGroupIds, setCompareGroupIds] = useState([]);
+  const [activeCompareIds, setActiveCompareIds] = useState([]); // only set once "Compare Selected Groups" is clicked
+
   useEffect(() => {
     api.get("/readiness/admin/subjects").then((res) => setSubjects(res.data)).catch(() => {});
+    api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => {});
   }, []);
+
+  const departmentOptions = useMemo(() => {
+    const map = new Map();
+    academicGroups.forEach((g) => g.department && map.set(g.department.id, g.department.name));
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [academicGroups]);
+  const batchOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.batch))].sort().reverse(), [academicGroups]);
+  const sectionOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.section))].sort(), [academicGroups]);
 
   const selectedSubject = subjects.find((s) => s.id === subjectId);
   const modeOptions = Array.isArray(selectedSubject?.assessmentModes) ? selectedSubject.assessmentModes : [];
@@ -45,14 +66,26 @@ export default function ReadinessAnalytics() {
     const p = {};
     if (subjectId) p.subjectId = subjectId;
     if (assessmentMode) p.assessmentMode = assessmentMode;
+    if (activeCompareIds.length) {
+      p.compareGroupIds = activeCompareIds.join(",");
+      return p; // compare mode overrides the single-scope batch/department/section filter
+    }
+    if (filterBatch) p.batch = filterBatch;
+    if (filterDepartmentId) p.departmentId = filterDepartmentId;
+    if (filterSection) p.section = filterSection;
     return p;
-  }, [subjectId, assessmentMode]);
+  }, [subjectId, assessmentMode, filterBatch, filterDepartmentId, filterSection, activeCompareIds]);
 
   useEffect(() => {
     api.get("/readiness/admin/analytics", { params: queryParams })
       .then((res) => setAnalytics(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load analytics"));
   }, [queryParams]);
+
+  const contextBreadcrumb = activeCompareIds.length
+    ? null
+    : [filterBatch ? `Batch ${filterBatch}` : null, departmentOptions.find((d) => d.id === filterDepartmentId)?.name, filterSection ? `Section ${filterSection}` : null, selectedSubject?.name]
+        .filter(Boolean).join(" · ") || "All academic groups";
 
   async function exportExcel() {
     setExporting(true);
@@ -70,8 +103,8 @@ export default function ReadinessAnalytics() {
     }
   }
 
-  const levelData = analytics ? Object.entries(analytics.readinessLevelDistribution).map(([level, count]) => ({ level: level.replace(/_/g, " "), count, color: LEVEL_COLORS[level] || "#6b7280" })) : [];
-  const btlData = analytics ? [1, 2, 3, 4, 5, 6].filter((l) => analytics.btlAverages[l] != null).map((l) => ({ level: BTL_LABELS[l], average: analytics.btlAverages[l] })) : [];
+  const levelData = analytics && !analytics.groups ? Object.entries(analytics.readinessLevelDistribution).map(([level, count]) => ({ level: level.replace(/_/g, " "), count, color: LEVEL_COLORS[level] || "#6b7280" })) : [];
+  const btlData = analytics && !analytics.groups ? [1, 2, 3, 4, 5, 6].filter((l) => analytics.btlAverages[l] != null).map((l) => ({ level: BTL_LABELS[l], average: analytics.btlAverages[l] })) : [];
 
   return (
     <div>
@@ -86,33 +119,103 @@ export default function ReadinessAnalytics() {
         <div className="card" style={{ padding: 16, marginTop: 24, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
             <label style={labelStyle}>Subject</label>
-            <select style={inputStyle} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setAssessmentMode(""); }}>
+            <select style={inputStyle} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setAssessmentMode(""); }} disabled={compareMode}>
               <option value="">All subjects</option>
               {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label style={labelStyle}>Assessment Mode</label>
-            <select style={inputStyle} value={assessmentMode} onChange={(e) => setAssessmentMode(e.target.value)} disabled={!subjectId}>
+            <select style={inputStyle} value={assessmentMode} onChange={(e) => setAssessmentMode(e.target.value)} disabled={!subjectId || compareMode}>
               <option value="">All modes</option>
               {modeOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           </div>
-          <button type="button" className="btn btn-ghost" disabled={exporting || !analytics?.totalAssessments} onClick={exportExcel}>
+          <div>
+            <label style={labelStyle}>Batch</label>
+            <select style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} disabled={compareMode}>
+              <option value="">All batches</option>
+              {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Department</label>
+            <select style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)} disabled={compareMode}>
+              <option value="">All departments</option>
+              {departmentOptions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Section</label>
+            <select style={inputStyle} value={filterSection} onChange={(e) => setFilterSection(e.target.value)} disabled={compareMode}>
+              <option value="">All sections</option>
+              {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <button type="button" className="btn btn-ghost" disabled={exporting || compareMode || !analytics?.totalAssessments} onClick={exportExcel}>
             {exporting ? "Exporting…" : "⬇ Export Excel"}
           </button>
+          <button
+            type="button" className="btn btn-ghost"
+            onClick={() => { setCompareMode((v) => !v); setActiveCompareIds([]); setCompareGroupIds([]); }}
+          >
+            {compareMode ? "✕ Exit Compare" : "⇄ Compare Academic Groups"}
+          </button>
         </div>
+
+        {compareMode && (
+          <div className="card" style={{ padding: 16, marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Compare Academic Groups</div>
+            <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+              Pick 2 or more Institute/Batch/Department/Section groups to see them side by side. This never happens automatically — the normal dashboard above stays scoped to one context at a time.
+            </p>
+            <div style={{ marginTop: 10 }}>
+              <AcademicGroupPicker multi groups={academicGroups} value={compareGroupIds} onChange={setCompareGroupIds} />
+            </div>
+            <button type="button" className="btn btn-primary" style={{ marginTop: 12 }} disabled={compareGroupIds.length < 2} onClick={() => setActiveCompareIds(compareGroupIds)}>
+              Compare {compareGroupIds.length || ""} Selected Group(s)
+            </button>
+          </div>
+        )}
+
+        {!compareMode && (
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 12 }}>
+            Showing: <strong>{contextBreadcrumb}</strong>
+          </p>
+        )}
 
         {error && <p style={{ color: "var(--rust)", marginTop: 16 }}>{error}</p>}
         {!analytics && !error && <p style={{ color: "var(--ink-dim)", marginTop: 24 }}>Loading…</p>}
 
-        {analytics && analytics.totalAssessments === 0 && (
+        {analytics?.groups && (
+          <div style={{ overflowX: "auto", marginTop: 24 }}>
+            <div style={{ display: "flex", gap: 16, minWidth: "fit-content" }}>
+              {analytics.groups.map((g) => (
+                <div key={g.academicGroupId} className="card" style={{ padding: 16, minWidth: 240, flex: "0 0 auto" }}>
+                  <h3 style={{ fontSize: 13 }}>{g.label}</h3>
+                  {g.totalAssessments === 0 ? (
+                    <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>No completed assessments yet.</p>
+                  ) : (
+                    <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+                      <KpiCard label="Total Assessments" value={g.totalAssessments} />
+                      <KpiCard label="Students Assessed" value={g.studentsAssessed} />
+                      <KpiCard label="Average Readiness" value={`${g.averageReadiness}%`} />
+                      <KpiCard label="At-Risk Students" value={g.atRiskStudents.length} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {analytics && !analytics.groups && analytics.totalAssessments === 0 && (
           <div className="card" style={{ padding: 24, marginTop: 24, textAlign: "center", color: "var(--ink-dim)" }}>
             No completed assessments match these filters yet.
           </div>
         )}
 
-        {analytics && analytics.totalAssessments > 0 && (
+        {analytics && !analytics.groups && analytics.totalAssessments > 0 && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginTop: 24 }}>
               <KpiCard label="Total Assessments" value={analytics.totalAssessments} />

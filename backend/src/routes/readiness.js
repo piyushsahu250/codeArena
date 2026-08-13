@@ -12,11 +12,51 @@ const logger = require("../utils/logger");
 const { cached } = require("../utils/cache");
 const { GRADABLE_QUESTION_TYPES } = require("../utils/readinessBlueprint");
 const { generateReadinessReportPdf } = require("../utils/readinessReportPdf");
+const { readinessSubjectEligibilityWhere, studentCanAccessReadinessSubject } = require("../utils/readinessEligibility");
 
 const router = express.Router();
 
 const DEFAULT_QUESTION_COUNT = 15;
 const MAX_QUESTION_COUNT = 50;
+
+// STAFF is restricted to only the AcademicGroups they've been assigned via StaffClassAssignment —
+// same inline query shape attendance.js already uses at 3 call sites (no shared util exists on
+// this platform for this lookup, confirmed before writing this). Returns null for ADMIN (and the
+// unscoped platform admin) so call sites can treat null as "unrestricted" without a separate branch.
+async function staffAcademicGroupIds(req) {
+  if (req.user.role !== "STAFF") return null;
+  const rows = await prisma.staffClassAssignment.findMany({ where: { staffId: req.user.id }, select: { academicGroupId: true } });
+  return rows.map((r) => r.academicGroupId).filter(Boolean);
+}
+
+// Rejects any academicGroupId outside a scoped Admin/Staff's own institute — mirrors courses.js's
+// assertAssignmentScope for CourseAcademicGroupAssignment. Unscoped Platform Admin
+// (req.requesterInstituteId === null) is unrestricted, same convention as every other
+// attachRequesterInstitute-guarded route.
+async function assertReadinessAssignmentScope(req, res, academicGroupIds) {
+  if (!req.requesterInstituteId || !academicGroupIds?.length) return true;
+  const groups = await prisma.academicGroup.findMany({ where: { id: { in: academicGroupIds } }, select: { id: true, instituteId: true } });
+  if (groups.length !== academicGroupIds.length || groups.some((g) => g.instituteId !== req.requesterInstituteId)) {
+    res.status(403).json({ error: "You can only assign this subject to academic groups within your own institute" });
+    return false;
+  }
+  return true;
+}
+
+// Builds the "Institute · Batch · Department · Section · Program" line every generated readiness
+// report/export must carry (spec section 16) — resolved live off the student's current
+// institute/academicGroup/program rather than a stored snapshot, per ResultEntry's own documented
+// convention (never denormalize, always read live at render time).
+function formatAcademicContext(student) {
+  const parts = [
+    student?.institute?.name,
+    student?.academicGroup?.batch,
+    student?.academicGroup?.department?.name,
+    student?.academicGroup?.section ? `Section ${student.academicGroup.section}` : null,
+    student?.program,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
 
 function sanitizeQuestionForStudent(q) {
   return {
@@ -36,10 +76,30 @@ function sanitizeQuestionForStudent(q) {
 
 // =========================== Admin/Staff: Subject configuration ===========================
 
+// Query params batch/departmentId/section are a display filter for the admin's cascading picker
+// (spec section 13) — narrows to subjects explicitly assigned to a matching academic group. An
+// "open to entire institute" subject (zero assignment rows) only shows up when no display filter
+// is active, since it has no assignment row to match against; this is a deliberate simplification
+// for the assignment-management list, not a security boundary (GET /subjects and POST /assessments
+// are the actual enforcement points for students).
+//
+// STAFF is always restricted to subjects open to the whole institute OR assigned to one of their
+// own StaffClassAssignment academic groups (spec section 10) — ADMIN sees everything.
 router.get("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    const { batch, departmentId, section } = req.query;
+    const hasDisplayFilter = !!(batch || departmentId || section);
+    const groupMatch = { ...(batch ? { batch } : {}), ...(departmentId ? { departmentId } : {}), ...(section ? { section } : {}) };
+
+    const myGroupIds = await staffAcademicGroupIds(req);
+    const scopeWhere = myGroupIds !== null
+      ? { OR: [{ academicGroupAssignments: { none: {} } }, { academicGroupAssignments: { some: { academicGroupId: { in: myGroupIds } } } }] }
+      : {};
+    const filterWhere = hasDisplayFilter ? { academicGroupAssignments: { some: { academicGroup: groupMatch } } } : {};
+
     const subjects = await prisma.readinessSubject.findMany({
-      where: instituteWhere(req.requesterInstituteId),
+      where: { ...instituteWhere(req.requesterInstituteId), ...scopeWhere, ...filterWhere },
+      include: { _count: { select: { academicGroupAssignments: true } } },
       orderBy: { name: "asc" },
     });
     res.json(subjects);
@@ -51,7 +111,10 @@ router.get("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attac
 
 router.get("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    const subject = await prisma.readinessSubject.findUnique({
+      where: { id: req.params.id },
+      include: { academicGroupAssignments: { include: { academicGroup: { include: { department: true, institute: true } } } } },
+    });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
     if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
       return res.status(404).json({ error: "Subject not found" });
@@ -152,13 +215,66 @@ router.delete("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
+// ADMIN/STAFF: assign a subject to specific academic groups (Institute+Batch+Department+Section),
+// optionally narrowed further to one free-text program per group — the actual "who can see/start
+// this assessment" gate that GET /subjects and POST /assessments enforce (see
+// utils/readinessEligibility.js). Mirrors courses.js's POST/DELETE /courses/:id/assignments
+// pattern exactly (createMany+skipDuplicates / deleteMany, not a full-replace).
+router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+
+    const assignments = (Array.isArray(req.body.assignments) ? req.body.assignments : []).filter((a) => a?.academicGroupId);
+    if (!assignments.length) return res.status(400).json({ error: "No academic groups provided" });
+    if (!(await assertReadinessAssignmentScope(req, res, assignments.map((a) => a.academicGroupId)))) return;
+
+    await prisma.readinessSubjectAcademicGroup.createMany({
+      data: assignments.map((a) => ({
+        subjectId: subject.id, academicGroupId: a.academicGroupId, program: (a.program || "").trim() || null,
+        assignedByUserId: req.user.id, assignedByName: req.user.name,
+      })),
+      skipDuplicates: true,
+    });
+    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, assignedCount: assignments.length } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to assign academic groups" });
+  }
+});
+
+router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+
+    const academicGroupIds = Array.isArray(req.body.academicGroupIds) ? req.body.academicGroupIds : [];
+    if (!academicGroupIds.length) return res.status(400).json({ error: "No academic groups provided" });
+    if (!(await assertReadinessAssignmentScope(req, res, academicGroupIds))) return;
+
+    await prisma.readinessSubjectAcademicGroup.deleteMany({ where: { subjectId: subject.id, academicGroupId: { in: academicGroupIds } } });
+    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, unassignedCount: academicGroupIds.length } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to unassign academic groups" });
+  }
+});
+
 // =========================== Student: browse subjects ===========================
 
 router.get("/subjects", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true, program: true } });
     const subjects = await prisma.readinessSubject.findMany({
-      where: { ...instituteWhere(student?.instituteId), isActive: true },
+      where: { isActive: true, ...readinessSubjectEligibilityWhere(student?.academicGroupId, student?.program, student?.instituteId) },
       orderBy: { name: "asc" },
     });
     res.json(subjects);
@@ -177,8 +293,11 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), async (req, re
     const { subjectId, assessmentMode, questionCount } = req.body;
     if (!subjectId || !assessmentMode) return res.status(400).json({ error: "subjectId and assessmentMode are required" });
 
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true, program: true } });
     const subject = await prisma.readinessSubject.findUnique({ where: { id: subjectId } });
     if (!subject || !subject.isActive) return res.status(404).json({ error: "This subject is not available" });
+    const eligible = await studentCanAccessReadinessSubject(prisma, subjectId, student?.academicGroupId, student?.program, student?.instituteId);
+    if (!eligible) return res.status(403).json({ error: "This subject is not assigned to your academic group" });
 
     const existing = await prisma.readinessAssessment.findFirst({
       where: { studentId: req.user.id, subjectId, assessmentMode, status: "IN_PROGRESS" },
@@ -192,7 +311,6 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), async (req, re
     }
 
     const count = Math.min(MAX_QUESTION_COUNT, Math.max(1, Number(questionCount) || DEFAULT_QUESTION_COUNT));
-    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
     const { items, blueprint, usedFallback, shortfallLevels } = await buildAssessmentBlueprint({
       subject, assessmentMode, questionCount: count, studentInstituteId: student?.instituteId, excludeStudentId: req.user.id,
     });
@@ -222,12 +340,15 @@ router.get("/assessments/:id", authenticate, requireRole("STUDENT"), async (req,
   try {
     const assessment = await prisma.readinessAssessment.findUnique({
       where: { id: req.params.id },
-      include: { answers: { orderBy: { createdAt: "asc" } }, report: true, subject: true },
+      include: {
+        answers: { orderBy: { createdAt: "asc" } }, report: true, subject: true,
+        student: { select: { program: true, institute: { select: { name: true } }, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
+      },
     });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(404).json({ error: "Assessment not found" });
     const questions = await prisma.question.findMany({ where: { id: { in: assessment.answers.map((a) => a.questionId) } }, include: { testCases: true } });
     const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
-    res.json({ assessment, questions: ordered });
+    res.json({ assessment: { ...assessment, academicContext: formatAcademicContext(assessment.student) }, questions: ordered });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load assessment" });
@@ -332,13 +453,16 @@ router.get("/assessments/:id/report.pdf", authenticate, requireRole("STUDENT"), 
     if (!assessment || assessment.studentId !== req.user.id) return res.status(404).json({ error: "Assessment not found" });
     if (!assessment.report) return res.status(400).json({ error: "This assessment hasn't been submitted yet" });
 
-    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+    const student = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { name: true, program: true, institute: { select: { name: true } }, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } },
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="readiness-report-${assessment.id.slice(0, 8)}.pdf"`);
     generateReadinessReportPdf({
       studentName: student.name, subjectName: assessment.subject.name, assessmentMode: assessment.assessmentMode,
-      submittedAt: assessment.submittedAt, report: assessment.report,
+      submittedAt: assessment.submittedAt, report: assessment.report, academicContext: formatAcademicContext(student),
     }, res);
   } catch (err) {
     console.error(err);
@@ -420,9 +544,22 @@ router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "S
 // scoped ReadinessReport rows, joined through their assessment+student+academicGroup for the
 // breakdown groupings. Institute scoping is on the STUDENT's own institute (not the subject's,
 // which may be platform-wide and attempted by students across many institutes) — an institute-
-// scoped Admin/Staff must only ever see their own institute's students' results.
-async function loadFilteredReports(req) {
+// scoped Admin/Staff must only ever see their own institute's results.
+//
+// `academicGroupOverride` (an AcademicGroup where-clause, e.g. {batch,departmentId,section} or
+// {id: oneGroupId}) lets computeReadinessAnalyticsComparison() reuse this same function per-group
+// instead of duplicating the query — when omitted, it's built from req.query's batch/departmentId/
+// section params (the normal single-view dashboard filter). STAFF is always intersected against
+// their own StaffClassAssignment academic groups, same restriction as the subject-list routes.
+async function loadFilteredReports(req, academicGroupOverride) {
   const studentWhere = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+  const { batch, departmentId, section } = req.query;
+  const academicGroupFilter = academicGroupOverride || { ...(batch ? { batch } : {}), ...(departmentId ? { departmentId } : {}), ...(section ? { section } : {}) };
+  if (Object.keys(academicGroupFilter).length) studentWhere.academicGroup = academicGroupFilter;
+
+  const myGroupIds = await staffAcademicGroupIds(req);
+  if (myGroupIds !== null) studentWhere.academicGroupId = { in: myGroupIds };
+
   const assessmentWhere = {
     ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}),
     ...(req.query.assessmentMode ? { assessmentMode: req.query.assessmentMode } : {}),
@@ -431,7 +568,7 @@ async function loadFilteredReports(req) {
     where: { assessment: assessmentWhere, student: studentWhere },
     include: {
       assessment: { select: { subjectId: true, assessmentMode: true, subject: { select: { name: true } } } },
-      student: { select: { id: true, name: true, registrationNumber: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
+      student: { select: { id: true, name: true, registrationNumber: true, program: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
     },
   });
 }
@@ -449,9 +586,10 @@ function breakdownBy(reports, keyFn) {
 }
 
 // Shared by both the cached JSON analytics route and the on-demand Excel export below, so the
-// two never drift — one computation, two renderings.
-async function computeReadinessAnalytics(req) {
-  const reports = await loadFilteredReports(req);
+// two never drift — one computation, two renderings. academicGroupOverride passes straight through
+// to loadFilteredReports (see its own comment) — used by computeReadinessAnalyticsComparison below.
+async function computeReadinessAnalytics(req, academicGroupOverride) {
+  const reports = await loadFilteredReports(req, academicGroupOverride);
   if (reports.length === 0) {
     return {
       totalAssessments: 0, studentsAssessed: 0, averageReadiness: 0, readinessLevelDistribution: {},
@@ -505,6 +643,24 @@ async function computeReadinessAnalytics(req) {
   };
 }
 
+// ADMIN/STAFF, explicit opt-in only (never automatic — spec: "the normal dashboard must NOT
+// automatically combine [groups]"): one independently-computed, labeled analytics block per
+// requested academicGroupId, reusing the exact same computeReadinessAnalytics()/
+// loadFilteredReports() pipeline as the single-group view, so a compared group's numbers can never
+// disagree with what that same group shows outside compare mode. A STAFF-requested or cross-
+// institute group id outside the requester's own scope silently returns an empty block (never a
+// leak) because loadFilteredReports still ANDs the requester's own institute/staff-group
+// restriction on top of the requested academicGroupId.
+async function computeReadinessAnalyticsComparison(req, academicGroupIds) {
+  const groups = await prisma.academicGroup.findMany({ where: { id: { in: academicGroupIds } }, include: { department: true } });
+  const blocks = await Promise.all(groups.map(async (g) => ({
+    academicGroupId: g.id,
+    label: `${g.batch} · ${g.department.name} · ${g.section}`,
+    ...(await computeReadinessAnalytics(req, { id: g.id })),
+  })));
+  return { groups: blocks };
+}
+
 // ADMIN/STAFF: institute-wide (or filtered) readiness analytics — class/subject/department/
 // batch comparison, BTL distribution, topic weaknesses, at-risk students. Mirrors
 // resultManagement.js's admin/analytics template: one shared filtered-load function feeding a
@@ -513,9 +669,12 @@ async function computeReadinessAnalytics(req) {
 // placement/document workflow scope Clerk is otherwise limited to.
 router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    const compareGroupIds = req.query.compareGroupIds ? String(req.query.compareGroupIds).split(",").map((s) => s.trim()).filter(Boolean) : [];
     const instituteKey = req.requesterInstituteId || "all";
     const filterKey = JSON.stringify(req.query);
-    const analytics = await cached(`readinessAnalytics:${instituteKey}:${filterKey}`, 60 * 1000, () => computeReadinessAnalytics(req));
+    const analytics = compareGroupIds.length
+      ? await cached(`readinessAnalyticsCompare:${instituteKey}:${filterKey}`, 60 * 1000, () => computeReadinessAnalyticsComparison(req, compareGroupIds))
+      : await cached(`readinessAnalytics:${instituteKey}:${filterKey}`, 60 * 1000, () => computeReadinessAnalytics(req));
     res.json(analytics);
   } catch (err) {
     console.error(err);
@@ -531,7 +690,21 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
   try {
     const analytics = await computeReadinessAnalytics(req);
 
+    // Academic-context header (spec section 16: every export must carry it) — describes the scope
+    // this export was actually filtered to, not one student's context (this is aggregate data).
+    const [institute, department, subject] = await Promise.all([
+      req.requesterInstituteId ? prisma.institute.findUnique({ where: { id: req.requesterInstituteId }, select: { name: true } }) : null,
+      req.query.departmentId ? prisma.department.findUnique({ where: { id: req.query.departmentId }, select: { name: true } }) : null,
+      req.query.subjectId ? prisma.readinessSubject.findUnique({ where: { id: req.query.subjectId }, select: { name: true } }) : null,
+    ]);
+    const contextParts = [
+      institute?.name || "All institutes", req.query.batch ? `Batch ${req.query.batch}` : null,
+      department?.name, req.query.section ? `Section ${req.query.section}` : null, subject?.name,
+    ].filter(Boolean);
+
     const summaryRows = [
+      ["Academic Context", contextParts.join(" · ")],
+      [],
       ["Total Assessments", analytics.totalAssessments],
       ["Students Assessed", analytics.studentsAssessed],
       ["Average Readiness", `${analytics.averageReadiness}%`],
