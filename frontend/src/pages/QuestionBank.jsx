@@ -52,6 +52,7 @@ export default function QuestionBank() {
   const [copyTargetId, setCopyTargetId] = useState("");
   const [copying, setCopying] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkStatusUpdating, setBulkStatusUpdating] = useState(false);
   const [clearingFolder, setClearingFolder] = useState(false);
   const [duplicateAction, setDuplicateAction] = useState("skip");
 
@@ -270,6 +271,32 @@ export default function QuestionBank() {
       alert(err.response?.data?.error || "Failed to copy questions");
     } finally {
       setCopying(false);
+    }
+  }
+
+  // Bulk review-status transition — the review-queue action: filter by Draft/Under Review,
+  // select a batch, Verify or Archive in one click instead of opening each question's edit
+  // form. No confirm dialog for Verify (reversible, same weight as any other edit); Archive gets
+  // one since it pulls the question out of every assessment surface until re-published.
+  async function setBulkStatus(questionStatus) {
+    if (questionStatus === "ARCHIVED") {
+      const ok = await confirmDialog({
+        title: `Archive ${selectedIds.length} Question${selectedIds.length === 1 ? "" : "s"}?`,
+        message: "Archived questions are excluded from Readiness assessments until re-published. They stay visible here and can still be manually added to a Formal Test if you choose. You can change this back later.",
+        confirmLabel: "Archive",
+      });
+      if (!ok) return;
+    }
+    setBulkStatusUpdating(true);
+    try {
+      const { data } = await api.post("/questions/bulk-status", { questionIds: selectedIds, questionStatus });
+      if (data.skippedCount > 0) alert(`Updated ${data.updatedCount} question(s). ${data.skippedCount} skipped (not yours to update).`);
+      setSelectedIds([]);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update review status");
+    } finally {
+      setBulkStatusUpdating(false);
     }
   }
 
@@ -677,6 +704,24 @@ export default function QuestionBank() {
                 </button>
                 <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={exportSelected}>Export</button>
                 <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={addSelectedToTest}>Add to Test</button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, color: "#16a34a", borderColor: "#16a34a" }}
+                  onClick={() => setBulkStatus("VERIFIED")}
+                  disabled={bulkStatusUpdating}
+                  title="Mark as reviewed and eligible for live assessments"
+                >
+                  {bulkStatusUpdating ? "Updating…" : "Verify"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12 }}
+                  onClick={() => setBulkStatus("ARCHIVED")}
+                  disabled={bulkStatusUpdating}
+                  title="Remove from live assessment surfaces until re-published"
+                >
+                  {bulkStatusUpdating ? "Updating…" : "Archive"}
+                </button>
                 <button
                   className="btn btn-ghost"
                   style={{ fontSize: 12, color: "var(--rust)", borderColor: "var(--rust)" }}

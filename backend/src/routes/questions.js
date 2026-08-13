@@ -585,6 +585,28 @@ router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   res.json({ movedCount: movableIds.length, skippedCount: questionIds.length - movableIds.length });
 });
 
+// Bulk review-status transition — powers the Question Bank's review queue (filter by Draft/Under
+// Review, select a batch, Verify or Archive in one action) instead of opening each question's
+// edit form individually. Same ownership-filter-then-updateMany pattern as bulk-move; no FK
+// constraints on questionStatus so a plain updateMany is safe here (unlike bulk-delete).
+router.post("/bulk-status", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
+  const questionStatus = req.body.questionStatus;
+  if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
+  if (!QUESTION_STATUSES.includes(questionStatus)) return res.status(400).json({ error: "Invalid review status" });
+
+  const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
+  const updatableIds = owned.filter((q) => ownsQuestionRow(req, q)).map((q) => q.id);
+  if (updatableIds.length === 0) return res.status(403).json({ error: "None of the selected questions are in your institute's question bank" });
+
+  await prisma.question.updateMany({ where: { id: { in: updatableIds } }, data: { questionStatus } });
+  await logAudit({
+    req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+    instituteId: req.requesterInstituteId, details: { bulk: true, count: updatableIds.length, questionStatus },
+  });
+  res.json({ updatedCount: updatableIds.length, skippedCount: questionIds.length - updatableIds.length });
+});
+
 // Bulk-delete: mirrors bulk-move's ownership-filter pattern, but deletes one row at a time
 // (not deleteMany) so a mixed selection — some questions attached to a Test, some not —
 // partially succeeds instead of the whole batch failing on the first FK-restrict question
