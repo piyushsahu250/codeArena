@@ -136,6 +136,8 @@ function buildWhere(query, req) {
   if (query.folderId === "__none__") where.folderId = null;
   else if (query.folderId) where.folderId = query.folderId;
   if (query.createdById) where.createdById = query.createdById;
+  if (query.questionStatus && QUESTION_STATUSES.includes(query.questionStatus)) where.questionStatus = query.questionStatus;
+  if (query.aiGenerated === "true") where.aiGenerated = true;
   if (query.q) {
     where.AND.push({
       OR: [
@@ -174,7 +176,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       evaluationType, functionSignature, starterCodeByLanguage, memoryLimitKb, tags, sqlSchema,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
-      allowDuplicate, subtopic, btlLevel, skillTested, questionStatus,
+      allowDuplicate, subtopic, btlLevel, skillTested, questionStatus, aiGenerated,
     } = req.body;
 
     if (!description) return res.status(400).json({ error: "Question text is required" });
@@ -234,7 +236,12 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       subtopic: subtopic || null,
       btlLevel: BTL_LEVELS.includes(Number(btlLevel)) ? Number(btlLevel) : null,
       skillTested: skillTested || null,
-      questionStatus: QUESTION_STATUSES.includes(questionStatus) ? questionStatus : "PUBLISHED",
+      aiGenerated: !!aiGenerated,
+      // An AI-drafted question that arrives with no explicit review status defaults to DRAFT, not
+      // PUBLISHED — CRITICAL RULE: AI-generated content must pass through a review step before it
+      // can appear in a live assessment, never auto-publish. A human-authored question with no
+      // status still defaults to PUBLISHED as before, unchanged from pre-RA8 behavior.
+      questionStatus: QUESTION_STATUSES.includes(questionStatus) ? questionStatus : (aiGenerated ? "DRAFT" : "PUBLISHED"),
     };
 
     if (type === "CODING") {

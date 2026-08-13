@@ -62,8 +62,10 @@ export default function CreateQuestion() {
   const [aiConfigured, setAiConfigured] = useState(true); // optimistic until checked, avoids a flash of "unavailable"
   const [aiSubject, setAiSubject] = useState("");
   const [aiTopic, setAiTopic] = useState("");
+  const [aiBtlLevel, setAiBtlLevel] = useState("");
   const [generating, setGenerating] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [aiGenerated, setAiGenerated] = useState(false);
 
   useEffect(() => {
     api.get("/ai/questions/status").then((res) => setAiConfigured(res.data.configured)).catch(() => {});
@@ -73,6 +75,13 @@ export default function CreateQuestion() {
   // member is expected to read, edit, and only then click the existing Save button, same as if
   // they'd typed it themselves. SQL / fill-in-the-blank / subjective aren't offered here since
   // this platform has no execution or grading path for them (see backend/src/routes/aiQuestions.js).
+  //
+  // Passes real BTL/skill context when the admin sets it — the backend uses these to instruct the
+  // model on the actual cognitive task the question must exercise, per the Employability &
+  // Readiness module's "never assign BTL randomly, always give AI real objective context" rule.
+  // A successful generation forces Review Status to DRAFT and marks the question aiGenerated —
+  // AI-authored content must pass through review before it can appear in a live assessment, never
+  // auto-publish.
   async function generateWithAI() {
     const subject = (aiSubject || form.subject).trim();
     if (!subject) return setAiError("Enter a subject to generate from");
@@ -84,6 +93,9 @@ export default function CreateQuestion() {
         subject,
         topic: (aiTopic || form.topic).trim(),
         difficulty: form.difficulty,
+        btlLevel: aiBtlLevel || form.btlLevel || undefined,
+        skillTested: form.skillTested || undefined,
+        subtopic: form.subtopic || undefined,
       });
       setForm((f) => ({
         ...f,
@@ -92,7 +104,12 @@ export default function CreateQuestion() {
         explanation: data.explanation || f.explanation,
         subject: f.subject || subject,
         topic: f.topic || (aiTopic || "").trim(),
+        btlLevel: data.btlLevel ?? f.btlLevel,
+        skillTested: data.skillTested || f.skillTested,
+        subtopic: data.subtopic || f.subtopic,
+        questionStatus: "DRAFT",
       }));
+      setAiGenerated(true);
       if (form.questionType === "CODING") {
         if (Array.isArray(data.testCases) && data.testCases.length > 0) {
           setTestCases(data.testCases.map((tc) => ({ input: tc.input ?? "", expected: tc.expected ?? "", isHidden: !!tc.isHidden, explanation: "" })));
@@ -126,6 +143,7 @@ export default function CreateQuestion() {
         subtopic: q.subtopic || "", btlLevel: q.btlLevel ?? "", skillTested: q.skillTested || "",
         questionStatus: q.questionStatus || "PUBLISHED",
       });
+      setAiGenerated(!!q.aiGenerated);
       if (q.functionSignature) setSignature(q.functionSignature);
       if (q.questionType === "CODING" || q.questionType === "SQL") {
         setTestCases(q.testCases?.length ? q.testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || "" })) : [{ input: "", expected: "", isHidden: false, explanation: "" }]);
@@ -185,6 +203,7 @@ export default function CreateQuestion() {
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         folderId: folderId || null,
         allowDuplicate: allowDuplicate || undefined,
+        aiGenerated,
       };
       if (form.questionType === "CODING") {
         payload.testCases = testCases;
@@ -273,16 +292,28 @@ export default function CreateQuestion() {
             ) : (
               <>
                 <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
-                  Drafts a {QUESTION_TYPES.find((t) => t.value === form.questionType)?.label.toLowerCase()} question below for you to review and edit — nothing is saved until you click Save.
+                  Drafts a {QUESTION_TYPES.find((t) => t.value === form.questionType)?.label.toLowerCase()} question below for you to review and edit — nothing is saved until you click Save. Saving an AI draft starts it at Review Status "Draft", never Published.
                 </p>
                 <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
                   <input style={{ ...inputStyle, marginTop: 0, flex: "1 1 160px" }} placeholder="Subject (e.g. Java, DBMS)" value={aiSubject} onChange={(e) => setAiSubject(e.target.value)} />
                   <input style={{ ...inputStyle, marginTop: 0, flex: "1 1 160px" }} placeholder="Topic (optional)" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} />
+                  <select style={{ ...inputStyle, marginTop: 0, flex: "1 1 160px" }} value={aiBtlLevel} onChange={(e) => setAiBtlLevel(e.target.value)}>
+                    <option value="">Target BTL level (optional)</option>
+                    {BTL_LEVELS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+                  </select>
                   <button type="button" className="btn btn-primary" disabled={generating} onClick={generateWithAI}>
                     {generating ? "Generating…" : "Generate"}
                   </button>
                 </div>
+                <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 6 }}>
+                  Setting a target BTL level tells the model the specific cognitive task the question must require (e.g. Apply = use a concept on a new problem, not just recall it) — it doesn't guess the level from wording.
+                </p>
                 {aiError && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 6 }}>{aiError}</p>}
+                {aiGenerated && (
+                  <p className="mono" style={{ fontSize: 11, fontWeight: 700, color: "var(--amber-dark, #b45309)", marginTop: 6 }}>
+                    ⚠ This question is AI-generated — verify its content and correctness, then update Review Status below before it's used in a live assessment.
+                  </p>
+                )}
               </>
             )}
           </div>

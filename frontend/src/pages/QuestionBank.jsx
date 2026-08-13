@@ -38,6 +38,8 @@ export default function QuestionBank() {
   const [difficulty, setDifficulty] = useState("");
   const [questionType, setQuestionType] = useState("");
   const [createdById, setCreatedById] = useState("");
+  const [questionStatus, setQuestionStatus] = useState("");
+  const [aiGeneratedOnly, setAiGeneratedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -72,12 +74,12 @@ export default function QuestionBank() {
     setPage(1);
     setSelectedIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, subject, topic, difficulty, questionType, createdById, activeFolder]);
+  }, [q, subject, topic, difficulty, questionType, createdById, questionStatus, aiGeneratedOnly, activeFolder]);
 
   useEffect(() => {
     if (activeFolder) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, subject, topic, difficulty, questionType, createdById, activeFolder, page]);
+  }, [q, subject, topic, difficulty, questionType, createdById, questionStatus, aiGeneratedOnly, activeFolder, page]);
 
   const foldersById = useMemo(() => new Map((folders || []).map((f) => [f.id, f])), [folders]);
 
@@ -118,6 +120,8 @@ export default function QuestionBank() {
     if (difficulty) params.difficulty = difficulty;
     if (questionType) params.questionType = questionType;
     if (createdById) params.createdById = createdById;
+    if (questionStatus) params.questionStatus = questionStatus;
+    if (aiGeneratedOnly) params.aiGenerated = "true";
     if (activeFolder?.id === "__none__") params.folderId = "__none__";
     else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
     api.get("/questions", { params }).then((res) => {
@@ -514,6 +518,18 @@ export default function QuestionBank() {
                   {meta.creators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               )}
+              <select style={selectStyle} value={questionStatus} onChange={(e) => setQuestionStatus(e.target.value)}>
+                <option value="">All review statuses</option>
+                <option value="DRAFT">Draft</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="VERIFIED">Verified</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, padding: "0 6px" }}>
+                <input type="checkbox" checked={aiGeneratedOnly} onChange={(e) => setAiGeneratedOnly(e.target.checked)} />
+                AI-generated only
+              </label>
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
@@ -596,6 +612,16 @@ export default function QuestionBank() {
                       <span style={{ fontWeight: 600, fontSize: 14 }}>{question.title || "(untitled)"}</span>
                       <span className="badge">{TYPE_LABELS[question.questionType]}</span>
                       <span className={`badge badge-${question.difficulty.toLowerCase()}`}>{question.difficulty}</span>
+                      {question.questionStatus && question.questionStatus !== "PUBLISHED" && (
+                        <span className="mono" style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)", color: "var(--ink-dim)" }}>
+                          {question.questionStatus.replace(/_/g, " ")}
+                        </span>
+                      )}
+                      {question.aiGenerated && (
+                        <span className="mono" style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#8b5cf622", color: "#8b5cf6" }}>
+                          AI
+                        </span>
+                      )}
                     </div>
                     <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {[question.subject, question.topic].filter(Boolean).join(" · ") || "—"} · {question.description}
