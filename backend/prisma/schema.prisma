@@ -54,6 +54,17 @@ enum QuestionType {
   SQL
 }
 
+// Employability & Subject Readiness module's question-quality workflow (Question.questionStatus).
+// Only questions that reach VERIFIED or PUBLISHED are eligible for a Readiness assessment
+// blueprint unless an admin explicitly opts a specific assessment into including drafts.
+enum QuestionStatus {
+  DRAFT
+  UNDER_REVIEW
+  VERIFIED
+  PUBLISHED
+  ARCHIVED
+}
+
 model Institute {
   id        String   @id @default(uuid())
   name      String   @unique
@@ -110,6 +121,7 @@ model Institute {
   weeklyChallenges WeeklyChallenge[]
   resultExaminations ResultExamination[]
   tests            Test[]
+  readinessSubjects ReadinessSubject[]
 }
 
 model Class {
@@ -230,6 +242,11 @@ model User {
   // Manual/offline exam results (Result Management module) — never duplicates name/roll/
   // department here, always read live off this User + its academicGroup at render time.
   resultEntries ResultEntry[]
+
+  // Employability & Subject Readiness Assessment module — see ReadinessSubject's own doc comment.
+  createdReadinessSubjects ReadinessSubject[]
+  readinessAssessments     ReadinessAssessment[]
+  readinessReports         ReadinessReport[]
 
   @@index([instituteId])
   @@index([classId])
@@ -481,6 +498,21 @@ model Question {
   description    String       // question text
   subject        String?
   topic          String?
+  // Employability & Subject Readiness module additions — all nullable/defaulted so every existing
+  // question (and every existing Formal Test/Module Coding/Practice/Challenge/Interview query
+  // against this table) is completely unaffected.
+  subtopic       String?  // finer-grained than `topic`, optional
+  btlLevel       Int?     // Bloom's Taxonomy level 1-6 (Remember..Create). Never inferred/assigned
+                          // automatically — set explicitly at authoring/review time based on the
+                          // question's actual cognitive task, not its wording. Null = not yet
+                          // classified; such questions are excluded from Readiness blueprints but
+                          // remain fully usable everywhere else on the platform (Tests, Practice, etc).
+  skillTested    String?  // free-text, e.g. "Normalization", "Recursion"
+  questionStatus QuestionStatus @default(PUBLISHED) // defaults PUBLISHED so every pre-existing
+                          // question and everything created via the existing Create/Bulk-Import/
+                          // AI-Generate flows keeps working unchanged; only the Readiness module's
+                          // own authoring flow moves a question through DRAFT->UNDER_REVIEW->VERIFIED.
+  aiGenerated    Boolean  @default(false)
   questionType   QuestionType @default(CODING)
   difficulty     Difficulty   @default(EASY)
   points         Int          @default(10) // marks
@@ -543,6 +575,7 @@ model Question {
   testLinks TestQuestion[]
   dailyChallenges  DailyChallenge[]
   weeklyChallenges WeeklyChallenge[]
+  readinessAnswers ReadinessAnswer[]
 
   // Set only when this question belongs to a Learning Module's proctored coding-test pool
   // (reusing this same Question/TestCase model — hidden test cases, judge grading — rather
@@ -571,6 +604,8 @@ model Question {
   @@index([instituteId])
   @@index([folderId])
   @@index([createdById])
+  @@index([btlLevel])
+  @@index([questionStatus])
 }
 
 // A named grouping within an institute's question bank (e.g. "Java", "DBMS Midterm"), nestable
@@ -2396,4 +2431,171 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+}
+
+// ===================================================================
+// Employability & Subject Readiness Assessment module.
+//
+// Deliberately reuses the existing Question/QuestionFolder/institute-scoping architecture rather
+// than creating a parallel question bank — see the btlLevel/subtopic/skillTested/questionStatus/
+// aiGenerated fields added directly to Question above. What genuinely doesn't exist anywhere else
+// on the platform (and is added here) is: (1) an admin-configurable Subject taxonomy with topics/
+// subtopics and a BTL-distribution blueprint, since Question.subject/topic are just free strings
+// with no owning hierarchy; (2) a session-based attempt+report pair for this assessment type,
+// modeled on InterviewSession/InterviewAnswer/InterviewReport (dynamic per-student question sets,
+// multi-dimensional Json breakdown scoring) rather than the Formal Test model (admin-scheduled,
+// fixed roster, proctoring-heavy) — a Readiness assessment is closer in shape to a mock interview
+// than to a scheduled exam.
+// ===================================================================
+
+// Admin-authored subject definition: the topic/subtopic taxonomy and default BTL distribution a
+// Readiness assessment blueprint is built from. instituteId null = platform-wide (usable by every
+// institute, same "null = shared" convention as Question.instituteId/QuestionFolder.instituteId).
+model ReadinessSubject {
+  id          String   @id @default(uuid())
+  name        String
+  code        String?
+  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+  instituteId String?
+  department  String?  // free-text, matches User.department's convention — not FK'd
+  program     String?  // free-text, matches User.program's convention — not FK'd
+  description String?
+
+  // [{ name: string, subtopics: string[] }]
+  topics Json
+
+  // Which of the platform's existing QuestionType values this subject's assessments may draw
+  // from (a subset of the Question model's QuestionType enum — no new question types introduced).
+  questionTypesAllowed Json // string[] of QuestionType values
+
+  // Percentages keyed by BTL level 1-6, admin-configured, need not sum to exactly 100 for every
+  // subject (the blueprint resolver in the Readiness engine normalizes at question-count time) —
+  // e.g. { "1": 10, "2": 15, "3": 25, "4": 25, "5": 15, "6": 10 }.
+  defaultBtlDistribution Json
+
+  // Named assessment modes this subject supports, each with its own BTL range — e.g.
+  // [{ key: "FOUNDATION", label: "Foundation Readiness", btlMin: 1, btlMax: 2 },
+  //  { key: "APPLICATION", label: "Application Readiness", btlMin: 3, btlMax: 3 },
+  //  { key: "PROBLEM_SOLVING", label: "Problem-Solving Readiness", btlMin: 3, btlMax: 4 },
+  //  { key: "INTERVIEW", label: "Interview Readiness", btlMin: 2, btlMax: 5 },
+  //  { key: "ADVANCED", label: "Advanced Employability Readiness", btlMin: 4, btlMax: 6 },
+  //  { key: "COMPLETE", label: "Complete Subject Employability Assessment", btlMin: 1, btlMax: 6 }]
+  assessmentModes Json
+
+  // Subject-specific employability indicator groups shown on the report (spec section 23) — e.g.
+  // DBMS: ["SQL","Database Design","Transactions","Query Optimization"]; DSA: ["Problem Solving",
+  // "Complexity Analysis","Algorithms","Coding"]. Purely descriptive/report-shaping, not scored
+  // independently of the topic/BTL breakdown already computed.
+  employabilityIndicators Json?
+
+  defaultDurationMin Int  @default(45)
+  passingPercent     Int  @default(50)
+
+  // Admin-configurable readiness-level thresholds, evaluated top-down against overallScore — e.g.
+  // [{ label: "EXCELLENTLY_READY", min: 90 }, { label: "JOB_READY", min: 75 },
+  //  { label: "NEARLY_READY", min: 60 }, { label: "DEVELOPING", min: 45 },
+  //  { label: "NEEDS_IMPROVEMENT", min: 25 }, { label: "FOUNDATION_REQUIRED", min: 0 }]
+  readinessThresholds Json
+
+  isActive  Boolean  @default(true)
+  createdBy User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assessments ReadinessAssessment[]
+
+  @@index([instituteId])
+  @@index([createdById])
+}
+
+// One student's attempt at a subject readiness assessment. Mirrors InterviewSession's shape: a
+// dynamic, per-attempt question set (captured in `blueprint` for explainability/audit) rather than
+// a fixed admin-scheduled roster.
+model ReadinessAssessment {
+  id          String   @id @default(uuid())
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
+  subject     ReadinessSubject @relation(fields: [subjectId], references: [id])
+  subjectId   String
+
+  assessmentMode String // one of ReadinessSubject.assessmentModes[].key, or "CUSTOM"
+
+  // The resolved BTL->questionCount target actually used to build this attempt (e.g.
+  // { "1": 3, "2": 5, "3": 9, "4": 7, "5": 4, "6": 2 }) — stored so the report can always explain
+  // exactly what was assessed, independent of whatever the subject's defaults are later changed to.
+  blueprint Json
+
+  status      String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED | TERMINATED | EXPIRED
+  startedAt   DateTime @default(now())
+  submittedAt DateTime?
+  durationMin Int
+  config      Json? // adaptive-mode flag, any per-attempt overrides
+
+  answers ReadinessAnswer[]
+  report  ReadinessReport?
+
+  @@index([studentId])
+  @@index([subjectId])
+  @@index([status])
+}
+
+model ReadinessAnswer {
+  id           String   @id @default(uuid())
+  assessment   ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessmentId String
+  question     Question @relation(fields: [questionId], references: [id])
+  questionId   String
+
+  answerText   String?
+  code         String?
+  language     String?
+  skipped      Boolean  @default(false)
+  score        Int      @default(0) // 0-100 for this one question
+  isCorrect    Boolean?
+  timeTakenSec Int?
+  createdAt    DateTime @default(now())
+
+  @@unique([assessmentId, questionId])
+  @@index([assessmentId])
+}
+
+// Computed, stored result for one ReadinessAssessment — the single source of truth every
+// dashboard/export reads from, so the UI and any exported PDF/Excel can never disagree (spec
+// section 34). Mirrors InterviewReport's overall-score-plus-Json-breakdown shape.
+model ReadinessReport {
+  id           String   @id @default(uuid())
+  assessment   ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessmentId String   @unique
+  student      User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId    String
+
+  overallScore   Int    // 0-100, the documented weighted composite (see readinessScoring.js)
+  readinessLevel String // one of ReadinessSubject.readinessThresholds[].label
+
+  // { "1": {attempted,correct,percent} | null, ..., "6": ... } — a BTL level with zero questions
+  // actually assessed in this attempt is stored as null, never as 0%, per spec section 19.
+  btlScores Json
+
+  // [{ topic, subtopic, questionsAttempted, accuracy, btlDistribution, strength }]
+  topicScores Json
+
+  // { EASY: percent|null, MEDIUM: percent|null, HARD: percent|null }
+  difficultyScores Json
+
+  // Only the dimensions actually assessed in this attempt are populated — e.g.
+  // { knowledge, conceptual, application, analysis, evaluation, problemSolving, coding }
+  dimensionScores Json
+
+  // Snapshot of the subject's employabilityIndicators, each with a computed score
+  employabilityIndicators Json?
+
+  strongAreas    Json // string[]
+  weakAreas      Json // string[]
+  recommendations Json // [{ priority, topic, action }]
+  nextAssessmentSuggestion String?
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
 }
