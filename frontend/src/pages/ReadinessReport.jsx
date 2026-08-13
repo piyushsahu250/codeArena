@@ -34,12 +34,29 @@ export default function ReadinessReport() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     api.get(`/readiness/assessments/${assessmentId}`)
       .then((res) => setData(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load report"));
   }, [assessmentId]);
+
+  async function downloadPdf() {
+    setDownloading(true);
+    try {
+      const res = await api.get(`/readiness/assessments/${assessmentId}/report.pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `readiness-report-${assessmentId.slice(0, 8)}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Failed to download PDF report");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   if (error) {
     return (
@@ -73,8 +90,15 @@ export default function ReadinessReport() {
     <div>
       <Navbar />
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
-        <h1>{assessment.subject?.name} — Readiness Report</h1>
-        <ChalkUnderline />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <h1>{assessment.subject?.name} — Readiness Report</h1>
+            <ChalkUnderline />
+          </div>
+          <button type="button" className="btn btn-ghost" disabled={downloading} onClick={downloadPdf}>
+            {downloading ? "Preparing…" : "⬇ Download PDF"}
+          </button>
+        </div>
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
           {assessment.assessmentMode.replace(/_/g, " ")} · Submitted {assessment.submittedAt ? new Date(assessment.submittedAt).toLocaleString() : "—"}
         </p>

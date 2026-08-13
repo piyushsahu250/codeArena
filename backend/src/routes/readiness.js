@@ -1,4 +1,5 @@
 const express = require("express");
+const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -9,6 +10,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const logger = require("../utils/logger");
 const { cached } = require("../utils/cache");
 const { GRADABLE_QUESTION_TYPES } = require("../utils/readinessBlueprint");
+const { generateReadinessReportPdf } = require("../utils/readinessReportPdf");
 
 const router = express.Router();
 
@@ -288,6 +290,29 @@ router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), a
   }
 });
 
+// STUDENT: download their own completed report as a PDF — same self-scoping as every other
+// readiness route (studentId must match the requester), reusing the platform's shared PDF
+// branding helper like every other report generator.
+router.get("/assessments/:id/report.pdf", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id }, include: { report: true, subject: true } });
+    if (!assessment || assessment.studentId !== req.user.id) return res.status(404).json({ error: "Assessment not found" });
+    if (!assessment.report) return res.status(400).json({ error: "This assessment hasn't been submitted yet" });
+
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="readiness-report-${assessment.id.slice(0, 8)}.pdf"`);
+    generateReadinessReportPdf({
+      studentName: student.name, subjectName: assessment.subject.name, assessmentMode: assessment.assessmentMode,
+      submittedAt: assessment.submittedAt, report: assessment.report,
+    }, res);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate PDF report" });
+  }
+});
+
 // STUDENT: assessment history for one subject (or all subjects if none specified) — trend over
 // time, per spec's "readiness action history" requirement.
 router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) => {
@@ -390,6 +415,63 @@ function breakdownBy(reports, keyFn) {
   })).sort((a, b) => b.count - a.count);
 }
 
+// Shared by both the cached JSON analytics route and the on-demand Excel export below, so the
+// two never drift — one computation, two renderings.
+async function computeReadinessAnalytics(req) {
+  const reports = await loadFilteredReports(req);
+  if (reports.length === 0) {
+    return {
+      totalAssessments: 0, studentsAssessed: 0, averageReadiness: 0, readinessLevelDistribution: {},
+      btlAverages: {}, topicWeaknesses: [], atRiskStudents: [], departmentWise: [], batchWise: [], sectionWise: [], subjectWise: [],
+    };
+  }
+
+  const totalAssessments = reports.length;
+  const studentsAssessed = new Set(reports.map((r) => r.studentId)).size;
+  const averageReadiness = Math.round(reports.reduce((s, r) => s + r.overallScore, 0) / totalAssessments);
+
+  const readinessLevelDistribution = {};
+  for (const r of reports) readinessLevelDistribution[r.readinessLevel] = (readinessLevelDistribution[r.readinessLevel] || 0) + 1;
+
+  const btlSums = {}, btlCounts = {};
+  for (const r of reports) {
+    for (const [lvl, v] of Object.entries(r.btlScores || {})) {
+      if (!v) continue;
+      btlSums[lvl] = (btlSums[lvl] || 0) + v.percent;
+      btlCounts[lvl] = (btlCounts[lvl] || 0) + 1;
+    }
+  }
+  const btlAverages = {};
+  for (const lvl of Object.keys(btlSums)) btlAverages[lvl] = Math.round(btlSums[lvl] / btlCounts[lvl]);
+
+  const topicSums = new Map();
+  for (const r of reports) {
+    for (const t of r.topicScores || []) {
+      const key = t.topic;
+      if (!topicSums.has(key)) topicSums.set(key, []);
+      topicSums.get(key).push(t.accuracy);
+    }
+  }
+  const topicWeaknesses = [...topicSums.entries()]
+    .map(([topic, accuracies]) => ({ topic, averageAccuracy: Math.round(accuracies.reduce((s, v) => s + v, 0) / accuracies.length), studentsAssessed: accuracies.length }))
+    .sort((a, b) => a.averageAccuracy - b.averageAccuracy)
+    .slice(0, 10);
+
+  const atRiskStudents = reports
+    .filter((r) => r.readinessLevel === "NEEDS_IMPROVEMENT" || r.readinessLevel === "FOUNDATION_REQUIRED")
+    .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
+    .sort((a, b) => a.overallScore - b.overallScore)
+    .slice(0, 50);
+
+  return {
+    totalAssessments, studentsAssessed, averageReadiness, readinessLevelDistribution, btlAverages, topicWeaknesses, atRiskStudents,
+    departmentWise: breakdownBy(reports, (r) => r.student.academicGroup?.department?.name),
+    batchWise: breakdownBy(reports, (r) => r.student.academicGroup?.batch),
+    sectionWise: breakdownBy(reports, (r) => r.student.academicGroup?.section),
+    subjectWise: breakdownBy(reports, (r) => r.assessment.subject.name),
+  };
+}
+
 // ADMIN/STAFF: institute-wide (or filtered) readiness analytics — class/subject/department/
 // batch comparison, BTL distribution, topic weaknesses, at-risk students. Mirrors
 // resultManagement.js's admin/analytics template: one shared filtered-load function feeding a
@@ -400,64 +482,55 @@ router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), atta
   try {
     const instituteKey = req.requesterInstituteId || "all";
     const filterKey = JSON.stringify(req.query);
-    const analytics = await cached(`readinessAnalytics:${instituteKey}:${filterKey}`, 60 * 1000, async () => {
-      const reports = await loadFilteredReports(req);
-      if (reports.length === 0) {
-        return {
-          totalAssessments: 0, studentsAssessed: 0, averageReadiness: 0, readinessLevelDistribution: {},
-          btlAverages: {}, topicWeaknesses: [], atRiskStudents: [], departmentWise: [], batchWise: [], sectionWise: [], subjectWise: [],
-        };
-      }
-
-      const totalAssessments = reports.length;
-      const studentsAssessed = new Set(reports.map((r) => r.studentId)).size;
-      const averageReadiness = Math.round(reports.reduce((s, r) => s + r.overallScore, 0) / totalAssessments);
-
-      const readinessLevelDistribution = {};
-      for (const r of reports) readinessLevelDistribution[r.readinessLevel] = (readinessLevelDistribution[r.readinessLevel] || 0) + 1;
-
-      const btlSums = {}, btlCounts = {};
-      for (const r of reports) {
-        for (const [lvl, v] of Object.entries(r.btlScores || {})) {
-          if (!v) continue;
-          btlSums[lvl] = (btlSums[lvl] || 0) + v.percent;
-          btlCounts[lvl] = (btlCounts[lvl] || 0) + 1;
-        }
-      }
-      const btlAverages = {};
-      for (const lvl of Object.keys(btlSums)) btlAverages[lvl] = Math.round(btlSums[lvl] / btlCounts[lvl]);
-
-      const topicSums = new Map();
-      for (const r of reports) {
-        for (const t of r.topicScores || []) {
-          const key = t.topic;
-          if (!topicSums.has(key)) topicSums.set(key, []);
-          topicSums.get(key).push(t.accuracy);
-        }
-      }
-      const topicWeaknesses = [...topicSums.entries()]
-        .map(([topic, accuracies]) => ({ topic, averageAccuracy: Math.round(accuracies.reduce((s, v) => s + v, 0) / accuracies.length), studentsAssessed: accuracies.length }))
-        .sort((a, b) => a.averageAccuracy - b.averageAccuracy)
-        .slice(0, 10);
-
-      const atRiskStudents = reports
-        .filter((r) => r.readinessLevel === "NEEDS_IMPROVEMENT" || r.readinessLevel === "FOUNDATION_REQUIRED")
-        .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
-        .sort((a, b) => a.overallScore - b.overallScore)
-        .slice(0, 50);
-
-      return {
-        totalAssessments, studentsAssessed, averageReadiness, readinessLevelDistribution, btlAverages, topicWeaknesses, atRiskStudents,
-        departmentWise: breakdownBy(reports, (r) => r.student.academicGroup?.department?.name),
-        batchWise: breakdownBy(reports, (r) => r.student.academicGroup?.batch),
-        sectionWise: breakdownBy(reports, (r) => r.student.academicGroup?.section),
-        subjectWise: breakdownBy(reports, (r) => r.assessment.subject.name),
-      };
-    });
+    const analytics = await cached(`readinessAnalytics:${instituteKey}:${filterKey}`, 60 * 1000, () => computeReadinessAnalytics(req));
     res.json(analytics);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load readiness analytics" });
+  }
+});
+
+// ADMIN/STAFF: Excel export of the same analytics the dashboard renders — one summary sheet plus
+// an at-risk-students sheet, both sourced from computeReadinessAnalytics() so the export can
+// never disagree with what's on screen. Same XLSX.utils/aoa_to_sheet convention as every other
+// export on this platform (see routes/questions.js's /export).
+router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const analytics = await computeReadinessAnalytics(req);
+
+    const summaryRows = [
+      ["Total Assessments", analytics.totalAssessments],
+      ["Students Assessed", analytics.studentsAssessed],
+      ["Average Readiness", `${analytics.averageReadiness}%`],
+      [],
+      ["Readiness Level", "Count"],
+      ...Object.entries(analytics.readinessLevelDistribution),
+      [],
+      ["BTL Level", "Average %"],
+      ...Object.entries(analytics.btlAverages).map(([lvl, avg]) => [`BTL ${lvl}`, avg]),
+      [],
+      ["Weakest Topics", "Average Accuracy", "Students Assessed"],
+      ...analytics.topicWeaknesses.map((t) => [t.topic, `${t.averageAccuracy}%`, t.studentsAssessed]),
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+
+    const atRiskRows = [
+      ["Name", "Registration Number", "Subject", "Overall Score", "Readiness Level"],
+      ...analytics.atRiskStudents.map((s) => [s.name, s.registrationNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
+    ];
+    const atRiskSheet = XLSX.utils.aoa_to_sheet(atRiskRows);
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
+    XLSX.utils.book_append_sheet(workbook, atRiskSheet, "At-Risk Students");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=readiness-analytics.xlsx");
+    res.send(buffer);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to export readiness analytics" });
   }
 });
 

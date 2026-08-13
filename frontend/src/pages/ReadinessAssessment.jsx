@@ -6,6 +6,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import useIsMobile from "../hooks/useIsMobile";
 import api from "../api";
 
 const QUIZ_TYPES = ["MCQ", "TRUE_FALSE", "MULTISELECT"];
@@ -33,6 +34,7 @@ export default function ReadinessAssessment() {
   const [remainingSec, setRemainingSec] = useState(null);
   const [loadError, setLoadError] = useState("");
   const autoFinalizedRef = useRef(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     api.get(`/readiness/assessments/${assessmentId}`).then((res) => {
@@ -177,13 +179,13 @@ export default function ReadinessAssessment() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "12px" : "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{subjectName}</div>
+            <div style={{ fontWeight: 700, fontSize: isMobile ? 14 : 16 }}>{subjectName}</div>
             <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{assessment.assessmentMode.replace(/_/g, " ")} · Question {activeIdx + 1} of {questions.length}</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: isMobile ? "1 1 100%" : "0 1 auto", justifyContent: isMobile ? "space-between" : "flex-start" }}>
             {remainingSec != null && (
               <span className="mono" style={{ fontSize: 14, fontWeight: 700, color: remainingSec < 120 ? "var(--rust)" : "var(--ink)" }}>⏱ {fmtTime(remainingSec)}</span>
             )}
@@ -198,10 +200,11 @@ export default function ReadinessAssessment() {
             const a = answers[q.id] || {};
             const bg = i === activeIdx ? "var(--mint)" : a.skipped === false ? "#22c55e" : "var(--card-bg, #F7F7F5)";
             const color = i === activeIdx || a.skipped === false ? "#fff" : "var(--ink)";
+            const size = isMobile ? 28 : 32;
             return (
               <button
                 key={q.id} type="button" onClick={() => setActiveIdx(i)}
-                style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid var(--line)", background: bg, color, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                style={{ width: size, height: size, borderRadius: 6, border: "1px solid var(--line)", background: bg, color, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
               >
                 {i + 1}
               </button>
@@ -209,7 +212,7 @@ export default function ReadinessAssessment() {
           })}
         </div>
 
-        <div className="card" style={{ marginTop: 16, padding: 24 }}>
+        <div className="card" style={{ marginTop: 16, padding: isMobile ? 14 : 24 }}>
           {isQuiz ? (
             <>
               <ProblemStatement question={{ ...current, testCases: [] }} />
@@ -229,12 +232,12 @@ export default function ReadinessAssessment() {
               )}
             </>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <div style={{ maxHeight: 600, overflowY: "auto" }}>
+            <div style={{ display: isMobile ? "flex" : "grid", flexDirection: isMobile ? "column" : undefined, gridTemplateColumns: isMobile ? undefined : "1fr 1fr", gap: 20 }}>
+              <div style={{ maxHeight: isMobile ? 260 : 600, overflowY: "auto" }}>
                 <ProblemStatement question={current} />
               </div>
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
                   {current.questionType === "SQL" ? (
                     <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>SQL</span>
                   ) : (
@@ -248,7 +251,7 @@ export default function ReadinessAssessment() {
                 </div>
                 <div style={{ border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
                   <Editor
-                    height="520px"
+                    height={isMobile ? "360px" : "520px"}
                     language={current.questionType === "SQL" ? "sql" : (CODE_LANGUAGES.find((l) => l.id === ans.language)?.monaco || "java")}
                     theme="vs-dark"
                     value={ans.code || ""}

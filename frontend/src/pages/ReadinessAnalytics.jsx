@@ -32,6 +32,7 @@ export default function ReadinessAnalytics() {
   const [assessmentMode, setAssessmentMode] = useState("");
   const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     api.get("/readiness/admin/subjects").then((res) => setSubjects(res.data)).catch(() => {});
@@ -52,6 +53,22 @@ export default function ReadinessAnalytics() {
       .then((res) => setAnalytics(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load analytics"));
   }, [queryParams]);
+
+  async function exportExcel() {
+    setExporting(true);
+    try {
+      const res = await api.get("/readiness/admin/analytics/export", { params: queryParams, responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([res.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = "readiness-analytics.xlsx";
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Failed to export analytics");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const levelData = analytics ? Object.entries(analytics.readinessLevelDistribution).map(([level, count]) => ({ level: level.replace(/_/g, " "), count, color: LEVEL_COLORS[level] || "#6b7280" })) : [];
   const btlData = analytics ? [1, 2, 3, 4, 5, 6].filter((l) => analytics.btlAverages[l] != null).map((l) => ({ level: BTL_LABELS[l], average: analytics.btlAverages[l] })) : [];
@@ -81,6 +98,9 @@ export default function ReadinessAnalytics() {
               {modeOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           </div>
+          <button type="button" className="btn btn-ghost" disabled={exporting || !analytics?.totalAssessments} onClick={exportExcel}>
+            {exporting ? "Exporting…" : "⬇ Export Excel"}
+          </button>
         </div>
 
         {error && <p style={{ color: "var(--rust)", marginTop: 16 }}>{error}</p>}
