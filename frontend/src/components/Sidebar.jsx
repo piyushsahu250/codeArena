@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck, Share2, UserCircle, Building, Star, UserCog,
+  CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 
@@ -49,6 +49,7 @@ const MENU = {
       { label: "Dashboard", to: "/staff", icon: LayoutDashboard },
       { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion },
+      { label: "Readiness Subjects", to: "/staff/readiness-subjects", icon: Target },
       { label: "Gamification", to: "/staff/gamification", icon: Trophy },
       { label: "Coding Challenges", to: "/staff/challenges", icon: CalendarDays },
     ] },
@@ -90,6 +91,7 @@ const MENU = {
       { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
       { label: "Course Assignments", to: "/admin/course-assignments", icon: Share2 },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion },
+      { label: "Readiness Subjects", to: "/staff/readiness-subjects", icon: Target },
       { label: "Gamification", to: "/staff/gamification", icon: Trophy },
       { label: "Coding Challenges", to: "/staff/challenges", icon: CalendarDays },
       { label: "Resumes", to: "/staff/resumes", icon: FileText },

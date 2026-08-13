@@ -31,6 +31,7 @@ const InterviewProgress = lazy(() => import("./pages/InterviewProgress"));
 const InterviewReports = lazy(() => import("./pages/InterviewReports"));
 import CreateQuestion from "./pages/CreateQuestion";
 import QuestionBank from "./pages/QuestionBank";
+import ReadinessSubjects from "./pages/ReadinessSubjects";
 import CreateTest from "./pages/CreateTest";
 import TestResults from "./pages/TestResults";
 import TestPreview from "./pages/TestPreview";
@@ -249,6 +250,7 @@ export default function App() {
           <Route path="/staff/interview-reports" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><InterviewReports /></Suspense></Protected>} />
           <Route path="/staff/interview-reports/:sessionId" element={<Protected roles={["ADMIN", "STAFF"]}><InterviewReportDetail /></Protected>} />
           <Route path="/staff/questions" element={<Protected roles={["ADMIN", "STAFF"]}><QuestionBank /></Protected>} />
+          <Route path="/staff/readiness-subjects" element={<Protected roles={["ADMIN", "STAFF"]}><ReadinessSubjects /></Protected>} />
           <Route path="/staff/questions/new" element={<Protected roles={["ADMIN", "STAFF"]}><CreateQuestion /></Protected>} />
           <Route path="/staff/questions/:id/edit" element={<Protected roles={["ADMIN", "STAFF"]}><CreateQuestion /></Protected>} />
           <Route path="/staff/tests/new" element={<Protected roles={["ADMIN", "STAFF"]}><CreateTest /></Protected>} />

@@ -24,7 +24,25 @@ const emptyForm = {
   evaluationType: "STDIO", sqlSchema: "",
   estimatedTimeMin: null, realWorldScenario: "", constraints: "", inputFormat: "",
   outputFormat: "", notes: "", edgeCases: "", problemExplanation: "",
+  // Employability & Subject Readiness module — all optional; leaving btlLevel unset just means
+  // this question is never picked for a Readiness assessment, everything else about it is
+  // unaffected. questionStatus defaults PUBLISHED, matching the backend default.
+  subtopic: "", btlLevel: "", skillTested: "", questionStatus: "PUBLISHED",
 };
+
+// Bloom's Taxonomy levels — the description is the actual cognitive task a question at that level
+// must require (per the platform's "classify by cognitive task, not wording difficulty" rule),
+// not a difficulty label. Deliberately shown inline so whoever is tagging a question sees the
+// distinction every time, not just once in a help doc nobody reads.
+const BTL_LEVELS = [
+  { value: 1, label: "BTL 1 — Remember", hint: "Recall a fact or definition" },
+  { value: 2, label: "BTL 2 — Understand", hint: "Explain or summarize a concept" },
+  { value: 3, label: "BTL 3 — Apply", hint: "Use a concept to solve a given problem" },
+  { value: 4, label: "BTL 4 — Analyze", hint: "Break down / identify issues in a scenario" },
+  { value: 5, label: "BTL 5 — Evaluate", hint: "Judge or justify between options" },
+  { value: 6, label: "BTL 6 — Create", hint: "Design or construct a new solution" },
+];
+const QUESTION_STATUSES = ["DRAFT", "UNDER_REVIEW", "VERIFIED", "PUBLISHED", "ARCHIVED"];
 
 export default function CreateQuestion() {
   const { id } = useParams();
@@ -105,6 +123,8 @@ export default function CreateQuestion() {
         realWorldScenario: q.realWorldScenario || "", constraints: q.constraints || "",
         inputFormat: q.inputFormat || "", outputFormat: q.outputFormat || "",
         notes: q.notes || "", edgeCases: q.edgeCases || "", problemExplanation: q.problemExplanation || "",
+        subtopic: q.subtopic || "", btlLevel: q.btlLevel ?? "", skillTested: q.skillTested || "",
+        questionStatus: q.questionStatus || "PUBLISHED",
       });
       if (q.functionSignature) setSignature(q.functionSignature);
       if (q.questionType === "CODING" || q.questionType === "SQL") {
@@ -278,6 +298,46 @@ export default function CreateQuestion() {
             <div>
               <label style={labelStyle}>Topic</label>
               <input style={inputStyle} value={form.topic} onChange={updateField("topic")} />
+            </div>
+          </div>
+
+          {/* Employability & Subject Readiness module — all optional. A question with no BTL
+              level set is simply never picked for a Readiness assessment; everything else about
+              it (Formal Tests, Practice, bulk import, etc.) is completely unaffected. */}
+          <div className="card" style={{ padding: 14, marginTop: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Employability Readiness tagging (optional)</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Subtopic</label>
+                <input style={inputStyle} value={form.subtopic} onChange={updateField("subtopic")} placeholder="Finer than Topic, e.g. &quot;Normalization&quot;" />
+              </div>
+              <div>
+                <label style={labelStyle}>Skill Tested</label>
+                <input style={inputStyle} value={form.skillTested} onChange={updateField("skillTested")} placeholder="e.g. Recursion, SQL Joins" />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+              <div>
+                <label style={labelStyle}>Bloom's Taxonomy (BTL) Level</label>
+                <select style={inputStyle} value={form.btlLevel} onChange={updateField("btlLevel")}>
+                  <option value="">Not classified</option>
+                  {BTL_LEVELS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+                </select>
+                {form.btlLevel && (
+                  <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+                    Classify by what this question actually requires the student to do — {BTL_LEVELS.find((b) => b.value === Number(form.btlLevel))?.hint.toLowerCase()} — not by how hard the wording sounds.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label style={labelStyle}>Review Status</label>
+                <select style={inputStyle} value={form.questionStatus} onChange={updateField("questionStatus")}>
+                  {QUESTION_STATUSES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                </select>
+                <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+                  Only VERIFIED/PUBLISHED questions are eligible for a Readiness assessment blueprint.
+                </p>
+              </div>
             </div>
           </div>
 

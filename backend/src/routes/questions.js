@@ -15,6 +15,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL"];
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
+// Employability & Subject Readiness module — see Question.btlLevel/questionStatus schema comments.
+const BTL_LEVELS = [1, 2, 3, 4, 5, 6];
+const QUESTION_STATUSES = ["DRAFT", "UNDER_REVIEW", "VERIFIED", "PUBLISHED", "ARCHIVED"];
 
 const TEMPLATE_HEADERS = [
   "Question Name", "Subject", "Topic", "Question Text", "Question Type",
@@ -171,7 +174,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       evaluationType, functionSignature, starterCodeByLanguage, memoryLimitKb, tags, sqlSchema,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
-      allowDuplicate,
+      allowDuplicate, subtopic, btlLevel, skillTested, questionStatus,
     } = req.body;
 
     if (!description) return res.status(400).json({ error: "Question text is required" });
@@ -225,6 +228,13 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       spaceComplexity: spaceComplexity || null,
       editorial: editorial ?? undefined,
       similarQuestions: similarQuestions ?? undefined,
+      // Employability & Subject Readiness module fields — all optional; a question with no
+      // btlLevel set simply stays ineligible for a Readiness blueprint (see
+      // utils/readinessBlueprint.js) while remaining fully usable everywhere else.
+      subtopic: subtopic || null,
+      btlLevel: BTL_LEVELS.includes(Number(btlLevel)) ? Number(btlLevel) : null,
+      skillTested: skillTested || null,
+      questionStatus: QUESTION_STATUSES.includes(questionStatus) ? questionStatus : "PUBLISHED",
     };
 
     if (type === "CODING") {
@@ -1252,6 +1262,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       evaluationType, functionSignature, starterCodeByLanguage, memoryLimitKb, tags, sqlSchema,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
+      subtopic, btlLevel, skillTested, questionStatus,
     } = req.body;
 
     if (folderId !== undefined && folderId !== null && folderId !== existing.folderId) {
@@ -1286,6 +1297,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       spaceComplexity: spaceComplexity !== undefined ? spaceComplexity : existing.spaceComplexity,
       editorial: editorial !== undefined ? editorial : existing.editorial,
       similarQuestions: similarQuestions !== undefined ? similarQuestions : existing.similarQuestions,
+      subtopic: subtopic !== undefined ? (subtopic || null) : existing.subtopic,
+      btlLevel: btlLevel !== undefined ? (BTL_LEVELS.includes(Number(btlLevel)) ? Number(btlLevel) : null) : existing.btlLevel,
+      skillTested: skillTested !== undefined ? (skillTested || null) : existing.skillTested,
+      questionStatus: questionStatus !== undefined ? (QUESTION_STATUSES.includes(questionStatus) ? questionStatus : existing.questionStatus) : existing.questionStatus,
     };
 
     if (type === "CODING") {
