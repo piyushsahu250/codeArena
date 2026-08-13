@@ -34,4 +34,4 @@ function ownsQuestionRow(req, row) {
   return true;
 }
 
-module.exports = { questionVisibilityWhere, ownsQuestionRow };
+module.exports = { instituteWhere, questionVisibilityWhere, ownsQuestionRow };
