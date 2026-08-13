@@ -443,6 +443,15 @@ model TalentPoolAutoRule {
   minAttendancePercent          Float?
   minAverageScorePercent        Float?
   minCompletionPercent          Float?   // Learning Module completion %
+  // Employability & Readiness module criteria — evaluated against each candidate's BEST completed
+  // ReadinessReport (optionally narrowed to one subject via readinessSubjectId; a null subject
+  // considers a student's best report across every subject they've attempted). "Best" rather than
+  // "latest" so one bad early attempt can't disqualify a student who has since improved — but per
+  // the module's "never label talent from a single test" rule, this is still just one of
+  // potentially several ALL/ANY criteria on the rule, not a standalone pass/fail.
+  minReadinessScorePercent      Float?
+  readinessLevelAtLeast         String?  // one of ReadinessReport.readinessLevel's 6 labels
+  readinessSubjectId            String?
   requiredBadgeIds              Json?    // string[] of Badge.id
   requiredCertificateCourseIds  Json?    // string[] of Course.id, matched against VALID Certificate rows
   matchMode                     String   @default("ALL") // "ALL" | "ANY"

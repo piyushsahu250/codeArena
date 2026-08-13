@@ -765,6 +765,15 @@ const RULE_FIELDS = [
   { key: "minAttendancePercent", label: "Minimum Attendance %", max: 100, step: 1 },
   { key: "minAverageScorePercent", label: "Minimum Average Coding Score %", max: 100, step: 1 },
   { key: "minCompletionPercent", label: "Minimum Learning Module Completion %", max: 100, step: 1 },
+  { key: "minReadinessScorePercent", label: "Minimum Readiness Score %", max: 100, step: 1 },
+];
+const READINESS_LEVELS = [
+  { value: "", label: "Any level" },
+  { value: "NEEDS_IMPROVEMENT", label: "Needs Improvement or better" },
+  { value: "DEVELOPING", label: "Developing or better" },
+  { value: "NEARLY_READY", label: "Nearly Ready or better" },
+  { value: "JOB_READY", label: "Job Ready or better" },
+  { value: "EXCELLENTLY_READY", label: "Excellently Ready" },
 ];
 
 function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
@@ -773,11 +782,15 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
   const [previewing, setPreviewing] = useState(false);
   const [running, setRunning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [readinessSubjects, setReadinessSubjects] = useState([]);
 
   function loadRule() {
     api.get(`/talent-pools/${poolId}/auto-rule`).then((res) => setRule(res.data || {})).catch(() => setRule({}));
   }
   useEffect(loadRule, [poolId]);
+  useEffect(() => {
+    api.get("/readiness/admin/subjects").then((res) => setReadinessSubjects(res.data)).catch(() => {});
+  }, []);
 
   function setField(key, value) {
     setRule((r) => ({ ...r, [key]: value === "" ? null : Number(value) }));
@@ -842,6 +855,25 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
           />
         </div>
       ))}
+      <div style={{ marginTop: 12 }}>
+        <label style={labelStyle}>Readiness Level At Least</label>
+        <select
+          style={inputStyle} value={rule.readinessLevelAtLeast || ""}
+          onChange={(e) => { setRule((r) => ({ ...r, readinessLevelAtLeast: e.target.value || null })); setPreview(null); }}
+        >
+          {READINESS_LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+        </select>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <label style={labelStyle}>Readiness Subject</label>
+        <select
+          style={inputStyle} value={rule.readinessSubjectId || ""}
+          onChange={(e) => { setRule((r) => ({ ...r, readinessSubjectId: e.target.value || null })); setPreview(null); }}
+        >
+          <option value="">Any subject (best across all)</option>
+          {readinessSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
       <div style={{ marginTop: 12 }}>
         <label style={labelStyle}>Match Mode</label>
         <select style={inputStyle} value={rule.matchMode || "ALL"} onChange={(e) => setRule((r) => ({ ...r, matchMode: e.target.value }))}>

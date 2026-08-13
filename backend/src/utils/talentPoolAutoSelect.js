@@ -106,6 +106,36 @@ async function evaluateCandidates(prismaClient, rule, candidateIds) {
     });
   }
 
+  // Employability & Readiness criteria — evaluated against each candidate's BEST completed
+  // ReadinessReport (see schema comment on TalentPoolAutoRule.minReadinessScorePercent for why
+  // "best" rather than "latest"), optionally narrowed to one subject.
+  const READINESS_LEVEL_RANK = { FOUNDATION_REQUIRED: 0, NEEDS_IMPROVEMENT: 1, DEVELOPING: 2, NEARLY_READY: 3, JOB_READY: 4, EXCELLENTLY_READY: 5 };
+  if (rule.minReadinessScorePercent != null || rule.readinessLevelAtLeast) {
+    const reports = await prismaClient.readinessReport.findMany({
+      where: {
+        studentId: { in: candidateIds },
+        ...(rule.readinessSubjectId ? { assessment: { subjectId: rule.readinessSubjectId } } : {}),
+      },
+      select: { studentId: true, overallScore: true, readinessLevel: true },
+    });
+    const bestByStudent = new Map();
+    for (const r of reports) {
+      const cur = bestByStudent.get(r.studentId);
+      if (!cur || r.overallScore > cur.overallScore) bestByStudent.set(r.studentId, r);
+    }
+    const requiredRank = rule.readinessLevelAtLeast ? (READINESS_LEVEL_RANK[rule.readinessLevelAtLeast] ?? 0) : null;
+    checks.push({
+      key: "readiness",
+      pass: (id) => {
+        const best = bestByStudent.get(id);
+        if (!best) return false;
+        if (rule.minReadinessScorePercent != null && best.overallScore < rule.minReadinessScorePercent) return false;
+        if (requiredRank != null && (READINESS_LEVEL_RANK[best.readinessLevel] ?? 0) < requiredRank) return false;
+        return true;
+      },
+    });
+  }
+
   const requiredBadgeIds = Array.isArray(rule.requiredBadgeIds) ? rule.requiredBadgeIds : [];
   if (requiredBadgeIds.length) {
     const rows = await prismaClient.studentBadge.findMany({
