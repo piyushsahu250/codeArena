@@ -212,4 +212,9 @@ function buildNextAssessmentSuggestion({ overallScore, subject, btlScores }) {
   return "You've covered this subject's full BTL range — revisit periodically to track retention.";
 }
 
-module.exports = { gradeReadinessAnswer, buildReadinessReport, resolveReadinessLevel };
+// Ordinal ranking of the 6 fixed readinessLevel labels, lowest to highest — shared by any caller
+// that needs "at least level X" comparisons (Talent Pool auto-selection criteria, certificate
+// issuance thresholds) so the ranking is defined once, not reinvented per call site.
+const READINESS_LEVEL_RANK = { FOUNDATION_REQUIRED: 0, NEEDS_IMPROVEMENT: 1, DEVELOPING: 2, NEARLY_READY: 3, JOB_READY: 4, EXCELLENTLY_READY: 5 };
+
+module.exports = { gradeReadinessAnswer, buildReadinessReport, resolveReadinessLevel, READINESS_LEVEL_RANK };

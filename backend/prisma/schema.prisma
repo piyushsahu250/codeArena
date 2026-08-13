@@ -1115,6 +1115,7 @@ enum CertificateType {
   LEARNING_MODULE
   CODING_ASSESSMENT
   MANUAL
+  READINESS
 }
 
 enum CertificateStatus {
@@ -1143,6 +1144,8 @@ model Certificate {
   course          Course?           @relation(fields: [courseId], references: [id], onDelete: Restrict) // LEARNING_MODULE only
   courseId        String?
   moduleCodingTestId String?        // CODING_ASSESSMENT only — denormalized, no FK (see AuditLog.adminId for the same pattern)
+  readinessSubjectId String?        // READINESS only — denormalized, no FK, same convention as moduleCodingTestId
+  readinessLevel     String?        // READINESS only — the ReadinessReport.readinessLevel that qualified, for display
   title           String            // display name on the certificate PDF, populated for every type
   programName     String?           // MANUAL only — free text, e.g. "FDP: Advanced Java Workshop"
   status          CertificateStatus @default(VALID)
@@ -1156,6 +1159,10 @@ model Certificate {
   // and a CODING_ASSESSMENT certificate (all module coding tests passed) for the SAME course —
   // these are two independently-earned achievements, not one row per course.
   @@unique([studentId, courseId, type])
+  // Separate uniqueness key for READINESS certs (one per student per subject) — courseId stays
+  // null for this type, so it can't discriminate between subjects the way it discriminates
+  // between courses for LEARNING_MODULE/CODING_ASSESSMENT.
+  @@unique([studentId, readinessSubjectId, type])
   @@index([studentId])
   @@index([courseId])
   @@index([type])
@@ -2499,6 +2506,14 @@ model ReadinessSubject {
 
   defaultDurationMin Int  @default(45)
   passingPercent     Int  @default(50)
+
+  // Certificate-on-completion policy (spec CRITICAL RULE: never auto-issue employment-readiness
+  // certificates unless policy supports it — both fields default to "off"/unset so issuance stays
+  // opt-in per subject, admin-configured). certificateMinLevel is one of ReadinessReport.readinessLevel's
+  // 6 labels; issuance checks the student's report against it using the same READINESS_LEVEL_RANK
+  // ordinal ranking already established in talentPoolAutoSelect.js.
+  certificateEnabled  Boolean @default(false)
+  certificateMinLevel String?
 
   // Admin-configurable readiness-level thresholds, evaluated top-down against overallScore — e.g.
   // [{ label: "EXCELLENTLY_READY", min: 90 }, { label: "JOB_READY", min: 75 },

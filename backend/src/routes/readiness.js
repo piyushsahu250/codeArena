@@ -5,7 +5,8 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { instituteWhere } = require("../utils/questionVisibility");
 const { buildAssessmentBlueprint } = require("../utils/readinessBlueprint");
-const { gradeReadinessAnswer, buildReadinessReport } = require("../utils/readinessScoring");
+const { gradeReadinessAnswer, buildReadinessReport, READINESS_LEVEL_RANK } = require("../utils/readinessScoring");
+const { issueCertificate } = require("../utils/certificates");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const logger = require("../utils/logger");
 const { cached } = require("../utils/cache");
@@ -84,7 +85,7 @@ function validateSubjectPayload(body) {
   return null;
 }
 
-const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive"];
+const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive", "certificateEnabled", "certificateMinLevel"];
 
 router.post("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
@@ -262,7 +263,10 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
 
 router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id }, include: { report: true, subject: true } });
+    const assessment = await prisma.readinessAssessment.findUnique({
+      where: { id: req.params.id },
+      include: { report: true, subject: true, student: { include: { institute: true } } },
+    });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
     if (assessment.status !== "IN_PROGRESS") return res.json({ assessment, report: assessment.report });
 
@@ -282,6 +286,35 @@ router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), a
     ]);
 
     logger.info("READINESS_ASSESSMENT_COMPLETED", { assessmentId: assessment.id, studentId: assessment.studentId, subjectId: assessment.subjectId, overallScore: report.overallScore, readinessLevel: report.readinessLevel });
+
+    // Certificate-on-completion: opt-in per subject (CRITICAL RULE — never auto-issue unless the
+    // admin has explicitly enabled it and set a minimum level). One cert per student per subject —
+    // idempotency is the studentId+readinessSubjectId+type DB unique constraint, so a student
+    // re-attempting after already qualifying is a no-op here, and per this platform's "no
+    // downgrade on retake" convention a cert already earned is never revoked by a later, weaker
+    // attempt. Runs fire-and-forget (like the CODING_ASSESSMENT issuance in
+    // gradeModuleCodingAttempt.js) so a certificate failure never blocks the student's report.
+    const subject = assessment.subject;
+    if (subject.certificateEnabled && subject.certificateMinLevel) {
+      const requiredRank = READINESS_LEVEL_RANK[subject.certificateMinLevel] ?? 0;
+      const earnedRank = READINESS_LEVEL_RANK[report.readinessLevel] ?? 0;
+      if (earnedRank >= requiredRank) {
+        const already = await prisma.certificate.findUnique({
+          where: { studentId_readinessSubjectId_type: { studentId: assessment.studentId, readinessSubjectId: subject.id, type: "READINESS" } },
+        });
+        if (!already) {
+          issueCertificate({
+            type: "READINESS",
+            studentId: assessment.studentId,
+            readinessSubjectId: subject.id,
+            readinessLevel: report.readinessLevel,
+            title: `${subject.name} Employability Readiness`,
+            instituteCode: assessment.student.institute?.code,
+            programCode: subject.code,
+          }).catch((err) => console.error("Readiness certificate issuance failed:", err));
+        }
+      }
+    }
 
     res.json({ assessment: updatedAssessment, report });
   } catch (err) {

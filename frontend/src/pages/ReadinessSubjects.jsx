@@ -41,6 +41,7 @@ function emptyForm() {
     defaultDurationMin: 45, passingPercent: 50,
     readinessThresholds: DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
     isActive: true,
+    certificateEnabled: false, certificateMinLevel: "JOB_READY",
   };
 }
 
@@ -78,6 +79,7 @@ export default function ReadinessSubjects() {
       defaultDurationMin: s.defaultDurationMin, passingPercent: s.passingPercent,
       readinessThresholds: s.readinessThresholds?.length ? s.readinessThresholds : DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
       isActive: s.isActive,
+      certificateEnabled: !!s.certificateEnabled, certificateMinLevel: s.certificateMinLevel || "JOB_READY",
     });
     setWarning("");
     setEditingId(s.id);
@@ -129,6 +131,7 @@ export default function ReadinessSubjects() {
         defaultDurationMin: Number(form.defaultDurationMin) || 45, passingPercent: Number(form.passingPercent) || 50,
         readinessThresholds: form.readinessThresholds.filter((t) => t.label.trim()).map((t) => ({ label: t.label.trim(), min: Number(t.min) })),
         isActive: form.isActive,
+        certificateEnabled: form.certificateEnabled, certificateMinLevel: form.certificateEnabled ? form.certificateMinLevel : null,
       };
       const res = editingId === "NEW" ? await api.post("/readiness/admin/subjects", payload) : await api.patch(`/readiness/admin/subjects/${editingId}`, payload);
       if (res.data.warning) setWarning(res.data.warning);
@@ -323,6 +326,26 @@ export default function ReadinessSubjects() {
                 </div>
               ))}
               <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addThreshold}>+ Add Threshold</button>
+            </div>
+
+            <div className="card" style={{ padding: 14, marginTop: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Certificate on Completion</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                Off by default — a student is never auto-issued an employability certificate unless enabled here with a minimum level.
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
+                <input type="checkbox" checked={form.certificateEnabled} onChange={(e) => setForm({ ...form, certificateEnabled: e.target.checked })} /> Issue a certificate automatically when a student qualifies
+              </label>
+              {form.certificateEnabled && (
+                <div style={{ marginTop: 10 }}>
+                  <label style={labelStyle}>Minimum Readiness Level Required</label>
+                  <select style={inputStyle} value={form.certificateMinLevel} onChange={(e) => setForm({ ...form, certificateMinLevel: e.target.value })}>
+                    {[...DEFAULT_THRESHOLDS].reverse().map((t) => (
+                      <option key={t.label} value={t.label}>{t.label.replace(/_/g, " ")}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>

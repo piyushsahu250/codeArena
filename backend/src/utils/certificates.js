@@ -26,7 +26,7 @@ async function generateCertificateCode({ instituteCode, programCode }) {
 // since the right uniqueness key differs per type (unique DB constraint for LEARNING_MODULE,
 // application-level findFirst for CODING_ASSESSMENT, none at all for MANUAL — a student can
 // legitimately receive several distinct manual certificates).
-async function issueCertificate({ type, studentId, courseId, moduleCodingTestId, title, programName, issuedByName, instituteCode, programCode }) {
+async function issueCertificate({ type, studentId, courseId, moduleCodingTestId, readinessSubjectId, readinessLevel, title, programName, issuedByName, instituteCode, programCode }) {
   const certificateCode = await generateCertificateCode({ instituteCode, programCode });
   return prisma.certificate.create({
     data: {
@@ -35,6 +35,8 @@ async function issueCertificate({ type, studentId, courseId, moduleCodingTestId,
       studentId,
       courseId: courseId || null,
       moduleCodingTestId: moduleCodingTestId || null,
+      readinessSubjectId: readinessSubjectId || null,
+      readinessLevel: readinessLevel || null,
       title,
       programName: programName || null,
       issuedByName: issuedByName || null,
