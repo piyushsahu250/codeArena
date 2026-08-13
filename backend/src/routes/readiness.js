@@ -7,6 +7,8 @@ const { buildAssessmentBlueprint } = require("../utils/readinessBlueprint");
 const { gradeReadinessAnswer, buildReadinessReport } = require("../utils/readinessScoring");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const logger = require("../utils/logger");
+const { cached } = require("../utils/cache");
+const { GRADABLE_QUESTION_TYPES } = require("../utils/readinessBlueprint");
 
 const router = express.Router();
 
@@ -303,6 +305,156 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load assessment history" });
+  }
+});
+
+// =========================== Admin/Staff: validation gate + analytics ===========================
+
+// ADMIN/STAFF: per-subject coverage check — for every configured assessment mode, how many
+// VERIFIED/PUBLISHED questions actually exist at each BTL level in that mode's range. This is the
+// spec's "validate before publishing" gate made visible rather than a hard block: a subject can
+// still be saved/activated with gaps (content grows incrementally), but the admin sees exactly
+// which BTL levels/modes have zero coverage before students hit them at assessment time.
+router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+
+    const allowedTypes = (Array.isArray(subject.questionTypesAllowed) ? subject.questionTypesAllowed : []).filter((t) => GRADABLE_QUESTION_TYPES.includes(t));
+    const baseWhere = {
+      ...instituteWhere(req.requesterInstituteId),
+      questionStatus: { in: ["VERIFIED", "PUBLISHED"] },
+      questionType: { in: allowedTypes },
+      subject: { equals: subject.name, mode: "insensitive" },
+    };
+
+    // One count query per BTL level (1-6), reused across every assessment mode below rather than
+    // re-querying per mode — same batched-query discipline as talentPoolAutoSelect.js.
+    const countsByLevel = {};
+    await Promise.all([1, 2, 3, 4, 5, 6].map(async (level) => {
+      countsByLevel[level] = await prisma.question.count({ where: { ...baseWhere, btlLevel: level } });
+    }));
+
+    const modes = Array.isArray(subject.assessmentModes) ? subject.assessmentModes : [];
+    const modeCoverage = modes.map((m) => {
+      const levels = [];
+      for (let lvl = m.btlMin; lvl <= m.btlMax; lvl++) levels.push({ level: lvl, availableQuestions: countsByLevel[lvl] || 0 });
+      const zeroLevels = levels.filter((l) => l.availableQuestions === 0).map((l) => l.level);
+      return { key: m.key, label: m.label, btlMin: m.btlMin, btlMax: m.btlMax, levels, totalAvailable: levels.reduce((s, l) => s + l.availableQuestions, 0), zeroCoverageLevels: zeroLevels, ready: zeroLevels.length === 0 };
+    });
+
+    const topicsCovered = await prisma.question.findMany({ where: baseWhere, select: { topic: true }, distinct: ["topic"] });
+    const configuredTopics = Array.isArray(subject.topics) ? subject.topics.map((t) => t.name) : [];
+    const topicsWithNoQuestions = configuredTopics.filter((t) => !topicsCovered.some((q) => (q.topic || "").toLowerCase() === t.toLowerCase()));
+
+    res.json({ subjectId: subject.id, allowedTypes, countsByLevel, modeCoverage, configuredTopics, topicsWithNoQuestions });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to compute subject coverage" });
+  }
+});
+
+// Shared by the admin analytics route below — institute/subject/department/batch/section/mode
+// scoped ReadinessReport rows, joined through their assessment+student+academicGroup for the
+// breakdown groupings. Institute scoping is on the STUDENT's own institute (not the subject's,
+// which may be platform-wide and attempted by students across many institutes) — an institute-
+// scoped Admin/Staff must only ever see their own institute's students' results.
+async function loadFilteredReports(req) {
+  const studentWhere = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+  const assessmentWhere = {
+    ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}),
+    ...(req.query.assessmentMode ? { assessmentMode: req.query.assessmentMode } : {}),
+  };
+  return prisma.readinessReport.findMany({
+    where: { assessment: assessmentWhere, student: studentWhere },
+    include: {
+      assessment: { select: { subjectId: true, assessmentMode: true, subject: { select: { name: true } } } },
+      student: { select: { id: true, name: true, registrationNumber: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
+    },
+  });
+}
+
+function breakdownBy(reports, keyFn) {
+  const groups = new Map();
+  for (const r of reports) {
+    const key = keyFn(r) || "Unassigned";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r.overallScore);
+  }
+  return [...groups.entries()].map(([key, scores]) => ({
+    key, count: scores.length, averageScore: Math.round(scores.reduce((s, v) => s + v, 0) / scores.length),
+  })).sort((a, b) => b.count - a.count);
+}
+
+// ADMIN/STAFF/CLERK: institute-wide (or filtered) readiness analytics — class/subject/department/
+// batch comparison, BTL distribution, topic weaknesses, at-risk students. Mirrors
+// resultManagement.js's admin/analytics template: one shared filtered-load function feeding a
+// generic breakdown helper, wrapped in cached() with an institute+querystring cache key.
+router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteKey = req.requesterInstituteId || "all";
+    const filterKey = JSON.stringify(req.query);
+    const analytics = await cached(`readinessAnalytics:${instituteKey}:${filterKey}`, 60 * 1000, async () => {
+      const reports = await loadFilteredReports(req);
+      if (reports.length === 0) {
+        return {
+          totalAssessments: 0, studentsAssessed: 0, averageReadiness: 0, readinessLevelDistribution: {},
+          btlAverages: {}, topicWeaknesses: [], atRiskStudents: [], departmentWise: [], batchWise: [], sectionWise: [], subjectWise: [],
+        };
+      }
+
+      const totalAssessments = reports.length;
+      const studentsAssessed = new Set(reports.map((r) => r.studentId)).size;
+      const averageReadiness = Math.round(reports.reduce((s, r) => s + r.overallScore, 0) / totalAssessments);
+
+      const readinessLevelDistribution = {};
+      for (const r of reports) readinessLevelDistribution[r.readinessLevel] = (readinessLevelDistribution[r.readinessLevel] || 0) + 1;
+
+      const btlSums = {}, btlCounts = {};
+      for (const r of reports) {
+        for (const [lvl, v] of Object.entries(r.btlScores || {})) {
+          if (!v) continue;
+          btlSums[lvl] = (btlSums[lvl] || 0) + v.percent;
+          btlCounts[lvl] = (btlCounts[lvl] || 0) + 1;
+        }
+      }
+      const btlAverages = {};
+      for (const lvl of Object.keys(btlSums)) btlAverages[lvl] = Math.round(btlSums[lvl] / btlCounts[lvl]);
+
+      const topicSums = new Map();
+      for (const r of reports) {
+        for (const t of r.topicScores || []) {
+          const key = t.topic;
+          if (!topicSums.has(key)) topicSums.set(key, []);
+          topicSums.get(key).push(t.accuracy);
+        }
+      }
+      const topicWeaknesses = [...topicSums.entries()]
+        .map(([topic, accuracies]) => ({ topic, averageAccuracy: Math.round(accuracies.reduce((s, v) => s + v, 0) / accuracies.length), studentsAssessed: accuracies.length }))
+        .sort((a, b) => a.averageAccuracy - b.averageAccuracy)
+        .slice(0, 10);
+
+      const atRiskStudents = reports
+        .filter((r) => r.readinessLevel === "NEEDS_IMPROVEMENT" || r.readinessLevel === "FOUNDATION_REQUIRED")
+        .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
+        .sort((a, b) => a.overallScore - b.overallScore)
+        .slice(0, 50);
+
+      return {
+        totalAssessments, studentsAssessed, averageReadiness, readinessLevelDistribution, btlAverages, topicWeaknesses, atRiskStudents,
+        departmentWise: breakdownBy(reports, (r) => r.student.academicGroup?.department?.name),
+        batchWise: breakdownBy(reports, (r) => r.student.academicGroup?.batch),
+        sectionWise: breakdownBy(reports, (r) => r.student.academicGroup?.section),
+        subjectWise: breakdownBy(reports, (r) => r.assessment.subject.name),
+      };
+    });
+    res.json(analytics);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load readiness analytics" });
   }
 });
 
