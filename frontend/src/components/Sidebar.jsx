@@ -21,6 +21,7 @@ const MENU = {
       { label: "My Attendance", to: "/attendance", icon: CalendarCheck },
     ] },
     { group: "Placement Prep", items: [
+      { label: "Readiness Assessment", to: "/readiness", icon: Target },
       { label: "My Talent Pools", to: "/talent-pools", icon: Star },
       { label: "Daily Challenge", to: "/challenges/daily", icon: CalendarDays },
       { label: "Weekly Challenge", to: "/challenges/weekly", icon: CalendarRange },

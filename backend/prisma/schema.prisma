@@ -2547,9 +2547,12 @@ model ReadinessAnswer {
   question     Question @relation(fields: [questionId], references: [id])
   questionId   String
 
-  answerText   String?
-  code         String?
-  language     String?
+  answerText      String?
+  code            String?
+  language        String?
+  selectedOptions Json? // array of 0-based option indices, for MCQ/MULTISELECT/TRUE_FALSE — needed
+                        // to restore the student's picks on resume, since score/isCorrect alone
+                        // can't reconstruct what was actually selected.
   skipped      Boolean  @default(false)
   score        Int      @default(0) // 0-100 for this one question
   isCorrect    Boolean?

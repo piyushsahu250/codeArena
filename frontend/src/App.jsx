@@ -21,6 +21,7 @@ const TestTaking = lazy(() => import("./pages/TestTaking"));
 // Lazy-loaded: pulls in Monaco (code editor), only needed for coding practice questions.
 const LessonView = lazy(() => import("./pages/LessonView"));
 const InterviewSession = lazy(() => import("./pages/InterviewSession"));
+const ReadinessAssessment = lazy(() => import("./pages/ReadinessAssessment"));
 const ModuleCodingAssessment = lazy(() => import("./pages/ModuleCodingAssessment"));
 // Lazy-loaded: these pull in recharts, which every student/login/account-settings page load was
 // previously downloading regardless of whether that user ever visits a chart-bearing page.
@@ -68,6 +69,8 @@ import GamificationManagement from "./pages/GamificationManagement";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import ResumeAdmin from "./pages/ResumeAdmin";
 import InterviewHub from "./pages/InterviewHub";
+import ReadinessHub from "./pages/ReadinessHub";
+import ReadinessReport from "./pages/ReadinessReport";
 import InterviewReport from "./pages/InterviewReport";
 import InterviewHistory from "./pages/InterviewHistory";
 import InterviewLeaderboard from "./pages/InterviewLeaderboard";
@@ -196,6 +199,18 @@ export default function App() {
           <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><WeeklyChallenge /></Protected>} />
           <Route path="/company-tests" element={<Protected roles={["STUDENT"]}><CompanyTests /></Protected>} />
           <Route path="/resume" element={<Protected roles={["STUDENT"]}><ResumeBuilder /></Protected>} />
+          <Route path="/readiness" element={<Protected roles={["STUDENT"]}><ReadinessHub /></Protected>} />
+          <Route
+            path="/readiness/take/:assessmentId"
+            element={
+              <Protected roles={["STUDENT"]} noChrome>
+                <Suspense fallback={<LoadingScreen />}>
+                  <ReadinessAssessment />
+                </Suspense>
+              </Protected>
+            }
+          />
+          <Route path="/readiness/report/:assessmentId" element={<Protected roles={["STUDENT"]}><ReadinessReport /></Protected>} />
           <Route path="/interview" element={<Protected roles={["STUDENT"]}><InterviewHub /></Protected>} />
           <Route path="/interview/companies" element={<Protected roles={["STUDENT"]}><InterviewCompanies /></Protected>} />
           <Route

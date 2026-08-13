@@ -243,10 +243,11 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
 
     const { score, isCorrect } = await gradeReadinessAnswer(question, { answerText, code, language, selectedOptions, skipped });
 
+    const normalizedOptions = Array.isArray(selectedOptions) ? selectedOptions : null;
     const answer = await prisma.readinessAnswer.upsert({
       where: { assessmentId_questionId: { assessmentId: assessment.id, questionId } },
-      update: { answerText: answerText ?? null, code: code ?? null, language: language ?? null, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
-      create: { assessmentId: assessment.id, questionId, answerText: answerText ?? null, code: code ?? null, language: language ?? null, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
+      update: { answerText: answerText ?? null, code: code ?? null, language: language ?? null, selectedOptions: normalizedOptions, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
+      create: { assessmentId: assessment.id, questionId, answerText: answerText ?? null, code: code ?? null, language: language ?? null, selectedOptions: normalizedOptions, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
     });
     logger.info("READINESS_ANSWER_SAVED", { assessmentId: assessment.id, questionId, questionType: question.questionType, skipped: !!skipped, score });
 
