@@ -637,8 +637,22 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
 
     const sendCredentials = req.body.sendCredentials === "true";
 
+    const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
+
+    // Scoped to only the emails/registration numbers actually present in this file, instead of
+    // loading every user on the entire platform for a dedup check — that unscoped query grows
+    // unbounded as institutes accumulate users over years, for a check that only ever needs to
+    // know about the handful-to-few-thousand rows in front of it right now.
+    const emailsInFile = [...new Set(rows.map((row) => field(row, "email")).filter(Boolean))];
+    const regNumbersInFile = [...new Set(rows.map((row) => field(row, "registrationNumber")).filter(Boolean))];
+
     const [existingUsers, institutes] = await Promise.all([
-      prisma.user.findMany({ select: { email: true, registrationNumber: true } }),
+      (emailsInFile.length || regNumbersInFile.length)
+        ? prisma.user.findMany({
+            where: { OR: [...(emailsInFile.length ? [{ email: { in: emailsInFile, mode: "insensitive" } }] : []), ...(regNumbersInFile.length ? [{ registrationNumber: { in: regNumbersInFile, mode: "insensitive" } }] : [])] },
+            select: { email: true, registrationNumber: true },
+          })
+        : [],
       prisma.institute.findMany(),
     ]);
     const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
@@ -655,8 +669,6 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
     const created = [];
     const duplicates = [];
     const errors = [];
-
-    const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
 
     for (let i = 0; i < rows.length; i++) {
       const rowNum = i + 2; // +1 for header row, +1 for 1-indexing

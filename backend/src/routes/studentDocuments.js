@@ -210,41 +210,61 @@ router.post("/bulk-verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
       return res.status(400).json({ error: "A remark is required when rejecting or requesting re-upload" });
     }
 
-    let verifiedCount = 0;
+    // Batch-load every document + student up front instead of a per-id findUnique/findUnique pair
+    // inside the loop — verifying a class's worth of documents (dozens-hundreds) previously meant
+    // hundreds of fully sequential round-trips (2 reads + 1 write + audit + notify, each awaited
+    // one at a time).
+    const uniqueDocumentIds = [...new Set(documentIds)];
+    const docs = await prisma.studentDocument.findMany({ where: { id: { in: uniqueDocumentIds } } });
+    const docById = new Map(docs.map((d) => [d.id, d]));
+    const studentIds = [...new Set(docs.map((d) => d.studentId))];
+    const students = studentIds.length ? await prisma.user.findMany({ where: { id: { in: studentIds } } }) : [];
+    const studentById = new Map(students.map((s) => [s.id, s]));
+
+    const validEntries = [];
     let skipped = 0;
-    for (const documentId of documentIds) {
-      const doc = await prisma.studentDocument.findUnique({ where: { id: documentId } });
-      if (!doc) { skipped++; continue; }
-      const student = await prisma.user.findUnique({ where: { id: doc.studentId } });
-      if (!student || student.role !== "STUDENT" || (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId)) {
+    for (const documentId of uniqueDocumentIds) {
+      const doc = docById.get(documentId);
+      const student = doc && studentById.get(doc.studentId);
+      if (!doc || !student || student.role !== "STUDENT" || (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId)) {
         skipped++;
         continue;
       }
-
-      const updated = await prisma.studentDocument.update({
-        where: { id: documentId },
-        data: {
-          verificationStatus: status,
-          verifiedByUserId: req.user.id,
-          verifiedByName: req.user.name,
-          verifiedAt: new Date(),
-          rejectionReason: status !== "VERIFIED" ? reason.trim() : null,
-        },
-      });
-      await logAudit({
-        req, action: AUDIT_ACTIONS.DOCUMENT_VERIFIED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-        studentId: doc.studentId, instituteId: student.instituteId,
-        details: {
-          documentId: doc.id, documentType: doc.documentType, documentLabel: doc.label,
-          studentName: student.name, registrationNumber: student.registrationNumber,
-          previousStatus: doc.verificationStatus, status, reason: status !== "VERIFIED" ? reason.trim() : null, bulk: true,
-        },
-      });
-      await notifyDocumentVerification(prisma, student, { document: updated, status, verifierName: req.user.name, reason: status !== "VERIFIED" ? reason.trim() : null });
-      verifiedCount++;
+      validEntries.push({ doc, student });
     }
 
-    res.json({ verifiedCount, skipped });
+    if (validEntries.length) {
+      const trimmedReason = status !== "VERIFIED" ? reason.trim() : null;
+      // Every valid document in this batch gets the identical status/reason, so the write is one
+      // updateMany instead of N individual updates.
+      await prisma.studentDocument.updateMany({
+        where: { id: { in: validEntries.map((v) => v.doc.id) } },
+        data: { verificationStatus: status, verifiedByUserId: req.user.id, verifiedByName: req.user.name, verifiedAt: new Date(), rejectionReason: trimmedReason },
+      });
+
+      // Audit + notify still run per-document (traceability needs one audit row per document, and
+      // notifyDocumentVerification is per-student), but chunked rather than fully sequential —
+      // each notify fires 2 concurrent ops (in-app + email), so an unbounded burst across a whole
+      // class would mean dozens of simultaneous writes/sends from this one 0.1vCPU instance.
+      const NOTIFY_BATCH_SIZE = 15;
+      for (let i = 0; i < validEntries.length; i += NOTIFY_BATCH_SIZE) {
+        const batch = validEntries.slice(i, i + NOTIFY_BATCH_SIZE);
+        await Promise.all(batch.map(async ({ doc, student }) => {
+          await logAudit({
+            req, action: AUDIT_ACTIONS.DOCUMENT_VERIFIED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+            studentId: doc.studentId, instituteId: student.instituteId,
+            details: {
+              documentId: doc.id, documentType: doc.documentType, documentLabel: doc.label,
+              studentName: student.name, registrationNumber: student.registrationNumber,
+              previousStatus: doc.verificationStatus, status, reason: trimmedReason, bulk: true,
+            },
+          });
+          await notifyDocumentVerification(prisma, student, { document: doc, status, verifierName: req.user.name, reason: trimmedReason });
+        }));
+      }
+    }
+
+    res.json({ verifiedCount: validEntries.length, skipped });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to bulk verify documents" });

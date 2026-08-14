@@ -334,27 +334,32 @@ router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN"), atta
     const nextExam = { ...existing, ...data };
 
     const { departmentIds } = req.body;
-    const updated = await prisma.$transaction(async (tx) => {
-      const examination = await tx.resultExamination.update({
-        where: { id: req.params.id },
-        data: {
-          ...data,
-          ...(Array.isArray(departmentIds)
-            ? { departments: { deleteMany: {}, create: departmentIds.map((departmentId) => ({ departmentId })) } }
-            : {}),
-        },
-        include: { departments: { include: { department: { select: { id: true, name: true } } } } },
-      });
 
-      if (thresholdsChanged) {
-        const entries = await tx.resultEntry.findMany({ where: { examinationId: req.params.id } });
-        for (const entry of entries) {
-          const { percentage, passed } = computeResult(entry.obtainedMarks, nextExam);
-          await tx.resultEntry.update({ where: { id: entry.id }, data: { percentage, passed } });
-        }
-      }
-      return examination;
+    // examinationUpdate + one update-op per entry are batched into a single prisma.$transaction
+    // array rather than an interactive tx callback with a sequential for-await loop: Prisma
+    // pipelines a batched array as one wrapped transaction instead of awaiting each round-trip in
+    // turn, which matters once an institute-wide exam has hundreds-to-thousands of entries.
+    const examinationUpdate = prisma.resultExamination.update({
+      where: { id: req.params.id },
+      data: {
+        ...data,
+        ...(Array.isArray(departmentIds)
+          ? { departments: { deleteMany: {}, create: departmentIds.map((departmentId) => ({ departmentId })) } }
+          : {}),
+      },
+      include: { departments: { include: { department: { select: { id: true, name: true } } } } },
     });
+
+    let entryUpdates = [];
+    if (thresholdsChanged) {
+      const entries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id }, select: { id: true, obtainedMarks: true } });
+      entryUpdates = entries.map((entry) => {
+        const { percentage, passed } = computeResult(entry.obtainedMarks, nextExam);
+        return prisma.resultEntry.update({ where: { id: entry.id }, data: { percentage, passed } });
+      });
+    }
+
+    const [updated] = await prisma.$transaction([examinationUpdate, ...entryUpdates]);
 
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_EDITED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
@@ -398,7 +403,15 @@ router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN
       where: { examinationId: req.params.id },
       include: { student: { select: { id: true, name: true, email: true } } },
     });
-    await Promise.all(entries.map((e) => notifyResultPublished(prisma, e.student, examination)));
+    // Chunked, not one big Promise.all: notifyResultPublished itself fires 2 concurrent ops
+    // (in-app notify + email) per student, so publishing an institute-wide exam with hundreds of
+    // entries unchunked would burst hundreds of simultaneous DB writes + email sends from this
+    // one 0.1vCPU instance. 15 students (30 concurrent ops) per batch, batches run in sequence.
+    const NOTIFY_BATCH_SIZE = 15;
+    for (let i = 0; i < entries.length; i += NOTIFY_BATCH_SIZE) {
+      const batch = entries.slice(i, i + NOTIFY_BATCH_SIZE);
+      await Promise.all(batch.map((e) => notifyResultPublished(prisma, e.student, examination)));
+    }
 
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_PUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
@@ -700,6 +713,19 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
     const existingEntries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id }, select: { studentId: true } });
     const existingStudentIds = new Set(existingEntries.map((e) => e.studentId));
 
+    // Batch-fetch every candidate student by Registration Number (PRN, globally unique) in one
+    // query instead of a per-row findFirst inside the loop below — an institute-wide import can be
+    // hundreds to thousands of rows, and a per-row query at that scale is exactly the N+1 pattern
+    // this platform already avoids elsewhere (see instituteByName above).
+    const registrationNumbersInFile = [...new Set(rows.map((row) => String(row[headerMap.registrationNumber] || "").trim()).filter(Boolean))];
+    const candidateStudents = registrationNumbersInFile.length
+      ? await prisma.user.findMany({
+          where: { role: "STUDENT", registrationNumber: { in: registrationNumbersInFile } },
+          select: { id: true, name: true, instituteId: true, registrationNumber: true },
+        })
+      : [];
+    const studentByInstituteAndRegNo = new Map(candidateStudents.map((s) => [`${s.instituteId}::${s.registrationNumber}`, s]));
+
     const imported = [], duplicate = [], invalidInstitute = [], invalidRegistrationNumber = [], failed = [];
     const seen = new Set();
 
@@ -735,10 +761,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
         // Matched by Registration Number (PRN), the platform's sole unique student identifier —
         // Roll Number is never accepted as an import column since it legitimately repeats across
         // departments and is auto-generated from the PRN, not entered manually.
-        const student = await prisma.user.findFirst({
-          where: { role: "STUDENT", instituteId: institute.id, registrationNumber: registrationNumberRaw },
-          select: { id: true, name: true },
-        });
+        const student = studentByInstituteAndRegNo.get(`${institute.id}::${registrationNumberRaw}`);
         if (!student) {
           invalidRegistrationNumber.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: `No student with Registration Number "${registrationNumberRaw}" was found at ${institute.name}.` });
           continue;
@@ -798,7 +821,11 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
 // `division` here means AcademicGroup.section's actual string value (e.g. "Section A"), not a
 // Division-model id — the legacy Division entity isn't what current students are scoped by (see
 // the schema comment on ResultExamination.divisions).
-async function loadFilteredEntries(req) {
+//
+// Shared base where-clause for analytics (full unbounded load, cached, needs every matching row to
+// aggregate) and search/export (paginated/capped) below, so all three routes can never disagree
+// about what's in scope.
+function buildEntryWhere(req) {
   const { examinationId, batch, departmentId, division, dateFrom, dateTo, instituteId } = req.query;
   const examWhere = {};
   if (req.requesterInstituteId) examWhere.instituteId = req.requesterInstituteId;
@@ -815,12 +842,13 @@ async function loadFilteredEntries(req) {
   if (departmentId || division) {
     entryWhere.student = { academicGroup: { ...(departmentId ? { departmentId } : {}), ...(division ? { section: division } : {}) } };
   }
+  return entryWhere;
+}
 
-  return prisma.resultEntry.findMany({
-    where: entryWhere,
-    include: { student: { select: STUDENT_SELECT }, examination: { select: { id: true, title: true, status: true, batch: true, institute: { select: { name: true } } } } },
-    orderBy: { createdAt: "desc" },
-  });
+const ENTRY_INCLUDE = { student: { select: STUDENT_SELECT }, examination: { select: { id: true, title: true, status: true, batch: true, institute: { select: { name: true } } } } };
+
+async function loadFilteredEntries(req) {
+  return prisma.resultEntry.findMany({ where: buildEntryWhere(req), include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" } });
 }
 
 router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
@@ -872,19 +900,33 @@ router.get("/admin/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
 
-    let entries = await loadFilteredEntries(req);
-    if (status) entries = entries.filter((e) => (status === "PASS" ? e.passed : status === "FAIL" ? !e.passed : e.examination.status === status));
+    // Every filter (including name/roll/status) is pushed into the Prisma where clause and the
+    // page is fetched DB-side via skip/take + a matching count — this used to load every matching
+    // entry into memory and filter/paginate in JS, which recomputed the full unbounded load on
+    // every keystroke-driven search request across an institute that can have thousands of entries.
+    const entryWhere = buildEntryWhere(req);
+    if (status === "PASS") entryWhere.passed = true;
+    else if (status === "FAIL") entryWhere.passed = false;
+    else if (status) entryWhere.examination = { ...entryWhere.examination, status };
     if (studentName && studentName.trim()) {
-      const q = studentName.trim().toLowerCase();
-      entries = entries.filter((e) => e.student.name.toLowerCase().includes(q));
+      entryWhere.student = { ...(entryWhere.student || {}), name: { contains: studentName.trim(), mode: "insensitive" } };
     }
     if (rollNumber && rollNumber.trim()) {
-      const q = rollNumber.trim().toLowerCase();
-      entries = entries.filter((e) => (e.student.rollNumber || "").toLowerCase().includes(q) || (e.student.registrationNumber || "").toLowerCase().includes(q));
+      const q = rollNumber.trim();
+      entryWhere.student = { ...(entryWhere.student || {}), OR: [{ rollNumber: { contains: q, mode: "insensitive" } }, { registrationNumber: { contains: q, mode: "insensitive" } }] };
     }
 
-    const total = entries.length;
-    const rows = entries.slice((page - 1) * pageSize, page * pageSize).map((e) => ({
+    const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
+    const filterKey = JSON.stringify(req.query);
+    const { entries, total } = await cached(`resultSearch:${instituteKey}:${filterKey}`, 20 * 1000, async () => {
+      const [entries, total] = await Promise.all([
+        prisma.resultEntry.findMany({ where: entryWhere, include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
+        prisma.resultEntry.count({ where: entryWhere }),
+      ]);
+      return { entries, total };
+    });
+
+    const rows = entries.map((e) => ({
       ...serializeEntry(e),
       examinationTitle: e.examination.title,
       examinationStatus: e.examination.status,
@@ -897,9 +939,13 @@ router.get("/admin/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
   }
 });
 
+// Same take:10000 hard ceiling attendance.js's export uses — a runaway/unfiltered export request
+// stays bounded instead of pulling the entire table into memory.
+const EXPORT_ROW_CAP = 10000;
+
 router.get("/admin/export", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
-    const entries = await loadFilteredEntries(req);
+    const entries = await prisma.resultEntry.findMany({ where: buildEntryWhere(req), include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" }, take: EXPORT_ROW_CAP });
     const rows = entries.map((e) => ({
       Examination: e.examination.title,
       Institute: e.examination.institute.name,

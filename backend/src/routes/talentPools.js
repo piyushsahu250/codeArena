@@ -138,6 +138,18 @@ router.get("/my-pools", authenticate, requireRole("STUDENT"), async (req, res) =
 
 router.get("/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    const cacheKey = `talentPoolAnalytics:${req.requesterInstituteId || "all"}:${JSON.stringify(req.query)}`;
+    const result = await cached(cacheKey, 60 * 1000, () => computeTalentPoolAnalytics(req));
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to compute analytics" });
+  }
+});
+
+// Extracted so the route above can wrap it in cached() — recomputing this from scratch on every
+// request was wasted work despite the queries themselves already being well-batched.
+async function computeTalentPoolAnalytics(req) {
     const { poolId, instituteId, departmentId, testId, dateFrom, dateTo } = req.query;
 
     const poolWhere = {};
@@ -157,12 +169,12 @@ router.get("/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
     const inactivePools = totalPools - activePools;
 
     if (poolIds.length === 0) {
-      return res.json({
+      return {
         totals: { totalPools: 0, activePools: 0, inactivePools: 0, totalStudents: 0 },
         perPool: [], instituteWise: [], departmentWise: [],
         assessmentParticipation: { assigned: 0, completed: 0, completionRatePercent: 0 },
         scores: { average: null, highest: null, lowest: null },
-      });
+      };
     }
 
     const memberWhere = { poolId: { in: poolIds } };
@@ -230,7 +242,7 @@ router.get("/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
     const assigned = testIds.length * memberIds.length;
     const completed = attempts.length;
 
-    res.json({
+    return {
       totals: { totalPools, activePools, inactivePools, totalStudents },
       perPool,
       instituteWise: [...instituteCounts.entries()].map(([name, count]) => ({ name, count })),
@@ -241,12 +253,8 @@ router.get("/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
         highest: scorePercents.length ? Math.round(Math.max(...scorePercents)) : null,
         lowest: scorePercents.length ? Math.round(Math.min(...scorePercents)) : null,
       },
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to compute analytics" });
-  }
-});
+    };
+}
 
 router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
@@ -566,6 +574,19 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachReques
     const existingMembers = await prisma.talentPoolMember.findMany({ where: { poolId: pool.id }, select: { studentId: true } });
     const existingMemberIds = new Set(existingMembers.map((m) => m.studentId));
 
+    // Batch-fetch every candidate student by Registration Number (PRN, globally unique) in one
+    // query instead of a per-row findFirst inside the loop below — an institute-wide import can be
+    // hundreds to thousands of rows, and a per-row query at that scale is exactly the N+1 pattern
+    // this platform already avoids elsewhere (see instituteByName above).
+    const registrationNumbersInFile = [...new Set(rows.map((row) => String(row[headerMap.registrationNumber] || "").trim()).filter(Boolean))];
+    const candidateStudents = registrationNumbersInFile.length
+      ? await prisma.user.findMany({
+          where: { role: "STUDENT", registrationNumber: { in: registrationNumbersInFile } },
+          select: { id: true, name: true, instituteId: true, registrationNumber: true },
+        })
+      : [];
+    const studentByInstituteAndRegNo = new Map(candidateStudents.map((s) => [`${s.instituteId}::${s.registrationNumber}`, s]));
+
     const added = [], alreadyExisting = [], invalidInstitute = [], invalidRegistrationNumber = [], failed = [];
     const toCreate = [];
     const seen = new Set();
@@ -593,10 +614,7 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachReques
         // Matched by Registration Number (PRN), the platform's sole unique student identifier —
         // Roll Number is never accepted as an import column since it legitimately repeats across
         // departments and is auto-generated from the PRN, not entered manually.
-        const student = await prisma.user.findFirst({
-          where: { role: "STUDENT", instituteId: institute.id, registrationNumber: registrationNumberRaw },
-          select: { id: true, name: true },
-        });
+        const student = studentByInstituteAndRegNo.get(`${institute.id}::${registrationNumberRaw}`);
         if (!student) {
           invalidRegistrationNumber.push({
             row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw,
@@ -982,12 +1000,23 @@ router.get("/:id/report.pdf", authenticate, requireRole("ADMIN", "STAFF"), attac
   if (!pool) return;
   const members = await prisma.talentPoolMember.findMany({ where: { poolId: pool.id }, include: { student: { select: MEMBER_SELECT } } });
 
+  // One attendanceRecord query for every member instead of one per member inside the loop below —
+  // computeTalentPoolRank is already cheap to call per-member (it's backed by a 30s cached()
+  // pool-wide ranking computation, see talentPoolRank.js), but this attendance lookup wasn't.
+  const memberIds = members.map((m) => m.studentId);
+  const allRecords = memberIds.length
+    ? await prisma.attendanceRecord.findMany({ where: { studentId: { in: memberIds } }, select: { studentId: true, status: true } })
+    : [];
+  const recordsByStudent = new Map();
+  for (const r of allRecords) {
+    if (!recordsByStudent.has(r.studentId)) recordsByStudent.set(r.studentId, []);
+    recordsByStudent.get(r.studentId).push(r);
+  }
+
   const rows = await Promise.all(
     members.map(async (m) => {
-      const [rank, records] = await Promise.all([
-        computeTalentPoolRank(m.studentId, pool.id),
-        prisma.attendanceRecord.findMany({ where: { studentId: m.studentId }, select: { status: true } }),
-      ]);
+      const rank = await computeTalentPoolRank(m.studentId, pool.id);
+      const records = recordsByStudent.get(m.studentId) || [];
       const present = records.filter((r) => r.status === "PRESENT").length;
       const late = records.filter((r) => r.status === "LATE").length;
       const absent = records.filter((r) => r.status === "ABSENT").length;
