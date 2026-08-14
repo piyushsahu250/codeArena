@@ -399,6 +399,12 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     orderBy: { startTime: "asc" },
     include: {
       _count: { select: { questions: true, attempts: true } },
+      // Needed so the Manage Tests filter/badge UI can tell a genuinely platform-wide test
+      // (instituteId null, zero group/class assignments) apart from one that's institute-scoped
+      // via Test.instituteId directly but has no per-group assignment yet — those two cases used
+      // to be indistinguishable client-side since only academicGroups[]/classes[] carried an
+      // institute, never the test itself.
+      institute: { select: { id: true, name: true } },
       classes: {
         include: {
           class: {

@@ -61,40 +61,65 @@ export default function StaffDashboard() {
     refresh();
   }
 
-  // Distinct filter option lists, derived from whatever assignments actually exist — academicGroups
-  // for tests created/edited since the Institute/Batch/Department/Section cutover, classes[] as a
-  // fallback for older tests that still only carry the legacy assignment.
-  const { instituteOptions, groupOptions, batchOptions } = useMemo(() => {
+  // A test's institute is now determined by Test.instituteId (see backend/src/routes/tests.js)
+  // first, falling back to whatever its academicGroups/classes carry — a platform-level creator
+  // can scope a test to one institute directly, with zero group assignments, so the institute
+  // can no longer be read off academicGroups[]/classes[] alone.
+  function testInstitute(t) {
+    if (t.institute) return t.institute;
+    for (const tg of t.academicGroups) if (tg.academicGroup?.institute) return tg.academicGroup.institute;
+    for (const tc of t.classes) if (tc.class?.institute) return tc.class.institute;
+    return null;
+  }
+
+  // Cascading filter options: Institute narrows Group, Institute+Group narrows Batch — so a
+  // platform-level Admin picking "Sanjivani University" never sees another institute's groups or
+  // batches offered as if they applied, which was the exact source of confusing "no results"
+  // combinations before this fix.
+  const instituteOptions = useMemo(() => {
     const institutes = new Map();
-    const groups = new Map();
-    const batches = new Set();
     for (const t of tests) {
+      const inst = testInstitute(t);
+      if (inst) institutes.set(inst.id, inst.name);
+    }
+    return [...institutes.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [tests]);
+
+  const groupOptions = useMemo(() => {
+    const groups = new Map();
+    for (const t of tests) {
+      const inst = testInstitute(t);
+      if (instituteFilter && inst?.id !== instituteFilter) continue;
       for (const tg of t.academicGroups) {
         const g = tg.academicGroup;
-        if (g?.institute) institutes.set(g.institute.id, g.institute.name);
         if (g) groups.set(g.id, `${g.department?.name || "—"} - ${g.section}`);
-        if (g?.batch) batches.add(g.batch);
       }
       for (const tc of t.classes) {
-        if (tc.class?.institute) institutes.set(tc.class.institute.id, tc.class.institute.name);
         if (tc.class) groups.set(tc.class.id, tc.class.name);
-        if (tc.class?.batchYear) batches.add(tc.class.batchYear);
       }
     }
-    return {
-      instituteOptions: [...institutes.entries()],
-      groupOptions: [...groups.entries()],
-      batchOptions: [...batches].sort(),
-    };
-  }, [tests]);
+    return [...groups.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [tests, instituteFilter]);
+
+  const batchOptions = useMemo(() => {
+    const batches = new Set();
+    for (const t of tests) {
+      const inst = testInstitute(t);
+      if (instituteFilter && inst?.id !== instituteFilter) continue;
+      if (groupFilter) {
+        const inGroup = t.academicGroups.some((tg) => tg.academicGroup?.id === groupFilter)
+          || t.classes.some((tc) => tc.class?.id === groupFilter);
+        if (!inGroup) continue;
+      }
+      for (const tg of t.academicGroups) if (tg.academicGroup?.batch) batches.add(tg.academicGroup.batch);
+      for (const tc of t.classes) if (tc.class?.batchYear) batches.add(tc.class.batchYear);
+    }
+    return [...batches].sort();
+  }, [tests, instituteFilter, groupFilter]);
 
   const filtered = tests.filter((t) => {
     if (nameFilter && !t.title.toLowerCase().includes(nameFilter.toLowerCase())) return false;
-    if (instituteFilter) {
-      const match = t.academicGroups.some((tg) => tg.academicGroup?.institute?.id === instituteFilter)
-        || t.classes.some((tc) => tc.class?.institute?.id === instituteFilter);
-      if (!match) return false;
-    }
+    if (instituteFilter && testInstitute(t)?.id !== instituteFilter) return false;
     if (groupFilter) {
       const match = t.academicGroups.some((tg) => tg.academicGroup?.id === groupFilter)
         || t.classes.some((tc) => tc.class?.id === groupFilter);
@@ -193,11 +218,19 @@ export default function StaffDashboard() {
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
           />
-          <select style={{ ...inputStyle, flex: "1 1 160px" }} value={instituteFilter} onChange={(e) => { setInstituteFilter(e.target.value); setGroupFilter(""); }}>
+          <select
+            style={{ ...inputStyle, flex: "1 1 160px" }}
+            value={instituteFilter}
+            onChange={(e) => { setInstituteFilter(e.target.value); setGroupFilter(""); setBatchFilter(""); }}
+          >
             <option value="">All institutes</option>
             {instituteOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
-          <select style={{ ...inputStyle, flex: "1 1 140px" }} value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+          <select
+            style={{ ...inputStyle, flex: "1 1 140px" }}
+            value={groupFilter}
+            onChange={(e) => { setGroupFilter(e.target.value); setBatchFilter(""); }}
+          >
             <option value="">All groups</option>
             {groupOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
@@ -240,7 +273,9 @@ export default function StaffDashboard() {
 
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                       {!hasAssignment ? (
-                        <span className="badge">All groups</span>
+                        <span className="badge">
+                          {test.institute ? `All groups at ${test.institute.name}` : "All groups (platform-wide)"}
+                        </span>
                       ) : (
                         <>
                           {test.academicGroups.map((tg) => (
