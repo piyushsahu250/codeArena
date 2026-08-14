@@ -23,19 +23,28 @@ function initRollNumberFromRegistration(registrationNumber) {
 // but duplicates ARE expected across different groups — so collision-avoidance is scoped by
 // whatever `takenRollNumbers` set the caller passes in (that group's other students' current Roll
 // Numbers). Tries the default last-3-characters first, then slides that 3-character window one
-// position left through the rest of the PRN on each collision — every candidate is always a real
-// substring of this student's own PRN, so the platform's "never a DUP prefix" rule is never
-// violated. Falls back to the plain last-3 value (accepting a rare residual collision) only if the
-// entire PRN is exhausted, rather than blocking account creation outright.
+// position left through the rest of the PRN on each collision — but only while every candidate
+// stays all-digits. A PRN's numeric suffix is usually short (a handful of trailing digits) with an
+// alphabetic institute/batch/department code before it; sliding past the digits used to keep
+// going and hand out that alphabetic code's fragments as "Roll Numbers" — e.g. a batch of PRNs
+// like "...UMXF2001".."...UMXF2005" collided on their shared last-3 zone and produced "MXF"/"UMX"
+// once several students in the group needed to slide. Once the digit run is exhausted, fall back
+// to the first free zero-padded sequential number (numeric, never a DUP prefix concern since it's
+// clearly not derived from anyone's PRN) rather than ever returning a letter-containing candidate.
 function resolveRollNumberAvoidingCollisions(registrationNumber, takenRollNumbers) {
   const cleaned = String(registrationNumber || "").trim();
   if (cleaned.length < 3) return null;
   const taken = takenRollNumbers instanceof Set ? takenRollNumbers : new Set(takenRollNumbers || []);
   for (let end = cleaned.length; end - 3 >= 0; end--) {
     const candidate = cleaned.slice(end - 3, end);
+    if (!/^\d{3}$/.test(candidate)) break; // hit a non-digit — the PRN's numeric suffix is exhausted
     if (!taken.has(candidate)) return candidate;
   }
-  return cleaned.slice(-3);
+  for (let n = 0; n <= 999; n++) {
+    const candidate = String(n).padStart(3, "0");
+    if (!taken.has(candidate)) return candidate;
+  }
+  return cleaned.slice(-3); // group has genuinely exhausted all 1000 3-digit codes — give up gracefully
 }
 
 // Ascending Roll Number comparator for bounded, already-fetched lists (a class roster, one Talent
