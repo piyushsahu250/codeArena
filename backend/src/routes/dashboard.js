@@ -96,7 +96,10 @@ async function getNotifications(student) {
       notifications.push({ type: "test_assigned", text: `New test assigned: "${t.title}"`, date: t.createdAt });
     }
     if (t.startTime >= now && t.startTime <= in48h) {
-      notifications.push({ type: "test_reminder", text: `"${t.title}" starts ${new Date(t.startTime).toLocaleString()}`, date: t.startTime });
+      // Explicit Asia/Kolkata timezone — this runs server-side on Render (container clock is UTC),
+      // so without it a test scheduled for 1:30 PM IST was showing here as "8:00:00 AM" (the raw
+      // UTC time), 5.5 hours off. The frontend renders this text as-is, no client reformatting.
+      notifications.push({ type: "test_reminder", text: `"${t.title}" starts ${new Date(t.startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`, date: t.startTime });
     }
   }
 

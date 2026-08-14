@@ -76,14 +76,17 @@ async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel) 
 
 async function notifyDeadlineReminder(prisma, student, pool, testTitle, startTime) {
   const link = "/talent-pools";
+  // Explicit Asia/Kolkata timezone — this runs server-side on Render (container clock is UTC), so
+  // without it a test scheduled for e.g. 1:30 PM IST would show/email as "8:00:00 AM", 5.5h off.
+  const formattedStart = new Date(startTime).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
   await Promise.all([
     notify(prisma, {
       recipientId: student.id, type: "TALENT_POOL_DEADLINE_REMINDER",
-      message: `"${testTitle}" (${pool.name}) starts ${new Date(startTime).toLocaleString()}`, link,
+      message: `"${testTitle}" (${pool.name}) starts ${formattedStart}`, link,
     }),
     emailStudent(
       prisma, student, `Reminder: "${testTitle}" starts soon`,
-      `<p>Hi ${student.name},</p><p>Your exclusive assessment <strong>${testTitle}</strong> from the <strong>${pool.name}</strong> Talent Pool starts at ${new Date(startTime).toLocaleString()}.</p>`,
+      `<p>Hi ${student.name},</p><p>Your exclusive assessment <strong>${testTitle}</strong> from the <strong>${pool.name}</strong> Talent Pool starts at ${formattedStart}.</p>`,
       "TALENT_POOL_DEADLINE_REMINDER"
     ),
   ]);
