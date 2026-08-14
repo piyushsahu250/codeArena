@@ -195,6 +195,7 @@ model User {
   resetTokenExpiry DateTime?
 
   createdTests Test[]         @relation("TestCreator")
+  sharedTests  TestShare[]    @relation("TestSharedWith") // tests explicitly shared with this staff member by someone else
   attempts     TestAttempt[]
   submissions  Submission[]
   createdQuestions Question[]
@@ -305,6 +306,16 @@ model Test {
   createdById  String
   institute    Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   instituteId  String?    // null = platform-wide test, only ever set by a platform-level (instituteId-less) creator — mirrors QuestionFolder.instituteId. Gates the "empty group/class assignment = open to everyone" convention in testEligibility.js so an institute-scoped test can never leak across institutes.
+  // Subject/Unit/Program isolation — plain free-text, mirroring Question.subject's own convention
+  // (no new lookup entity). Two different staff both naming a test "Unit 1 Test" are told apart by
+  // Subject + Unit + createdById, not by title, which is never assumed unique. subject == null is
+  // also the "needs review" signal for legacy tests predating this field — see
+  // scripts/backfillTestSubjectUnit.js. unit is only ever meaningful paired with subject ("Java ·
+  // Unit 1" != "DBMS · Unit 1"), never shown/filtered alone. program is informational/filter-only,
+  // matching User.program's existing no-FK convention — never wired into eligibility.
+  subject      String?
+  unit         String?
+  program      String?
   createdAt    DateTime @default(now())
 
   questions TestQuestion[]
@@ -312,6 +323,13 @@ model Test {
   classes   TestClass[] // empty = open to all classes (legacy/unscoped tests)
   academicGroups TestAcademicGroup[] // replaces classes[] as the real eligibility gate — see testEligibility.js
   talentPools    TalentPoolTest[] // presence of any row makes this test Talent-Pool-exclusive — overrides, not OR's with, the academicGroups/classes check (see testEligibility.js)
+  // Explicit staff-to-staff sharing — additive on top of createdById ownership, never a substitute
+  // for it. A STAFF requester can access a test iff they own it OR appear here — see
+  // backend/src/utils/testOwnership.js. Empty = private to the owner (and any Admin at the same
+  // institute), matching the "PRIVATE BY DEFAULT" requirement — the inverse of every other
+  // "empty = open to everyone" join table on this platform, deliberately, since the whole point of
+  // this table is to stop tests from being visible-by-default.
+  shares TestShare[]
 
   // Attendance Management: when Lecture Type = Exam, a session can link back to the Test being
   // administered, so exam attendance is tied to the actual test rather than duplicated.
@@ -325,6 +343,25 @@ model Test {
   @@index([startTime, endTime])
   @@index([company])
   @@index([instituteId])
+}
+
+// Explicit test sharing: grants a Staff member other than the owner (createdById) access to
+// view/manage one test, without making it visible to every Staff member at the institute. Managed
+// only by the test's owner or an Admin — a shared staff member cannot re-share to a third party
+// (no route reads this table's own staffId as an authorization source for writing more rows).
+model TestShare {
+  id             String   @id @default(uuid())
+  test           Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId         String
+  staff          User     @relation("TestSharedWith", fields: [staffId], references: [id], onDelete: Cascade)
+  staffId        String
+  sharedByUserId String
+  sharedByName   String
+  createdAt      DateTime @default(now())
+
+  @@unique([testId, staffId])
+  @@index([testId])
+  @@index([staffId])
 }
 
 // Join table: which classes a test is assigned to — legacy, superseded by TestAcademicGroup below.

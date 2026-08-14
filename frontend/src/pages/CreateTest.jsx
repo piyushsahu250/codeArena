@@ -6,13 +6,16 @@ import Navbar from "../components/Navbar";
 import { SkeletonGrid } from "../components/Skeleton";
 import FolderPicker from "../components/FolderPicker";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
+import StaffPicker from "../components/StaffPicker";
 import UploadProgressBar from "../components/UploadProgressBar";
 import { useAuth } from "../context/AuthContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
 const emptyForm = {
   title: "", code: "", description: "", instructions: "", company: "", durationMin: 60, passingMarks: "", showResults: true, startTime: "", endTime: "",
+  subject: "", unit: "", program: "",
   requireFullscreen: true, requireWebcam: false, requireMicrophone: false, attendanceMandatory: false,
   shuffleQuestions: true, shuffleOptions: false,
   questionSelectionMode: "FIXED", randomBankFolderId: "", randomQuestionsPerStudent: "",
@@ -32,6 +35,7 @@ export default function CreateTest() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const confirmDialog = useConfirm();
   // Only the platform-level account (no instituteId — see backend/src/middleware/institute.js)
   // may ever produce a truly platform-wide test; every institute-scoped Staff/Admin's "leave
   // empty" default is now institute-bounded server-side (see Test.instituteId in schema.prisma).
@@ -62,10 +66,22 @@ export default function CreateTest() {
   const [loading, setLoading] = useState(isEdit);
   const [showBankModal, setShowBankModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  // Subject isolation additions — testOwnerId gates whether the Shared With panel renders at all
+  // (only the test's own creator, or an Admin, may manage sharing — see POST/DELETE
+  // /tests/:id/shares's own backend check, mirrored here just for UI visibility, never trusted as
+  // the real authorization boundary). mySubjects seeds the Subject datalist from this staff
+  // member's own already-created tests, fetched once — no new endpoint needed for that.
+  const [testOwnerId, setTestOwnerId] = useState(null);
+  const [shares, setShares] = useState([]); // [{ staffId, staff: { id, name } }]
+  const [mySubjects, setMySubjects] = useState([]);
 
   useEffect(() => {
     api.get("/academic-groups").then((res) => setAcademicGroups(res.data));
     api.get("/talent-pools").then((res) => setTalentPools(res.data)).catch(() => setTalentPools([]));
+    api.get("/tests").then((res) => {
+      const subjects = [...new Set(res.data.map((t) => t.subject).filter(Boolean))].sort();
+      setMySubjects(subjects);
+    }).catch(() => setMySubjects([]));
   }, []);
 
   useEffect(() => {
@@ -79,6 +95,7 @@ export default function CreateTest() {
       setForm({
         title: t.title || "", code: t.code || "", description: t.description || "",
         instructions: t.instructions || "", company: t.company || "", durationMin: t.durationMin, passingMarks: t.passingMarks ?? "",
+        subject: t.subject || "", unit: t.unit || "", program: t.program || "",
         showResults: t.showResults, startTime: toLocalInputValue(t.startTime), endTime: toLocalInputValue(t.endTime),
         requireFullscreen: t.requireFullscreen !== false, requireWebcam: !!t.requireWebcam, requireMicrophone: !!t.requireMicrophone,
         attendanceMandatory: !!t.attendanceMandatory,
@@ -92,6 +109,8 @@ export default function CreateTest() {
       });
       setAcademicGroupIds((t.academicGroups || []).map((g) => g.academicGroupId));
       setInstituteId(t.instituteId || "");
+      setTestOwnerId(t.createdById || null);
+      setShares(t.shares || []);
       const poolIds = (t.talentPools || []).map((tp) => tp.poolId);
       setTalentPoolIds(poolIds);
       setInitialTalentPoolIds(poolIds);
@@ -142,6 +161,27 @@ export default function CreateTest() {
     return (e) => setForm({ ...form, [field]: e.target.value });
   }
 
+  // Fires add/remove calls immediately on each picker toggle (not batched into the main form
+  // save) — sharing is a standalone action, same as the assign/unassign pattern used elsewhere on
+  // this platform (e.g. Readiness subject academic-group assignment). Refetches afterward for the
+  // shared staff member's name rather than tracking it locally, since StaffPicker's onChange only
+  // returns ids, and this is a low-frequency action where an extra round-trip is a non-issue.
+  async function syncShares(nextIds) {
+    const currentIds = shares.map((s) => s.staffId);
+    const toAdd = nextIds.filter((sid) => !currentIds.includes(sid));
+    const toRemove = currentIds.filter((sid) => !nextIds.includes(sid));
+    try {
+      await Promise.all([
+        toAdd.length ? api.post(`/tests/${id}/shares`, { staffIds: toAdd }) : null,
+        ...toRemove.map((sid) => api.delete(`/tests/${id}/shares/${sid}`)),
+      ]);
+      const { data: fresh } = await api.get(`/tests/${id}`);
+      setShares(fresh.shares || []);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update sharing");
+    }
+  }
+
   const totalMarks = selected.reduce((sum, qId) => {
     const q = questions.find((qq) => qq.id === qId);
     return sum + (q?.points || 0);
@@ -166,7 +206,7 @@ export default function CreateTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRandomMode, form.randomBankFolderId]);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e, allowDuplicate = false) {
     e.preventDefault();
     if (!isRandomMode && selected.length === 0) return alert("Select at least one question");
     if (isRandomMode) {
@@ -189,6 +229,7 @@ export default function CreateTest() {
         difficultyDistribution: isRandomMode && distributionSum > 0
           ? { easy: Number(form.randomEasy || 0), medium: Number(form.randomMedium || 0), hard: Number(form.randomHard || 0) }
           : undefined,
+        allowDuplicate: allowDuplicate || undefined,
       };
       let testId = id;
       if (isEdit) {
@@ -208,10 +249,24 @@ export default function CreateTest() {
 
       navigate("/staff");
     } catch (err) {
+      // Create-only duplicate warning (never fires on edit, or once already confirmed) — mirrors
+      // CreateQuestion.jsx's identical 409 { duplicate, existing } handling for the Question Bank.
+      if (!isEdit && err.response?.status === 409 && err.response?.data?.duplicate) {
+        const existing = err.response.data.existing;
+        const ok = await confirmDialog({
+          title: "Duplicate Test Detected",
+          message: `You already have a test named "${existing.title}" for ${existing.subject}${existing.unit ? ` · ${existing.unit}` : ""}. Create this one anyway?`,
+          confirmLabel: "Create Anyway",
+        });
+        setSaving(false);
+        if (ok) return handleSubmit(e, true);
+        return;
+      }
       alert(err.response?.data?.error || "Failed to save test");
-    } finally {
       setSaving(false);
+      return;
     }
+    setSaving(false);
   }
 
   if (loading) return <div><Navbar /><div style={{ maxWidth: 720, margin: "0 auto", padding: 48 }}><SkeletonGrid count={3} minWidth={220} /></div></div>;
@@ -227,6 +282,28 @@ export default function CreateTest() {
 
           <label style={labelStyle}>Test code (optional)</label>
           <input style={inputStyle} value={form.code} onChange={updateField("code")} placeholder="e.g. MCA-DS-MID1" />
+
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 14 }}>
+            Test names are not required to be unique — "Unit 1 Test" for Java and "Unit 1 Test" for DBMS are two
+            separate tests, told apart by Subject + Unit + who created them, never by the title alone.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Subject</label>
+              <input style={inputStyle} list="subject-options" value={form.subject} onChange={updateField("subject")} placeholder="e.g. Java" />
+              <datalist id="subject-options">
+                {mySubjects.map((s) => <option key={s} value={s} />)}
+              </datalist>
+            </div>
+            <div>
+              <label style={labelStyle}>Unit (optional)</label>
+              <input style={inputStyle} value={form.unit} onChange={updateField("unit")} placeholder="e.g. Unit 1" />
+            </div>
+            <div>
+              <label style={labelStyle}>Program (optional)</label>
+              <input style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. B.Tech CSE" />
+            </div>
+          </div>
 
           <label style={labelStyle}>Description</label>
           <textarea style={{ ...inputStyle, minHeight: 80 }} value={form.description} onChange={updateField("description")} />
@@ -367,6 +444,35 @@ export default function CreateTest() {
               ))}
               {talentPools.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No Talent Pools exist yet — create one from the Talent Pools admin page first.</p>}
             </div>
+          )}
+
+          {isEdit && (user.role === "ADMIN" || testOwnerId === user.id) && (
+            <>
+              <div style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Shared With</div>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                Private by default — only you (and Admins at your institute) can see and manage this test. Add a
+                staff member here to also let them view/manage it; unchecking removes their access immediately.
+              </p>
+              {shares.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {shares.map((s) => (
+                    <span key={s.staffId} className="badge" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {s.staff?.name || "Unknown"}
+                      <button
+                        type="button"
+                        onClick={() => syncShares(shares.filter((x) => x.staffId !== s.staffId).map((x) => x.staffId))}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, padding: 0 }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ marginTop: 8 }}>
+                <StaffPicker value={shares.map((s) => s.staffId)} onChange={syncShares} />
+              </div>
+            </>
           )}
 
           <div style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Question Selection Mode</div>

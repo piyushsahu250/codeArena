@@ -7,6 +7,7 @@ const { processGamification } = require("../utils/gamification");
 const { isTestVisibleToStudent, testEligibilityWhere } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { safeErrorMessage } = require("../utils/errors");
+const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwnership");
 
 const router = express.Router();
 
@@ -140,7 +141,30 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
       company, instituteId: bodyInstituteId,
+      subject, unit, program, allowDuplicate,
     } = req.body;
+
+    // Create-only duplicate warning, same shape as questions.js's (~L192-206): only meaningful
+    // when Subject is actually set (an unnamed/quick test isn't a "duplicate" of anything), scoped
+    // to this staff member's own tests only — two different staff both naming a test "Unit 1 Test"
+    // for their own different subjects is expected and never flagged (see section 16 of the spec:
+    // "Java + Unit 1 + Unit 1 Test" and "DBMS + Unit 1 + Unit 1 Test" are valid separate tests).
+    if (subject?.trim() && !allowDuplicate) {
+      const duplicate = await prisma.test.findFirst({
+        where: {
+          createdById: req.user.id,
+          subject: { equals: subject.trim(), mode: "insensitive" },
+          unit: unit?.trim() ? { equals: unit.trim(), mode: "insensitive" } : null,
+          title: { equals: (title || "").trim(), mode: "insensitive" },
+        },
+      });
+      if (duplicate) {
+        return res.status(409).json({
+          duplicate: true,
+          existing: { id: duplicate.id, title: duplicate.title, subject: duplicate.subject, unit: duplicate.unit },
+        });
+      }
+    }
 
     // A platform-level creator (no own institute) may optionally scope the test to one specific
     // institute directly — previously the only options were fully platform-wide (leave everything
@@ -182,6 +206,9 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
         randomBankFolderId: mode === "RANDOM" ? randomBankFolderId : null,
         randomQuestionsPerStudent: mode === "RANDOM" ? Number(randomQuestionsPerStudent) : null,
         difficultyDistribution: mode === "RANDOM" ? difficultyDistribution || null : null,
+        subject: subject?.trim() || null,
+        unit: unit?.trim() || null,
+        program: program?.trim() || null,
         createdById: req.user.id,
         instituteId: effectiveInstituteId,
         questions: { create: questionCreateData(resolvedQuestionIds, questionTimeLimits) },
@@ -199,10 +226,16 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
 // --- ADMIN/STAFF: edit an existing test (replaces questions + class assignment) ---
 router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.test.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      include: { shares: { select: { staffId: true } } },
+    });
     if (!existing) return res.status(404).json({ error: "Test not found" });
     if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only manage tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, existing)) {
+      return res.status(403).json({ error: "You can only edit tests you created or that were shared with you" });
     }
 
     const {
@@ -211,7 +244,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       requireFullscreen, requireWebcam, requireMicrophone, attendanceMandatory,
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
-      company, instituteId: bodyInstituteId,
+      company, instituteId: bodyInstituteId, subject, unit, program,
     } = req.body;
 
     // Same platform-level-only institute scoping as POST / above — institute-scoped Staff/Admin
@@ -250,6 +283,9 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       description: description ?? existing.description,
       instructions: instructions !== undefined ? (instructions?.trim() || null) : existing.instructions,
       company: company !== undefined ? (company?.trim() || null) : existing.company,
+      subject: subject !== undefined ? (subject?.trim() || null) : existing.subject,
+      unit: unit !== undefined ? (unit?.trim() || null) : existing.unit,
+      program: program !== undefined ? (program?.trim() || null) : existing.program,
       durationMin: durationMin !== undefined ? Number(durationMin) : existing.durationMin,
       passingMarks: passingMarks !== undefined ? (passingMarks === "" ? null : Number(passingMarks)) : existing.passingMarks,
       showResults: showResults === undefined ? existing.showResults : !!showResults,
@@ -301,11 +337,14 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attac
   try {
     const original = await prisma.test.findUnique({
       where: { id: req.params.id },
-      include: { questions: true, classes: true, academicGroups: true },
+      include: { questions: true, classes: true, academicGroups: true, shares: { select: { staffId: true } } },
     });
     if (!original) return res.status(404).json({ error: "Test not found" });
     if (req.requesterInstituteId && original.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only duplicate tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, original)) {
+      return res.status(403).json({ error: "You can only duplicate tests you created or that were shared with you" });
     }
 
     const copy = await prisma.test.create({
@@ -320,6 +359,11 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attac
         startTime: original.startTime,
         endTime: original.endTime,
         isPublished: false,
+        subject: original.subject,
+        unit: original.unit,
+        program: original.program,
+        // The duplicate is always owned by whoever ran the duplicate action, never inherited from
+        // the original — a fresh test with a fresh owner, matching "duplicate ≠ shares stay shared."
         createdById: req.user.id,
         instituteId: original.instituteId,
         questions: {
@@ -339,8 +383,15 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attac
 });
 
 // --- ADMIN: permanently delete a test (and its attempts/submissions) ---
-router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    // Previously missing entirely — an institute-scoped Admin could delete another institute's
+    // test by id. Staff-delete stays disallowed altogether (unchanged); this only tightens Admin.
+    const existing = await prisma.test.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!existing) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only delete tests under your own institute" });
+    }
     await prisma.test.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
@@ -350,12 +401,27 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
 });
 
 // --- ADMIN/STAFF: publish/unpublish ---
-router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
-  const test = await prisma.test.update({
-    where: { id: req.params.id },
-    data: { isPublished: !!req.body.isPublished },
-  });
-  res.json(test);
+router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    // Previously had no authorization check at all beyond role — any Staff member anywhere could
+    // publish/unpublish any test by id. Now matches every other staff-reachable route's gate.
+    const existing = await prisma.test.findUnique({ where: { id: req.params.id }, include: { shares: { select: { staffId: true } } } });
+    if (!existing) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, existing)) {
+      return res.status(403).json({ error: "You can only publish tests you created or that were shared with you" });
+    }
+    const test = await prisma.test.update({
+      where: { id: req.params.id },
+      data: { isPublished: !!req.body.isPublished },
+    });
+    res.json(test);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update publish status" });
+  }
 });
 
 // --- Everyone authenticated: list tests (students see only published tests assigned to their
@@ -375,7 +441,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     // A test with zero group/class assignments is only "open to all" within its OWN institute (or
     // platform-wide if instituteId is null) — never leaks into another institute's staff test
     // list. Mirrors the matching gate in testEligibility.js.
-    where = req.requesterInstituteId
+    const instituteWhere = req.requesterInstituteId
       ? {
           OR: [
             { classes: { some: { class: { instituteId: req.requesterInstituteId } } } },
@@ -388,6 +454,12 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
           ],
         }
       : {};
+    // staffTestAccessWhere no-ops (returns {}) for ADMIN — Admin visibility stays institute-wide,
+    // unchanged. For STAFF it further restricts to "created by me OR explicitly shared with me" —
+    // previously a STAFF requester inherited the exact same institute-only visibility as Admin,
+    // which is the root cause of two staff members' same-named "Unit 1 Test" being indistinguishable
+    // to each other. See utils/testOwnership.js.
+    where = { AND: [instituteWhere, staffTestAccessWhere(req)] };
   } else {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
@@ -436,6 +508,10 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       },
       talentPools: { select: { poolId: true } },
       createdBy: { select: { id: true, name: true } },
+      // Lets the frontend badge "Shared with me" vs "My Tests" and tell canStaffAccessTest-style
+      // checks apart client-side — negligible extra join, included unconditionally rather than
+      // branched on role for simplicity.
+      shares: { select: { staffId: true } },
     },
   });
 
@@ -453,6 +529,29 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
   res.json(withStatus);
 });
 
+// --- ADMIN/STAFF: list Staff members at the requester's own institute, for the "share this test
+// with" picker. Registered before GET /:id so "/staff-directory" is never swallowed by the :id
+// param route. No existing route serves this for STAFF — the only other staff-listing route
+// (staffClerk.js's GET /) is ADMIN-only. Deliberately minimal fields — this is a picker source,
+// not a directory. ---
+router.get("/staff-directory", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const staff = await prisma.user.findMany({
+      where: {
+        role: "STAFF",
+        id: { not: req.user.id },
+        ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+    res.json(staff);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load staff directory" });
+  }
+});
+
 // --- Get single test detail (questions without hidden test cases, and without
 // correctAnswer/explanation, for students — those would leak the answer key) ---
 router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
@@ -463,6 +562,11 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
       classes: { select: { classId: true } },
       academicGroups: { select: { academicGroupId: true } },
       talentPools: { select: { poolId: true } },
+      // Includes the shared staff member's name (not just id) here specifically — this is the
+      // single-test detail route CreateTest.jsx's edit view calls to populate the "Shared With"
+      // panel, and the only place a name is actually displayed; the list route's shares include
+      // stays id-only since it's just used for own/shared badge logic there.
+      shares: { select: { staffId: true, staff: { select: { id: true, name: true } } } },
       questions: {
         include: {
           question: {
@@ -497,6 +601,9 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
   if (isStaff) {
     if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only view tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only view tests you created or that were shared with you" });
     }
   } else {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
@@ -714,7 +821,7 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
   try {
     const { testId, studentId } = req.params;
     const [test, student, attempt] = await Promise.all([
-      prisma.test.findUnique({ where: { id: testId }, select: { id: true, title: true } }),
+      prisma.test.findUnique({ where: { id: testId }, select: { id: true, title: true, createdById: true, shares: { select: { staffId: true } } } }),
       prisma.user.findUnique({ where: { id: studentId }, select: { id: true, name: true, rollNumber: true, instituteId: true } }),
       prisma.testAttempt.findUnique({ where: { testId_studentId: { testId, studentId } } }),
     ]);
@@ -722,6 +829,9 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
     if (!student) return res.status(404).json({ error: "Student not found" });
     if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only manage students under your own institute" });
+    }
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only manage reattempts for tests you created or that were shared with you" });
     }
     if (!attempt) return res.status(404).json({ error: "This student has not attempted this test" });
     if (attempt.status === "IN_PROGRESS") {
@@ -757,10 +867,16 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
 
 // --- ADMIN/STAFF: leaderboard / results for a test ---
 router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+  const test = await prisma.test.findUnique({
+    where: { id: req.params.id },
+    select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } },
+  });
   if (!test) return res.status(404).json({ error: "Test not found" });
   if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
     return res.status(403).json({ error: "You can only view results for tests under your own institute" });
+  }
+  if (!canStaffAccessTest(req, test)) {
+    return res.status(403).json({ error: "You can only view results for tests you created or that were shared with you" });
   }
   const attempts = await prisma.testAttempt.findMany({
     where: { testId: req.params.id },
@@ -804,6 +920,62 @@ router.get("/:id/my-result", authenticate, requireRole("STUDENT"), async (req, r
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load result" });
+  }
+});
+
+// --- Explicit test sharing: owner (or Admin) grants/revokes another staff member's access.
+// Mirrors learning.js's POST/DELETE /courses/:id/assignments (createMany+skipDuplicates /
+// deleteMany). Deliberately NOT reachable by a staff member the test is merely shared with — only
+// the owner or an Admin can grant/revoke, so access can't be chained/re-shared onward. ---
+router.post("/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { staffIds = [] } = req.body;
+    const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { id: true, createdById: true, instituteId: true } });
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage tests under your own institute" });
+    }
+    if (req.user.role === "STAFF" && test.createdById !== req.user.id) {
+      return res.status(403).json({ error: "Only the test's creator can share it" });
+    }
+    if (staffIds.length > 0) {
+      // Validate every target is an actual STAFF account in the requester's own institute before
+      // writing anything — never trusted from the client, same discipline as
+      // assertGroupsBelongToInstitute above.
+      const staffRows = await prisma.user.findMany({
+        where: { id: { in: staffIds }, role: "STAFF", ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}) },
+        select: { id: true },
+      });
+      if (staffRows.length !== staffIds.length) {
+        return res.status(400).json({ error: "One or more selected staff members are not valid for this institute" });
+      }
+      await prisma.testShare.createMany({
+        data: staffIds.map((staffId) => ({ testId: test.id, staffId, sharedByUserId: req.user.id, sharedByName: req.user.name })),
+        skipDuplicates: true,
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to share test" });
+  }
+});
+
+router.delete("/:id/shares/:staffId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { id: true, createdById: true, instituteId: true } });
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage tests under your own institute" });
+    }
+    if (req.user.role === "STAFF" && test.createdById !== req.user.id) {
+      return res.status(403).json({ error: "Only the test's creator can revoke sharing" });
+    }
+    await prisma.testShare.deleteMany({ where: { testId: test.id, staffId: req.params.staffId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to revoke access" });
   }
 });
 

@@ -34,6 +34,16 @@ export default function StaffDashboard() {
   const [groupFilter, setGroupFilter] = useState("");
   const [batchFilter, setBatchFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  // "MINE" | "SHARED" | "ALL" — GET /tests already scopes STAFF to own+shared only (see
+  // backend/src/utils/testOwnership.js), so this tab is purely a client-side split of that
+  // already-private dataset, not a new visibility boundary. "ALL" is Admin-only — for STAFF it
+  // would just be indistinguishable from "MINE ∪ SHARED" while implying (incorrectly) that it
+  // means "every test platform-wide," which is exactly the confusion this whole feature exists to
+  // remove. Admin defaults to ALL (their existing institute-wide view); STAFF defaults to MINE.
+  const [scope, setScope] = useState(user.role === "ADMIN" ? "ALL" : "MINE");
+  const [subjectFilter, setSubjectFilter] = useState("");
+  const [unitFilter, setUnitFilter] = useState("");
+  const [staffOwnerFilter, setStaffOwnerFilter] = useState(""); // Admin only
 
   useEffect(() => {
     refresh();
@@ -71,6 +81,9 @@ export default function StaffDashboard() {
     setInstituteFilter("");
     setGroupFilter("");
     setBatchFilter("");
+    setSubjectFilter("");
+    setUnitFilter("");
+    setStaffOwnerFilter("");
     setStatusFilter(status);
     manageTestsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -131,7 +144,35 @@ export default function StaffDashboard() {
     return [...batches].sort();
   }, [tests, instituteFilter, groupFilter]);
 
+  // Subject narrows Unit the same way Institute narrows Group above. `subject === null` is a
+  // legacy test the backfill script couldn't confidently infer — it's deliberately excluded from
+  // both dropdowns (there's nothing to filter by) and instead surfaced per-card as "Needs review."
+  const subjectOptions = useMemo(() => {
+    const s = new Set();
+    for (const t of tests) if (t.subject) s.add(t.subject);
+    return [...s].sort();
+  }, [tests]);
+
+  const unitOptions = useMemo(() => {
+    const s = new Set();
+    for (const t of tests) {
+      if (subjectFilter && t.subject !== subjectFilter) continue;
+      if (t.unit) s.add(t.unit);
+    }
+    return [...s].sort();
+  }, [tests, subjectFilter]);
+
+  // Admin-only: who owns each test, derived from the already institute-scoped `tests` list —
+  // lets an Admin narrow down to one Staff member's tests without leaving the page.
+  const staffOwnerOptions = useMemo(() => {
+    const m = new Map();
+    for (const t of tests) if (t.createdBy) m.set(t.createdBy.id, t.createdBy.name);
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [tests]);
+
   const filtered = tests.filter((t) => {
+    if (scope === "MINE" && t.createdBy?.id !== user.id) return false;
+    if (scope === "SHARED" && !(t.shares || []).some((s) => s.staffId === user.id)) return false;
     if (nameFilter && !t.title.toLowerCase().includes(nameFilter.toLowerCase())) return false;
     if (instituteFilter && testInstitute(t)?.id !== instituteFilter) return false;
     if (groupFilter) {
@@ -144,6 +185,9 @@ export default function StaffDashboard() {
         || t.classes.some((tc) => tc.class?.batchYear === batchFilter);
       if (!match) return false;
     }
+    if (subjectFilter && t.subject !== subjectFilter) return false;
+    if (unitFilter && t.unit !== unitFilter) return false;
+    if (staffOwnerFilter && t.createdBy?.id !== staffOwnerFilter) return false;
     if (statusFilter && statusOf(t).label !== statusFilter) return false;
     return true;
   });
@@ -230,7 +274,30 @@ export default function StaffDashboard() {
 
         <h3 ref={manageTestsRef} style={{ fontSize: 16, marginTop: 32, marginBottom: 4, scrollMarginTop: 24 }}>Manage Tests</h3>
 
-        <div className="card" style={{ padding: 16, marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <button
+            className={scope === "MINE" ? "btn btn-dark" : "btn btn-ghost"}
+            onClick={() => setScope("MINE")}
+          >
+            My Tests
+          </button>
+          <button
+            className={scope === "SHARED" ? "btn btn-dark" : "btn btn-ghost"}
+            onClick={() => setScope("SHARED")}
+          >
+            Shared with me
+          </button>
+          {user.role === "ADMIN" && (
+            <button
+              className={scope === "ALL" ? "btn btn-dark" : "btn btn-ghost"}
+              onClick={() => setScope("ALL")}
+            >
+              All Tests
+            </button>
+          )}
+        </div>
+
+        <div className="card" style={{ padding: 16, marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <input
             style={{ ...inputStyle, flex: "2 1 200px" }}
             placeholder="Search by test name…"
@@ -257,6 +324,24 @@ export default function StaffDashboard() {
             <option value="">All batches</option>
             {batchOptions.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
+          <select
+            style={{ ...inputStyle, flex: "1 1 140px" }}
+            value={subjectFilter}
+            onChange={(e) => { setSubjectFilter(e.target.value); setUnitFilter(""); }}
+          >
+            <option value="">All subjects</option>
+            {subjectOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select style={{ ...inputStyle, flex: "1 1 120px" }} value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)}>
+            <option value="">All units</option>
+            {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+          {user.role === "ADMIN" && (
+            <select style={{ ...inputStyle, flex: "1 1 160px" }} value={staffOwnerFilter} onChange={(e) => setStaffOwnerFilter(e.target.value)}>
+              <option value="">All staff</option>
+              {staffOwnerOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          )}
           <select style={{ ...inputStyle, flex: "1 1 130px" }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
             <option value="Draft">Draft</option>
@@ -274,6 +359,8 @@ export default function StaffDashboard() {
               ? test.academicGroups.reduce((sum, tg) => sum + (tg.academicGroup?._count?.users || 0), 0)
                 + test.classes.reduce((sum, tc) => sum + (tc.class?._count?.users || 0), 0)
               : null;
+            const isMine = test.createdBy?.id === user.id;
+            const isShared = !isMine && (test.shares || []).some((s) => s.staffId === user.id);
             return (
               <div key={test.id} className="card" style={{ padding: 24 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
@@ -281,13 +368,23 @@ export default function StaffDashboard() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <h3 style={{ fontSize: 18 }}>{test.title}</h3>
                       <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: status.color }}>● {status.label}</span>
+                      {isShared && (
+                        <span className="badge" style={{ background: "var(--amber)" }}>Shared with you</span>
+                      )}
                     </div>
+                    <p className="mono" style={{ fontSize: 12, marginTop: 4 }}>
+                      {test.subject ? (
+                        <span style={{ color: "var(--ink-dim)" }}>{test.subject}{test.unit ? ` · ${test.unit}` : ""}</span>
+                      ) : (
+                        <span style={{ color: "var(--rust)", fontWeight: 700 }}>Subject not set — needs review</span>
+                      )}
+                    </p>
                     <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
                       {test._count?.questions || 0} questions · {test._count?.attempts || 0} attempts
                       {studentCount !== null && ` · ${studentCount} assigned student${studentCount === 1 ? "" : "s"}`}
                     </p>
                     <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
-                      Created by {test.createdBy?.name || "—"} · {new Date(test.createdAt).toLocaleDateString()}
+                      Created by {isMine ? "You" : (test.createdBy?.name || "—")} · {new Date(test.createdAt).toLocaleDateString()}
                     </p>
 
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>

@@ -3,6 +3,7 @@ const prisma = require("../prisma");
 const { authenticate } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { testEligibilityWhere } = require("../utils/testEligibility");
+const { staffTestAccessWhere } = require("../utils/testOwnership");
 
 const router = express.Router();
 
@@ -112,7 +113,13 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
         results.push(...groups.map((g) => ({ type: "Academic Group", label: `${g.department.name} · ${g.section} (${g.batch})`, url: "/admin/academic-groups" })));
       }
 
-      const tests = await prisma.test.findMany({ where: { title: insensitive(q), createdBy: { ...instituteFilter } }, take: LIMIT });
+      // staffTestAccessWhere no-ops for ADMIN (institute-wide search stays unchanged) but restricts
+      // STAFF to tests they created or were explicitly shared — search must never surface a test a
+      // staff member can't actually open (see testOwnership.js / the same gate tests.js enforces).
+      const tests = await prisma.test.findMany({
+        where: { AND: [{ title: insensitive(q), createdBy: { ...instituteFilter } }, staffTestAccessWhere(req)] },
+        take: LIMIT,
+      });
       results.push(...tests.map((t) => ({ type: "Assessment", label: t.title, url: `/staff/tests/${t.id}/results` })));
 
       if (req.user.role === "ADMIN") {
