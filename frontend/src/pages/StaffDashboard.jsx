@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { PlusCircle, BookOpen, Trophy, FileText, Mic, Users as UsersIcon, Upload, Download, School, GraduationCap, ClipboardList, BarChart3 } from "lucide-react";
 import api from "../api";
@@ -20,6 +20,8 @@ function statusOf(test) {
 
 export default function StaffDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const manageTestsRef = useRef(null);
   const [tests, setTests] = useState([]);
   const [groups, setGroups] = useState(null);
   const [gamiStats, setGamiStats] = useState(null);
@@ -59,6 +61,18 @@ export default function StaffDashboard() {
   async function duplicateTest(test) {
     await api.post(`/tests/${test.id}/duplicate`);
     refresh();
+  }
+
+  // The Active/Total Tests stat cards point at the Manage Tests table already on this same page
+  // rather than a separate route — jumping to a second page just to see the number you clicked
+  // would be redundant when the underlying list lives a few hundred pixels down.
+  function goToManageTests(status) {
+    setNameFilter("");
+    setInstituteFilter("");
+    setGroupFilter("");
+    setBatchFilter("");
+    setStatusFilter(status);
+    manageTestsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // A test's institute is now determined by Test.instituteId (see backend/src/routes/tests.js)
@@ -160,13 +174,18 @@ export default function StaffDashboard() {
           <div style={{ marginTop: 24 }}><SkeletonGrid count={7} minWidth={150} /></div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 24 }}>
-            <StatCard icon={School} label="Academic Groups" value={groups.length} />
-            <StatCard icon={GraduationCap} label="Total Students" value={groups.reduce((s, g) => s + (g._count?.users || 0), 0)} />
-            <StatCard icon={ClipboardList} label="Active Tests" value={tests.filter((t) => statusOf(t).label === "Active").length} />
-            <StatCard icon={BarChart3} label="Total Tests" value={tests.length} />
-            <StatCard icon={BookOpen} label="Learning Courses" value={courseCount ?? "—"} />
-            <StatCard icon={FileText} label="Resumes In Progress" value={resumeStats ? resumeStats.resumesStarted : "—"} />
-            <StatCard icon={Mic} label="Avg. Interview Score" value={interviewStats ? `${interviewStats.averageScore}%` : "—"} />
+            <StatCard
+              icon={School}
+              label="Academic Groups"
+              value={groups.length}
+              onClick={user.role === "ADMIN" ? () => navigate("/admin/academic-groups") : undefined}
+            />
+            <StatCard icon={GraduationCap} label="Total Students" value={groups.reduce((s, g) => s + (g._count?.users || 0), 0)} onClick={() => navigate("/staff/students")} />
+            <StatCard icon={ClipboardList} label="Active Tests" value={tests.filter((t) => statusOf(t).label === "Active").length} onClick={() => goToManageTests("Active")} />
+            <StatCard icon={BarChart3} label="Total Tests" value={tests.length} onClick={() => goToManageTests("")} />
+            <StatCard icon={BookOpen} label="Learning Courses" value={courseCount ?? "—"} onClick={() => navigate("/staff/learning")} />
+            <StatCard icon={FileText} label="Resumes In Progress" value={resumeStats ? resumeStats.resumesStarted : "—"} onClick={() => navigate("/staff/resumes")} />
+            <StatCard icon={Mic} label="Avg. Interview Score" value={interviewStats ? `${interviewStats.averageScore}%` : "—"} onClick={() => navigate("/staff/interviews")} />
           </div>
         )}
 
@@ -209,7 +228,7 @@ export default function StaffDashboard() {
           </div>
         </div>
 
-        <h3 style={{ fontSize: 16, marginTop: 32, marginBottom: 4 }}>Manage Tests</h3>
+        <h3 ref={manageTestsRef} style={{ fontSize: 16, marginTop: 32, marginBottom: 4, scrollMarginTop: 24 }}>Manage Tests</h3>
 
         <div className="card" style={{ padding: 16, marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <input
@@ -326,9 +345,18 @@ export default function StaffDashboard() {
 
 const inputStyle = { padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
 
-function StatCard({ icon: Icon, label, value }) {
+function StatCard({ icon: Icon, label, value, onClick }) {
   return (
-    <div className="card" style={{ padding: "14px 16px" }}>
+    <div
+      className="card"
+      style={{ padding: "14px 16px", cursor: onClick ? "pointer" : "default", transition: "transform 0.1s, box-shadow 0.1s" }}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      onMouseEnter={onClick ? (e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08))"; } : undefined}
+      onMouseLeave={onClick ? (e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; } : undefined}
+    >
       <Icon size={20} />
       <div className="mono" style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{value}</div>
       <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
