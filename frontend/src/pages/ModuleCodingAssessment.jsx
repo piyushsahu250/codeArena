@@ -26,6 +26,7 @@ const VIOLATION_LABEL = {
   PRINT_SCREEN_ATTEMPT: "attempting a screenshot",
   REFRESH_ATTEMPT: "attempting to refresh/leave the page",
   MULTI_MONITOR: "using multiple monitors",
+  SCREEN_OVERLAY_DETECTED: "an on-screen search/assistant overlay being detected",
   FACE_MISSING: "no face being detected in the camera frame",
   MULTIPLE_FACES: "multiple faces being detected in the camera frame",
   CAMERA_DROPPED: "your camera being turned off or disconnected",

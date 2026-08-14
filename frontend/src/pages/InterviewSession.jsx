@@ -24,6 +24,7 @@ const VIOLATION_LABEL = {
   CAMERA_DROPPED: "your camera being turned off or disconnected",
   MIC_DROPPED: "your microphone being turned off or disconnected",
   BROWSER_SHORTCUT: "using a restricted keyboard shortcut",
+  SCREEN_OVERLAY_DETECTED: "an on-screen search/assistant overlay being detected",
 };
 
 export default function InterviewSession() {

@@ -820,7 +820,7 @@ router.post("/sessions/:id/finalize", authenticate, requireRole("STUDENT"), asyn
 // threshold or is only logged for review (face missing briefly, multiple faces detected — per
 // spec, "future ready, log don't penalize"). Noise/silent-environment reminders never reach this
 // endpoint at all — they're pure client-side UI state, not a proctoring concern.
-const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED"]);
+const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED", "SCREEN_OVERLAY_DETECTED"]);
 router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });

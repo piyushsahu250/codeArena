@@ -217,6 +217,61 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     }
   }, [active, report]);
 
+  // Android system-level assistant overlays (e.g. "Circle to Search", triggered by a long-press
+  // on the home button/gesture pill) draw their result sheet as an OS-level layer ON TOP of the
+  // current app rather than switching away from it — the browser tab is never actually hidden or
+  // backgrounded, so neither `visibilitychange` nor `fullscreenchange` fires, which is exactly
+  // what lets a student search a visible on-screen question without tripping tab-switch
+  // detection above. The one side effect it can't avoid: the result sheet still has to occupy
+  // real screen space, so the visible viewport shrinks noticeably while it's open — the same
+  // signal a docked on-screen keyboard produces, which is why this is gated to touch devices and
+  // excludes any moment a text input/editor genuinely has focus. Not a perfect defense (nothing
+  // client-side can be, against an OS-level overlay) but it catches the actual, unavoidable
+  // footprint this class of overlay leaves on the page.
+  useEffect(() => {
+    if (!active) return;
+    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia?.("(pointer: coarse)").matches;
+    if (!isTouchDevice) return;
+    const viewport = window.visualViewport;
+    const SHRINK_RATIO_THRESHOLD = 0.22;
+    let baseline = viewport ? viewport.height : window.innerHeight;
+    let flagged = false;
+
+    function isEditableFocused() {
+      const el = document.activeElement;
+      if (!el) return false;
+      return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
+    }
+
+    function handleResize() {
+      const height = viewport ? viewport.height : window.innerHeight;
+      if (isEditableFocused()) {
+        // Legitimate on-screen keyboard — re-baseline so its close doesn't look like a shrink.
+        baseline = Math.max(baseline, height);
+        flagged = false;
+        return;
+      }
+      if (height >= baseline) {
+        baseline = height;
+        flagged = false;
+        return;
+      }
+      const shrinkRatio = (baseline - height) / baseline;
+      if (shrinkRatio > SHRINK_RATIO_THRESHOLD) {
+        if (!flagged) {
+          flagged = true;
+          report("SCREEN_OVERLAY_DETECTED");
+        }
+      } else {
+        flagged = false;
+      }
+    }
+
+    const target = viewport || window;
+    target.addEventListener("resize", handleResize);
+    return () => target.removeEventListener("resize", handleResize);
+  }, [active, report]);
+
   // ---- Webcam: face presence (missing / multiple) ----
   const [mediaGranted, setMediaGranted] = useState(false);
   const [mediaError, setMediaError] = useState(null);

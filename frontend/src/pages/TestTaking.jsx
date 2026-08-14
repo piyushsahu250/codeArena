@@ -603,6 +603,60 @@ export default function TestTaking() {
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [started]);
 
+  // Android system-level assistant overlays (e.g. "Circle to Search", triggered by a long-press
+  // on the home button/gesture pill) draw their result sheet as an OS-level layer ON TOP of the
+  // current app rather than switching away from it — the tab is never actually hidden or
+  // backgrounded, so neither visibilitychange nor fullscreenchange above fires, which is exactly
+  // what lets a student search a visible on-screen question without tripping tab-switch
+  // detection. The one side effect it can't avoid: the result sheet still has to occupy real
+  // screen space, so the visible viewport shrinks noticeably while it's open — the same signal a
+  // docked on-screen keyboard produces, which is why this is gated to touch devices and excludes
+  // any moment a text input/editor genuinely has focus. Not a perfect defense (nothing
+  // client-side can be, against an OS-level overlay) but it catches the actual, unavoidable
+  // footprint this class of overlay leaves on the page.
+  useEffect(() => {
+    if (!started) return;
+    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia?.("(pointer: coarse)").matches;
+    if (!isTouchDevice) return;
+    const viewport = window.visualViewport;
+    const SHRINK_RATIO_THRESHOLD = 0.22;
+    let baseline = viewport ? viewport.height : window.innerHeight;
+    let flagged = false;
+
+    function isEditableFocused() {
+      const el = document.activeElement;
+      if (!el) return false;
+      return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
+    }
+
+    function handleResize() {
+      const height = viewport ? viewport.height : window.innerHeight;
+      if (isEditableFocused()) {
+        baseline = Math.max(baseline, height);
+        flagged = false;
+        return;
+      }
+      if (height >= baseline) {
+        baseline = height;
+        flagged = false;
+        return;
+      }
+      const shrinkRatio = (baseline - height) / baseline;
+      if (shrinkRatio > SHRINK_RATIO_THRESHOLD) {
+        if (!flagged) {
+          flagged = true;
+          reportViolation("an on-screen search/assistant overlay was detected");
+        }
+      } else {
+        flagged = false;
+      }
+    }
+
+    const target = viewport || window;
+    target.addEventListener("resize", handleResize);
+    return () => target.removeEventListener("resize", handleResize);
+  }, [started]);
+
   // Block clipboard/context-menu/browser-chrome shortcuts for the duration of the test. This is
   // always on, independent of the webcam/mic/fullscreen proctoring flags — same treatment as
   // tab-switch detection above. Browsers reserve some of these (Ctrl+T/N/W/Tab, Print Screen) and
