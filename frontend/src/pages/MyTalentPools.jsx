@@ -1,12 +1,29 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import api from "../api";
+import { useToast } from "../context/ToastContext";
+
+// Same status derivation StudentDashboard.jsx uses for its "Upcoming Tests" cards — kept as a
+// local copy rather than a shared import since this platform's convention is each dashboard page
+// owns its own small status-label helper (StaffDashboard/StudentDashboard both do the same).
+function statusOf(test) {
+  if (test.myStatus === "SUBMITTED" || test.myStatus === "AUTO_SUBMITTED") return { label: "Completed", color: "var(--mint)", completed: true };
+  if (!test.isPublished) return { label: "Not yet published", color: "var(--ink-dim)" };
+  const now = new Date();
+  const start = new Date(test.startTime), end = new Date(test.endTime);
+  if (now < start) return { label: "Upcoming", color: "var(--ink-dim)" };
+  if (now > end) return { label: "Closed", color: "var(--rust)" };
+  return { label: "Live now", color: "var(--mint)" };
+}
 
 // Student's own Talent Pool memberships — self-scoped entirely server-side (GET
 // /talent-pools/my-pools reads req.user.id only), same "nothing to filter, just display"
 // shape as MyAttendance.jsx.
 export default function MyTalentPools() {
+  const navigate = useNavigate();
+  const toast = useToast();
   const [pools, setPools] = useState(null);
   const [error, setError] = useState("");
 
@@ -15,6 +32,15 @@ export default function MyTalentPools() {
       .then((res) => setPools(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load your Talent Pools"));
   }, []);
+
+  async function attend(test) {
+    try {
+      await api.post(`/tests/${test.id}/start`);
+      navigate(`/test/${test.id}`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Could not start test");
+    }
+  }
 
   return (
     <div>
@@ -64,12 +90,37 @@ export default function MyTalentPools() {
               {entry.exclusiveTests.length > 0 && (
                 <>
                   <h4 style={{ fontSize: 13, marginTop: 16 }}>Exclusive Tests</h4>
-                  <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-                    {entry.exclusiveTests.map((t) => (
-                      <div key={t.id} style={{ fontSize: 13, padding: "8px 12px", background: "var(--paper-alt, #f7f5ef)", borderRadius: 8 }}>
-                        {t.title} — {t.isPublished ? new Date(t.startTime).toLocaleString() : "Not yet published"}
-                      </div>
-                    ))}
+                  <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                    {entry.exclusiveTests.map((t) => {
+                      const status = statusOf(t);
+                      return (
+                        <div
+                          key={t.id}
+                          style={{
+                            display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10,
+                            fontSize: 13, padding: "10px 12px", background: "var(--paper-alt, #f7f5ef)", borderRadius: 8,
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <strong>{t.title}</strong>
+                              <span className="mono" style={{ fontSize: 11, color: status.color, fontWeight: 700 }}>● {status.label}</span>
+                            </div>
+                            <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 3 }}>
+                              {t._count?.questions || 0} questions · {t.durationMin} min · {new Date(t.startTime).toLocaleString()}
+                            </p>
+                          </div>
+                          <button
+                            className="btn btn-dark"
+                            disabled={status.label !== "Live now"}
+                            style={{ opacity: status.label !== "Live now" ? 0.4 : 1, fontSize: 12 }}
+                            onClick={() => attend(t)}
+                          >
+                            {status.label === "Live now" ? "Start Test →" : status.label}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}

@@ -7,6 +7,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { cached, invalidate } = require("../utils/cache");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
+const { canStaffAccessTest } = require("../utils/testOwnership");
 const { computeTalentPoolRank, computeTalentPoolInterviewRank } = require("../utils/talentPoolRank");
 const { previewAutoSelection, runAutoSelection } = require("../utils/talentPoolAutoSelect");
 const { notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned } = require("../utils/notifications");
@@ -104,12 +105,27 @@ router.get("/my-pools", authenticate, requireRole("STUDENT"), async (req, res) =
     include: {
       pool: {
         include: {
-          testAssignments: { include: { test: { select: { id: true, title: true, startTime: true, endTime: true, isPublished: true } } } },
+          testAssignments: {
+            include: {
+              test: {
+                select: { id: true, title: true, startTime: true, endTime: true, isPublished: true, durationMin: true, _count: { select: { questions: true } } },
+              },
+            },
+          },
           interviewConfigs: { where: { isActive: true }, select: { id: true, label: true } },
         },
       },
     },
   });
+
+  // Batched (one query for every exclusive test across every pool this student belongs to), not
+  // per-test — same "myStatus" shape GET /tests already gives students, so the frontend can tell
+  // Completed apart from Upcoming/Live/Closed instead of guessing from isPublished alone.
+  const allTestIds = memberships.flatMap((m) => m.pool.testAssignments.map((t) => t.testId));
+  const myAttempts = allTestIds.length
+    ? await prisma.testAttempt.findMany({ where: { studentId: req.user.id, testId: { in: allTestIds } }, select: { testId: true, status: true } })
+    : [];
+  const statusByTest = Object.fromEntries(myAttempts.map((a) => [a.testId, a.status]));
 
   // Sequential, not Promise.all(map(...)) — each membership fans out into its own rank lookups
   // (each of which is itself a 2-way Promise.all internally), so a student in several pools could
@@ -124,7 +140,7 @@ router.get("/my-pools", authenticate, requireRole("STUDENT"), async (req, res) =
       pool: { id: m.pool.id, name: m.pool.name, description: m.pool.description },
       addedVia: m.addedVia,
       addedAt: m.addedAt,
-      exclusiveTests: m.pool.testAssignments.map((t) => t.test),
+      exclusiveTests: m.pool.testAssignments.map((t) => ({ ...t.test, myStatus: statusByTest[t.test.id] || null })),
       interviewConfigs: m.pool.interviewConfigs,
       testRank,
       interviewRank,
@@ -742,14 +758,23 @@ router.get("/:id/tests", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
   res.json(links);
 });
 
-router.post("/:id/tests", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+// STAFF may assign a pool a test the same way they can already add/remove pool members
+// (loadPoolScoped enforces the institute boundary below) — but only a test they actually own or
+// were explicitly shared, mirroring the Staff Test Ownership rules enforced everywhere else a
+// staff member touches a test (see testOwnership.js). Without this, a staff member could pool-scope
+// (and thereby expose to every pool member) another staff member's private test they have no
+// authorization over.
+router.post("/:id/tests", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
     const { testId } = req.body;
     if (!testId) return res.status(400).json({ error: "A test is required" });
-    const test = await prisma.test.findUnique({ where: { id: testId }, select: { id: true, title: true } });
+    const test = await prisma.test.findUnique({ where: { id: testId }, select: { id: true, title: true, createdById: true, shares: { select: { staffId: true } } } });
     if (!test) return res.status(404).json({ error: "Test not found" });
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only assign tests you created or that were shared with you" });
+    }
 
     const link = await prisma.talentPoolTest.upsert({
       where: { poolId_testId: { poolId: pool.id, testId } },
@@ -772,9 +797,13 @@ router.post("/:id/tests", authenticate, requireRole("ADMIN"), attachRequesterIns
   }
 });
 
-router.delete("/:id/tests/:testId", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/tests/:testId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
+  const test = await prisma.test.findUnique({ where: { id: req.params.testId }, select: { createdById: true, shares: { select: { staffId: true } } } });
+  if (test && !canStaffAccessTest(req, test)) {
+    return res.status(403).json({ error: "You can only unassign tests you created or that were shared with you" });
+  }
   await prisma.talentPoolTest.deleteMany({ where: { poolId: pool.id, testId: req.params.testId } });
   invalidate(`talentPoolLeaderboard:${pool.id}`);
   invalidate(`talentPoolRank:${pool.id}`);

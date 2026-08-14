@@ -28,6 +28,14 @@
 // plus whatever the group/class rules would otherwise allow."
 
 function testEligibilityWhere(academicGroupId, classId, memberPoolIds = [], studentInstituteId) {
+  // memberPoolIds may be a Set (getStudentPoolIds' native return shape) or a plain array — normalize
+  // here rather than trusting every call site to spread it first. A Set has `.size`, not `.length`,
+  // so `memberPoolIds.length` on a raw Set is always `undefined` (falsy) and silently drops the
+  // entire pool-membership branch below, making every Talent-Pool-exclusive test invisible to every
+  // student regardless of membership — this is exactly the bug that broke Talent Pool test
+  // visibility platform-wide; normalizing here (matching isTestVisibleToStudent/studentCanAccessTest
+  // below, which already do this) prevents the whole bug class for any future caller too.
+  const poolIds = memberPoolIds instanceof Set ? [...memberPoolIds] : memberPoolIds;
   return {
     OR: [
       {
@@ -45,7 +53,7 @@ function testEligibilityWhere(academicGroupId, classId, memberPoolIds = [], stud
           ...(classId ? [{ classes: { some: { classId } } }] : []),
         ],
       },
-      ...(memberPoolIds.length ? [{ talentPools: { some: { poolId: { in: memberPoolIds } } } }] : []),
+      ...(poolIds.length ? [{ talentPools: { some: { poolId: { in: poolIds } } } }] : []),
     ],
   };
 }

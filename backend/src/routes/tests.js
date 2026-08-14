@@ -463,7 +463,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
   } else {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
-    where = { isPublished: true, ...testEligibilityWhere(student.academicGroupId, student.classId, memberPoolIds, student.instituteId) };
+    where = { isPublished: true, ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId) };
   }
 
   const tests = await prisma.test.findMany({
