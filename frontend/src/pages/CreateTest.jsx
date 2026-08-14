@@ -43,6 +43,11 @@ export default function CreateTest() {
   const [form, setForm] = useState(emptyForm);
   const [academicGroups, setAcademicGroups] = useState([]);
   const [academicGroupIds, setAcademicGroupIds] = useState([]);
+  // Only meaningful for a platform-level creator (see isPlatformLevel above) — lets them scope an
+  // otherwise-platform-wide test to one institute directly, without hand-picking every academic
+  // group at that institute. Institute-scoped Staff/Admin never see or send this; their tests are
+  // always bound to their own institute server-side regardless of this field.
+  const [instituteId, setInstituteId] = useState("");
   // Group Type is mutually exclusive per the spec — "Only one Group Type should be selected for
   // an assessment" — since testEligibilityWhere already treats any TalentPoolTest link as a full
   // override of the academicGroup/class check, not an OR with it (see backend/src/utils/
@@ -86,6 +91,7 @@ export default function CreateTest() {
         randomHard: t.difficultyDistribution?.hard ?? "",
       });
       setAcademicGroupIds((t.academicGroups || []).map((g) => g.academicGroupId));
+      setInstituteId(t.instituteId || "");
       const poolIds = (t.talentPools || []).map((tp) => tp.poolId);
       setTalentPoolIds(poolIds);
       setInitialTalentPoolIds(poolIds);
@@ -141,6 +147,15 @@ export default function CreateTest() {
     return sum + (q?.points || 0);
   }, 0);
 
+  const institutes = [];
+  const seenInstituteIds = new Set();
+  for (const g of academicGroups) {
+    if (g.institute && !seenInstituteIds.has(g.institute.id)) {
+      seenInstituteIds.add(g.institute.id);
+      institutes.push(g.institute);
+    }
+  }
+
   const isRandomMode = form.questionSelectionMode === "RANDOM";
   const [bankCount, setBankCount] = useState(null);
   useEffect(() => {
@@ -169,6 +184,7 @@ export default function CreateTest() {
         endTime: new Date(form.endTime).toISOString(),
         questionIds: isRandomMode ? undefined : selected,
         academicGroupIds: groupType === "ACADEMIC" ? academicGroupIds : [],
+        instituteId: isPlatformLevel ? (instituteId || null) : undefined,
         randomQuestionsPerStudent: isRandomMode ? Number(form.randomQuestionsPerStudent) : undefined,
         difficultyDistribution: isRandomMode && distributionSum > 0
           ? { easy: Number(form.randomEasy || 0), medium: Number(form.randomMedium || 0), hard: Number(form.randomHard || 0) }
@@ -296,6 +312,23 @@ export default function CreateTest() {
             Choose exactly one Group Type. A Talent-Pool-exclusive test is only visible to that pool's members — any
             Academic Group assignment is ignored while Talent Pools is selected.
           </p>
+
+          {isPlatformLevel && (
+            <div style={{ marginTop: 10 }}>
+              <label style={labelStyle}>Institute</label>
+              <select style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
+                <option value="">All institutes (platform-wide)</option>
+                {institutes.map((inst) => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
+                ))}
+              </select>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                Scope this test to one institute without hand-picking every academic group there. Leave as
+                "All institutes" only if this test should genuinely be visible platform-wide.
+              </p>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
               <input type="radio" name="groupType" checked={groupType === "ACADEMIC"} onChange={() => setGroupType("ACADEMIC")} />
@@ -311,7 +344,9 @@ export default function CreateTest() {
             <>
               <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>
                 {isPlatformLevel
-                  ? "Leave all unchecked to make this test visible to every group, platform-wide (default)."
+                  ? (instituteId
+                      ? "Leave all unchecked to make this test visible to every group at the selected institute."
+                      : "Leave all unchecked to make this test visible to every group, platform-wide (default).")
                   : "Leave all unchecked to make this test visible to every group in your institute (default)."}
               </p>
               <div style={{ marginTop: 8 }}>

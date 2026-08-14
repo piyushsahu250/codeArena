@@ -139,10 +139,22 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       requireFullscreen, requireWebcam, requireMicrophone, attendanceMandatory,
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
-      company,
+      company, instituteId: bodyInstituteId,
     } = req.body;
 
-    await assertGroupsBelongToInstitute(academicGroupIds, req.requesterInstituteId);
+    // A platform-level creator (no own institute) may optionally scope the test to one specific
+    // institute directly — previously the only options were fully platform-wide (leave everything
+    // blank) or hand-picking every current academic group at that institute one by one, which
+    // silently missed future groups and made it easy to end up with a test the admin believed was
+    // institute-scoped but was actually visible platform-wide. Institute-scoped Staff/Admin can
+    // never override their own institute here — unchanged from before.
+    const effectiveInstituteId = req.requesterInstituteId || (bodyInstituteId || null);
+    if (!req.requesterInstituteId && bodyInstituteId) {
+      const institute = await prisma.institute.findUnique({ where: { id: bodyInstituteId }, select: { id: true } });
+      if (!institute) return res.status(400).json({ error: "Selected institute was not found" });
+    }
+
+    await assertGroupsBelongToInstitute(academicGroupIds, effectiveInstituteId);
 
     const mode = SELECTION_MODES.includes(questionSelectionMode) ? questionSelectionMode : "FIXED";
     const resolvedQuestionIds = await resolveQuestionIds(mode, questionIds, randomBankFolderId);
@@ -171,7 +183,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
         randomQuestionsPerStudent: mode === "RANDOM" ? Number(randomQuestionsPerStudent) : null,
         difficultyDistribution: mode === "RANDOM" ? difficultyDistribution || null : null,
         createdById: req.user.id,
-        instituteId: req.requesterInstituteId,
+        instituteId: effectiveInstituteId,
         questions: { create: questionCreateData(resolvedQuestionIds, questionTimeLimits) },
         academicGroups: { create: (academicGroupIds || []).map((academicGroupId) => ({ academicGroupId })) },
       },
@@ -199,10 +211,22 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       requireFullscreen, requireWebcam, requireMicrophone, attendanceMandatory,
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
-      company,
+      company, instituteId: bodyInstituteId,
     } = req.body;
 
-    await assertGroupsBelongToInstitute(academicGroupIds, req.requesterInstituteId);
+    // Same platform-level-only institute scoping as POST / above — institute-scoped Staff/Admin
+    // already can't reach this line for a test outside their own institute (checked above), and
+    // can never change a test's institute.
+    let effectiveInstituteId = existing.instituteId;
+    if (!req.requesterInstituteId && bodyInstituteId !== undefined) {
+      if (bodyInstituteId) {
+        const institute = await prisma.institute.findUnique({ where: { id: bodyInstituteId }, select: { id: true } });
+        if (!institute) return res.status(400).json({ error: "Selected institute was not found" });
+      }
+      effectiveInstituteId = bodyInstituteId || null;
+    }
+
+    await assertGroupsBelongToInstitute(academicGroupIds, effectiveInstituteId);
 
     const mode = questionSelectionMode !== undefined
       ? (SELECTION_MODES.includes(questionSelectionMode) ? questionSelectionMode : existing.questionSelectionMode)
@@ -220,6 +244,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     if (mode === "RANDOM") validateRandomConfig("RANDOM", effectivePerStudent, effectiveDistribution, resolvedQuestionIds.length);
 
     const data = {
+      instituteId: effectiveInstituteId,
       title: title ?? existing.title,
       code: code !== undefined ? (code?.trim() || null) : existing.code,
       description: description ?? existing.description,
