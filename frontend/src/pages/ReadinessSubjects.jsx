@@ -208,15 +208,36 @@ export default function ReadinessSubjects() {
       const wasNew = editingId === "NEW";
       const res = wasNew ? await api.post("/readiness/admin/subjects", payload) : await api.patch(`/readiness/admin/subjects/${editingId}`, payload);
       if (res.data.warning) setWarning(res.data.warning);
-      toast.success(wasNew ? "Subject created — now assign it to academic groups below." : "Subject updated.");
+
       if (wasNew) {
-        // Stay on the edit screen so the admin can immediately assign academic groups — a brand
-        // new subject with zero assignments is "open to the entire institute" until they do, per
-        // the platform's empty-assignment convention, so prompting right away avoids accidental
-        // wide-open subjects.
-        setEditingId(res.data.subject.id);
-        setAssignments([]);
+        const newSubjectId = res.data.subject.id;
+        // Any groups picked in the academic-group panel while creating are assigned right away in
+        // the same save action — no separate "save, then come back and assign" round trip. A brand
+        // new subject with zero assignments is "open to the entire institute" until assigned, per
+        // the platform's empty-assignment convention, so applying picks immediately avoids
+        // accidentally leaving a wide-open subject if the admin never returns to assign it.
+        if (pickerGroupIds.length) {
+          try {
+            await api.post(`/readiness/admin/subjects/${newSubjectId}/assignments`, {
+              assignments: pickerGroupIds.map((academicGroupId) => ({ academicGroupId, program: pickerProgram.trim() || null })),
+            });
+          } catch (assignErr) {
+            toast.error(assignErr.response?.data?.error || "Subject created, but assigning academic groups failed — assign them from the Edit screen.");
+          }
+        }
+        toast.success("Subject created.");
+        // Stay on the edit screen so the admin can review/adjust the assignment right away.
+        setEditingId(newSubjectId);
+        setPickerGroupIds([]);
+        setPickerProgram("");
+        try {
+          const detail = await api.get(`/readiness/admin/subjects/${newSubjectId}`);
+          setAssignments(detail.data.academicGroupAssignments || []);
+        } catch {
+          setAssignments([]);
+        }
       } else {
+        toast.success("Subject updated.");
         setEditingId(null);
       }
       load();
@@ -370,36 +391,36 @@ export default function ReadinessSubjects() {
                   : "Only students in the assigned groups below (matching the group's program, if one is set) can see and start this assessment."}
               </p>
 
-              {editingId === "NEW" ? (
-                <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>Save the subject first — you'll be able to assign academic groups right after.</p>
-              ) : (
-                <>
-                  {assignments.length > 0 && (
-                    <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
-                      {assignments.map((a) => (
-                        <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "var(--paper-alt, #f7f5f0)", borderRadius: 8, padding: "6px 10px" }}>
-                          <span>
-                            {a.academicGroup?.institute?.name} · {a.academicGroup?.batch} · {a.academicGroup?.department?.name} · Section {a.academicGroup?.section}
-                            {a.program ? ` · ${a.program}` : ""}
-                          </span>
-                          <button type="button" className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} disabled={removingGroupId === a.academicGroupId} onClick={() => unassignGroup(a.academicGroupId)}>
-                            {removingGroupId === a.academicGroupId ? "Removing…" : "Remove"}
-                          </button>
-                        </div>
-                      ))}
+              {assignments.length > 0 && (
+                <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+                  {assignments.map((a) => (
+                    <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "var(--paper-alt, #f7f5f0)", borderRadius: 8, padding: "6px 10px" }}>
+                      <span>
+                        {a.academicGroup?.institute?.name} · {a.academicGroup?.batch} · {a.academicGroup?.department?.name} · Section {a.academicGroup?.section}
+                        {a.program ? ` · ${a.program}` : ""}
+                      </span>
+                      <button type="button" className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} disabled={removingGroupId === a.academicGroupId} onClick={() => unassignGroup(a.academicGroupId)}>
+                        {removingGroupId === a.academicGroupId ? "Removing…" : "Remove"}
+                      </button>
                     </div>
-                  )}
-
-                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-                    <AcademicGroupPicker multi groups={academicGroups} value={pickerGroupIds} onChange={setPickerGroupIds} />
-                    <label style={{ ...labelStyle, marginTop: 10 }}>Program (optional — blank applies to every program in the selected groups)</label>
-                    <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
-                    <button type="button" className="btn btn-primary" style={{ ...smallBtn, marginTop: 10 }} disabled={!pickerGroupIds.length || assigning} onClick={assignGroups}>
-                      {assigning ? "Assigning…" : `Assign ${pickerGroupIds.length || ""} Selected Group(s)`}
-                    </button>
-                  </div>
-                </>
+                  ))}
+                </div>
               )}
+
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                <AcademicGroupPicker multi groups={academicGroups} value={pickerGroupIds} onChange={setPickerGroupIds} />
+                <label style={{ ...labelStyle, marginTop: 10 }}>Program (optional — blank applies to every program in the selected groups)</label>
+                <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
+                {editingId === "NEW" ? (
+                  pickerGroupIds.length > 0 && (
+                    <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>{pickerGroupIds.length} group(s) selected — assigned automatically when you save the subject below.</p>
+                  )
+                ) : (
+                  <button type="button" className="btn btn-primary" style={{ ...smallBtn, marginTop: 10 }} disabled={!pickerGroupIds.length || assigning} onClick={assignGroups}>
+                    {assigning ? "Assigning…" : `Assign ${pickerGroupIds.length || ""} Selected Group(s)`}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="card" style={{ padding: 14, marginTop: 16 }}>
