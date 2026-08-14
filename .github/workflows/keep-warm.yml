@@ -1,0 +1,31 @@
+name: Keep Backend Warm
+
+# Render's free tier (0.1 vCPU / 512MB — see backend/src/utils/queue.js and prisma.js for the
+# same constraint documented elsewhere) spins the whole container down after ~15 minutes of no
+# inbound traffic. The first request after that eats a 30-60s cold start, which reads to a
+# student as "the platform isn't loading" — this bit a live CIA1 exam for 120 students before
+# this workflow existed (see the manual keep-warm ping that was set up ad hoc for that one exam).
+#
+# Rather than requiring someone to remember to warm it up before every test/exam/interview
+# session, this pings the health endpoint every 10 minutes, always — comfortably under the
+# 15-minute spin-down window, so the backend never actually goes cold. This is the automated,
+# permanent version of that one-off fix.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          code=$(curl -s -o /tmp/health.json -w "%{http_code}" https://sanjivani-codearena-backend-docker.onrender.com/api/health)
+          echo "HTTP $code"
+          cat /tmp/health.json
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::Health check failed with HTTP $code — backend may be down or cold-starting."
+            exit 1
+          fi
