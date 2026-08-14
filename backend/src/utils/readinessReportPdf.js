@@ -14,7 +14,12 @@ function levelLabel(level) {
 // academicContext (optional — the caller resolves it live off student.academicGroup/student.program
 // at generation time, per this module's "no denormalized academic snapshot" convention) renders
 // the Institute/Batch/Department/Section/Program line every generated report is required to carry.
-function generateReadinessReportPdf({ studentName, subjectName, assessmentMode, submittedAt, report, academicContext }, res) {
+// Below this, the blueprint couldn't assemble most of what it targeted (a thin BTL level or topic
+// pool) — the reader should treat the score as a preliminary signal, not a conclusive one. Matches
+// the threshold used in ReadinessReport.jsx so the web report and PDF never disagree on the label.
+const LIMITED_COVERAGE_THRESHOLD = 70;
+
+function generateReadinessReportPdf({ studentName, subjectName, assessmentMode, submittedAt, report, academicContext, coverage }, res) {
   const doc = new PDFDocument({ margin: 40, size: "A4" });
   doc.pipe(res);
   drawReportLogoBadge(doc);
@@ -32,6 +37,12 @@ function generateReadinessReportPdf({ studentName, subjectName, assessmentMode, 
 
   doc.font("Helvetica-Bold").fontSize(18).fillColor("#1C3D5A")
     .text(`Overall Readiness: ${report.overallScore}% — ${levelLabel(report.readinessLevel)}`);
+  if (coverage != null) {
+    doc.font("Helvetica").fontSize(10).fillColor(coverage < LIMITED_COVERAGE_THRESHOLD ? "#dc2626" : "#555")
+      .text(coverage < LIMITED_COVERAGE_THRESHOLD
+        ? `Assessment Coverage: ${coverage}% — Limited assessment coverage; additional assessment recommended.`
+        : `Assessment Coverage: ${coverage}%`);
+  }
   doc.moveDown(0.6);
 
   doc.font("Helvetica-Bold").fontSize(12).fillColor("#1C1B18").text("Bloom's Taxonomy Performance");

@@ -201,6 +201,7 @@ export default function ReadinessAnalytics() {
                       <KpiCard label="Students Assessed" value={g.studentsAssessed} />
                       <KpiCard label="Average Readiness" value={`${g.averageReadiness}%`} />
                       <KpiCard label="At-Risk Students" value={g.atRiskStudents.length} />
+                      <KpiCard label="Top Performers" value={g.topPerformers.length} />
                     </div>
                   )}
                 </div>
@@ -222,6 +223,7 @@ export default function ReadinessAnalytics() {
               <KpiCard label="Students Assessed" value={analytics.studentsAssessed} />
               <KpiCard label="Average Readiness" value={`${analytics.averageReadiness}%`} />
               <KpiCard label="At-Risk Students" value={analytics.atRiskStudents.length} />
+              <KpiCard label="Top Performers" value={analytics.topPerformers.length} />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 32 }}>
@@ -303,6 +305,41 @@ export default function ReadinessAnalytics() {
                     </thead>
                     <tbody>
                       {analytics.atRiskStudents.map((s) => (
+                        <tr key={`${s.studentId}-${s.subject}`} style={{ borderBottom: "1px solid var(--line)" }}>
+                          <td style={{ padding: 8 }}>{s.name}</td>
+                          <td style={{ padding: 8 }}>{s.registrationNumber}</td>
+                          <td style={{ padding: 8 }}>{s.subject}</td>
+                          <td style={{ padding: 8 }}>{s.overallScore}%</td>
+                          <td style={{ padding: 8 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: "#fff", background: LEVEL_COLORS[s.readinessLevel] || "#6b7280" }}>
+                              {s.readinessLevel.replace(/_/g, " ")}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {analytics.topPerformers.length > 0 && (
+              <>
+                <h2 style={{ marginTop: 40 }}>Top Performers</h2>
+                <ChalkUnderline />
+                <div style={{ overflowX: "auto", marginTop: 16 }}>
+                  <table className="mono" style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
+                        <th style={{ padding: 8 }}>Name</th>
+                        <th style={{ padding: 8 }}>Reg. No.</th>
+                        <th style={{ padding: 8 }}>Subject</th>
+                        <th style={{ padding: 8 }}>Score</th>
+                        <th style={{ padding: 8 }}>Level</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.topPerformers.map((s) => (
                         <tr key={`${s.studentId}-${s.subject}`} style={{ borderBottom: "1px solid var(--line)" }}>
                           <td style={{ padding: 8 }}>{s.name}</td>
                           <td style={{ padding: 8 }}>{s.registrationNumber}</td>

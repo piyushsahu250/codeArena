@@ -234,7 +234,11 @@ export default function CreateQuestion() {
         setSaving(false);
         return;
       }
-      alert(err.response?.data?.error || "Failed to save question");
+      const reasons = err.response?.data?.reasons;
+      alert(
+        (err.response?.data?.error || "Failed to save question") +
+        (Array.isArray(reasons) && reasons.length > 0 ? "\n\n" + reasons.map((r) => `• ${r}`).join("\n") : "")
+      );
       setSaving(false);
       return;
     }

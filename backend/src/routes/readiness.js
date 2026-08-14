@@ -5,11 +5,11 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { instituteWhere } = require("../utils/questionVisibility");
 const { buildAssessmentBlueprint } = require("../utils/readinessBlueprint");
-const { gradeReadinessAnswer, buildReadinessReport, READINESS_LEVEL_RANK } = require("../utils/readinessScoring");
+const { gradeReadinessAnswer, buildReadinessReport, READINESS_LEVEL_RANK, computeAssessmentCoverage } = require("../utils/readinessScoring");
 const { issueCertificate } = require("../utils/certificates");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const logger = require("../utils/logger");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { GRADABLE_QUESTION_TYPES } = require("../utils/readinessBlueprint");
 const { generateReadinessReportPdf } = require("../utils/readinessReportPdf");
 const { readinessSubjectEligibilityWhere, studentCanAccessReadinessSubject } = require("../utils/readinessEligibility");
@@ -348,7 +348,10 @@ router.get("/assessments/:id", authenticate, requireRole("STUDENT"), async (req,
     if (!assessment || assessment.studentId !== req.user.id) return res.status(404).json({ error: "Assessment not found" });
     const questions = await prisma.question.findMany({ where: { id: { in: assessment.answers.map((a) => a.questionId) } }, include: { testCases: true } });
     const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
-    res.json({ assessment: { ...assessment, academicContext: formatAcademicContext(assessment.student) }, questions: ordered });
+    res.json({
+      assessment: { ...assessment, academicContext: formatAcademicContext(assessment.student), coverage: computeAssessmentCoverage(assessment.blueprint) },
+      questions: ordered,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load assessment" });
@@ -408,6 +411,15 @@ router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), a
 
     logger.info("READINESS_ASSESSMENT_COMPLETED", { assessmentId: assessment.id, studentId: assessment.studentId, subjectId: assessment.subjectId, overallScore: report.overallScore, readinessLevel: report.readinessLevel });
 
+    // Every filter combination admin/staff have ever queried gets its own cache key (see
+    // GET /admin/analytics's filterKey), so a plain single-key invalidate can't target them all —
+    // invalidate() already supports prefix-matching for exactly this "whole family of cached reads"
+    // case (see its own comment in cache.js). Without this, a just-submitted assessment could stay
+    // invisible on the faculty dashboard for up to the 60s TTL.
+    invalidate("readinessAnalytics");
+    invalidate("readinessAnalyticsCompare");
+    invalidate("readinessPlacementOverview");
+
     // Certificate-on-completion: opt-in per subject (CRITICAL RULE — never auto-issue unless the
     // admin has explicitly enabled it and set a minimum level). One cert per student per subject —
     // idempotency is the studentId+readinessSubjectId+type DB unique constraint, so a student
@@ -463,6 +475,7 @@ router.get("/assessments/:id/report.pdf", authenticate, requireRole("STUDENT"), 
     generateReadinessReportPdf({
       studentName: student.name, subjectName: assessment.subject.name, assessmentMode: assessment.assessmentMode,
       submittedAt: assessment.submittedAt, report: assessment.report, academicContext: formatAcademicContext(student),
+      coverage: computeAssessmentCoverage(assessment.blueprint),
     }, res);
   } catch (err) {
     console.error(err);
@@ -484,7 +497,34 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
       }),
       prisma.readinessAssessment.count({ where }),
     ]);
-    res.json({ assessments, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+
+    // Progress-over-time trend (spec section 18) — only computed on page 1, since it's a
+    // one-time summary for the hub, not part of the paginated list itself. Scoped to this one
+    // student's own completed assessments, so (unlike the admin analytics queries elsewhere in
+    // this file) an unbounded read here can't grow with institute size.
+    let trend = null;
+    if (page === 1) {
+      const all = await prisma.readinessAssessment.findMany({
+        where: { studentId: req.user.id, status: "COMPLETED" },
+        select: { submittedAt: true, subject: { select: { name: true } }, report: { select: { overallScore: true } } },
+        orderBy: { submittedAt: "asc" },
+      });
+      const withScores = all.filter((a) => a.report);
+      const bySubject = new Map();
+      for (const a of withScores) {
+        const name = a.subject.name;
+        if (!bySubject.has(name)) bySubject.set(name, []);
+        bySubject.get(name).push({ submittedAt: a.submittedAt, score: a.report.overallScore });
+      }
+      trend = {
+        overall: withScores.map((a) => ({ submittedAt: a.submittedAt, score: a.report.overallScore })),
+        bySubject: [...bySubject.entries()]
+          .filter(([, points]) => points.length >= 2)
+          .map(([subject, points]) => ({ subject, first: points[0].score, latest: points[points.length - 1].score, attempts: points.length })),
+      };
+    }
+
+    res.json({ assessments, page, pageSize, total, totalPages: Math.ceil(total / pageSize), trend });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load assessment history" });
@@ -551,6 +591,8 @@ router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "S
 // instead of duplicating the query — when omitted, it's built from req.query's batch/departmentId/
 // section params (the normal single-view dashboard filter). STAFF is always intersected against
 // their own StaffClassAssignment academic groups, same restriction as the subject-list routes.
+const READINESS_REPORT_CAP = 10000;
+
 async function loadFilteredReports(req, academicGroupOverride) {
   const studentWhere = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
   const { batch, departmentId, section } = req.query;
@@ -570,6 +612,11 @@ async function loadFilteredReports(req, academicGroupOverride) {
       assessment: { select: { subjectId: true, assessmentMode: true, subject: { select: { name: true } } } },
       student: { select: { id: true, name: true, registrationNumber: true, program: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
     },
+    // Same hard ceiling resultManagement.js's/attendance.js's exports use on an otherwise-unbounded
+    // filtered load — this function feeds both the dashboard and the Excel export, and neither had
+    // any cap at all before this. A runaway/unfiltered request (no institute scope, e.g. the
+    // platform-level admin) could otherwise load every ReadinessReport row ever created into memory.
+    take: READINESS_REPORT_CAP,
   });
 }
 
@@ -593,7 +640,7 @@ async function computeReadinessAnalytics(req, academicGroupOverride) {
   if (reports.length === 0) {
     return {
       totalAssessments: 0, studentsAssessed: 0, averageReadiness: 0, readinessLevelDistribution: {},
-      btlAverages: {}, topicWeaknesses: [], atRiskStudents: [], departmentWise: [], batchWise: [], sectionWise: [], subjectWise: [],
+      btlAverages: {}, topicWeaknesses: [], atRiskStudents: [], topPerformers: [], departmentWise: [], batchWise: [], sectionWise: [], subjectWise: [],
     };
   }
 
@@ -634,8 +681,16 @@ async function computeReadinessAnalytics(req, academicGroupOverride) {
     .sort((a, b) => a.overallScore - b.overallScore)
     .slice(0, 50);
 
+  // Symmetric to atRiskStudents above — the top two readiness levels, highest score first. Same
+  // 50-row cap for the same reason (a runaway/unfiltered request shouldn't return an unbounded list).
+  const topPerformers = reports
+    .filter((r) => r.readinessLevel === "JOB_READY" || r.readinessLevel === "EXCELLENTLY_READY")
+    .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
+    .sort((a, b) => b.overallScore - a.overallScore)
+    .slice(0, 50);
+
   return {
-    totalAssessments, studentsAssessed, averageReadiness, readinessLevelDistribution, btlAverages, topicWeaknesses, atRiskStudents,
+    totalAssessments, studentsAssessed, averageReadiness, readinessLevelDistribution, btlAverages, topicWeaknesses, atRiskStudents, topPerformers,
     departmentWise: breakdownBy(reports, (r) => r.student.academicGroup?.department?.name),
     batchWise: breakdownBy(reports, (r) => r.student.academicGroup?.batch),
     sectionWise: breakdownBy(reports, (r) => r.student.academicGroup?.section),
@@ -726,9 +781,16 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
     ];
     const atRiskSheet = XLSX.utils.aoa_to_sheet(atRiskRows);
 
+    const topPerformerRows = [
+      ["Name", "Registration Number", "Subject", "Overall Score", "Readiness Level"],
+      ...analytics.topPerformers.map((s) => [s.name, s.registrationNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
+    ];
+    const topPerformerSheet = XLSX.utils.aoa_to_sheet(topPerformerRows);
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");
     XLSX.utils.book_append_sheet(workbook, atRiskSheet, "At-Risk Students");
+    XLSX.utils.book_append_sheet(workbook, topPerformerSheet, "Top Performers");
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -737,6 +799,35 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to export readiness analytics" });
+  }
+});
+
+// ADMIN/STAFF/CLERK: a separate, deliberately reduced-detail placement view (spec section 23 —
+// "do not expose unnecessary academic data" — same reasoning /admin/analytics above excludes CLERK
+// from entirely, since that route's BTL/topic breakdowns are academic diagnostic detail a placement
+// role has no need for). Reuses computeReadinessAnalytics() so the underlying numbers can never
+// disagree with the full dashboard, but reshapes the response down to exactly what a placement
+// team needs: how many students are ready vs. need more preparation, and who they are — never the
+// per-topic/per-BTL breakdown. Same requireRole("ADMIN","STAFF","CLERK") convention already
+// established by this platform's other placement-facing analytics (placementOffers.js).
+router.get("/placement/overview", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const analytics = await cached(
+      `readinessPlacementOverview:${req.requesterInstituteId || "all"}:${JSON.stringify(req.query)}`,
+      60 * 1000,
+      () => computeReadinessAnalytics(req)
+    );
+    res.json({
+      totalAssessments: analytics.totalAssessments,
+      studentsAssessed: analytics.studentsAssessed,
+      averageReadiness: analytics.averageReadiness,
+      readinessLevelDistribution: analytics.readinessLevelDistribution,
+      readyStudents: analytics.topPerformers,
+      needsPreparationStudents: analytics.atRiskStudents,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load placement readiness overview" });
   }
 });
 

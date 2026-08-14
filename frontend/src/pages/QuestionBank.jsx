@@ -290,7 +290,12 @@ export default function QuestionBank() {
     setBulkStatusUpdating(true);
     try {
       const { data } = await api.post("/questions/bulk-status", { questionIds: selectedIds, questionStatus });
-      if (data.skippedCount > 0) alert(`Updated ${data.updatedCount} question(s). ${data.skippedCount} skipped (not yours to update).`);
+      if (Array.isArray(data.blocked) && data.blocked.length > 0) {
+        const lines = data.blocked.map((b) => `• ${b.title}: ${b.reasons.join("; ")}`).join("\n");
+        alert(`Updated ${data.updatedCount} question(s). ${data.blocked.length} couldn't be marked VERIFIED yet:\n\n${lines}`);
+      } else if (data.skippedCount > 0) {
+        alert(`Updated ${data.updatedCount} question(s). ${data.skippedCount} skipped (not yours to update).`);
+      }
       setSelectedIds([]);
       load();
     } catch (err) {

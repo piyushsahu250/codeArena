@@ -488,6 +488,14 @@ model TalentPoolAutoRule {
   // potentially several ALL/ANY criteria on the rule, not a standalone pass/fail.
   minReadinessScorePercent      Float?
   readinessLevelAtLeast         String?  // one of ReadinessReport.readinessLevel's 6 labels
+  // Distinct from minReadinessScorePercent per spec: "strong BTL4/5 performance" and "strong coding
+  // ability" are named as their own selectable criteria, not folded into the overall score. Both
+  // read from the SAME best-by-overallScore report as the two fields above (never a different
+  // report cherry-picked per criterion). A student whose best report never attempted BTL4 or BTL5
+  // fails minBtl4And5Percent outright — never averaged against a fabricated 0, per this module's
+  // "not assessed is never 0%" rule.
+  minBtl4And5Percent            Float?   // average of btlScores[4].percent and btlScores[5].percent
+  minCodingPercent              Float?   // dimensionScores.coding percent
   readinessSubjectId            String?
   requiredBadgeIds              Json?    // string[] of Badge.id
   requiredCertificateCourseIds  Json?    // string[] of Course.id, matched against VALID Certificate rows

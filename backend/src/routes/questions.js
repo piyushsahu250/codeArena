@@ -9,6 +9,7 @@ const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { questionVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
+const { validateQuestionForVerification } = require("../utils/questionValidation");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -596,15 +597,40 @@ router.post("/bulk-status", authenticate, requireRole("ADMIN", "STAFF"), attachR
   if (!QUESTION_STATUSES.includes(questionStatus)) return res.status(400).json({ error: "Invalid review status" });
 
   const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
-  const updatableIds = owned.filter((q) => ownsQuestionRow(req, q)).map((q) => q.id);
-  if (updatableIds.length === 0) return res.status(403).json({ error: "None of the selected questions are in your institute's question bank" });
+  const updatable = owned.filter((q) => ownsQuestionRow(req, q));
+  if (updatable.length === 0) return res.status(403).json({ error: "None of the selected questions are in your institute's question bank" });
 
-  await prisma.question.updateMany({ where: { id: { in: updatableIds } }, data: { questionStatus } });
+  // Structural gate before a CODING/SQL question can become VERIFIED (spec: validate before an
+  // assessment becomes official). Blocked questions are simply excluded from this batch's status
+  // change rather than failing the whole request — the admin still sees exactly which ones and why.
+  let blocked = [];
+  let finalized = updatable;
+  if (questionStatus === "VERIFIED") {
+    const gradable = updatable.filter((q) => q.questionType === "CODING" || q.questionType === "SQL");
+    if (gradable.length > 0) {
+      const cases = await prisma.testCase.findMany({ where: { questionId: { in: gradable.map((q) => q.id) } } });
+      const casesByQuestion = new Map();
+      for (const tc of cases) {
+        if (!casesByQuestion.has(tc.questionId)) casesByQuestion.set(tc.questionId, []);
+        casesByQuestion.get(tc.questionId).push(tc);
+      }
+      for (const q of gradable) {
+        const reasons = validateQuestionForVerification(q, casesByQuestion.get(q.id) || []);
+        if (reasons.length > 0) blocked.push({ id: q.id, title: q.title || q.description.slice(0, 60), reasons });
+      }
+      const blockedIds = new Set(blocked.map((b) => b.id));
+      finalized = updatable.filter((q) => !blockedIds.has(q.id));
+    }
+  }
+
+  if (finalized.length > 0) {
+    await prisma.question.updateMany({ where: { id: { in: finalized.map((q) => q.id) } }, data: { questionStatus } });
+  }
   await logAudit({
     req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-    instituteId: req.requesterInstituteId, details: { bulk: true, count: updatableIds.length, questionStatus },
+    instituteId: req.requesterInstituteId, details: { bulk: true, count: finalized.length, questionStatus, blockedCount: blocked.length },
   });
-  res.json({ updatedCount: updatableIds.length, skippedCount: questionIds.length - updatableIds.length });
+  res.json({ updatedCount: finalized.length, skippedCount: questionIds.length - finalized.length, blocked });
 });
 
 // Bulk-delete: mirrors bulk-move's ownership-filter pattern, but deletes one row at a time
@@ -1395,6 +1421,14 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       data.sqlSchema = null;
       data.evaluationType = "STDIO";
       data.functionSignature = null;
+    }
+
+    if (data.questionStatus === "VERIFIED" && (type === "CODING" || type === "SQL")) {
+      const effectiveCases = testCases || await prisma.testCase.findMany({ where: { questionId: existing.id } });
+      const reasons = validateQuestionForVerification({ ...existing, ...data }, effectiveCases);
+      if (reasons.length > 0) {
+        return res.status(400).json({ error: "Cannot mark as VERIFIED — this question isn't ready yet", reasons });
+      }
     }
 
     const question = await prisma.question.update({ where: { id: existing.id }, data, include: { testCases: true } });

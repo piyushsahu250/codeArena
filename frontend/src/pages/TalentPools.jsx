@@ -766,6 +766,8 @@ const RULE_FIELDS = [
   { key: "minAverageScorePercent", label: "Minimum Average Coding Score %", max: 100, step: 1 },
   { key: "minCompletionPercent", label: "Minimum Learning Module Completion %", max: 100, step: 1 },
   { key: "minReadinessScorePercent", label: "Minimum Readiness Score %", max: 100, step: 1 },
+  { key: "minBtl4And5Percent", label: "Minimum BTL 4/5 (Analyze/Evaluate) Performance %", max: 100, step: 1 },
+  { key: "minCodingPercent", label: "Minimum Coding Ability %", max: 100, step: 1 },
 ];
 const READINESS_LEVELS = [
   { value: "", label: "Any level" },

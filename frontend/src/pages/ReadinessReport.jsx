@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import InfoTip from "../components/InfoTip";
 import api from "../api";
+import useIsMobile from "../hooks/useIsMobile";
 
 const LEVEL_COLORS = {
   EXCELLENTLY_READY: "#16a34a", JOB_READY: "#22c55e", NEARLY_READY: "#84cc16",
@@ -32,6 +34,7 @@ function scoreBar(percent, color = "var(--mint)") {
 export default function ReadinessReport() {
   const { assessmentId } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -89,7 +92,7 @@ export default function ReadinessReport() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "48px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1>{assessment.subject?.name} — Readiness Report</h1>
@@ -107,14 +110,36 @@ export default function ReadinessReport() {
         )}
 
         <div className="card" style={{ padding: 28, marginTop: 24, textAlign: "center", background: `${color}14`, border: `1px solid ${color}55` }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-dim)", letterSpacing: "0.04em" }}>OVERALL READINESS</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-dim)", letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            OVERALL READINESS
+            <InfoTip
+              label="Overall Readiness"
+              text="A weighted composite of your performance across every cognitive level (BTL) this assessment tested — not a simple correct/total percentage. Your readiness level below is derived from this score plus admin-configured thresholds for this subject."
+            />
+          </div>
           <div style={{ fontSize: 48, fontWeight: 800, marginTop: 8 }}>{report.overallScore}%</div>
           <div className="mono" style={{ display: "inline-block", marginTop: 10, fontSize: 14, fontWeight: 700, padding: "6px 16px", borderRadius: 999, color: "#fff", background: color }}>
             {levelLabel(report.readinessLevel)}
           </div>
+          {assessment.coverage != null && (
+            <div style={{ marginTop: 14, fontSize: 12.5, color: assessment.coverage < 70 ? "var(--rust)" : "var(--ink-dim)", fontWeight: assessment.coverage < 70 ? 700 : 400, display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+              Assessment Coverage: {assessment.coverage}%
+              {assessment.coverage < 70 && " — Limited assessment coverage; additional assessment recommended."}
+              <InfoTip
+                label="Assessment Coverage"
+                text="How much of this assessment's planned question mix (across cognitive levels) was actually available and delivered from the question bank. Lower coverage means the result is based on fewer questions than intended — treat it as a preliminary signal."
+              />
+            </div>
+          )}
         </div>
 
-        <h2 style={{ marginTop: 40 }}>Bloom's Taxonomy Performance</h2>
+        <h2 style={{ marginTop: 40, display: "flex", alignItems: "center" }}>
+          Bloom's Taxonomy Performance
+          <InfoTip
+            label="Bloom's Taxonomy (BTL)"
+            text="BTL 1-6 (Remember → Understand → Apply → Analyze → Evaluate → Create) is a scale of cognitive difficulty, not question difficulty. Low BTL means recalling facts; high BTL means applying, analyzing, and creating solutions — closer to what interviews and real jobs actually demand."
+          />
+        </h2>
         <ChalkUnderline />
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
           Levels with no questions in this assessment show "Not assessed" rather than a misleading 0%.
@@ -164,7 +189,7 @@ export default function ReadinessReport() {
 
         <h2 style={{ marginTop: 40 }}>Difficulty Performance</h2>
         <ChalkUnderline />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginTop: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14, marginTop: 16 }}>
           {["EASY", "MEDIUM", "HARD"].map((d) => {
             const v = report.difficultyScores?.[d];
             return (
@@ -177,8 +202,47 @@ export default function ReadinessReport() {
           })}
         </div>
 
+        {((report.dimensionScores?.coding != null) || (Array.isArray(report.employabilityIndicators) && report.employabilityIndicators.length > 0)) && (
+          <>
+            <h2 style={{ marginTop: 40, display: "flex", alignItems: "center" }}>
+              Practical Skills
+              <InfoTip
+                label="Practical Skills"
+                text="Scores from this assessment's actual coding/application questions, evaluated on real functionality — separate from the BTL cognitive-level breakdown above, which mixes all question types together."
+              />
+            </h2>
+            <ChalkUnderline />
+            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
+              How this assessment's actual coding/application questions went — separate from the
+              cognitive-level breakdown above.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginTop: 16 }}>
+              {report.dimensionScores?.coding != null && (
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>Coding Ability</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{report.dimensionScores.coding}%</div>
+                  {scoreBar(report.dimensionScores.coding)}
+                </div>
+              )}
+              {report.employabilityIndicators?.map((ind, i) => (
+                <div key={i} className="card" style={{ padding: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{ind.indicator}</div>
+                  {ind.score != null ? (
+                    <>
+                      <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{ind.score}%</div>
+                      {scoreBar(ind.score)}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 10 }}>Not assessed</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         {(report.strongAreas?.length > 0 || report.weakAreas?.length > 0) && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 40 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, marginTop: 40 }}>
             <div>
               <h3>Strengths</h3>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>

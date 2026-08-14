@@ -217,4 +217,21 @@ function buildNextAssessmentSuggestion({ overallScore, subject, btlScores }) {
 // issuance thresholds) so the ranking is defined once, not reinvented per call site.
 const READINESS_LEVEL_RANK = { FOUNDATION_REQUIRED: 0, NEEDS_IMPROVEMENT: 1, DEVELOPING: 2, NEARLY_READY: 3, JOB_READY: 4, EXCELLENTLY_READY: 5 };
 
-module.exports = { gradeReadinessAnswer, buildReadinessReport, resolveReadinessLevel, READINESS_LEVEL_RANK };
+// Assessment Coverage: what fraction of the subject's configured BTL-level question targets for
+// this attempt were actually available and assembled (readinessBlueprint.js's `target` vs `actual`,
+// already stored verbatim on ReadinessAssessment.blueprint — nothing new to compute or persist,
+// just read). A low value means the question bank couldn't fully cover the intended blueprint (a
+// thin BTL level, a narrow topic pool), so the resulting score/level should be read with that
+// caveat rather than treated as fully conclusive — same "don't fake confidence" rule as the
+// per-BTL-level "Not assessed" display. Computed here once so the JSON report and the PDF (the
+// only two places it's shown) can never disagree, per the platform's single-scoring-engine rule.
+function computeAssessmentCoverage(blueprint) {
+  const target = blueprint?.target || {};
+  const actual = blueprint?.actual || {};
+  const totalTarget = Object.values(target).reduce((s, v) => s + (Number(v) || 0), 0);
+  const totalActual = Object.values(actual).reduce((s, v) => s + (Number(v) || 0), 0);
+  if (totalTarget === 0) return null;
+  return Math.round((totalActual / totalTarget) * 100);
+}
+
+module.exports = { gradeReadinessAnswer, buildReadinessReport, resolveReadinessLevel, READINESS_LEVEL_RANK, computeAssessmentCoverage };

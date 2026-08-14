@@ -695,7 +695,7 @@ router.put("/:id/auto-rule", authenticate, requireRole("ADMIN"), attachRequester
   try {
     const FIELDS = [
       "minCgpa", "minAttendancePercent", "minAverageScorePercent", "minCompletionPercent",
-      "minReadinessScorePercent", "readinessLevelAtLeast", "readinessSubjectId",
+      "minReadinessScorePercent", "readinessLevelAtLeast", "minBtl4And5Percent", "minCodingPercent", "readinessSubjectId",
       "requiredBadgeIds", "requiredCertificateCourseIds", "matchMode",
       "scopeInstituteId", "scopeDepartmentIds", "scopeBatch",
     ];

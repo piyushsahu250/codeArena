@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Building, Search, Users, GraduationCap, FileDown, FileText, UserCheck, Clock } from "lucide-react";
+import { Building, Search, Users, GraduationCap, FileDown, FileText, UserCheck, Clock, Target } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -21,6 +21,7 @@ export default function ClerkDashboard() {
   const [batchFilter, setBatchFilter] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [readiness, setReadiness] = useState(null);
 
   useEffect(() => {
     api.get("/companies").then((res) => setCompanyCount(res.data.length)).catch(() => setCompanyCount(null));
@@ -45,6 +46,14 @@ export default function ClerkDashboard() {
 
   useEffect(() => {
     api.get("/placement/analytics/documents").then((res) => setDocumentStats(res.data)).catch(() => setDocumentStats(null));
+  }, []);
+
+  // Reduced-detail readiness view — readiness-level flags only, no BTL/topic breakdowns
+  // (spec requires the Placement Cell not see raw academic assessment data).
+  useEffect(() => {
+    api.get("/readiness/placement/overview")
+      .then((res) => setReadiness(res.data))
+      .catch(() => setReadiness(null));
   }, []);
 
   // Reuses the same institute-scoped completion-stats route Student Management/Institute admin
@@ -186,6 +195,78 @@ export default function ClerkDashboard() {
                     <Tooltip /><Legend />
                   </PieChart>
                 </ResponsiveContainer>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Technical Readiness Overview */}
+        <h3 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Technical Readiness Overview</h3>
+        {readiness === null ? (
+          <SkeletonGrid count={5} minWidth={160} />
+        ) : readiness.totalAssessments === 0 ? (
+          <div className="card" style={{ padding: 16, color: "var(--ink-dim)", fontSize: 13 }}>
+            No readiness assessments recorded yet for this institute.
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+              <StatCard icon={Target} label="Assessments Completed" value={readiness.totalAssessments} />
+              <StatCard icon={Users} label="Students Assessed" value={readiness.studentsAssessed} />
+              <StatCard icon={Target} label="Average Readiness" value={`${readiness.averageReadiness}%`} />
+              <StatCard icon={UserCheck} label="Ready for Placement" value={readiness.readyStudents.length} />
+              <StatCard icon={Clock} label="Needs Preparation" value={readiness.needsPreparationStudents.length} />
+            </div>
+
+            {readiness.readyStudents.length > 0 && (
+              <div className="card" style={{ overflowX: "auto", marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, padding: "12px 12px 0" }}>Students Ready for Technical Assessments</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
+                      <th style={{ padding: "10px 12px" }}>Name</th>
+                      <th style={{ padding: "10px 12px" }}>Reg. No.</th>
+                      <th style={{ padding: "10px 12px" }}>Subject</th>
+                      <th style={{ padding: "10px 12px" }}>Readiness</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {readiness.readyStudents.slice(0, 20).map((s, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                        <td style={{ padding: "10px 12px" }}>{s.name}</td>
+                        <td className="mono" style={{ padding: "10px 12px" }}>{s.registrationNumber || "—"}</td>
+                        <td style={{ padding: "10px 12px" }}>{s.subject}</td>
+                        <td className="mono" style={{ padding: "10px 12px" }}>{s.overallScore}% — {s.readinessLevel.replace(/_/g, " ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {readiness.needsPreparationStudents.length > 0 && (
+              <div className="card" style={{ overflowX: "auto", marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, padding: "12px 12px 0" }}>Students Needing Preparation</div>
+                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
+                      <th style={{ padding: "10px 12px" }}>Name</th>
+                      <th style={{ padding: "10px 12px" }}>Reg. No.</th>
+                      <th style={{ padding: "10px 12px" }}>Subject</th>
+                      <th style={{ padding: "10px 12px" }}>Readiness</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {readiness.needsPreparationStudents.slice(0, 20).map((s, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                        <td style={{ padding: "10px 12px" }}>{s.name}</td>
+                        <td className="mono" style={{ padding: "10px 12px" }}>{s.registrationNumber || "—"}</td>
+                        <td style={{ padding: "10px 12px" }}>{s.subject}</td>
+                        <td className="mono" style={{ padding: "10px 12px" }}>{s.overallScore}% — {s.readinessLevel.replace(/_/g, " ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </>

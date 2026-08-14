@@ -110,30 +110,60 @@ async function evaluateCandidates(prismaClient, rule, candidateIds) {
   // ReadinessReport (see schema comment on TalentPoolAutoRule.minReadinessScorePercent for why
   // "best" rather than "latest"), optionally narrowed to one subject.
   const READINESS_LEVEL_RANK = { FOUNDATION_REQUIRED: 0, NEEDS_IMPROVEMENT: 1, DEVELOPING: 2, NEARLY_READY: 3, JOB_READY: 4, EXCELLENTLY_READY: 5 };
-  if (rule.minReadinessScorePercent != null || rule.readinessLevelAtLeast) {
+  const needsReadiness = rule.minReadinessScorePercent != null || rule.readinessLevelAtLeast
+    || rule.minBtl4And5Percent != null || rule.minCodingPercent != null;
+  if (needsReadiness) {
     const reports = await prismaClient.readinessReport.findMany({
       where: {
         studentId: { in: candidateIds },
         ...(rule.readinessSubjectId ? { assessment: { subjectId: rule.readinessSubjectId } } : {}),
       },
-      select: { studentId: true, overallScore: true, readinessLevel: true },
+      select: { studentId: true, overallScore: true, readinessLevel: true, btlScores: true, dimensionScores: true },
     });
     const bestByStudent = new Map();
     for (const r of reports) {
       const cur = bestByStudent.get(r.studentId);
       if (!cur || r.overallScore > cur.overallScore) bestByStudent.set(r.studentId, r);
     }
-    const requiredRank = rule.readinessLevelAtLeast ? (READINESS_LEVEL_RANK[rule.readinessLevelAtLeast] ?? 0) : null;
-    checks.push({
-      key: "readiness",
-      pass: (id) => {
-        const best = bestByStudent.get(id);
-        if (!best) return false;
-        if (rule.minReadinessScorePercent != null && best.overallScore < rule.minReadinessScorePercent) return false;
-        if (requiredRank != null && (READINESS_LEVEL_RANK[best.readinessLevel] ?? 0) < requiredRank) return false;
-        return true;
-      },
-    });
+
+    if (rule.minReadinessScorePercent != null || rule.readinessLevelAtLeast) {
+      const requiredRank = rule.readinessLevelAtLeast ? (READINESS_LEVEL_RANK[rule.readinessLevelAtLeast] ?? 0) : null;
+      checks.push({
+        key: "readiness",
+        pass: (id) => {
+          const best = bestByStudent.get(id);
+          if (!best) return false;
+          if (rule.minReadinessScorePercent != null && best.overallScore < rule.minReadinessScorePercent) return false;
+          if (requiredRank != null && (READINESS_LEVEL_RANK[best.readinessLevel] ?? 0) < requiredRank) return false;
+          return true;
+        },
+      });
+    }
+
+    // Distinct criteria per spec section 24 ("strong BTL4/5 performance", "strong coding
+    // ability") — kept as their own checks so ALL/ANY matchMode can combine or isolate them
+    // instead of silently folding into the overall-score check above.
+    if (rule.minBtl4And5Percent != null) {
+      checks.push({
+        key: "minBtl4And5Percent",
+        pass: (id) => {
+          const btl = bestByStudent.get(id)?.btlScores || {};
+          const b4 = btl[4] ?? btl["4"];
+          const b5 = btl[5] ?? btl["5"];
+          if (!b4 || !b5) return false;
+          return (b4.percent + b5.percent) / 2 >= rule.minBtl4And5Percent;
+        },
+      });
+    }
+    if (rule.minCodingPercent != null) {
+      checks.push({
+        key: "minCodingPercent",
+        pass: (id) => {
+          const coding = bestByStudent.get(id)?.dimensionScores?.coding;
+          return coding != null && coding >= rule.minCodingPercent;
+        },
+      });
+    }
   }
 
   const requiredBadgeIds = Array.isArray(rule.requiredBadgeIds) ? rule.requiredBadgeIds : [];

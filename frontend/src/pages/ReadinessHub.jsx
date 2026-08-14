@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { useToast } from "../context/ToastContext";
@@ -24,11 +25,12 @@ export default function ReadinessHub() {
   const toast = useToast();
   const [subjects, setSubjects] = useState(null);
   const [history, setHistory] = useState(null);
+  const [trend, setTrend] = useState(null);
   const [starting, setStarting] = useState(null);
 
   useEffect(() => {
     api.get("/readiness/subjects").then((res) => setSubjects(res.data)).catch(() => toast.error("Failed to load subjects"));
-    api.get("/readiness/history").then((res) => setHistory(res.data.assessments)).catch(() => {});
+    api.get("/readiness/history").then((res) => { setHistory(res.data.assessments); setTrend(res.data.trend); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -97,6 +99,43 @@ export default function ReadinessHub() {
             </div>
           ))}
         </div>
+
+        {trend && trend.overall.length >= 2 && (
+          <>
+            <h2 style={{ marginTop: 48 }}>Progress Over Time</h2>
+            <ChalkUnderline />
+            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
+              Overall readiness score across all your completed assessments, oldest to most recent.
+            </p>
+            <div className="card" style={{ padding: 16, marginTop: 16 }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={trend.overall.map((p, i) => ({ attempt: i + 1, score: p.score, date: new Date(p.submittedAt).toLocaleDateString() }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v) => `${v}%`} />
+                  <Line type="monotone" dataKey="score" name="Overall Score" stroke="#4F9D6E" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {trend.bySubject.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginTop: 12 }}>
+                {trend.bySubject.map((s) => (
+                  <div key={s.subject} className="card" style={{ padding: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{s.subject}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                      {s.first}% <span style={{ color: "var(--ink-dim)", fontWeight: 400 }}>→</span> {s.latest}%
+                      <span style={{ fontSize: 12, fontWeight: 700, color: s.latest >= s.first ? "#16a34a" : "#dc2626" }}>
+                        ({s.latest >= s.first ? "+" : ""}{s.latest - s.first})
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>{s.attempts} attempts</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
         <h2 style={{ marginTop: 48 }}>Your Assessment History</h2>
         <ChalkUnderline />
