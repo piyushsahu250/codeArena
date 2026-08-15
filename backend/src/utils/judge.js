@@ -61,15 +61,39 @@ const COMPILE_TIMEOUT_MS = Number(process.env.JUDGE_COMPILE_TIMEOUT_MS || 45000)
 // well-understood defense against a fork bomb (`while(1) fork();` / infinite thread spawn)
 // hanging the whole instance. Generous enough for legitimate multi-threaded submissions.
 //
-// KNOWN LIMITATION: this container runs as root (no USER directive in the Dockerfile), and Linux
-// lets a process holding CAP_SYS_RESOURCE (which root has) exceed RLIMIT_NPROC entirely — so this
-// ulimit may not actually stop a fork bomb run as root. The real fix is dropping privileges for
-// the execute step specifically (spawn with a dedicated non-root uid/gid, after chmod'ing the
-// tmpdir/binary so that user can read+run them) — not done here because getting the file-
-// permission handoff right needs to be verified against a real container, which wasn't available
-// while making this change. ulimit -v (memory) is unaffected by this gap; it's enforced via a
-// separate kernel mechanism root doesn't bypass.
+// KNOWN LIMITATION (mitigated, see DROP_PRIVILEGES below): by default this container still runs
+// everything as root (no USER directive in the Dockerfile's final stage), and Linux lets a
+// process holding CAP_SYS_RESOURCE (which root has) exceed RLIMIT_NPROC entirely — so this ulimit
+// alone does not stop a fork bomb run as root. The fix — spawning both compile and execute as a
+// dedicated non-root `sandbox` uid/gid — exists below, gated behind JUDGE_DROP_PRIVILEGES (off by
+// default) until it's been verified against the real deployed container. ulimit -v (memory) is
+// unaffected by this gap either way; it's enforced via a separate kernel mechanism root doesn't
+// bypass.
 const MAX_PROCESSES = Number(process.env.JUDGE_MAX_PROCESSES || 64);
+
+// Fixed uid/gid for the unprivileged `sandbox` system user created in the Dockerfile —
+// keep these two numbers in sync with the Dockerfile's `useradd --uid ... --gid ...`.
+const SANDBOX_UID = Number(process.env.JUDGE_SANDBOX_UID || 10001);
+const SANDBOX_GID = Number(process.env.JUDGE_SANDBOX_GID || 10001);
+// Gates the actual privilege drop for both compiling AND running untrusted code.
+// Defaults to false (today's root behavior, unchanged) so this ships dark — flip
+// JUDGE_DROP_PRIVILEGES=true on Render (which restarts the container, applying the new
+// value) only after the Dockerfile's `sandbox` user/permissions are live and the test
+// matrix below has been run. Like every other JUDGE_* constant in this file, this is
+// read once at module load; there is no cheaper "live toggle" — process.env cannot
+// change under a running process, so a restart is required either way.
+const DROP_PRIVILEGES = process.env.JUDGE_DROP_PRIVILEGES === "true";
+// CPU-time ceiling for `ulimit -t`, in whole seconds (no sub-second granularity).
+// Ships unconditionally (independent of DROP_PRIVILEGES) since RLIMIT_CPU's
+// exceeded-limit signal (SIGXCPU/SIGKILL) is a plain accounting mechanism, not gated by
+// CAP_SYS_RESOURCE the way RLIMIT_NPROC's fork()-time check is — unlike `ulimit -u`,
+// this backstop is real even before any privilege drop. Generous headroom over
+// timeLimitMs (which is wall-clock ms, not CPU seconds) so a legitimate multi-threaded
+// submission consuming >1 core-second of CPU per wall-clock second doesn't false-trip;
+// the wall-clock killTimer remains the primary timeout, this is defense-in-depth.
+function cpuTimeLimitSeconds(timeLimitMs) {
+  return Math.max(1, Math.ceil((timeLimitMs / 1000) * 2) + 1);
+}
 
 // Best-effort network denial for submitted code: run it inside its own network namespace with
 // no interfaces, so outbound connections fail immediately instead of hanging or exfiltrating
@@ -81,7 +105,15 @@ let networkDenialAvailable = null;
 function checkNetworkDenialAvailable() {
   if (networkDenialAvailable !== null) return Promise.resolve(networkDenialAvailable);
   return new Promise((resolve) => {
-    const probe = spawn("unshare", ["-n", "true"]);
+    // Must probe under the SAME identity real execution will use, or this predicts
+    // nothing. `unshare -n` needs CAP_SYS_ADMIN — root has it within its own container
+    // namespace, but the unprivileged `sandbox` user (once DROP_PRIVILEGES is on)
+    // almost certainly won't, so this is expected to start returning false once that
+    // flag flips. That's an accepted, documented trade-off (see DROP_PRIVILEGES
+    // comment) — the existing graceful fallback below (log + run without network
+    // isolation) already handles it safely.
+    const probeOptions = DROP_PRIVILEGES ? { uid: SANDBOX_UID, gid: SANDBOX_GID } : {};
+    const probe = spawn("unshare", ["-n", "true"], probeOptions);
     probe.on("error", () => { networkDenialAvailable = false; resolve(false); });
     probe.on("close", (code) => {
       networkDenialAvailable = code === 0;
@@ -274,12 +306,27 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
   const networkDenied = enforceMemory && await checkNetworkDenialAvailable(); // only for actual execution, not compilation
   return new Promise((resolve) => {
     const statsFile = path.join(os.tmpdir(), `judge-time-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
-    // The memory/process ulimits only apply to actually running submitted code, not to
+    // The memory/process/CPU ulimits only apply to actually running submitted code, not to
     // compilation — javac in particular needs real JVM headroom well beyond a student program's
     // own budget, and capping it the same way would misreport legitimate compiler memory use as
-    // an MLE (or block javac's own worker threads as a false fork-bomb trip).
-    const wrappedArgs = enforceMemory
-      ? ["-v", "-o", statsFile, "sh", "-c", `ulimit -v ${memoryLimitKb}; ulimit -u ${MAX_PROCESSES}; exec "$0" "$@"`, cmd, ...args]
+    // an MLE (or block javac's own worker threads as a false fork-bomb trip). DROP_PRIVILEGES, in
+    // contrast, applies to BOTH compile and execute — compiling untrusted source is itself
+    // untrusted input to gcc/g++/javac, and dropping privileges for the whole lifecycle after
+    // mkdtempSync (see prepare()) is simpler to reason about than a split where compile stays
+    // root and only execute drops.
+    //
+    // `setpriv --no-new-privs` runs *inside* the shell, immediately before the final exec: it
+    // only needs to set a per-process flag any uid can set for itself, so it's safe to run after
+    // the uid/gid drop below already took effect at spawn() time. Native spawn({uid,gid}) alone
+    // drops identity but doesn't block the sandboxed process from exec'ing a setuid-root binary
+    // if one were reachable; --no-new-privs closes that gap.
+    const cpuSeconds = cpuTimeLimitSeconds(timeLimitMs);
+    const execTail = DROP_PRIVILEGES ? `exec setpriv --no-new-privs "$0" "$@"` : `exec "$0" "$@"`;
+    const innerCmd = enforceMemory
+      ? `ulimit -v ${memoryLimitKb}; ulimit -u ${MAX_PROCESSES}; ulimit -t ${cpuSeconds}; ${execTail}`
+      : execTail;
+    const wrappedArgs = enforceMemory || DROP_PRIVILEGES
+      ? ["-v", "-o", statsFile, "sh", "-c", innerCmd, cmd, ...args]
       : ["-v", "-o", statsFile, cmd, ...args];
     const timeArgs = networkDenied ? ["-n", "/usr/bin/time", ...wrappedArgs] : wrappedArgs;
     const timeCmd = networkDenied ? "unshare" : "/usr/bin/time";
@@ -287,7 +334,20 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     // group (process.kill(-pid, ...)), not just this one PID, which also reaps any children the
     // submitted program itself forked (a plain child.kill() would leave those running).
     // env explicitly whitelisted (see JUDGE_ENV above) — never inherit process.env's secrets.
-    const child = spawn(timeCmd, timeArgs, { ...options, env: { ...JUDGE_ENV, ...options.env }, detached: true, killSignal: "SIGKILL" });
+    // uid/gid (when DROP_PRIVILEGES is on) setuid/setgid this child to `sandbox` BEFORE it execs
+    // anything — the whole chain that follows (unshare -> time -> sh -> ulimit -> setpriv -> the
+    // real cmd) therefore runs unprivileged from its very first exec onward, not just the final
+    // one; dropping privileges only after some earlier step already ran as root would not
+    // actually close the gap this fix exists for. If the drop itself fails (bad uid/gid, a
+    // tmpDir ownership mismatch), spawn() emits 'error' on the child, which the existing handler
+    // below already turns into ok:false — there is intentionally no catch-and-retry-as-root path
+    // anywhere in this function.
+    const spawnOptions = { ...options, env: { ...JUDGE_ENV, ...options.env }, detached: true, killSignal: "SIGKILL" };
+    if (DROP_PRIVILEGES) {
+      spawnOptions.uid = SANDBOX_UID;
+      spawnOptions.gid = SANDBOX_GID;
+    }
+    const child = spawn(timeCmd, timeArgs, spawnOptions);
 
     let stdout = "";
     let stderr = "";
@@ -346,8 +406,24 @@ async function prepare(language, code) {
   if (!runner) return { ok: false, error: "Unsupported language" };
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "judge-"));
+  if (DROP_PRIVILEGES) {
+    // tmpDir is created by this (still-root) process, but compilation and execution now
+    // both run as `sandbox` (see spawnWithTimeout) — it needs to enter (x) and write (w)
+    // here, since it compiles its own output into this same directory. 0770: owner
+    // (sandbox) full access, no access for anyone else — root retains access for
+    // cleanup() regardless of the chmod, since root bypasses permission checks entirely.
+    fs.chownSync(tmpDir, SANDBOX_UID, SANDBOX_GID);
+    fs.chmodSync(tmpDir, 0o770);
+  }
   const file = path.join(tmpDir, runner.srcName);
   fs.writeFileSync(file, code);
+  if (DROP_PRIVILEGES) {
+    // sandbox needs read access to compile/interpret its own source, but never write —
+    // least privilege, and prevents a running submission from rewriting its own source
+    // file mid-execution for no legitimate reason.
+    fs.chownSync(file, SANDBOX_UID, SANDBOX_GID);
+    fs.chmodSync(file, 0o440);
+  }
 
   if (runner.compile) {
     const { cmd, args } = runner.compile(file, tmpDir);
