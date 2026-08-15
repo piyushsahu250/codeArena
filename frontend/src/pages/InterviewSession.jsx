@@ -15,6 +15,17 @@ import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
+const JUDGE_TIMEOUT_MS = 20000;
+
+// Judge/queue-contention errors get the specific, reassuring copy the platform wants for this
+// scenario (distinct from a generic "Execution failed") — queue-full (backend-flagged via
+// queueBusy) and a client-side timeout (queue/judge taking longer than JUDGE_TIMEOUT_MS) both
+// read as "temporarily busy, try again," not as a broken interview.
+function judgeErrorMessage(err, fallback) {
+  if (err.response?.data?.queueBusy) return err.response.data.error;
+  if (err.code === "ECONNABORTED") return "Evaluation temporarily unavailable. Your code has been saved. Please try again shortly.";
+  return err.response?.data?.error || fallback;
+}
 
 const CATEGORY_LABEL = { HR: "HR", TECHNICAL: "Technical", CODING: "Coding", APTITUDE: "Aptitude", SYSTEM_DESIGN: "System Design", BEHAVIORAL: "Behavioral", MANAGERIAL: "Managerial" };
 const FREE_TEXT_CATEGORIES = ["HR", "TECHNICAL", "SYSTEM_DESIGN", "BEHAVIORAL", "MANAGERIAL"];
@@ -52,8 +63,17 @@ export default function InterviewSession() {
   const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
   const recognitionRef = useRef(null);
   const finalizedRef = useRef(false);
+  // Set synchronously as the FIRST statement of advanceRound() (before any await, including the
+  // one inside saveAnswer()) — a double-click guard distinct from `saving`, since saveAnswer()'s
+  // own finally resets `saving` to false as soon as the answer-save leg resolves, well before
+  // advanceRound()'s own /rounds/advance request finishes, which previously left a real window
+  // where the "Submit Round" button looked enabled again while a request was still in flight.
+  const advancingRef = useRef(false);
   const deadlineRef = useRef(null); // absolute ms timestamp this interview auto-submits at
   const clockOffsetRef = useRef(0); // serverTime - Date.now() at load; corrects a skewed device clock
+  // Guards against a slow/duplicate Run response landing after the student has already switched
+  // questions — mirrors TestTaking.jsx's activeQuestionIdRef pattern.
+  const activeQuestionIdRef = useRef(null);
   const { theme } = useTheme();
   const dark = theme === "dark";
 
@@ -134,6 +154,9 @@ export default function InterviewSession() {
   // the `q`/`draft` consts declared further down, which only exist after the loading-state guards.
   const activeQuestion = data?.questions?.[activeIdx];
   const activeDraft = activeQuestion ? drafts[activeQuestion.id] || {} : {};
+  useEffect(() => {
+    activeQuestionIdRef.current = activeQuestion?.id ?? null;
+  }, [activeQuestion]);
   useEffect(() => {
     if (phase !== "active" || !activeQuestion || activeQuestion.category !== "CODING") return;
     const timer = setTimeout(() => {
@@ -368,7 +391,7 @@ export default function InterviewSession() {
       if (q.category === "APTITUDE") body.answerText = draft.selected != null ? String(draft.selected) : null;
       else if (q.category === "CODING") { body.code = draft.code; body.language = draft.language; }
       else body.answerText = draft.answerText;
-      const { data: res } = await api.post(`/interview/sessions/${id}/answer`, body);
+      const { data: res } = await api.post(`/interview/sessions/${id}/answer`, body, { timeout: JUDGE_TIMEOUT_MS });
       if (res.immediateResult) setRunResult(res.immediateResult);
       if (res.followUpQuestion) {
         setData((d) => (d.questions.some((qq) => qq.id === res.followUpQuestion.id) ? d : { ...d, questions: [...d.questions, res.followUpQuestion] }));
@@ -379,7 +402,7 @@ export default function InterviewSession() {
       }
       return res;
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to save answer");
+      alert(judgeErrorMessage(err, "Failed to save answer"));
       return null;
     } finally {
       setSaving(false);
@@ -393,11 +416,14 @@ export default function InterviewSession() {
     setRunning(true);
     setRunResult(null);
     setCodeSubmittedResult(false);
+    const questionIdAtRequest = q.id;
     try {
-      const { data: res } = await api.post(`/interview/sessions/${id}/run-code`, { questionId: q.id, code: draft.code, language: draft.language });
-      setRunResult(res);
+      const { data: res } = await api.post(`/interview/sessions/${id}/run-code`, { questionId: q.id, code: draft.code, language: draft.language }, { timeout: JUDGE_TIMEOUT_MS });
+      // A slow/duplicate response landing after the student already switched questions must not
+      // overwrite that other question's displayed result.
+      if (activeQuestionIdRef.current === questionIdAtRequest) setRunResult(res);
     } catch (err) {
-      alert(err.response?.data?.error || "Execution failed");
+      if (activeQuestionIdRef.current === questionIdAtRequest) alert(judgeErrorMessage(err, "Execution failed"));
     } finally {
       setRunning(false);
     }
@@ -429,11 +455,12 @@ export default function InterviewSession() {
   // either appends the next round's questions (continuing the session) or navigates to the report
   // (round-elimination or the whole interview completed).
   async function advanceRound() {
-    if (finalizedRef.current) return;
+    if (finalizedRef.current || advancingRef.current) return;
+    advancingRef.current = true;
     setSaving(true);
     try {
       await saveAnswer(false);
-      const { data: res } = await api.post(`/interview/sessions/${id}/rounds/advance`);
+      const { data: res } = await api.post(`/interview/sessions/${id}/rounds/advance`, {}, { timeout: JUDGE_TIMEOUT_MS });
       if (res.completed) {
         finalizedRef.current = true;
         proctor.stopMedia();
@@ -452,9 +479,10 @@ export default function InterviewSession() {
       setCodeSubmittedResult(false);
       setActiveIdx((i) => i + 1);
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to advance to the next round");
+      alert(judgeErrorMessage(err, "Failed to advance to the next round"));
     } finally {
       setSaving(false);
+      advancingRef.current = false;
     }
   }
 

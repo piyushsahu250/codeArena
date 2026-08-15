@@ -17,6 +17,7 @@ const { generateInterviewReportPdf } = require("../utils/interviewReportPdf");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { askClaudeJson } = require("../utils/aiClient");
 const { cached } = require("../utils/cache");
+const { dedupe, isInFlight } = require("../utils/requestDedup");
 const { COMPANIES } = require("../utils/companies");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
@@ -29,6 +30,10 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // Real, billed Claude API calls — tighter than the global per-user limiter, same rationale as
 // learning.js's hintLimiter and resume.js's aiReviewLimiter.
 const aiInsightsLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
+// Every other judge-invoking surface in this codebase (submissions.js, moduleCoding.js,
+// learning.js, challenges.js) already has this exact per-student throttle on code execution —
+// Interview was the one surface missing it.
+const execLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id });
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
 const CERT_THRESHOLD = 80;
 
@@ -503,7 +508,12 @@ router.get("/sessions/:id", authenticate, requireRole("STUDENT"), async (req, re
     if (!session || session.studentId !== req.user.id) return res.status(404).json({ error: "Session not found" });
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
     const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
-    const recommendedLearning = session.report ? await buildRecommendations(session.report.weakAreas) : [];
+    // A completed session's report/weakAreas never changes, so recomputing recommendations on
+    // every single report-page load/refresh (confirmed up to ~11 DB round trips) is pure waste —
+    // cache per-session with a long TTL.
+    const recommendedLearning = session.report
+      ? await cached(`interview:recs:${session.id}`, 3600 * 1000, () => buildRecommendations(session.report.weakAreas))
+      : [];
     // Resume position on refresh/remount: the first still-`skipped:true` row in creation order —
     // every answer row starts skipped:true at session-creation time and flips to false the moment
     // the student actually submits that question, so this is "the first question not yet visited"
@@ -542,12 +552,16 @@ router.get("/sessions/:id/ai-insights", authenticate, requireRole("STUDENT"), ai
       : Array.isArray(session.roundPlanSnapshot) && session.roundPlanSnapshot.length > 0
         ? ` The candidate cleared all ${session.roundPlanSnapshot.length} rounds of a company-style interview (company readiness score: ${session.report.companyReadinessScore ?? "n/a"}%).`
         : "";
-    const insights = await askClaudeJson({
-      system: "You are an interview coach analyzing a completed mock interview transcript. Be specific — reference the candidate's actual answers, not generic advice. Return only JSON matching the requested schema.",
-      prompt: `Overall score: ${session.report.overallScore}%.${roundContext} Transcript:\n\n${transcript.slice(0, 8000)}\n\nReturn JSON exactly shaped: {"narrative": string (3-4 sentence performance summary), "recommendations": string[] (3-5 specific, actionable next steps referencing the actual answers)}.`,
-      maxTokens: 1000,
-      temperature: 0.4,
-    });
+    // A double-click within the 5/min rate-limit window would otherwise fire two separate billed
+    // Claude calls for the exact same (never-persisted) request — coalesce into one.
+    const insights = await dedupe(`ai-insights:${session.id}`, () =>
+      askClaudeJson({
+        system: "You are an interview coach analyzing a completed mock interview transcript. Be specific — reference the candidate's actual answers, not generic advice. Return only JSON matching the requested schema.",
+        prompt: `Overall score: ${session.report.overallScore}%.${roundContext} Transcript:\n\n${transcript.slice(0, 8000)}\n\nReturn JSON exactly shaped: {"narrative": string (3-4 sentence performance summary), "recommendations": string[] (3-5 specific, actionable next steps referencing the actual answers)}.`,
+        maxTokens: 1000,
+        temperature: 0.4,
+      })
+    );
     res.json(insights);
   } catch (err) {
     if (err.notConfigured) return res.status(503).json({ error: err.message });
@@ -595,7 +609,7 @@ async function maybeInsertFollowUp(session, question, answerText, skipped) {
 // STUDENT: run a coding interview question's code against its VISIBLE (sample) test cases only
 // — a free, unlimited, side-effect-free self-check before answering, matching the Run/Submit
 // split used everywhere else on the platform. Does not save an answer or affect the score.
-router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), execLimiter, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
@@ -607,9 +621,18 @@ router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), asyn
     if (!question || question.category !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const { visible } = splitInterviewCases(question.testCases);
-    const result = await runQueued(() => judgeSubmission({ language, code, testCases: visible, timeLimitMs: 3000, evaluationType: question.evaluationType, functionSignature: question.functionSignature }));
+    // Coalesces a double-click/retry on the same question into one judge job instead of two.
+    const dedupeKey = `run:${session.id}:${questionId}`;
+    if (isInFlight(dedupeKey)) logger.info("JUDGE_DEDUP_HIT", { sessionId: session.id, questionId, route: "run-code" });
+    const result = await dedupe(dedupeKey, () =>
+      runQueued(() => judgeSubmission({ language, code, testCases: visible, timeLimitMs: 3000, evaluationType: question.evaluationType, functionSignature: question.functionSignature }))
+    );
     res.json(result);
   } catch (err) {
+    if (err.queueBusy) {
+      logger.info("JUDGE_QUEUE_BUSY", { sessionId: req.params.id, route: "run-code" });
+      return res.status(503).json({ error: "Code execution is currently busy. Your interview session is safe. Please try again shortly.", queueBusy: true });
+    }
     console.error(err);
     res.status(500).json({ error: "Execution failed" });
   }
@@ -659,7 +682,7 @@ router.get("/sessions/:id/questions/:questionId/draft", authenticate, requireRol
 // only shows up in the final report, matching "AI evaluates after submission" (of the whole
 // interview, not each question). May
 // frontend appends it to the live question list rather than the session needing to be re-fetched.
-router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), execLimiter, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
@@ -688,13 +711,29 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), async 
       const r = evaluateAptitudeAnswer(answerText, question.correctAnswer, session.config?.negativeMarking);
       score = r.score; breakdown = { correct: r.correct };
     } else if (question.category === "CODING") {
+      // Save the code as a PENDING answer BEFORE invoking the judge — same "save first, grade
+      // second" pattern already used by submissions.js/moduleCoding.js's coding submit routes —
+      // so a judge failure (busy queue, timeout, crash) never loses the student's code; the
+      // upsert below (after grading) then overwrites this with the real score. Worst case on a
+      // judge failure, the code the student typed is still saved and they can retry.
+      await prisma.interviewAnswer.upsert({
+        where: { sessionId_questionId: { sessionId: session.id, questionId } },
+        update: { code: code ?? null, language: language ?? null, skipped: false, timeTakenSec: timeTakenSec ?? null },
+        create: { sessionId: session.id, questionId, code: code ?? null, language: language ?? null, skipped: false, timeTakenSec: timeTakenSec ?? null },
+      });
+
       // Final scoring (like the rest of the platform) is based on hidden test cases only, with a
       // fallback to the visible set for legacy questions that predate isHidden. The candidate
       // already had unlimited access to a sample-only self-check via POST /sessions/:id/run-code
       // before submitting this answer.
       const { visible, hidden } = splitInterviewCases(question.testCases);
       const gradingCases = hidden.length > 0 ? hidden : visible;
-      const judgeResult = await runQueued(() => judgeSubmission({ language, code, testCases: gradingCases, timeLimitMs: 3000, evaluationType: question.evaluationType, functionSignature: question.functionSignature }));
+      // Coalesces a double-click/retry into one judge job instead of two.
+      const dedupeKey = `answer:${session.id}:${questionId}`;
+      if (isInFlight(dedupeKey)) logger.info("JUDGE_DEDUP_HIT", { sessionId: session.id, questionId, route: "answer" });
+      const judgeResult = await dedupe(dedupeKey, () =>
+        runQueued(() => judgeSubmission({ language, code, testCases: gradingCases, timeLimitMs: 3000, evaluationType: question.evaluationType, functionSignature: question.functionSignature }))
+      );
       const r = evaluateCodingAnswer(judgeResult, code);
       score = r.score; breakdown = r.breakdown;
       // Hidden case inputs/expected outputs never leave the server — only counts/verdict/timing
@@ -724,6 +763,10 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), async 
 
     res.json({ saved: true, answer, immediateResult, followUpQuestion });
   } catch (err) {
+    if (err.queueBusy) {
+      logger.info("JUDGE_QUEUE_BUSY", { sessionId: req.params.id, route: "answer" });
+      return res.status(503).json({ error: "Code execution is currently busy. Your interview session is safe. Please try again shortly.", queueBusy: true });
+    }
     console.error(err);
     res.status(500).json({ error: "Failed to save answer" });
   }
@@ -1048,13 +1091,20 @@ router.get("/progress", authenticate, requireRole("STUDENT"), async (req, res) =
 
 // =========================== Question bank (read, any authenticated) ===========================
 
+// These three are platform-wide (not per-student) and only change when an admin edits question/
+// company content — cached() (the existing in-process TTL helper, same one already used for
+// admin analytics below) avoids hitting Postgres on every hub/browse-page load under concurrent
+// student traffic.
 router.get("/subjects", authenticate, async (req, res) => {
-  const rows = await prisma.interviewQuestion.groupBy({ by: ["category", "subject"], where: { isActive: true, generatedForStudentId: null } });
-  const bySubject = {};
-  for (const r of rows) {
-    if (!r.subject) continue;
-    (bySubject[r.category] = bySubject[r.category] || []).push(r.subject);
-  }
+  const bySubject = await cached("interview:subjects", 120 * 1000, async () => {
+    const rows = await prisma.interviewQuestion.groupBy({ by: ["category", "subject"], where: { isActive: true, generatedForStudentId: null } });
+    const result = {};
+    for (const r of rows) {
+      if (!r.subject) continue;
+      (result[r.category] = result[r.category] || []).push(r.subject);
+    }
+    return result;
+  });
   res.json(bySubject);
 });
 
@@ -1062,24 +1112,30 @@ router.get("/subjects", authenticate, async (req, res) => {
 // option once real content exists for it, rather than listing all 12 named in the spec
 // regardless of whether any have been seeded/added yet.
 router.get("/companies", authenticate, async (req, res) => {
-  const rows = await prisma.interviewQuestion.groupBy({
-    by: ["company"], where: { isActive: true, generatedForStudentId: null, company: { not: null } },
-    _count: { _all: true },
+  const result = await cached("interview:companies", 120 * 1000, async () => {
+    const rows = await prisma.interviewQuestion.groupBy({
+      by: ["company"], where: { isActive: true, generatedForStudentId: null, company: { not: null } },
+      _count: { _all: true },
+    });
+    return rows.map((r) => ({ company: r.company, questionCount: r._count._all })).sort((a, b) => a.company.localeCompare(b.company));
   });
-  res.json(rows.map((r) => ({ company: r.company, questionCount: r._count._all })).sort((a, b) => a.company.localeCompare(b.company)));
+  res.json(result);
 });
 
 // Student-facing browse — unlike GET /companies above (which only lists companies that already
 // have questions, for the session-config dropdown), this always returns all COMPANIES so the
 // browse grid can show a company before any content has been seeded for it yet.
 router.get("/companies/browse", authenticate, requireRole("STUDENT"), async (req, res) => {
-  const [counts, patternCompanies] = await Promise.all([
-    prisma.interviewQuestion.groupBy({ by: ["company"], where: { isActive: true, company: { not: null } }, _count: { _all: true } }),
-    prisma.companyPatternNote.findMany({ where: { status: "APPROVED" }, select: { company: true }, distinct: ["company"] }),
-  ]);
-  const countByCompany = Object.fromEntries(counts.map((c) => [c.company, c._count._all]));
-  const withPattern = new Set(patternCompanies.map((p) => p.company));
-  res.json(COMPANIES.map((company) => ({ company, questionCount: countByCompany[company] || 0, hasApprovedPattern: withPattern.has(company) })));
+  const result = await cached("interview:companies:browse", 120 * 1000, async () => {
+    const [counts, patternCompanies] = await Promise.all([
+      prisma.interviewQuestion.groupBy({ by: ["company"], where: { isActive: true, company: { not: null } }, _count: { _all: true } }),
+      prisma.companyPatternNote.findMany({ where: { status: "APPROVED" }, select: { company: true }, distinct: ["company"] }),
+    ]);
+    const countByCompany = Object.fromEntries(counts.map((c) => [c.company, c._count._all]));
+    const withPattern = new Set(patternCompanies.map((p) => p.company));
+    return COMPANIES.map((company) => ({ company, questionCount: countByCompany[company] || 0, hasApprovedPattern: withPattern.has(company) }));
+  });
+  res.json(result);
 });
 
 // Metadata-only catalog browse for the student-facing filter UI — title/tags/difficulty/
@@ -1096,12 +1152,14 @@ router.get("/questions/browse", authenticate, requireRole("STUDENT"), async (req
   if (req.query.packageBand) where.packageBand = req.query.packageBand;
   if (req.query.experienceLevel) where.experienceLevel = req.query.experienceLevel;
 
-  const rows = await prisma.interviewQuestion.findMany({
-    where,
-    select: { id: true, title: true, category: true, subject: true, company: true, difficulty: true, tags: true, frequencyTag: true, packageBand: true, experienceLevel: true },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const rows = await cached(`interview:questions:browse:${JSON.stringify(where)}`, 60 * 1000, () =>
+    prisma.interviewQuestion.findMany({
+      where,
+      select: { id: true, title: true, category: true, subject: true, company: true, difficulty: true, tags: true, frequencyTag: true, packageBand: true, experienceLevel: true },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    })
+  );
   res.json(rows);
 });
 

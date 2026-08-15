@@ -7,11 +7,22 @@
 let active = 0;
 const waiting = [];
 const MAX_CONCURRENT_SUBMISSIONS = Number(process.env.JUDGE_CONCURRENCY || 2);
+// Previously unbounded — under enough concurrent load the `waiting` array could grow without
+// limit, with every queued caller just waiting indefinitely for a slot with no feedback. A cap
+// lets callers fail fast with a distinguishable, recoverable error instead.
+const MAX_QUEUE_SIZE = Number(process.env.JUDGE_MAX_QUEUE_SIZE || 20);
 
 // Runs `fn` once fewer than MAX_CONCURRENT_SUBMISSIONS judge jobs are in flight;
-// otherwise queues it (FIFO) until a slot frees up.
+// otherwise queues it (FIFO) until a slot frees up. Rejects immediately (err.queueBusy = true)
+// if the queue is already at MAX_QUEUE_SIZE, rather than growing it unboundedly.
 function runQueued(fn) {
   return new Promise((resolve, reject) => {
+    if (active >= MAX_CONCURRENT_SUBMISSIONS && waiting.length >= MAX_QUEUE_SIZE) {
+      const err = new Error("Judge queue is full");
+      err.queueBusy = true;
+      reject(err);
+      return;
+    }
     const task = async () => {
       active++;
       try {
@@ -33,7 +44,7 @@ function runQueued(fn) {
 // this instance can only run MAX_CONCURRENT_SUBMISSIONS judge jobs at once, so under a
 // large concurrent class this counter is the honest picture of what's actually happening.
 function getQueueStatus() {
-  return { active, waiting: waiting.length, maxConcurrent: MAX_CONCURRENT_SUBMISSIONS };
+  return { active, waiting: waiting.length, maxConcurrent: MAX_CONCURRENT_SUBMISSIONS, maxQueueSize: MAX_QUEUE_SIZE };
 }
 
 // Runs fn(item, index) over items with at most `limit` in flight at once,
