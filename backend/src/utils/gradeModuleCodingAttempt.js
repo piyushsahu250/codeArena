@@ -17,10 +17,11 @@ async function gradeOneModuleCodingSubmission(sub, question) {
       memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
     })
   );
+  const score = result.totalCases > 0 ? Math.round((result.passedCases / result.totalCases) * 100) : 0;
   await prisma.moduleCodingSubmission.update({
     where: { id: sub.id },
     data: {
-      passedCases: result.passedCases, totalCases: result.totalCases, verdict: result.verdict,
+      passedCases: result.passedCases, totalCases: result.totalCases, verdict: result.verdict, score,
       timeMs: result.maxTimeMs ?? null, memoryKb: result.maxMemoryKb ?? null,
     },
   });
@@ -54,13 +55,17 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
 
   const submissionByQuestion = new Map(attempt.submissions.map((s) => [s.questionId, s]));
 
-  await Promise.all(
-    attempt.questions.map(async ({ question }) => {
-      const sub = submissionByQuestion.get(question.id);
-      if (!sub || sub.verdict !== "PENDING") return;
-      await gradeOneModuleCodingSubmission(sub, question);
-    })
-  );
+  // Sequential, not Promise.all: this platform's Prisma pool is deliberately small (see
+  // prisma.js) — grading every pending question of a whole class's synchronized finalize burst
+  // concurrently was already identified as a real trigger for Postgres pool-timeout errors
+  // elsewhere in this codebase (see gradeAttempt.js's identical rationale for Formal Tests). A
+  // module-coding attempt only has a few questions, so this costs a little wall-clock time in
+  // exchange for not reintroducing that same failure mode here.
+  for (const { question } of attempt.questions) {
+    const sub = submissionByQuestion.get(question.id);
+    if (!sub || sub.verdict !== "PENDING") continue;
+    await gradeOneModuleCodingSubmission(sub, question);
+  }
 
   const freshSubmissions = await prisma.moduleCodingSubmission.findMany({ where: { attemptId } });
   const submissionByQuestion2 = new Map(freshSubmissions.map((s) => [s.questionId, s]));

@@ -506,7 +506,18 @@ export default function ModuleCodingAssessment() {
                 <h2 style={{ marginTop: 12, color: passed ? "var(--mint)" : "var(--rust)" }}>
                   {passed ? "Assessment Passed" : "Assessment Failed"}
                 </h2>
-                <div className="mono" style={{ fontSize: 28, fontWeight: 700, marginTop: 10 }}>{result?.score ?? 0}%</div>
+                <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10, textTransform: "uppercase", letterSpacing: 0.4 }}>Overall Assessment Score</div>
+                <div className="mono" style={{ fontSize: 28, fontWeight: 700 }}>{result?.score ?? 0}%</div>
+                {/* This is an average across ALL assigned questions, including any never attempted (counted as
+                    0% so skipping can't inflate it) — so it can legitimately differ from an individual question's
+                    own score shown below. Both numbers are correct; this note is here so they don't read as
+                    contradictory. */}
+                {Array.isArray(result?.questionBreakdown) && result.questionBreakdown.some((q) => q.totalCases === 0) && (
+                  <p style={{ marginTop: 4, fontSize: 12, color: "var(--ink-dim)" }}>
+                    {result.questionBreakdown.filter((q) => q.totalCases === 0).length} of {result.questionBreakdown.length} question
+                    {result.questionBreakdown.length === 1 ? "" : "s"} not attempted (counted as 0% in the overall score above).
+                  </p>
+                )}
                 <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>
                   {passed
                     ? "The next module is now unlocked."
@@ -521,9 +532,12 @@ export default function ModuleCodingAssessment() {
                     <div style={{ display: "grid", gap: 8 }}>
                       {result.questionBreakdown.map((q, i) => (
                         <div key={q.questionId} className="card" style={{ padding: 12, fontSize: 13 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                             <span className="mono">{q.title || `Question ${i + 1}`}</span>
-                            <span className="mono" style={{ fontWeight: 700 }}>{q.score}%</span>
+                            <span title="This question's own score — may differ from the overall assessment score above.">
+                              <span className="mono" style={{ fontWeight: 700 }}>{q.score}%</span>
+                              <span style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 4 }}>question score</span>
+                            </span>
                           </div>
                           <div style={{ marginTop: 6, fontSize: 12, color: "var(--ink-dim)" }} className="mono">
                             {q.verdict} — {q.passedCases}/{q.totalCases} hidden test case{q.totalCases === 1 ? "" : "s"} passed
@@ -574,7 +588,7 @@ export default function ModuleCodingAssessment() {
               <InfoRow label="Passing score" value={`${t.passingPercent}%`} />
               <InfoRow label="Max violations" value={t.maxViolations} />
               <InfoRow label="Attempts" value={t.maxAttempts == null ? "Unlimited" : `${status.attemptsUsed}/${t.maxAttempts} used`} />
-              {status.bestScore != null && <InfoRow label="Best score so far" value={`${status.bestScore}%`} />}
+              {status.bestScore != null && <InfoRow label="Best score across your attempts" value={`${status.bestScore}%`} />}
             </div>
 
             <p style={{ fontSize: 13, marginTop: 16, color: "var(--ink-dim)" }}>

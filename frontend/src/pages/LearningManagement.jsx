@@ -1409,7 +1409,7 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)", display: "grid", gap: 6 }}>
                   {s.attempts.map((a) => (
                     <div key={a.id} className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                      Attempt #{a.attemptNumber} — {a.status} — {a.score}%{a.passed ? " (Passed)" : ""} — {a.violationCount} violation(s)
+                      Attempt #{a.attemptNumber} — {a.status} — Score: {a.score}%{a.passed ? " (Passed)" : ""} — {a.violationCount} violation(s)
                       {a.autoSubmitReason ? ` — auto-submitted: ${a.autoSubmitReason}` : ""}
                     </div>
                   ))}
