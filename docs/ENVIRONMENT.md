@@ -28,10 +28,21 @@
 
 ## Email
 
+Email delivery is real SMTP (via `nodemailer`) — deliberately not a third-party transactional
+email API. Point it at any real mailbox (Gmail/Google Workspace SMTP with an App Password is the
+supported default; any standard SMTP provider works the same way).
+
 | Variable | Purpose |
 |---|---|
-| `RESEND_API_KEY` | Email delivery provider is **Resend** (confirmed via this variable name — corrects any prior assumption of a different provider). |
-| `MAIL_FROM` | From-address for outbound email. |
+| `MAIL_HOST` | SMTP server hostname, e.g. `smtp.gmail.com`. |
+| `MAIL_PORT` | SMTP port — `587` (STARTTLS, recommended) or `465` (implicit TLS). |
+| `MAIL_USER` | SMTP username — for Gmail, the full mailbox address. |
+| `MAIL_PASSWORD` | SMTP password — for Gmail, a 16-character **App Password** (myaccount.google.com/apppasswords, requires 2FA enabled on the account), never the account's normal login password. |
+| `MAIL_FROM` | From-address for outbound email, e.g. `"CodeArena <youraddress@gmail.com>"`. Most providers (including Gmail) reject a From address that doesn't match the authenticated mailbox. |
+
+If `MAIL_HOST`/`MAIL_USER`/`MAIL_PASSWORD` are not all set, the mailer runs in a safe "not
+configured" mode — every send attempt is logged and recorded in `EmailLog` as `FAILED` with a
+clear reason, never silently reported as successful.
 
 ## Judge / Compiler
 

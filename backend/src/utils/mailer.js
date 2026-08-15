@@ -1,14 +1,29 @@
 /**
- * Minimal email sender using the Resend REST API (https://resend.com).
- * No SDK dependency — plain fetch, since Node 18+ (and our Docker image) has
- * it globally. This project has no traditional SMTP transport (no host/port/
- * username/password/TLS config) — Resend's HTTPS API is the only transport,
- * so "SMTP config" here means one thing: RESEND_API_KEY.
+ * Email sender over real SMTP (nodemailer) — deliberately not a third-party
+ * transactional email API (no Resend/SendGrid/Mailgun/etc.). Transport is
+ * whatever mailbox is configured via MAIL_HOST/MAIL_PORT/MAIL_USER/
+ * MAIL_PASSWORD (e.g. Gmail SMTP with an App Password); MAIL_FROM must match
+ * the authenticated account for most providers (Gmail rejects mismatched
+ * From addresses).
  */
+const nodemailer = require("nodemailer");
 
-const FROM = process.env.MAIL_FROM || "CodeArena <onboarding@resend.dev>";
+const FROM = process.env.MAIL_FROM || "CodeArena <no-reply@codearena.local>";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
 const LOGO_URL = `${FRONTEND_URL}/branding/logo.png`;
+
+// Built once at module load, reused across every send — nodemailer transports are meant to be
+// long-lived, not recreated per request. `secure: true` (implicit TLS) is only correct for port
+// 465; every other port (587 STARTTLS, 25, etc.) needs `secure: false` and nodemailer negotiates
+// STARTTLS on its own.
+const transporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD)
+  ? nodemailer.createTransport({
+      host: process.env.MAIL_HOST,
+      port: Number(process.env.MAIL_PORT) || 587,
+      secure: Number(process.env.MAIL_PORT) === 465,
+      auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD },
+    })
+  : null;
 
 // Wraps an email body with a consistent CodeArena-branded header/footer. The logo is referenced
 // by its deployed frontend URL (not embedded) since that's how email clients reliably load
@@ -32,8 +47,8 @@ function wrapBranded(bodyHtml) {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Returns { ok: boolean, error?: string, messageId?: string, simulated?: true }.
-// `ok: true` is only ever returned once Resend's API has actually accepted the message —
-// there is no path that reports success without a confirmed 2xx response from the provider.
+// `ok: true` is only ever returned once the SMTP server has actually accepted the message for
+// delivery — there is no path that reports success without a confirmed accept from the mailbox.
 async function sendMail({ to, subject, html }) {
   console.log(`[mailer] Sending "${subject}" to ${to}…`);
 
@@ -42,49 +57,29 @@ async function sendMail({ to, subject, html }) {
     return { ok: false, error: "Invalid recipient email address" };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.error(`[mailer] RESEND_API_KEY is not set — email NOT sent (logging content only):\n  to: ${to}\n  subject: ${subject}`);
-    return { ok: false, simulated: true, error: "Email service is not configured on the server (RESEND_API_KEY is missing) — no email was actually sent." };
+  if (!transporter) {
+    console.error(`[mailer] MAIL_HOST/MAIL_USER/MAIL_PASSWORD are not fully set — email NOT sent (logging content only):\n  to: ${to}\n  subject: ${subject}`);
+    return { ok: false, simulated: true, error: "Email service is not configured on the server (MAIL_HOST/MAIL_USER/MAIL_PASSWORD missing) — no email was actually sent." };
   }
 
-  console.log("[mailer] Connecting to Resend API...");
-  let res;
+  console.log("[mailer] Connecting to SMTP server...");
   try {
-    res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: FROM, to, subject, html }),
-    });
+    const info = await transporter.sendMail({ from: FROM, to, subject, html });
+    console.log(`[mailer] Email accepted by mail server. Message ID: ${info.messageId || "(none returned)"} — Status: SUCCESS`);
+    return { ok: true, messageId: info.messageId || null };
   } catch (err) {
-    console.error("[mailer] Network error contacting Resend:", err.message);
-    return { ok: false, error: `Network error while contacting the email provider: ${err.message}` };
+    console.error("[mailer] SMTP send error:", err.code || "", err.message);
+    if (err.code === "EAUTH") {
+      return { ok: false, error: `Email provider authentication failed: ${err.message}` };
+    }
+    if (err.responseCode === 421 || err.responseCode === 450 || err.responseCode === 452) {
+      return { ok: false, error: `Email provider rate limit or temporary failure: ${err.message}` };
+    }
+    if (err.code === "ECONNECTION" || err.code === "ETIMEDOUT" || err.code === "ESOCKET") {
+      return { ok: false, error: `Network error while contacting the mail server: ${err.message}` };
+    }
+    return { ok: false, error: err.message || "Unknown SMTP error" };
   }
-
-  if (!res.ok) {
-    let message = `Email provider returned HTTP ${res.status}`;
-    try {
-      const body = await res.json();
-      message = body?.message || message;
-    } catch {
-      // response wasn't JSON — keep the generic status-based message
-    }
-    console.error(`[mailer] Resend API error (${res.status}):`, message);
-    if (res.status === 401 || res.status === 403) {
-      return { ok: false, error: `Email provider authentication failed: ${message}` };
-    }
-    if (res.status === 429) {
-      return { ok: false, error: `Email provider rate limit exceeded: ${message}` };
-    }
-    return { ok: false, error: message };
-  }
-
-  const data = await res.json().catch(() => ({}));
-  console.log(`[mailer] Email accepted by provider. Message ID: ${data.id || "(none returned)"} — Status: SUCCESS`);
-  return { ok: true, messageId: data.id || null };
 }
 
 // Same as sendMail(), but writes an EmailLog row so admins can see real delivery status/history
