@@ -36,6 +36,7 @@ export default function LearningManagement() {
   const [chapter, setChapter] = useState(null); // selected chapter { id, moduleId, title, ... } for detail view
 
   const [courseDetail, setCourseDetail] = useState(null); // { course, modules: [{...lessons}] }
+  const [progressLookup, setProgressLookup] = useState(false); // "Student Progress" tool, replaces the course tree when open
 
   function loadCourses() {
     api.get("/learning/courses").then((res) => setCourses(res.data));
@@ -75,47 +76,169 @@ export default function LearningManagement() {
               platform's Audit Log (action: COURSE_MANAGEMENT_CHANGED) — this just makes that
               existing "who changed what, when" record discoverable from inside the CMS itself
               instead of only from the separate Audit Log page. */}
-          <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate(isAdmin ? "/admin/audit-log" : "/staff/audit-log")}>
-            View Change History →
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              className={progressLookup ? "btn btn-primary" : "btn btn-ghost"}
+              style={{ fontSize: 12 }}
+              onClick={() => { setProgressLookup((v) => !v); setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}
+            >
+              {progressLookup ? "← Back to Courses" : "Student Progress Lookup"}
+            </button>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate(isAdmin ? "/admin/audit-log" : "/staff/audit-log")}>
+              View Change History →
+            </button>
+          </div>
         </div>
         <ChalkUnderline />
         <p style={{ color: "var(--ink-dim)", marginTop: 12, fontSize: 14 }}>
-          {isAdmin
+          {progressLookup
+            ? "Look up exactly what a specific student's Course Overview page shows them — which modules are locked/unlocked/completed and why, straight from the same backend logic the student sees."
+            : isAdmin
             ? "Manage courses, modules, lessons, and practice questions for the Learning module."
             : "Browse courses, modules, lessons, and coding assessments. You can search and view everything here — editing is Admin-only, except resetting a student's coding assessment attempts."}
         </p>
 
-        <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 20 }}>
-          <span style={{ cursor: "pointer", textDecoration: courseId ? "underline" : "none" }} onClick={() => { setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>Courses</span>
-          {selectedCourse && <> / <span style={{ cursor: "pointer", textDecoration: (moduleId || codingTestModuleId || chaptersModuleId) ? "underline" : "none" }} onClick={() => { setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>{selectedCourse.name}</span></>}
-          {selectedModule && !codingTestModuleId && <> / <span style={{ cursor: "pointer", textDecoration: lessonId ? "underline" : "none" }} onClick={() => setLessonId(null)}>{selectedModule.title}</span></>}
-          {selectedLesson && <> / {selectedLesson.title}</>}
-          {codingTestModuleId && <> / {courseDetail?.modules.find((m) => m.id === codingTestModuleId)?.title} / Coding Assessment</>}
-          {chaptersModuleId && <> / <span style={{ cursor: "pointer", textDecoration: chapter ? "underline" : "none" }} onClick={() => setChapter(null)}>{courseDetail?.modules.find((m) => m.id === chaptersModuleId)?.title} / Chapters</span></>}
-          {chapter && <> / {chapter.title}</>}
-        </div>
+        {progressLookup ? (
+          <StudentProgressPanel courses={courses} />
+        ) : (
+          <>
+            <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 20 }}>
+              <span style={{ cursor: "pointer", textDecoration: courseId ? "underline" : "none" }} onClick={() => { setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>Courses</span>
+              {selectedCourse && <> / <span style={{ cursor: "pointer", textDecoration: (moduleId || codingTestModuleId || chaptersModuleId) ? "underline" : "none" }} onClick={() => { setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>{selectedCourse.name}</span></>}
+              {selectedModule && !codingTestModuleId && <> / <span style={{ cursor: "pointer", textDecoration: lessonId ? "underline" : "none" }} onClick={() => setLessonId(null)}>{selectedModule.title}</span></>}
+              {selectedLesson && <> / {selectedLesson.title}</>}
+              {codingTestModuleId && <> / {courseDetail?.modules.find((m) => m.id === codingTestModuleId)?.title} / Coding Assessment</>}
+              {chaptersModuleId && <> / <span style={{ cursor: "pointer", textDecoration: chapter ? "underline" : "none" }} onClick={() => setChapter(null)}>{courseDetail?.modules.find((m) => m.id === chaptersModuleId)?.title} / Chapters</span></>}
+              {chapter && <> / {chapter.title}</>}
+            </div>
 
-        {!courseId && <CoursePanel courses={courses} onSelect={setCourseId} onRefresh={loadCourses} />}
-        {courseId && !moduleId && !codingTestModuleId && !chaptersModuleId && courseDetail && (
-          <ModulePanel course={selectedCourse} modules={courseDetail.modules} onSelect={setModuleId} onManageCoding={setCodingTestModuleId} onManageChapters={setChaptersModuleId} onRefresh={refresh} />
-        )}
-        {moduleId && !lessonId && selectedModule && (
-          <LessonPanel mod={selectedModule} onSelect={setLessonId} onRefresh={refresh} />
-        )}
-        {lessonId && selectedLesson && (
-          <LessonDetailPanel lessonId={lessonId} lessonSummary={selectedLesson} onRefresh={refresh} />
-        )}
-        {codingTestModuleId && (
-          <CodingTestPanel moduleId={codingTestModuleId} />
-        )}
-        {chaptersModuleId && !chapter && (
-          <ChapterListPanel moduleId={chaptersModuleId} onSelect={setChapter} />
-        )}
-        {chapter && (
-          <ChapterDetailPanel chapter={chapter} onBack={() => setChapter(null)} />
+            {!courseId && <CoursePanel courses={courses} onSelect={setCourseId} onRefresh={loadCourses} />}
+            {courseId && !moduleId && !codingTestModuleId && !chaptersModuleId && courseDetail && (
+              <ModulePanel course={selectedCourse} modules={courseDetail.modules} onSelect={setModuleId} onManageCoding={setCodingTestModuleId} onManageChapters={setChaptersModuleId} onRefresh={refresh} />
+            )}
+            {moduleId && !lessonId && selectedModule && (
+              <LessonPanel mod={selectedModule} onSelect={setLessonId} onRefresh={refresh} />
+            )}
+            {lessonId && selectedLesson && (
+              <LessonDetailPanel lessonId={lessonId} lessonSummary={selectedLesson} onRefresh={refresh} />
+            )}
+            {codingTestModuleId && (
+              <CodingTestPanel moduleId={codingTestModuleId} />
+            )}
+            {chaptersModuleId && !chapter && (
+              <ChapterListPanel moduleId={chaptersModuleId} onSelect={setChapter} />
+            )}
+            {chapter && (
+              <ChapterDetailPanel chapter={chapter} onBack={() => setChapter(null)} />
+            )}
+          </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Admin/Staff diagnostic tool for "student X can't unlock Module Y" reports — calls
+// GET /learning/admin/student-progress, which reuses getModuleLockMap directly (the exact same
+// function that decides what a student's own Course Overview page shows), so this can never
+// contradict what the student actually sees. Read-only.
+function StudentProgressPanel({ courses }) {
+  const [registrationNumber, setRegistrationNumber] = useState("");
+  const [courseSlug, setCourseSlug] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  async function lookup(e) {
+    e.preventDefault();
+    if (!registrationNumber.trim()) return;
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const { data } = await api.get("/learning/admin/student-progress", {
+        params: { registrationNumber: registrationNumber.trim(), courseSlug: courseSlug || undefined },
+      });
+      setResult(data);
+      if (data.courses.length === 0) {
+        setError(courseSlug ? "That student has no progress recorded in this course." : "That student has no progress recorded in any course.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Lookup failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <form onSubmit={lookup} className="card" style={{ padding: 20, display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 220px" }}>
+          <label style={{ ...labelStyle, marginTop: 0 }}>Student Registration Number (PRN)</label>
+          <input style={inputStyle} value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} placeholder="e.g. 2125PMIF1020" />
+        </div>
+        <div style={{ flex: "1 1 180px" }}>
+          <label style={{ ...labelStyle, marginTop: 0 }}>Course (optional — narrows the search)</label>
+          <select style={inputStyle} value={courseSlug} onChange={(e) => setCourseSlug(e.target.value)}>
+            <option value="">Any course with progress</option>
+            {courses.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
+          </select>
+        </div>
+        <button className="btn btn-primary" disabled={!registrationNumber.trim() || loading}>{loading ? "Looking up…" : "Look Up"}</button>
+      </form>
+
+      {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
+
+      {result?.student && (
+        <div style={{ marginTop: 16 }}>
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ fontWeight: 700 }}>{result.student.name}</div>
+            <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+              {result.student.registrationNumber} · {result.student.email} · {result.student.institute?.name || "No institute"}
+            </div>
+          </div>
+
+          {result.courses.map((c) => (
+            <div key={c.courseId} className="card" style={{ padding: 16, marginTop: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{c.courseName}</div>
+              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                {c.modules.map((m) => (
+                  <div key={m.moduleId} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, opacity: m.locked ? 0.65 : 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Module {m.order + 1}: {m.title}</span>
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: 11,
+                          background: m.locked ? "#F0EEE3" : m.completed ? "#E7F3EB" : "#FCEFD9",
+                          color: m.locked ? "var(--ink-dim)" : m.completed ? "var(--mint)" : "var(--amber-dark)",
+                        }}
+                      >
+                        {m.locked ? "🔒 Locked" : m.completed ? "✓ Completed" : "🔓 Available / In Progress"}
+                      </span>
+                    </div>
+                    {m.codingAssessment?.required && (
+                      <div className="mono" style={{ fontSize: 11, color: m.codingAssessment.passed ? "var(--mint)" : "var(--ink-dim)", marginTop: 6 }}>
+                        Coding Assessment: {m.codingAssessment.passed ? "Passed" : "Not passed yet (optional — does not block unlock)"}
+                      </div>
+                    )}
+                    {!m.locked && (
+                      <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
+                        {m.lessons.map((l) => (
+                          <div key={l.id} className="mono" style={{ fontSize: 11, display: "flex", justifyContent: "space-between", color: "var(--ink-dim)" }}>
+                            <span>{l.isModuleTest ? "📋 " : ""}{l.title}</span>
+                            <span style={{ color: l.status === "COMPLETED" ? "var(--mint)" : l.status === "IN_PROGRESS" ? "var(--amber-dark)" : "var(--ink-dim)" }}>{l.status.replace("_", " ")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

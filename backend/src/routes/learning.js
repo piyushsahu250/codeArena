@@ -860,6 +860,84 @@ router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "STAFF
   });
 });
 
+// ADMIN/STAFF diagnostic: exactly reproduces what a specific student sees on their own Course
+// Overview page (reuses getModuleLockMap directly, the same single source of truth the student-
+// facing routes use — spec: admin/staff progress views must never independently re-derive
+// completion with different logic) plus the raw per-lesson LessonProgress rows behind it, so a
+// support request like "student X can't unlock Module 2" can be diagnosed without DB access.
+router.get("/admin/student-progress", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const registrationNumber = String(req.query.registrationNumber || "").trim();
+    if (!registrationNumber) return res.status(400).json({ error: "registrationNumber is required" });
+
+    const student = await prisma.user.findFirst({
+      where: {
+        registrationNumber, role: "STUDENT",
+        ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
+      },
+      select: { id: true, name: true, registrationNumber: true, email: true, institute: { select: { name: true } } },
+    });
+    if (!student) return res.status(404).json({ error: "No student found with that registration number in your institute" });
+
+    const courseSlug = req.query.courseSlug ? String(req.query.courseSlug).trim() : null;
+    const courses = await prisma.course.findMany({
+      where: courseSlug ? { slug: courseSlug } : {},
+      select: { id: true, slug: true, name: true },
+      orderBy: { name: "asc" },
+    });
+
+    const courseResults = [];
+    for (const course of courses) {
+      const modules = await prisma.courseModule.findMany({
+        where: { courseId: course.id },
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, order: true, lessons: { orderBy: { order: "asc" }, select: { id: true, title: true, isModuleTest: true } } },
+      });
+      if (modules.length === 0) continue;
+
+      const lockMap = await getModuleLockMap(prisma, student.id, course.id);
+      const lessonIds = modules.flatMap((m) => m.lessons.map((l) => l.id));
+      const progress = lessonIds.length
+        ? await prisma.lessonProgress.findMany({ where: { studentId: student.id, lessonId: { in: lessonIds } }, select: { lessonId: true, status: true, completedAt: true } })
+        : [];
+      const progressByLesson = new Map(progress.map((p) => [p.lessonId, p]));
+
+      const hasAnyProgress = progress.some((p) => p.status !== "NOT_STARTED");
+      if (!courseSlug && !hasAnyProgress) continue; // skip courses the student never touched, unless explicitly requested
+
+      courseResults.push({
+        courseId: course.id,
+        courseSlug: course.slug,
+        courseName: course.name,
+        modules: modules.map((m) => {
+          const lock = lockMap.get(m.id);
+          return {
+            moduleId: m.id,
+            title: m.title,
+            order: m.order,
+            locked: lock.locked,
+            completed: lock.completed,
+            lessonsComplete: lock.lessonsComplete,
+            codingAssessment: lock.codingTest, // { required, passed } — no longer blocks unlock, kept for visibility
+            lessons: m.lessons.map((l) => ({
+              id: l.id,
+              title: l.title,
+              isModuleTest: l.isModuleTest,
+              status: progressByLesson.get(l.id)?.status || "NOT_STARTED",
+              completedAt: progressByLesson.get(l.id)?.completedAt || null,
+            })),
+          };
+        }),
+      });
+    }
+
+    res.json({ student, courses: courseResults });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load student progress" });
+  }
+});
+
 router.post("/courses/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteIds = [], academicGroupIds = [] } = req.body;
