@@ -14,7 +14,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
-const { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
+const { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, isValidRollNumber, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -319,6 +319,13 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
     if (normalizedRollNumber && normalizedRollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
       return res.status(400).json({ error: "Roll Number cannot exceed 3 characters" });
     }
+    // A manually-typed Roll Number must be exactly 3 numeric digits — auto-generated values
+    // (below, via resolveRollNumberAvoidingCollisions) already satisfy this by construction, so
+    // this only ever rejects a human-entered value, with a clear error rather than silently
+    // accepting a garbled one.
+    if (normalizedRollNumber && !isValidRollNumber(normalizedRollNumber)) {
+      return res.status(400).json({ error: "Roll Number must be exactly 3 digits" });
+    }
     if (role === "STUDENT" && normalizedRegNumber) {
       const dupReg = await prisma.user.findFirst({ where: { registrationNumber: normalizedRegNumber } });
       if (dupReg) return res.status(409).json({ error: `Registration Number "${normalizedRegNumber}" is already registered to another account` });
@@ -456,6 +463,12 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
       data.rollNumber = String(data.rollNumber || "").trim() || null;
       if (data.rollNumber && data.rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
         return res.status(400).json({ error: "Roll Number cannot exceed 3 characters" });
+      }
+      // Same rule as POST /users: a manually-typed Roll Number must be exactly 3 numeric
+      // digits. Values re-derived below via resolveRollNumberAvoidingCollisions already
+      // satisfy this by construction, so this only rejects a human-entered value.
+      if (data.rollNumber && !isValidRollNumber(data.rollNumber)) {
+        return res.status(400).json({ error: "Roll Number must be exactly 3 digits" });
       }
     }
     // Registration Number (PRN) IS the platform's sole permanent, system-wide unique identifier

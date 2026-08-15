@@ -8,6 +8,21 @@
 const REGISTRATION_NUMBER_RE = /^[A-Za-z0-9]{9,12}$/;
 // Roll Number: capped at 3 characters platform-wide.
 const ROLL_NUMBER_MAX_LENGTH = 3;
+// A *valid* (as opposed to merely "not-too-long") Roll Number is exactly 3 numeric digits —
+// this was previously only enforced by convention (every generator produces this shape), not
+// actually validated at any write path, which let non-numeric/garbled values slip in edited
+// through routes that only checked length. A value can never literally satisfy this regex AND
+// contain "DUP" as a substring, but isValidRollNumber() checks for it explicitly anyway (belt
+// and suspenders, and it's what was asked for): if a future change ever loosens the character
+// set, the DUP check still catches the one specific corruption signature this platform has
+// actually seen in production.
+const ROLL_NUMBER_RE = /^\d{3}$/;
+function isValidRollNumber(value) {
+  const s = String(value ?? "").trim();
+  if (!ROLL_NUMBER_RE.test(s)) return false;
+  if (s.toUpperCase().includes("DUP")) return false;
+  return true;
+}
 
 // Auto-init a blank Roll Number from the last 3 characters of a Registration Number (PRN), e.g.
 // "2028COMP00123" -> "123". Verbatim last-3-characters (matching the spec's own example), not a
@@ -70,4 +85,12 @@ function compareRollNumbers(a, b) {
   return String(a?.name || "").localeCompare(String(b?.name || ""));
 }
 
-module.exports = { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH };
+module.exports = {
+  initRollNumberFromRegistration,
+  resolveRollNumberAvoidingCollisions,
+  compareRollNumbers,
+  isValidRollNumber,
+  REGISTRATION_NUMBER_RE,
+  ROLL_NUMBER_RE,
+  ROLL_NUMBER_MAX_LENGTH,
+};

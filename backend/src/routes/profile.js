@@ -4,7 +4,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion, MOBILE_RE, EMAIL_RE, PINCODE_RE } = require("../utils/studentProfileCompletion");
-const { ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
+const { ROLL_NUMBER_MAX_LENGTH, isValidRollNumber } = require("../utils/studentIdentifiers");
 const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
 const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption");
 
@@ -76,13 +76,30 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     if (userData.mobile && !MOBILE_RE.test(userData.mobile)) {
       return res.status(400).json({ error: "Enter a valid mobile number" });
     }
-    // Roll Number is the classroom number, intentionally not unique (duplicates across
-    // departments/institutes are expected) — no uniqueness check here, just trim/blank->null
-    // normalization, same discipline used for this field everywhere else in the platform.
+    // Roll Number is the classroom number, intentionally not unique platform-wide (duplicates
+    // across different Academic Groups are expected by design) — but a collision within the
+    // SAME group (Institute+Batch+Department+Section) IS a real conflict, so it's checked here
+    // the same way users.js's admin-facing routes already do. Previously this route only
+    // trimmed/length-checked the value with no format or uniqueness check at all, which let a
+    // student self-edit into a non-numeric value or a same-group clash that admin-side routes
+    // would have rejected.
     if ("rollNumber" in userData) {
       userData.rollNumber = String(userData.rollNumber || "").trim() || null;
       if (userData.rollNumber && userData.rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
         return res.status(400).json({ error: "Roll Number cannot exceed 3 characters" });
+      }
+      if (userData.rollNumber && !isValidRollNumber(userData.rollNumber)) {
+        return res.status(400).json({ error: "Roll Number must be exactly 3 digits" });
+      }
+      if (userData.rollNumber) {
+        const self = await prisma.user.findUnique({ where: { id: req.user.id }, select: { academicGroupId: true } });
+        if (self?.academicGroupId) {
+          const clash = await prisma.user.findFirst({
+            where: { academicGroupId: self.academicGroupId, role: "STUDENT", rollNumber: userData.rollNumber, id: { not: req.user.id } },
+            select: { name: true },
+          });
+          if (clash) return res.status(409).json({ error: `Roll Number "${userData.rollNumber}" is already used by ${clash.name} in your Batch/Department/Section — choose a different Roll Number.` });
+        }
       }
     }
     // First/Last Name is a UI-only split — joined back into the single User.name field this
