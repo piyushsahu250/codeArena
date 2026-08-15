@@ -2,14 +2,12 @@
 // "module unlocked" notification) — kept in one place so the two never drift out of sync.
 
 // Sequential module locking: module N is locked unless every lesson in module N-1 is COMPLETED
-// AND every one of module N-1's active coding gates is PASSED. A "gate" is either the legacy
-// Module-direct codingTest, or (new) any active Coding Assessment Level belonging to one of the
-// module's Chapters — a module with several Chapters each with several Levels requires ALL of
-// them passed, not just one. A module with no gates at all is ungated by this condition entirely
-// — it behaves exactly as it always has, so existing modules that predate this feature keep
-// working unchanged. Learning Topics (a Chapter's "Learn" content) are never part of this gate,
-// only Levels. Once one module is locked, everything after it stays locked, regardless of that
-// module's own state.
+// (including that module's isModuleTest lesson, the final practice test). A module's proctored
+// Coding Assessment (the legacy Module-direct codingTest, or a Chapter's Level) is tracked and
+// returned here too, but deliberately does NOT gate the next module's unlock — it's an
+// independent, optional achievement that only gates the CODING_ASSESSMENT certificate (see
+// gatingLevels.js/gradeModuleCodingAttempt.js, which don't call this function at all). Once one
+// module is locked, everything after it stays locked, regardless of that module's own state.
 async function getModuleLockMap(prisma, studentId, courseId) {
   const modules = await prisma.courseModule.findMany({
     where: { courseId },
@@ -53,7 +51,10 @@ async function getModuleLockMap(prisma, studentId, courseId) {
     const testIds = gatingTestIds(m);
     const codingRequired = testIds.length > 0;
     const codingPassed = codingRequired ? testIds.every((id) => passedTestIds.has(id)) : true;
-    const moduleSatisfied = !locked && lessonsComplete && codingPassed;
+    // Coding Assessment status is reported below (for the UI badge / certificate eligibility) but
+    // intentionally excluded from moduleSatisfied — passing it is not required to unlock the next
+    // module, only lesson content (including the final practice test) is.
+    const moduleSatisfied = !locked && lessonsComplete;
     map.set(m.id, {
       locked,
       completed: moduleSatisfied,

@@ -85,7 +85,7 @@ export default function CourseOverview() {
 
                 {locked ? (
                   <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 10 }}>
-                    Complete the previous module's practice test{modules[mi - 1]?.codingTest?.required ? " and coding assessment" : ""} to unlock this module.
+                    Complete the previous module's practice test to unlock this module.
                   </p>
                 ) : (
                   <>
@@ -119,7 +119,7 @@ export default function CourseOverview() {
                         }}
                       >
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          {m.codingTest.passed ? <><CheckCircle2 size={14} /> Coding Assessment Passed</> : m.lessonsComplete ? <><Clock size={14} /> Coding Assessment Pending</> : <><Lock size={14} /> Coding Assessment (complete lessons first)</>}
+                          {m.codingTest.passed ? <><CheckCircle2 size={14} /> Coding Assessment Passed</> : m.lessonsComplete ? <><Clock size={14} /> Coding Assessment available — optional, required for your certificate</> : <><Lock size={14} /> Coding Assessment (complete lessons first)</>}
                         </span>
                         {m.lessonsComplete && (
                           <Link to={`/learning/${slug}/module/${m.id}/coding-assessment`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>
