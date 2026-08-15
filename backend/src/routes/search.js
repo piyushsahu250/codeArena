@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { testEligibilityWhere } = require("../utils/testEligibility");
 const { staffTestAccessWhere } = require("../utils/testOwnership");
+const { courseEligibilityWhere, isEligibilityUnresolvable } = require("../utils/courseEligibility");
 
 const router = express.Router();
 
@@ -24,17 +25,31 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     const results = [];
 
     if (req.user.role === "STUDENT") {
-      const courses = await prisma.course.findMany({ where: { name: insensitive(q), isActive: true }, take: LIMIT });
+      const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { academicGroupId: true, classId: true, instituteId: true } });
+
+      // Same PUBLISHED + institute/academic-group assignment gate learning.js's GET /courses
+      // already enforces — previously this search had no eligibility filter at all (just
+      // isActive), so a student could see a non-eligible course's name+link in results even
+      // though opening it via /learning/:slug correctly 404s. Information-disclosure gap, not
+      // an access gap, but worth closing while the underlying course data is the same either way.
+      const eligible = !isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId);
+      const courseWhere = eligible
+        ? { name: insensitive(q), status: "PUBLISHED", ...courseEligibilityWhere(student.instituteId, student.academicGroupId) }
+        : null;
+      const courses = courseWhere ? await prisma.course.findMany({ where: courseWhere, take: LIMIT }) : [];
       results.push(...courses.map((c) => ({ type: "Learning Module", label: c.name, url: `/learning/${c.slug}` })));
 
-      const lessons = await prisma.lesson.findMany({
-        where: { title: insensitive(q) },
-        include: { module: { include: { course: true } } },
-        take: LIMIT,
-      });
+      // Lessons inherit the same gate via their parent course — a lesson whose course fails
+      // eligibility must not surface here either, for the same reason.
+      const lessons = eligible
+        ? await prisma.lesson.findMany({
+            where: { title: insensitive(q), module: { course: { status: "PUBLISHED", ...courseEligibilityWhere(student.instituteId, student.academicGroupId) } } },
+            include: { module: { include: { course: true } } },
+            take: LIMIT,
+          })
+        : [];
       results.push(...lessons.map((l) => ({ type: "Lesson", label: `${l.title} (${l.module.course.name})`, url: `/learning/${l.module.course.slug}/lesson/${l.id}` })));
 
-      const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { academicGroupId: true, classId: true, instituteId: true } });
       const tests = await prisma.test.findMany({
         where: { title: insensitive(q), ...testEligibilityWhere(student?.academicGroupId, student?.classId, [], student?.instituteId) },
         take: LIMIT,
