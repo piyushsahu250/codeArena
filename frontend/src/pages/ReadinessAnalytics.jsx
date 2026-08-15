@@ -312,7 +312,7 @@ export default function ReadinessAnalytics() {
                     <thead>
                       <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
                         <th style={{ padding: 8 }}>Name</th>
-                        <th style={{ padding: 8 }}>Reg. No.</th>
+                        <th style={{ padding: 8 }}>Reg. No. (PRN)</th>
                         <th style={{ padding: 8 }}>Subject</th>
                         <th style={{ padding: 8 }}>Score</th>
                         <th style={{ padding: 8 }}>Level</th>
@@ -347,7 +347,7 @@ export default function ReadinessAnalytics() {
                     <thead>
                       <tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
                         <th style={{ padding: 8 }}>Name</th>
-                        <th style={{ padding: 8 }}>Reg. No.</th>
+                        <th style={{ padding: 8 }}>Reg. No. (PRN)</th>
                         <th style={{ padding: 8 }}>Subject</th>
                         <th style={{ padding: 8 }}>Score</th>
                         <th style={{ padding: 8 }}>Level</th>

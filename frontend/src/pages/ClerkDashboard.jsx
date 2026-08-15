@@ -225,7 +225,7 @@ export default function ClerkDashboard() {
                   <thead>
                     <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
                       <th style={{ padding: "10px 12px" }}>Name</th>
-                      <th style={{ padding: "10px 12px" }}>Reg. No.</th>
+                      <th style={{ padding: "10px 12px" }}>Reg. No. (PRN)</th>
                       <th style={{ padding: "10px 12px" }}>Subject</th>
                       <th style={{ padding: "10px 12px" }}>Readiness</th>
                     </tr>
@@ -251,7 +251,7 @@ export default function ClerkDashboard() {
                   <thead>
                     <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
                       <th style={{ padding: "10px 12px" }}>Name</th>
-                      <th style={{ padding: "10px 12px" }}>Reg. No.</th>
+                      <th style={{ padding: "10px 12px" }}>Reg. No. (PRN)</th>
                       <th style={{ padding: "10px 12px" }}>Subject</th>
                       <th style={{ padding: "10px 12px" }}>Readiness</th>
                     </tr>
