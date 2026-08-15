@@ -7,6 +7,8 @@ const { runQueued } = require("../utils/queue");
 const { processGamification } = require("../utils/gamification");
 const { resolveMostSpecificChallenge, loadStudentScope } = require("../utils/challengeScoping");
 const { safeErrorMessage } = require("../utils/errors");
+const { cached } = require("../utils/cache");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -80,6 +82,78 @@ async function gradeAgainstHidden(question, language, code) {
       memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
     })
   );
+}
+
+// ============================ Admin tooling shared helpers ============================
+
+// Search/filter shape shared by GET /admin/daily and GET /admin/weekly — filters live on the
+// scheduled row's underlying Question (title/description/subject/topic/difficulty/status), since
+// that's where all of a challenge's actual content already lives (see file header comment).
+function buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status }) {
+  const question = {};
+  if (q) {
+    question.OR = [
+      { title: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } },
+    ];
+  }
+  if (subjectId) question.subjectId = subjectId;
+  if (topicId) question.topicId = topicId;
+  if (difficulty) question.difficulty = difficulty;
+  if (status) question.questionStatus = status;
+  return Object.keys(question).length > 0 ? { question } : {};
+}
+
+// Hard-blocks scheduling a question with no way to grade it at all; everything else is a
+// non-blocking heads-up shown in the admin UI, not enforced server-side, since none of these
+// gaps make the challenge unusable — only lower quality (spec section: "quality-check
+// validation before publish").
+function validateChallengeReadiness(question) {
+  const errors = [];
+  const warnings = [];
+  const testCases = question.testCases || [];
+  if (testCases.length === 0) errors.push("This question has zero test cases — it cannot be graded.");
+  if (!testCases.some((tc) => tc.isHidden)) warnings.push("No hidden test cases — students could pass by hard-coding the visible cases.");
+  if (question.evaluationType === "FUNCTION" && !question.functionSignature) {
+    warnings.push("FUNCTION mode is set but no function signature is configured.");
+  }
+  if (!question.starterCode && !question.starterCodeByLanguage) {
+    warnings.push("No starter code configured for any language.");
+  }
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+// Clones the underlying Question (including test cases) into a new, independent row — same
+// field-stripping technique as questions.js's /bulk-copy (id/questionNumber/createdAt/testCases
+// stripped, testCases recreated fresh) but self-contained here since bulk-copy also requires a
+// destination folder + institute-ownership check that don't apply to these platform-wide,
+// institute-less Daily/Weekly Challenge questions. Does NOT copy folder/institute — the copy
+// lands wherever the original did, just as a new row, matching the file's existing "no institute
+// scoping on these models" convention.
+async function duplicateQuestionRow(question, actorId) {
+  const { id, questionNumber, createdAt, testCases, ...rest } = question;
+  return prisma.question.create({
+    data: {
+      ...rest,
+      createdById: actorId,
+      title: rest.title ? `${rest.title} (Copy)` : rest.title,
+      testCases: { create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation })) },
+    },
+  });
+}
+
+async function computeChallengeAnalytics(submissionModel, foreignKey, challengeId) {
+  const submissions = await submissionModel.findMany({ where: { [foreignKey]: challengeId } });
+  const attempts = submissions.length;
+  const uniqueStudents = new Set(submissions.map((s) => s.studentId)).size;
+  const solved = submissions.filter((s) => s.verdict === "ACCEPTED");
+  const passRate = attempts > 0 ? Math.round((solved.length / attempts) * 100) : 0;
+  const avgScore = attempts > 0
+    ? Math.round(submissions.reduce((sum, s) => sum + (s.totalCases > 0 ? (s.passedCases / s.totalCases) * 100 : 0), 0) / attempts)
+    : 0;
+  const timedSubs = submissions.filter((s) => s.timeMs != null);
+  const avgTimeMs = timedSubs.length > 0 ? Math.round(timedSubs.reduce((sum, s) => sum + s.timeMs, 0) / timedSubs.length) : null;
+  return { attempts, uniqueStudents, passRate, avgScore, avgTimeMs };
 }
 
 // STUDENT: streak + challenge-XP summary — surfaces data already tracked by the shared
@@ -304,17 +378,26 @@ router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), runLimit
 
 router.get("/admin/daily", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
-    const rows = await prisma.dailyChallenge.findMany({
-      orderBy: { date: "desc" },
-      include: {
-        question: { select: { id: true, title: true, description: true, difficulty: true } },
-        institute: { select: { id: true, name: true } },
-        academicGroup: { select: { id: true, batch: true, section: true, department: { select: { name: true } } } },
-        _count: { select: { submissions: true } },
-      },
-      take: 90,
-    });
-    res.json(rows);
+    const { q, subjectId, topicId, difficulty, status } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+    const where = buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status });
+    const [rows, total] = await Promise.all([
+      prisma.dailyChallenge.findMany({
+        where,
+        orderBy: { date: "desc" },
+        include: {
+          question: { select: { id: true, title: true, description: true, difficulty: true, questionStatus: true, subjectRef: { select: { id: true, name: true } }, topicRef: { select: { id: true, name: true } } } },
+          institute: { select: { id: true, name: true } },
+          academicGroup: { select: { id: true, batch: true, section: true, department: { select: { name: true } } } },
+          _count: { select: { submissions: true } },
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.dailyChallenge.count({ where }),
+    ]);
+    res.json({ rows, page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load daily challenge schedule" });
@@ -341,6 +424,7 @@ router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN"), asyn
     const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true } });
     if (!existing) return res.status(404).json({ error: "Scheduled challenge not found" });
     const dc = await prisma.dailyChallenge.update({ where: { id: req.params.id }, data: { isActive: !existing.isActive } });
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", id: dc.id, isActive: dc.isActive } });
     res.json(dc);
   } catch (err) {
     console.error(err);
@@ -353,9 +437,11 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN"), async (req, res)
     const { date, questionId, instituteId, academicGroupId } = req.body;
     if (!date || !questionId) return res.status(400).json({ error: "date and questionId are required" });
     if (academicGroupId && !instituteId) return res.status(400).json({ error: "academicGroupId requires instituteId" });
-    const question = await prisma.question.findUnique({ where: { id: questionId }, select: { id: true, questionType: true } });
+    const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING") return res.status(400).json({ error: "Only coding questions can be scheduled as a challenge" });
+    const readiness = validateChallengeReadiness(question);
+    if (!readiness.valid) return res.status(400).json({ error: readiness.errors[0] });
 
     // Not a plain upsert: Prisma rejects null values inside a compound-unique where selector
     // (date_instituteId_academicGroupId) even though instituteId/academicGroupId are nullable
@@ -366,15 +452,26 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN"), async (req, res)
     const dc = existing
       ? await prisma.dailyChallenge.update({ where: { id: existing.id }, data: { questionId } })
       : await prisma.dailyChallenge.create({ data: { ...scopeKey, questionId } });
-    res.json(dc);
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_SCHEDULED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", id: dc.id, date: dc.date, questionId } });
+    res.json({ ...dc, warnings: readiness.warnings });
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: safeErrorMessage(err, "Failed to schedule daily challenge") });
   }
 });
 
+// Archive-safe: a scheduled slot with real student submissions is preserved as inactive
+// (same "block destructive delete when dependent data exists" pattern already shipped for
+// Chapter/Module/Lesson) — an admin who genuinely wants it gone can still deactivate it via
+// the toggle route above; only an empty slot can be hard-deleted.
 router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const submissionCount = await prisma.dailyChallengeSubmission.count({ where: { dailyChallengeId: req.params.id } });
+    if (submissionCount > 0) {
+      await prisma.dailyChallenge.update({ where: { id: req.params.id }, data: { isActive: false } });
+      await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_ARCHIVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", id: req.params.id, submissionCount } });
+      return res.status(409).json({ error: `This challenge has ${submissionCount} student submission(s) and was deactivated instead of deleted.`, archived: true });
+    }
     await prisma.dailyChallenge.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
@@ -383,19 +480,71 @@ router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req
   }
 });
 
+// Reuses the file's own sanitizeQuestion — admin preview is guaranteed identical to what a
+// student sees (hidden cases still stripped) because it's the same function, not a re-implementation.
+router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
+    if (!dc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    res.json({ question: sanitizeQuestion(dc.question) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load challenge preview" });
+  }
+});
+
+// Short TTL cache — this is a per-row admin panel view, not a page-load-critical stat, so a small
+// amount of staleness after a fresh submission is an acceptable tradeoff against re-aggregating
+// every submission on every open of the panel.
+router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const exists = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!exists) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const analytics = await cached(`challenge:analytics:daily:${req.params.id}`, 2 * 60 * 1000, () =>
+      computeChallengeAnalytics(prisma.dailyChallengeSubmission, "dailyChallengeId", req.params.id)
+    );
+    res.json(analytics);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load challenge analytics" });
+  }
+});
+
+router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
+    if (!dc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const copy = await duplicateQuestionRow(dc.question, req.user.id);
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_DUPLICATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", sourceId: dc.id, newQuestionId: copy.id } });
+    res.json({ question: copy });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to duplicate challenge question" });
+  }
+});
+
 router.get("/admin/weekly", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
   try {
-    const rows = await prisma.weeklyChallenge.findMany({
-      orderBy: { weekStart: "desc" },
-      include: {
-        question: { select: { id: true, title: true, description: true, difficulty: true } },
-        institute: { select: { id: true, name: true } },
-        academicGroup: { select: { id: true, batch: true, section: true, department: { select: { name: true } } } },
-        _count: { select: { submissions: true } },
-      },
-      take: 90,
-    });
-    res.json(rows);
+    const { q, subjectId, topicId, difficulty, status } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+    const where = buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status });
+    const [rows, total] = await Promise.all([
+      prisma.weeklyChallenge.findMany({
+        where,
+        orderBy: { weekStart: "desc" },
+        include: {
+          question: { select: { id: true, title: true, description: true, difficulty: true, questionStatus: true, subjectRef: { select: { id: true, name: true } }, topicRef: { select: { id: true, name: true } } } },
+          institute: { select: { id: true, name: true } },
+          academicGroup: { select: { id: true, batch: true, section: true, department: { select: { name: true } } } },
+          _count: { select: { submissions: true } },
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.weeklyChallenge.count({ where }),
+    ]);
+    res.json({ rows, page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load weekly challenge schedule" });
@@ -422,6 +571,7 @@ router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN"), asy
     const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true } });
     if (!existing) return res.status(404).json({ error: "Scheduled challenge not found" });
     const wc = await prisma.weeklyChallenge.update({ where: { id: req.params.id }, data: { isActive: !existing.isActive } });
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", id: wc.id, isActive: wc.isActive } });
     res.json(wc);
   } catch (err) {
     console.error(err);
@@ -434,9 +584,11 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res
     const { weekStart, questionId, instituteId, academicGroupId } = req.body;
     if (!weekStart || !questionId) return res.status(400).json({ error: "weekStart and questionId are required" });
     if (academicGroupId && !instituteId) return res.status(400).json({ error: "academicGroupId requires instituteId" });
-    const question = await prisma.question.findUnique({ where: { id: questionId }, select: { id: true, questionType: true } });
+    const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING") return res.status(400).json({ error: "Only coding questions can be scheduled as a challenge" });
+    const readiness = validateChallengeReadiness(question);
+    if (!readiness.valid) return res.status(400).json({ error: readiness.errors[0] });
 
     // Same null-in-compound-unique-where limitation as POST /admin/daily above — findFirst +
     // explicit create/update instead of upsert.
@@ -445,7 +597,8 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res
     const wc = existing
       ? await prisma.weeklyChallenge.update({ where: { id: existing.id }, data: { questionId } })
       : await prisma.weeklyChallenge.create({ data: { ...scopeKey, questionId } });
-    res.json(wc);
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_SCHEDULED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", id: wc.id, weekStart: wc.weekStart, questionId } });
+    res.json({ ...wc, warnings: readiness.warnings });
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: safeErrorMessage(err, "Failed to schedule weekly challenge") });
@@ -454,11 +607,55 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res
 
 router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const submissionCount = await prisma.weeklyChallengeSubmission.count({ where: { weeklyChallengeId: req.params.id } });
+    if (submissionCount > 0) {
+      await prisma.weeklyChallenge.update({ where: { id: req.params.id }, data: { isActive: false } });
+      await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_ARCHIVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", id: req.params.id, submissionCount } });
+      return res.status(409).json({ error: `This challenge has ${submissionCount} student submission(s) and was deactivated instead of deleted.`, archived: true });
+    }
     await prisma.weeklyChallenge.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to remove scheduled challenge" });
+  }
+});
+
+router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
+    if (!wc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    res.json({ question: sanitizeQuestion(wc.question) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load challenge preview" });
+  }
+});
+
+router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const exists = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!exists) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const analytics = await cached(`challenge:analytics:weekly:${req.params.id}`, 2 * 60 * 1000, () =>
+      computeChallengeAnalytics(prisma.weeklyChallengeSubmission, "weeklyChallengeId", req.params.id)
+    );
+    res.json(analytics);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load challenge analytics" });
+  }
+});
+
+router.post("/admin/weekly/:id/duplicate", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
+    if (!wc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const copy = await duplicateQuestionRow(wc.question, req.user.id);
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_DUPLICATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", sourceId: wc.id, newQuestionId: copy.id } });
+    res.json({ question: copy });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to duplicate challenge question" });
   }
 });
 

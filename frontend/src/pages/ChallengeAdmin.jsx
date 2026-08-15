@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Eye, Copy, BarChart3, X } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -128,8 +129,13 @@ function ScheduleForm({ kind, onScheduled }) {
         ...(kind === "daily" ? { date: when } : { weekStart: when }),
         questionId: question.id, instituteId: scope.instituteId, academicGroupId: scope.academicGroupId,
       };
-      await api.post(`/challenges/admin/${kind}`, body);
+      const res = await api.post(`/challenges/admin/${kind}`, body);
       toast.success(`${kind === "daily" ? "Daily" : "Weekly"} challenge scheduled.`);
+      // Non-blocking quality-check warnings (e.g. no hidden test cases, no starter code) — the
+      // schedule still went through, this is just a heads-up for the admin to improve the question.
+      if (res.data.warnings?.length > 0) {
+        toast.info(`Quality check: ${res.data.warnings.join(" ")}`, 7000);
+      }
       setQuestion(null);
       onScheduled();
     } catch (err) {
@@ -166,14 +172,97 @@ function ScheduleForm({ kind, onScheduled }) {
   );
 }
 
-function ScheduleList({ rows, kind, isAdmin, onDeleted }) {
+// Read-only "what the student will see" view — hits the same GET .../preview route that reuses
+// this file's own sanitizeQuestion() server-side, so hidden test cases are guaranteed stripped,
+// not re-implemented client-side.
+function PreviewModal({ kind, id, onClose }) {
+  const [question, setQuestion] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    api.get(`/challenges/admin/${kind}/${id}/preview`)
+      .then((res) => setQuestion(res.data.question))
+      .catch((err) => setError(err.response?.data?.error || "Failed to load preview"));
+  }, [kind, id]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "40px 16px", overflowY: "auto" }} onClick={onClose}>
+      <div className="card" style={{ maxWidth: 720, width: "100%", padding: 24, position: "relative" }} onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="btn btn-ghost" style={{ position: "absolute", top: 12, right: 12, padding: 6 }} onClick={onClose} aria-label="Close preview">
+          <X size={16} />
+        </button>
+        <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 12 }}>PREVIEW — exactly what a student sees (hidden test cases stripped)</p>
+        {error ? (
+          <p style={{ color: "var(--rust)" }}>{error}</p>
+        ) : !question ? (
+          <p style={{ color: "var(--ink-dim)" }}>Loading…</p>
+        ) : (
+          <>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {question.title}
+              <span style={{ fontSize: 11, fontWeight: 700, color: DIFF_COLOR[question.difficulty] }}>{question.difficulty}</span>
+            </h3>
+            <p style={{ marginTop: 10, whiteSpace: "pre-wrap", fontSize: 14 }}>{question.description}</p>
+            {question.testCases.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <h4 style={{ fontSize: 13 }}>Visible Test Cases</h4>
+                <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                  {question.testCases.map((tc, i) => (
+                    <div key={i} className="mono" style={{ fontSize: 12, padding: 10, background: "var(--surface-2, #f5f5f5)", borderRadius: 6 }}>
+                      <div>Input: {tc.input}</div>
+                      <div>Expected: {tc.expected}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Lazy-loaded inline analytics row — never queried until the admin actually expands it, and the
+// route itself is wrapped in a short-TTL cached() server-side, so re-opening it repeatedly is cheap.
+function AnalyticsRow({ kind, id, colSpan }) {
+  const [analytics, setAnalytics] = useState(null);
+
+  useEffect(() => {
+    api.get(`/challenges/admin/${kind}/${id}/analytics`).then((res) => setAnalytics(res.data)).catch(() => setAnalytics({}));
+  }, [kind, id]);
+
+  return (
+    <tr>
+      <td colSpan={colSpan} style={{ padding: "10px 12px", background: "var(--surface-2, #f9f9f9)" }}>
+        {!analytics ? (
+          <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Loading analytics…</span>
+        ) : (
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: 12 }}>
+            <span><strong>{analytics.attempts ?? 0}</strong> attempts</span>
+            <span><strong>{analytics.uniqueStudents ?? 0}</strong> unique students</span>
+            <span><strong>{analytics.passRate ?? 0}%</strong> pass rate</span>
+            <span><strong>{analytics.avgScore ?? 0}%</strong> avg score</span>
+            <span><strong>{analytics.avgTimeMs != null ? `${(analytics.avgTimeMs / 1000).toFixed(1)}s` : "—"}</strong> avg time</span>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function ScheduleList({ rows, kind, isAdmin, onDeleted, onChanged }) {
   const toast = useToast();
   const confirmDialog = useConfirm();
+  const [previewRow, setPreviewRow] = useState(null);
+  const [analyticsOpenId, setAnalyticsOpenId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   async function remove(row) {
     const ok = await confirmDialog({
       title: "Remove this scheduled challenge?",
-      message: `This unschedules "${row.question.title || row.question.description.slice(0, 60)}" — any student submissions for it stay on record.`,
+      message: `This unschedules "${row.question.title || row.question.description.slice(0, 60)}". If students have already submitted, it will be deactivated instead of deleted.`,
       confirmLabel: "Remove",
       danger: true,
     });
@@ -183,45 +272,150 @@ function ScheduleList({ rows, kind, isAdmin, onDeleted }) {
       toast.success("Removed.");
       onDeleted();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to remove");
+      const msg = err.response?.data?.error || "Failed to remove";
+      if (err.response?.status === 409) toast.info(msg, 6000);
+      else toast.error(msg);
+      onDeleted();
+    }
+  }
+
+  async function toggle(row) {
+    setTogglingId(row.id);
+    try {
+      await api.patch(`/challenges/admin/${kind}/${row.id}/toggle`);
+      onChanged();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to toggle");
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  async function duplicate(row) {
+    setDuplicatingId(row.id);
+    try {
+      await api.post(`/challenges/admin/${kind}/${row.id}/duplicate`);
+      toast.success("Question duplicated into the question bank. Schedule the copy separately when ready.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to duplicate");
+    } finally {
+      setDuplicatingId(null);
     }
   }
 
   if (!rows) return <p style={{ color: "var(--ink-dim)", fontSize: 13 }}>Loading…</p>;
-  if (rows.length === 0) return <p style={{ color: "var(--ink-dim)", fontSize: 13 }}>Nothing scheduled yet.</p>;
+  if (rows.length === 0) return <p style={{ color: "var(--ink-dim)", fontSize: 13 }}>Nothing matches — try clearing filters.</p>;
+
+  const colSpan = isAdmin ? 7 : 6;
 
   return (
-    <div className="card" style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-            <th style={{ padding: "10px 12px" }}>{kind === "daily" ? "Date" : "Week of"}</th>
-            <th style={{ padding: "10px 12px" }}>Scope</th>
-            <th style={{ padding: "10px 12px" }}>Question</th>
-            <th style={{ padding: "10px 12px" }}>Difficulty</th>
-            <th style={{ padding: "10px 12px" }}>Submissions</th>
-            {isAdmin && <th style={{ padding: "10px 12px" }}></th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-              <td className="mono" style={{ padding: "10px 12px" }}>{toDateInputValue(kind === "daily" ? r.date : r.weekStart)}</td>
-              <td style={{ padding: "10px 12px", fontSize: 12 }}>
-                {r.academicGroup ? `${r.academicGroup.department?.name} · ${r.academicGroup.batch} · ${r.academicGroup.section}` : r.institute ? r.institute.name : <span style={{ opacity: 0.6 }}>Global</span>}
-              </td>
-              <td style={{ padding: "10px 12px" }}>{r.question.title || r.question.description.slice(0, 60)}</td>
-              <td style={{ padding: "10px 12px", color: DIFF_COLOR[r.question.difficulty], fontWeight: 700 }}>{r.question.difficulty}</td>
-              <td style={{ padding: "10px 12px" }}>{r._count.submissions}</td>
-              {isAdmin && (
-                <td style={{ padding: "10px 12px" }}>
-                  <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => remove(r)}>Remove</button>
-                </td>
-              )}
+    <>
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
+              <th style={{ padding: "10px 12px" }}>{kind === "daily" ? "Date" : "Week of"}</th>
+              <th style={{ padding: "10px 12px" }}>Scope</th>
+              <th style={{ padding: "10px 12px" }}>Question</th>
+              <th style={{ padding: "10px 12px" }}>Difficulty</th>
+              <th style={{ padding: "10px 12px" }}>Submissions</th>
+              <th style={{ padding: "10px 12px" }}>Active</th>
+              {isAdmin && <th style={{ padding: "10px 12px" }}></th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <Fragment key={r.id}>
+                <tr style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                  <td className="mono" style={{ padding: "10px 12px" }}>{toDateInputValue(kind === "daily" ? r.date : r.weekStart)}</td>
+                  <td style={{ padding: "10px 12px", fontSize: 12 }}>
+                    {r.academicGroup ? `${r.academicGroup.department?.name} · ${r.academicGroup.batch} · ${r.academicGroup.section}` : r.institute ? r.institute.name : <span style={{ opacity: 0.6 }}>Global</span>}
+                  </td>
+                  <td style={{ padding: "10px 12px" }}>{r.question.title || r.question.description.slice(0, 60)}</td>
+                  <td style={{ padding: "10px 12px", color: DIFF_COLOR[r.question.difficulty], fontWeight: 700 }}>{r.question.difficulty}</td>
+                  <td style={{ padding: "10px 12px" }}>{r._count.submissions}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <button
+                      className="btn btn-ghost"
+                      disabled={!isAdmin || togglingId === r.id}
+                      onClick={() => toggle(r)}
+                      style={{ fontSize: 12, padding: "3px 10px", color: r.isActive ? "var(--mint)" : "var(--ink-dim)", fontWeight: 600 }}
+                      title={isAdmin ? "Click to toggle" : undefined}
+                    >
+                      {r.isActive ? "Active" : "Inactive"}
+                    </button>
+                  </td>
+                  {isAdmin && (
+                    <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                      <button className="btn btn-ghost" style={{ padding: 6 }} title="Preview" onClick={() => setPreviewRow(r)}><Eye size={14} /></button>
+                      <button className="btn btn-ghost" style={{ padding: 6 }} title="Analytics" onClick={() => setAnalyticsOpenId(analyticsOpenId === r.id ? null : r.id)}><BarChart3 size={14} /></button>
+                      <button className="btn btn-ghost" style={{ padding: 6 }} disabled={duplicatingId === r.id} title="Duplicate question" onClick={() => duplicate(r)}><Copy size={14} /></button>
+                      <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => remove(r)}>Remove</button>
+                    </td>
+                  )}
+                </tr>
+                {analyticsOpenId === r.id && <AnalyticsRow kind={kind} id={r.id} colSpan={colSpan} />}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {previewRow && <PreviewModal kind={kind} id={previewRow.id} onClose={() => setPreviewRow(null)} />}
+    </>
+  );
+}
+
+// Owns its own filter/page/rows state — mounted fresh per tab (daily vs weekly), so switching
+// tabs naturally resets filters instead of needing separate state trees threaded from the parent.
+function ChallengeSchedule({ kind, isAdmin }) {
+  const [q, setQ] = useState("");
+  const [difficulty, setDifficulty] = useState("");
+  const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState({ rows: null, total: 0, totalPages: 1 });
+
+  function load() {
+    const params = { page, pageSize: 20 };
+    if (q.trim()) params.q = q.trim();
+    if (difficulty) params.difficulty = difficulty;
+    if (status) params.status = status;
+    api.get(`/challenges/admin/${kind}`, { params }).then((res) => setData(res.data)).catch(() => {});
+  }
+
+  useEffect(() => { load(); }, [page, q, difficulty, status]);
+  useEffect(() => { setPage(1); }, [q, difficulty, status]);
+
+  return (
+    <div style={{ display: "grid", gap: 16 }}>
+      {isAdmin && <ScheduleForm kind={kind} onScheduled={load} />}
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <input className="input" style={{ flex: 1, minWidth: 200 }} placeholder="Search question title/description…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="input" style={{ minWidth: 130 }} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+          <option value="">All difficulties</option>
+          <option value="EASY">Easy</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HARD">Hard</option>
+        </select>
+        <select className="input" style={{ minWidth: 150 }} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="DRAFT">Draft</option>
+          <option value="UNDER_REVIEW">Under Review</option>
+          <option value="VERIFIED">Verified</option>
+          <option value="PUBLISHED">Published</option>
+          <option value="ARCHIVED">Archived</option>
+        </select>
+      </div>
+
+      <ScheduleList rows={data.rows} kind={kind} isAdmin={isAdmin} onDeleted={load} onChanged={load} />
+
+      {data.totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 10, alignItems: "center" }}>
+          <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+          <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Page {page} of {data.totalPages} ({data.total} scheduled)</span>
+          <button className="btn btn-ghost" disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -230,18 +424,11 @@ export default function ChallengeAdmin() {
   const { user } = useAuth();
   const isAdmin = user.role === "ADMIN";
   const [tab, setTab] = useState("daily");
-  const [daily, setDaily] = useState(null);
-  const [weekly, setWeekly] = useState(null);
-
-  function loadDaily() { api.get("/challenges/admin/daily").then((res) => setDaily(res.data)); }
-  function loadWeekly() { api.get("/challenges/admin/weekly").then((res) => setWeekly(res.data)); }
-
-  useEffect(() => { loadDaily(); loadWeekly(); }, []);
 
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 24px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1>Coding Challenges</h1>
@@ -252,7 +439,7 @@ export default function ChallengeAdmin() {
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 12 }}>
           Schedule a coding question from the question bank onto a specific day or week. Students solve it from
           their Daily/Weekly Challenge page and earn XP + streak credit the same way Practice Coding does.
-          {!isAdmin && " Only Admins can schedule or remove challenges — you have view access."}
+          {!isAdmin && " Only Admins can schedule, toggle, remove, or duplicate challenges — you have view access."}
         </p>
 
         <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
@@ -260,17 +447,9 @@ export default function ChallengeAdmin() {
           <button className={`btn ${tab === "weekly" ? "btn-primary" : "btn-ghost"}`} onClick={() => setTab("weekly")}>Weekly Challenge</button>
         </div>
 
-        {tab === "daily" ? (
-          <div style={{ marginTop: 16, display: "grid", gap: 16 }}>
-            {isAdmin && <ScheduleForm kind="daily" onScheduled={loadDaily} />}
-            <ScheduleList rows={daily} kind="daily" isAdmin={isAdmin} onDeleted={loadDaily} />
-          </div>
-        ) : (
-          <div style={{ marginTop: 16, display: "grid", gap: 16 }}>
-            {isAdmin && <ScheduleForm kind="weekly" onScheduled={loadWeekly} />}
-            <ScheduleList rows={weekly} kind="weekly" isAdmin={isAdmin} onDeleted={loadWeekly} />
-          </div>
-        )}
+        <div style={{ marginTop: 16 }}>
+          {tab === "daily" ? <ChallengeSchedule kind="daily" isAdmin={isAdmin} /> : <ChallengeSchedule kind="weekly" isAdmin={isAdmin} />}
+        </div>
       </div>
     </div>
   );
