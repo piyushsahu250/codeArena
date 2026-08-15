@@ -169,6 +169,8 @@ export default function LessonView() {
           </div>
         )}
 
+        <NotesPanel courseId={course.id} moduleId={module.id} lessonId={lessonId} />
+
         {lesson.isModuleTest && testQuestions.length > 0 && (
           <>
             <h3 style={{ fontSize: 16, marginTop: 32, marginBottom: 12 }}>
@@ -210,6 +212,111 @@ export default function LessonView() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Private note-taking panel for this lesson. One editable note per lesson (the most recently
+// updated one, if a student somehow has more than one from before this UI existed) — kept
+// simple, matching the spec's own single-note-per-topic example. Debounced autosave copies the
+// existing AUTOSAVE_DEBOUNCE_MS pattern from this file's own Practice-Coding draft autosave, but
+// — unlike that fire-and-forget precedent — surfaces Saving/Saved/Unable-to-save states and never
+// clears the student's typed text on a failed save; the next debounce tick (or Retry) tries again.
+function NotesPanel({ courseId, moduleId, lessonId }) {
+  const [noteId, setNoteId] = useState(null);
+  const [text, setText] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [saveState, setSaveState] = useState("idle"); // idle, saving, saved, error
+  const savedTextRef = useRef("");
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get("/learning/notes", { params: { lessonId, pageSize: 1 } })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const existing = data.rows[0];
+        setNoteId(existing?.id || null);
+        setText(existing?.content || "");
+        savedTextRef.current = existing?.content || "";
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+    return () => { cancelled = true; };
+  }, [lessonId]);
+
+  async function flush(value) {
+    if (value === savedTextRef.current) return;
+    if (!value.trim()) return; // never auto-create/save an empty note
+    setSaveState("saving");
+    try {
+      if (noteId) {
+        await api.patch(`/learning/notes/${noteId}`, { content: value });
+      } else {
+        const { data } = await api.post("/learning/notes", { courseId, moduleId, lessonId, content: value });
+        setNoteId(data.id);
+      }
+      savedTextRef.current = value;
+      setSaveState("saved");
+    } catch {
+      setSaveState("error"); // text stays in `text` state either way — nothing typed is lost
+    }
+  }
+
+  function handleChange(e) {
+    const value = e.target.value;
+    setText(value);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => flush(value), AUTOSAVE_DEBOUNCE_MS);
+  }
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  async function handleDelete() {
+    if (!noteId) { setText(""); return; }
+    if (!confirm("Delete this note?")) return;
+    try {
+      await api.delete(`/learning/notes/${noteId}`);
+      setNoteId(null);
+      setText("");
+      savedTextRef.current = "";
+      setSaveState("idle");
+    } catch {
+      alert("Failed to delete note");
+    }
+  }
+
+  if (!loaded) return null;
+
+  return (
+    <div className="card" style={{ padding: 16, marginTop: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <strong style={{ fontSize: 13 }}>My Notes</strong>
+        <span className="mono" style={{ fontSize: 11, color: saveState === "error" ? "var(--rust)" : "var(--ink-dim)" }}>
+          {saveState === "saving" && "Saving…"}
+          {saveState === "saved" && "Saved"}
+          {saveState === "error" && (
+            <>
+              Unable to save —{" "}
+              <button type="button" onClick={() => flush(text)} style={{ background: "none", border: "none", color: "var(--rust)", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}>
+                retry
+              </button>
+            </>
+          )}
+        </span>
+      </div>
+      <textarea
+        value={text}
+        onChange={handleChange}
+        placeholder="Write a private note for yourself about this lesson…"
+        rows={4}
+        style={{ width: "100%", resize: "vertical", padding: 8, fontFamily: "inherit", fontSize: 13, border: "1px solid var(--border, #ddd)", borderRadius: 6 }}
+      />
+      {(noteId || text) && (
+        <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 12, padding: "4px 10px" }} onClick={handleDelete}>
+          Delete note
+        </button>
+      )}
     </div>
   );
 }

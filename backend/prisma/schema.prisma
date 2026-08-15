@@ -205,6 +205,7 @@ model User {
   subjectAssignments StaffSubjectAssignment[]
 
   lessonProgress LessonProgress[]
+  learningNotes  LearningNote[]
   certificates    Certificate[]
   practiceRunLogs PracticeRunLog[]
   codeDrafts      CodeDraft[]
@@ -1021,6 +1022,7 @@ model Course {
 
   modules      CourseModule[]
   certificates Certificate[]
+  notes        LearningNote[]
 
   instituteAssignments     CourseInstituteAssignment[]
   academicGroupAssignments CourseAcademicGroupAssignment[]
@@ -1099,6 +1101,7 @@ model CourseModule {
   lessons Lesson[]
   codingTest ModuleCodingTest?
   chapters   Chapter[]
+  notes      LearningNote[]
 
   @@unique([courseId, title])
   @@index([courseId])
@@ -1126,6 +1129,7 @@ model Chapter {
 
   topics Lesson[]
   levels ModuleCodingTest[]
+  notes  LearningNote[]
 
   @@unique([moduleId, title])
   @@index([moduleId])
@@ -1158,6 +1162,8 @@ model Lesson {
 
   progress  LessonProgress[]
   questions PracticeQuestion[]
+  notes     LearningNote[]
+  contentVersions LessonContentVersion[]
 
   @@unique([moduleId, title])
   @@index([moduleId])
@@ -1172,11 +1178,73 @@ model LessonProgress {
   lessonId    String
   status      String    @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
   bookmarked  Boolean   @default(false)
+  // Module-quiz score (0-100), written only by POST /lessons/:id/test-submit for isModuleTest
+  // lessons — null for every other lesson and for quiz attempts that predate this field. Purely
+  // additive: no existing read of LessonProgress depends on this column existing.
+  score       Int?
   completedAt DateTime?
   updatedAt   DateTime  @updatedAt
 
   @@unique([studentId, lessonId])
   @@index([studentId])
+}
+
+// Private, student-owned notes attached to any point in the Course->Module->Chapter->Lesson
+// hierarchy — pure FK references, no duplication of the entities themselves. courseId is always
+// required (a note always has a course context); module/chapter/lesson are optional, set to
+// whichever level the student was viewing when they wrote the note. Never readable by anyone but
+// the owning student — every route scopes `studentId: req.user.id` server-side.
+model LearningNote {
+  id         String        @id @default(uuid())
+  student    User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId  String
+  course     Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId   String
+  module     CourseModule? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId   String?
+  chapter    Chapter?      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  chapterId  String?
+  lesson     Lesson?       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId   String?
+  content    String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([studentId, courseId])
+  @@index([studentId, lessonId])
+}
+
+enum ContentVersionStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+// Version history for a Lesson's content/blocks. Lesson.content/Lesson.blocks remain the single
+// source of truth every existing student-facing read path already uses (CourseOverview,
+// LessonView, search, etc.) — completely unchanged. Publishing a version is the only thing that
+// ever copies content onto the live Lesson row, in one UPDATE; drafts/in-review versions never
+// touch it, so nothing a student can read is ever a draft. LessonProgress keys on lessonId only
+// (never content), so publishing a new version can never reset a student's completion status.
+model LessonContentVersion {
+  id              String   @id @default(uuid())
+  lesson          Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId        String
+  versionNumber   Int
+  content         String?
+  blocks          Json?
+  status          ContentVersionStatus @default(DRAFT)
+  changeSummary   String?
+  createdById     String
+  createdByName   String
+  createdAt       DateTime @default(now())
+  publishedById   String?
+  publishedByName String?
+  publishedAt     DateTime?
+
+  @@unique([lessonId, versionNumber])
+  @@index([lessonId, status])
 }
 
 // type: MCQ, FILL_BLANK, CODING, DEBUG, OUTPUT_PREDICTION — DEBUG/OUTPUT_PREDICTION are

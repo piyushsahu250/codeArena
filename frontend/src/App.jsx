@@ -62,6 +62,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ForceChangePassword from "./pages/ForceChangePassword";
 import StudentSearch from "./pages/StudentSearch";
 import LearningHub from "./pages/LearningHub";
+import MyNotes from "./pages/MyNotes";
 import CourseOverview from "./pages/CourseOverview";
 import CourseCertificate from "./pages/CourseCertificate";
 import CourseCertificateVerify from "./pages/CourseCertificateVerify";
@@ -246,6 +247,7 @@ export default function App() {
               </Protected>
             }
           />
+          <Route path="/learning/notes" element={<Protected roles={["STUDENT"]}><MyNotes /></Protected>} />
           <Route path="/learning/:slug/certificate" element={<Protected roles={["STUDENT"]}><CourseCertificate /></Protected>} />
           <Route
             path="/learning/:slug/module/:moduleId/coding-assessment"

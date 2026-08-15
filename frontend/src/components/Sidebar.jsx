@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target,
+  CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target, StickyNote,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 
@@ -17,6 +17,7 @@ const MENU = {
       { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
       { label: "Profile", to: "/profile", icon: UserCircle },
       { label: "Learning", to: "/learning", icon: BookOpen },
+      { label: "My Notes", to: "/learning/notes", icon: StickyNote },
       { label: "My Performance", to: "/dashboard/performance", icon: BarChart3 },
       { label: "My Attendance", to: "/attendance", icon: CalendarCheck },
     ] },

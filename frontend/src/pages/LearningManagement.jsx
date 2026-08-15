@@ -657,7 +657,9 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
     api.get(`/learning/lessons/${lessonId}`).then((res) => {
       setFull(res.data);
       const l = res.data.lesson;
-      setForm({ title: l.title, content: l.content || "", videoUrl: l.videoUrl || "", pdfUrl: l.pdfUrl || "", estimatedMinutes: l.estimatedMinutes, isModuleTest: l.isModuleTest });
+      // content/blocks are deliberately NOT part of this form anymore — they now go through
+      // ContentVersionPanel's Draft -> Review -> Publish flow below, never a direct PATCH.
+      setForm({ title: l.title, videoUrl: l.videoUrl || "", pdfUrl: l.pdfUrl || "", estimatedMinutes: l.estimatedMinutes, isModuleTest: l.isModuleTest });
     });
   }
   useEffect(load, [lessonId]);
@@ -688,8 +690,6 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
         </div>
         <label style={labelStyle}>Title</label>
         <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <label style={labelStyle}>Content (HTML — headings, &lt;p&gt;, &lt;pre&gt;&lt;code&gt;, &lt;ul&gt;)</label>
-        <textarea style={{ ...inputStyle, minHeight: 260, fontFamily: "var(--font-mono)", fontSize: 12 }} disabled={!isAdmin} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
         <label style={labelStyle}>Video URL (optional)</label>
         <input style={inputStyle} disabled={!isAdmin} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
         <label style={labelStyle}>PDF URL (optional)</label>
@@ -703,7 +703,126 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
         {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save lesson"}</button>}
       </form>
 
-      <PracticeQuestionsPanel lesson={{ id: lessonId, questions: full.questions }} onRefresh={load} />
+      <div style={{ display: "grid", gap: 20 }}>
+        <ContentVersionPanel lessonId={lessonId} onPublished={load} />
+        <PracticeQuestionsPanel lesson={{ id: lessonId, questions: full.questions }} onRefresh={load} />
+      </div>
+    </div>
+  );
+}
+
+// Draft -> Review -> Publish for a Lesson's content/blocks. Lesson.content only ever changes at
+// the moment of Publish/Restore (see backend/src/routes/learning.js's /versions routes) — this
+// panel never PATCHes /lessons/:id with content, so nothing a student can read changes until an
+// Admin explicitly publishes. ADMIN-only; Staff sees a read-only history list, matching the rest
+// of this page's existing RBAC pattern.
+function ContentVersionPanel({ lessonId, onPublished }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const [versions, setVersions] = useState(null);
+  const [draftText, setDraftText] = useState("");
+  const [summary, setSummary] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  function load() {
+    api.get(`/learning/lessons/${lessonId}/versions`).then((res) => {
+      setVersions(res.data);
+      const open = res.data.find((v) => v.status === "DRAFT" || v.status === "IN_REVIEW");
+      const published = res.data.find((v) => v.status === "PUBLISHED");
+      setDraftText((open || published)?.content || "");
+      setSummary(open?.changeSummary || "");
+    });
+  }
+  useEffect(load, [lessonId]);
+
+  async function saveDraft() {
+    setSaving(true);
+    try {
+      await api.post(`/learning/lessons/${lessonId}/versions`, { content: draftText, changeSummary: summary });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function publish(versionId) {
+    if (!confirm("Publish this version? Students will see it immediately.")) return;
+    setSaving(true);
+    try {
+      await api.post(`/learning/lessons/${lessonId}/versions/${versionId}/publish`);
+      load();
+      onPublished?.();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to publish — a change summary is required");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function restore(versionId, versionNumber) {
+    if (!confirm(`Restore version ${versionNumber}? This creates and publishes a new version copying it — nothing is deleted.`)) return;
+    setSaving(true);
+    try {
+      await api.post(`/learning/lessons/${lessonId}/versions/${versionId}/restore`);
+      load();
+      onPublished?.();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to restore version");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!versions) return null;
+  const openDraft = versions.find((v) => v.status === "DRAFT" || v.status === "IN_REVIEW");
+
+  return (
+    <div className="card" style={{ padding: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ fontSize: 15 }}>Content Version</h3>
+        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setExpanded((e) => !e)}>
+          {expanded ? "Hide history" : `History (${versions.length})`}
+        </button>
+      </div>
+
+      {isAdmin && (
+        <>
+          <label style={labelStyle}>Content (HTML — headings, &lt;p&gt;, &lt;pre&gt;&lt;code&gt;, &lt;ul&gt;) {openDraft ? `— editing ${openDraft.status === "IN_REVIEW" ? "in-review" : "draft"} v${openDraft.versionNumber}` : "— new draft"}</label>
+          <textarea style={{ ...inputStyle, minHeight: 220, fontFamily: "var(--font-mono)", fontSize: 12 }} value={draftText} onChange={(e) => setDraftText(e.target.value)} />
+          <label style={labelStyle}>Change summary (required to publish)</label>
+          <input style={inputStyle} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="e.g. Added inheritance examples" />
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button type="button" className="btn btn-ghost" disabled={saving} onClick={saveDraft}>{saving ? "Saving…" : "Save Draft"}</button>
+            {openDraft && (
+              <button type="button" className="btn btn-primary" disabled={saving} onClick={() => publish(openDraft.id)}>Publish</button>
+            )}
+          </div>
+        </>
+      )}
+
+      {expanded && (
+        <div style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 12, display: "grid", gap: 8 }}>
+          {versions.map((v) => (
+            <div key={v.id} className="card" style={{ padding: 10, fontSize: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <strong>Version {v.versionNumber} — {v.status}</strong>
+                <span className="mono" style={{ color: "var(--ink-dim)" }}>
+                  {v.publishedAt ? `Published ${new Date(v.publishedAt).toLocaleDateString()} by ${v.publishedByName}` : `Created ${new Date(v.createdAt).toLocaleDateString()} by ${v.createdByName}`}
+                </span>
+              </div>
+              {v.changeSummary && <div style={{ marginTop: 4, color: "var(--ink-dim)" }}>{v.changeSummary}</div>}
+              {isAdmin && v.status !== "DRAFT" && v.status !== "IN_REVIEW" && (
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", marginTop: 6 }} disabled={saving} onClick={() => restore(v.id, v.versionNumber)}>
+                  Restore this version
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

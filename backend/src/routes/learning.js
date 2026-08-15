@@ -466,6 +466,91 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), as
   }
 });
 
+// =========================== Learning Notes (private, student-owned) ===========================
+// Every route below is scoped to `studentId: req.user.id` server-side, never taken from the
+// request body/query — a student can never read, edit, or delete another student's note, and no
+// Staff/Admin route anywhere exposes this table.
+
+router.get("/notes", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const { q, courseId, moduleId, chapterId, lessonId } = req.query;
+    const where = { studentId: req.user.id };
+    if (courseId) where.courseId = courseId;
+    if (moduleId) where.moduleId = moduleId;
+    if (chapterId) where.chapterId = chapterId;
+    if (lessonId) where.lessonId = lessonId;
+    if (q) where.content = { contains: String(q), mode: "insensitive" };
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
+    const [rows, total] = await Promise.all([
+      prisma.learningNote.findMany({
+        where,
+        include: {
+          course: { select: { id: true, name: true, slug: true } },
+          module: { select: { id: true, title: true } },
+          chapter: { select: { id: true, title: true } },
+          lesson: { select: { id: true, title: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.learningNote.count({ where }),
+    ]);
+    res.json({ rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load notes" });
+  }
+});
+
+router.post("/notes", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const { courseId, moduleId, chapterId, lessonId, content } = req.body;
+    if (!courseId) return res.status(400).json({ error: "courseId is required" });
+    if (!content || !content.trim()) return res.status(400).json({ error: "content is required" });
+    const note = await prisma.learningNote.create({
+      data: {
+        studentId: req.user.id, courseId,
+        moduleId: moduleId || null, chapterId: chapterId || null, lessonId: lessonId || null,
+        content,
+      },
+    });
+    res.json(note);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create note" });
+  }
+});
+
+router.patch("/notes/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (content === undefined || !content.trim()) return res.status(400).json({ error: "content is required" });
+    const result = await prisma.learningNote.updateMany({
+      where: { id: req.params.id, studentId: req.user.id }, // ownership check baked into the write itself
+      data: { content },
+    });
+    if (result.count === 0) return res.status(404).json({ error: "Note not found" });
+    const note = await prisma.learningNote.findUnique({ where: { id: req.params.id } });
+    res.json(note);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save note" });
+  }
+});
+
+router.delete("/notes/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const result = await prisma.learningNote.deleteMany({ where: { id: req.params.id, studentId: req.user.id } });
+    if (result.count === 0) return res.status(404).json({ error: "Note not found" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete note" });
+  }
+});
+
 // STUDENT: check an MCQ/FILL_BLANK/DEBUG/OUTPUT_PREDICTION practice answer. Unlike exam
 // submissions, learning-mode feedback is immediate and reveals the correct answer + explanation
 // right away — that's the point of practice, not a leak.
@@ -1351,13 +1436,15 @@ router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN"), async (
 
 router.patch("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
-    const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive, chapterId } = req.body;
+    // content/blocks are deliberately NOT accepted here anymore — they now move exclusively
+    // through the versions API below (POST /lessons/:id/versions -> .../publish), so a student
+    // never sees anything that hasn't gone through Draft -> Review -> Publish. Everything else
+    // (title/order/isActive/etc.) is still a direct, immediate edit as before.
+    const { title, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive, chapterId } = req.body;
     const lesson = await prisma.lesson.update({
       where: { id: req.params.id },
       data: {
         ...(title !== undefined ? { title } : {}),
-        ...(content !== undefined ? { content } : {}),
-        ...(blocks !== undefined ? { blocks } : {}),
         ...(videoUrl !== undefined ? { videoUrl } : {}),
         ...(pdfUrl !== undefined ? { pdfUrl } : {}),
         ...(externalLinks !== undefined ? { externalLinks } : {}),
@@ -1368,22 +1455,171 @@ router.patch("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res
         ...(chapterId !== undefined ? { chapterId: chapterId || null } : {}),
       },
     });
-    // The one edit that actually matters for "content versioning" (task's approved lightweight
-    // scope: who changed what, when — no rollback/diff) — content/blocks are the fields a student
-    // actually reads, so flagging that specifically rather than just listing every changed key.
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
       actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-      details: {
-        entity: "lesson", operation: "edit", lessonId: lesson.id, title: lesson.title,
-        contentChanged: content !== undefined || blocks !== undefined,
-        changedFields: Object.keys(req.body),
-      },
+      details: { entity: "lesson", operation: "edit", lessonId: lesson.id, title: lesson.title, changedFields: Object.keys(req.body) },
     });
     res.json(lesson);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update lesson" });
+  }
+});
+
+// =========================== Lesson Content Versioning (Draft -> Review -> Publish) ===========================
+// Lesson.content/Lesson.blocks remain the only fields every student-facing read path uses
+// (LessonView.jsx, CourseOverview.jsx, search, etc.) — completely unchanged. A version only ever
+// touches those live columns at the moment it's published (see .../publish below); drafts and
+// in-review versions live entirely in LessonContentVersion and are never reachable by a student.
+
+// Version history, newest first. Lazily synthesizes "Version 1 / PUBLISHED" from the lesson's
+// current content/blocks on first read if no version rows exist yet — no bulk migration script
+// needed, and it's safe because it only ever creates a version that already matches what's live.
+router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
+    if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    let versions = await prisma.lessonContentVersion.findMany({ where: { lessonId: lesson.id }, orderBy: { versionNumber: "desc" } });
+    if (versions.length === 0) {
+      const seed = await prisma.lessonContentVersion.create({
+        data: {
+          lessonId: lesson.id, versionNumber: 1, content: lesson.content, blocks: lesson.blocks,
+          status: "PUBLISHED", changeSummary: "Initial version", createdById: "system", createdByName: "System",
+          publishedById: "system", publishedByName: "System", publishedAt: lesson.createdAt,
+        },
+      });
+      versions = [seed];
+    }
+    res.json(versions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load version history" });
+  }
+});
+
+// Creates a new draft, or updates the lesson's existing open draft if one is already in progress
+// (upsert-by-latest-DRAFT — avoids spawning a new draft row on every autosave-style edit).
+router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
+    if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    const { content, blocks, changeSummary } = req.body;
+    const openDraft = await prisma.lessonContentVersion.findFirst({
+      where: { lessonId: lesson.id, status: { in: ["DRAFT", "IN_REVIEW"] } },
+      orderBy: { versionNumber: "desc" },
+    });
+    let version;
+    if (openDraft) {
+      version = await prisma.lessonContentVersion.update({
+        where: { id: openDraft.id },
+        data: { content: content ?? openDraft.content, blocks: blocks !== undefined ? blocks : openDraft.blocks, changeSummary: changeSummary ?? openDraft.changeSummary },
+      });
+    } else {
+      const last = await prisma.lessonContentVersion.findFirst({ where: { lessonId: lesson.id }, orderBy: { versionNumber: "desc" } });
+      const nextNumber = (last?.versionNumber || 0) + 1;
+      version = await prisma.lessonContentVersion.create({
+        data: {
+          lessonId: lesson.id, versionNumber: nextNumber, content: content ?? lesson.content, blocks: blocks !== undefined ? blocks : lesson.blocks,
+          status: "DRAFT", changeSummary: changeSummary || null, createdById: req.user.id, createdByName: req.user.name,
+        },
+      });
+    }
+    await logAudit({
+      req, action: AUDIT_ACTIONS.CONTENT_VERSION_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "lesson", lessonId: lesson.id, versionId: version.id, versionNumber: version.versionNumber },
+    });
+    res.json(version);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save draft" });
+  }
+});
+
+// Edits an existing draft in place, or moves it DRAFT -> IN_REVIEW.
+router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const version = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
+    if (!version || version.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
+    if (version.status === "PUBLISHED" || version.status === "ARCHIVED") {
+      return res.status(409).json({ error: "Cannot edit a published or archived version — start a new draft instead" });
+    }
+    const { content, blocks, changeSummary, status } = req.body;
+    const updated = await prisma.lessonContentVersion.update({
+      where: { id: version.id },
+      data: {
+        ...(content !== undefined ? { content } : {}),
+        ...(blocks !== undefined ? { blocks } : {}),
+        ...(changeSummary !== undefined ? { changeSummary } : {}),
+        ...(status === "IN_REVIEW" ? { status: "IN_REVIEW" } : {}),
+      },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update version" });
+  }
+});
+
+// Publishes a DRAFT/IN_REVIEW version: copies content/blocks onto the live Lesson row (the only
+// place that ever happens), archives whatever was PUBLISHED before (never deleted), marks this
+// one PUBLISHED. This is the sole write path that changes what a student can read.
+router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const version = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
+    if (!version || version.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
+    if (version.status === "PUBLISHED") return res.status(409).json({ error: "This version is already published" });
+    if (!version.changeSummary) return res.status(400).json({ error: "A change summary is required before publishing" });
+    const [, , published] = await prisma.$transaction([
+      prisma.lessonContentVersion.updateMany({ where: { lessonId: version.lessonId, status: "PUBLISHED" }, data: { status: "ARCHIVED" } }),
+      prisma.lesson.update({ where: { id: version.lessonId }, data: { content: version.content, blocks: version.blocks } }),
+      prisma.lessonContentVersion.update({
+        where: { id: version.id },
+        data: { status: "PUBLISHED", publishedById: req.user.id, publishedByName: req.user.name, publishedAt: new Date() },
+      }),
+    ]);
+    await logAudit({
+      req, action: AUDIT_ACTIONS.CONTENT_VERSION_PUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "lesson", lessonId: version.lessonId, versionId: version.id, versionNumber: version.versionNumber },
+    });
+    res.json(published);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to publish version" });
+  }
+});
+
+// Restores an old (ARCHIVED or PUBLISHED) version by creating a NEW version row copying its
+// content, then publishing that new row immediately. Never resurrects/renumbers the old version
+// — "Restore Version 2" produces Version 4, keeping full history intact.
+router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const source = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
+    if (!source || source.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
+    const last = await prisma.lessonContentVersion.findFirst({ where: { lessonId: source.lessonId }, orderBy: { versionNumber: "desc" } });
+    const nextNumber = (last?.versionNumber || 0) + 1;
+    const restored = await prisma.lessonContentVersion.create({
+      data: {
+        lessonId: source.lessonId, versionNumber: nextNumber, content: source.content, blocks: source.blocks,
+        status: "DRAFT", changeSummary: `Restored from version ${source.versionNumber}`, createdById: req.user.id, createdByName: req.user.name,
+      },
+    });
+    const [, , published] = await prisma.$transaction([
+      prisma.lessonContentVersion.updateMany({ where: { lessonId: source.lessonId, status: "PUBLISHED" }, data: { status: "ARCHIVED" } }),
+      prisma.lesson.update({ where: { id: source.lessonId }, data: { content: restored.content, blocks: restored.blocks } }),
+      prisma.lessonContentVersion.update({
+        where: { id: restored.id },
+        data: { status: "PUBLISHED", publishedById: req.user.id, publishedByName: req.user.name, publishedAt: new Date() },
+      }),
+    ]);
+    await logAudit({
+      req, action: AUDIT_ACTIONS.CONTENT_VERSION_RESTORED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      details: { entity: "lesson", lessonId: source.lessonId, restoredFromVersion: source.versionNumber, newVersionId: restored.id, newVersionNumber: restored.versionNumber },
+    });
+    res.json(published);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to restore version" });
   }
 });
 
