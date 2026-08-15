@@ -105,65 +105,98 @@ router.get("/courses/:slug", authenticate, async (req, res) => {
     where.status = "PUBLISHED";
     Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
   }
+  // Module metadata only, no nested lessons — the full per-lesson list (title/estimatedMinutes/
+  // isModuleTest/etc.) is fetched on demand per module via GET .../modules/:moduleId/lessons
+  // below, once a student actually expands it. Overview stats (totals/resume-pointer/per-module
+  // completion) below still need every lesson's id+order+moduleId, but that's a much narrower
+  // row (3 small columns, no text content) than the full lesson list this route used to return
+  // for every module on every page load — this is what actually stops the response from growing
+  // linearly with total course content as more courses/modules get authored.
   const course = await prisma.course.findFirst({
     where,
-    include: {
-      modules: {
-        orderBy: { order: "asc" },
-        include: { lessons: { orderBy: { order: "asc" } } },
-      },
-    },
+    include: { modules: { orderBy: { order: "asc" } } },
   });
   if (!course) return res.status(404).json({ error: "Course not found" });
 
   let progressByLesson = new Map();
   let lockMap = new Map();
   let resumeLessonId = null;
+  let lessonMeta = []; // { id, moduleId, order } — lightweight, all lessons in the course
   if (req.user.role === "STUDENT") {
-    const allLessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
-    const progress = await prisma.lessonProgress.findMany({
-      where: { studentId: req.user.id, lessonId: { in: allLessonIds } },
+    lessonMeta = await prisma.lesson.findMany({
+      where: { moduleId: { in: course.modules.map((m) => m.id) } },
+      select: { id: true, moduleId: true, order: true },
+      orderBy: { order: "asc" },
     });
+    const allLessonIds = lessonMeta.map((l) => l.id);
+    const progress = allLessonIds.length
+      ? await prisma.lessonProgress.findMany({ where: { studentId: req.user.id, lessonId: { in: allLessonIds } } })
+      : [];
     progressByLesson = new Map(progress.map((p) => [p.lessonId, p]));
     lockMap = await getModuleLockMap(prisma, req.user.id, course.id);
 
     // Resume pointer: the most recently touched lesson still in progress, or otherwise the
-    // first lesson of the first module that isn't fully completed yet.
+    // first lesson (by order) of the first module that isn't fully completed yet.
     const inProgress = progress
       .filter((p) => p.status === "IN_PROGRESS")
       .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
     if (inProgress) {
       resumeLessonId = inProgress.lessonId;
     } else {
+      const lessonsByModule = new Map();
+      for (const l of lessonMeta) {
+        if (!lessonsByModule.has(l.moduleId)) lessonsByModule.set(l.moduleId, []);
+        lessonsByModule.get(l.moduleId).push(l);
+      }
       for (const m of course.modules) {
         const lock = lockMap.get(m.id);
         if (lock?.locked) break;
-        if (!lock?.completed && m.lessons.length > 0) { resumeLessonId = m.lessons[0].id; break; }
+        const firstLesson = lessonsByModule.get(m.id)?.[0];
+        if (!lock?.completed && firstLesson) { resumeLessonId = firstLesson.id; break; }
       }
     }
   }
 
   let totalLessons = 0, completedLessons = 0;
+  const countsByModule = new Map();
+  for (const l of lessonMeta) {
+    const c = countsByModule.get(l.moduleId) || { total: 0, completed: 0 };
+    c.total++;
+    totalLessons++;
+    if (progressByLesson.get(l.id)?.status === "COMPLETED") { c.completed++; completedLessons++; }
+    countsByModule.set(l.moduleId, c);
+  }
   const modules = course.modules.map((m) => {
     const lock = lockMap.get(m.id) || { locked: false, completed: false, lessonsComplete: false, codingTest: { required: false, passed: true } };
-    const lessons = m.lessons.map((l) => {
-      const p = progressByLesson.get(l.id);
-      totalLessons++;
-      if (p?.status === "COMPLETED") completedLessons++;
-      return {
-        id: l.id, title: l.title, order: l.order, estimatedMinutes: l.estimatedMinutes,
-        isModuleTest: l.isModuleTest,
-        status: p?.status || "NOT_STARTED", bookmarked: p?.bookmarked || false,
-      };
-    });
-    const moduleCompleted = lessons.filter((l) => l.status === "COMPLETED").length;
+    const counts = countsByModule.get(m.id) || { total: 0, completed: 0 };
     return {
-      id: m.id, title: m.title, description: m.description, order: m.order, lessons,
-      completedCount: moduleCompleted, totalCount: lessons.length,
+      id: m.id, title: m.title, description: m.description, order: m.order,
+      completedCount: counts.completed, totalCount: counts.total,
       locked: lock.locked, completed: lock.completed,
       lessonsComplete: lock.lessonsComplete, codingTest: lock.codingTest,
     };
   });
+
+  // ADMIN/STAFF (LearningManagement.jsx's content-editing tree) still need the full inline
+  // lesson list on this same response — unlike the student-facing overview, that page is a
+  // single-course-at-a-time CMS, not a scalability concern, and reworking it onto the new
+  // on-demand endpoint is out of scope here. Only the STUDENT path (the one with an actual
+  // growing-course-count concern) uses the lighter counts-only shape above.
+  if (req.user.role !== "STUDENT") {
+    const allLessons = await prisma.lesson.findMany({
+      where: { moduleId: { in: course.modules.map((m) => m.id) } },
+      orderBy: { order: "asc" },
+    });
+    const lessonsByModule = new Map();
+    for (const l of allLessons) {
+      if (!lessonsByModule.has(l.moduleId)) lessonsByModule.set(l.moduleId, []);
+      lessonsByModule.get(l.moduleId).push({
+        id: l.id, title: l.title, order: l.order, estimatedMinutes: l.estimatedMinutes,
+        isModuleTest: l.isModuleTest, status: "NOT_STARTED", bookmarked: false,
+      });
+    }
+    for (const m of modules) m.lessons = lessonsByModule.get(m.id) || [];
+  }
 
   res.json({
     course: { id: course.id, slug: course.slug, name: course.name, description: course.description, isActive: course.isActive },
@@ -171,6 +204,50 @@ router.get("/courses/:slug", authenticate, async (req, res) => {
     overall: { totalLessons, completedLessons, percent: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0 },
     resumeLessonId,
   });
+});
+
+// Per-module lesson list, fetched on demand when a student expands a module in the UI (see
+// GET /courses/:slug above, which now returns module metadata + counts only, no lesson list).
+// Same shape the old inline `lessons` array had (id/title/order/estimatedMinutes/isModuleTest/
+// status/bookmarked). ADMIN/STAFF: unfiltered (module just needs to exist). STUDENT: the parent
+// course must still pass the same eligibility gate, and a locked module's lessons are not
+// returned (matches the intent of the lock — a student shouldn't even see what's inside a
+// module they can't access yet).
+router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req, res) => {
+  const where = { slug: req.params.slug };
+  if (req.user.role === "STUDENT") {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return res.status(404).json({ error: "Course not found" });
+    where.status = "PUBLISHED";
+    Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
+  }
+  const course = await prisma.course.findFirst({ where, select: { id: true } });
+  if (!course) return res.status(404).json({ error: "Course not found" });
+
+  const module = await prisma.courseModule.findFirst({ where: { id: req.params.moduleId, courseId: course.id }, select: { id: true } });
+  if (!module) return res.status(404).json({ error: "Module not found" });
+
+  if (req.user.role === "STUDENT") {
+    const lockMap = await getModuleLockMap(prisma, req.user.id, course.id);
+    if (lockMap.get(module.id)?.locked) return res.status(403).json({ error: "This module is locked" });
+  }
+
+  const lessons = await prisma.lesson.findMany({ where: { moduleId: module.id }, orderBy: { order: "asc" } });
+  let progressByLesson = new Map();
+  if (req.user.role === "STUDENT" && lessons.length) {
+    const progress = await prisma.lessonProgress.findMany({
+      where: { studentId: req.user.id, lessonId: { in: lessons.map((l) => l.id) } },
+    });
+    progressByLesson = new Map(progress.map((p) => [p.lessonId, p]));
+  }
+  res.json(lessons.map((l) => {
+    const p = progressByLesson.get(l.id);
+    return {
+      id: l.id, title: l.title, order: l.order, estimatedMinutes: l.estimatedMinutes,
+      isModuleTest: l.isModuleTest,
+      status: p?.status || "NOT_STARTED", bookmarked: p?.bookmarked || false,
+    };
+  }));
 });
 
 // Any authenticated user: single lesson detail, with prev/next lesson ids for in-course

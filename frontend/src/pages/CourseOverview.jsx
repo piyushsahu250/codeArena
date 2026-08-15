@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { GraduationCap, Lock, CheckCircle2, Clock, ClipboardList } from "lucide-react";
+import { GraduationCap, Lock, CheckCircle2, Clock, ClipboardList, ChevronDown, ChevronRight } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -15,13 +15,35 @@ export default function CourseOverview() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const isStudent = user.role === "STUDENT";
+  // For students, GET /courses/:slug now returns module metadata + counts only (no `lessons`
+  // array) — a course's full lesson list no longer has to be transferred/rendered up front as
+  // more courses/modules get authored. Lessons are fetched per module, on first expand, and
+  // cached here so re-collapsing/re-expanding the same module doesn't re-fetch. ADMIN/STAFF
+  // still get `lessons` inline on the initial response (unchanged), so this cache is unused for
+  // them — `moduleLessons[m.id] ?? m.lessons` below picks whichever is actually available.
+  const [moduleLessons, setModuleLessons] = useState({});
+  const [expanded, setExpanded] = useState({});
+  const [loadingModule, setLoadingModule] = useState(null);
 
   useEffect(() => {
     setData(null);
+    setModuleLessons({});
+    setExpanded({});
     api.get(`/learning/courses/${slug}`)
       .then((res) => setData(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load course"));
   }, [slug]);
+
+  function toggleModule(m) {
+    setExpanded((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
+    if (!moduleLessons[m.id] && !Array.isArray(m.lessons)) {
+      setLoadingModule(m.id);
+      api.get(`/learning/courses/${slug}/modules/${m.id}/lessons`)
+        .then((res) => setModuleLessons((prev) => ({ ...prev, [m.id]: res.data })))
+        .catch(() => setModuleLessons((prev) => ({ ...prev, [m.id]: [] })))
+        .finally(() => setLoadingModule(null));
+    }
+  }
 
   if (error) return <div><Navbar /><div style={{ maxWidth: 900, margin: "0 auto", padding: 48 }}><p style={{ color: "var(--rust)" }}>{error}</p></div></div>;
   if (!data) return <div><Navbar /><div style={{ maxWidth: 900, margin: "0 auto", padding: 48 }} className="mono">Loading…</div></div>;
@@ -69,10 +91,18 @@ export default function CourseOverview() {
           {modules.map((m, mi) => {
             const locked = isStudent && m.locked;
             const isCurrent = isStudent && m.id === currentModuleId;
+            // ADMIN/STAFF get `lessons` inline on the initial response (unchanged); STUDENT gets
+            // it lazily via moduleLessons once expanded (see toggleModule above).
+            const lessons = Array.isArray(m.lessons) ? m.lessons : moduleLessons[m.id];
+            const isOpen = !isStudent || !!expanded[m.id];
             return (
               <div key={m.id} className="card" style={{ padding: 20, opacity: locked ? 0.6 : 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, cursor: isStudent && !locked ? "pointer" : "default" }}
+                  onClick={() => { if (isStudent && !locked) toggleModule(m); }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {isStudent && !locked && (isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
                     <h3 style={{ fontSize: 16 }}>Module {mi + 1}: {m.title}</h3>
                     {isStudent && m.completed && <span className="badge" style={{ background: "#E7F3EB", color: "var(--mint)" }}>✓ Completed</span>}
                     {isCurrent && <span className="badge" style={{ background: "#FCEFD9", color: "var(--amber-dark)" }}>In progress</span>}
@@ -87,10 +117,12 @@ export default function CourseOverview() {
                   <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 10 }}>
                     Complete the previous module's practice test to unlock this module.
                   </p>
-                ) : (
+                ) : !isOpen ? null : (
                   <>
                     <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
-                      {m.lessons.map((l) => (
+                      {!lessons ? (
+                        <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{loadingModule === m.id ? "Loading lessons…" : ""}</p>
+                      ) : lessons.map((l) => (
                         <Link
                           key={l.id}
                           to={`/learning/${slug}/lesson/${l.id}`}
