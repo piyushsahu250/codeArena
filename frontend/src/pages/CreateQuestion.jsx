@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import FolderPicker from "../components/FolderPicker";
+import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
@@ -18,7 +19,7 @@ const QUESTION_TYPES = [
 ];
 
 const emptyForm = {
-  title: "", subject: "", topic: "", description: "", questionType: "CODING",
+  title: "", description: "", questionType: "CODING",
   difficulty: "EASY", points: 10, explanation: "",
   timeLimitMs: 2000, memoryLimitKb: "", starterCode: "", tags: "",
   evaluationType: "STDIO", sqlSchema: "",
@@ -55,6 +56,9 @@ export default function CreateQuestion() {
   const [options, setOptions] = useState(["", ""]);
   const [correctIndices, setCorrectIndices] = useState([]);
   const [folderId, setFolderId] = useState("");
+  const [subjectId, setSubjectId] = useState(null);
+  const [unitId, setUnitId] = useState(null);
+  const [topicId, setTopicId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
@@ -83,7 +87,7 @@ export default function CreateQuestion() {
   // AI-authored content must pass through review before it can appear in a live assessment, never
   // auto-publish.
   async function generateWithAI() {
-    const subject = (aiSubject || form.subject).trim();
+    const subject = aiSubject.trim();
     if (!subject) return setAiError("Enter a subject to generate from");
     setGenerating(true);
     setAiError("");
@@ -91,7 +95,7 @@ export default function CreateQuestion() {
       const { data } = await api.post("/ai/questions/generate-question", {
         questionType: form.questionType,
         subject,
-        topic: (aiTopic || form.topic).trim(),
+        topic: aiTopic.trim(),
         difficulty: form.difficulty,
         btlLevel: aiBtlLevel || form.btlLevel || undefined,
         skillTested: form.skillTested || undefined,
@@ -102,8 +106,6 @@ export default function CreateQuestion() {
         title: data.title || f.title,
         description: data.description || f.description,
         explanation: data.explanation || f.explanation,
-        subject: f.subject || subject,
-        topic: f.topic || (aiTopic || "").trim(),
         btlLevel: data.btlLevel ?? f.btlLevel,
         skillTested: data.skillTested || f.skillTested,
         subtopic: data.subtopic || f.subtopic,
@@ -130,7 +132,7 @@ export default function CreateQuestion() {
     api.get(`/questions/${id}`).then((res) => {
       const q = res.data;
       setForm({
-        title: q.title || "", subject: q.subject || "", topic: q.topic || "",
+        title: q.title || "",
         description: q.description || "", questionType: q.questionType,
         difficulty: q.difficulty, points: q.points, explanation: q.explanation || "",
         timeLimitMs: q.timeLimitMs ?? 2000, memoryLimitKb: q.memoryLimitKb ? Math.round(q.memoryLimitKb / 1024) : "",
@@ -152,6 +154,9 @@ export default function CreateQuestion() {
         setCorrectIndices(q.correctAnswer || []);
       }
       setFolderId(q.folderId || "");
+      setSubjectId(q.subjectId || null);
+      setUnitId(q.unitId || null);
+      setTopicId(q.topicId || null);
       setLoading(false);
     });
   }, [id, isEdit]);
@@ -193,6 +198,10 @@ export default function CreateQuestion() {
 
   async function handleSubmit(e, allowDuplicate = false) {
     e.preventDefault();
+    if (!subjectId || !unitId) {
+      alert("Subject and Unit are required — every question must be classified before it can be saved.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -202,6 +211,7 @@ export default function CreateQuestion() {
         memoryLimitKb: form.memoryLimitKb ? Math.round(Number(form.memoryLimitKb) * 1024) : null,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         folderId: folderId || null,
+        subjectId, unitId, topicId,
         allowDuplicate: allowDuplicate || undefined,
         aiGenerated,
       };
@@ -325,15 +335,13 @@ export default function CreateQuestion() {
           <label style={labelStyle}>Question Name (optional)</label>
           <input style={inputStyle} value={form.title} onChange={updateField("title")} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Subject</label>
-              <input style={inputStyle} value={form.subject} onChange={updateField("subject")} />
-            </div>
-            <div>
-              <label style={labelStyle}>Topic</label>
-              <input style={inputStyle} value={form.topic} onChange={updateField("topic")} />
-            </div>
+          <div style={{ marginTop: 14 }}>
+            <SubjectUnitPicker
+              subjectId={subjectId}
+              unitId={unitId}
+              topicId={topicId}
+              onChange={({ subjectId: s, unitId: u, topicId: t }) => { setSubjectId(s); setUnitId(u); setTopicId(t); }}
+            />
           </div>
 
           {/* Employability & Subject Readiness module — all optional. A question with no BTL

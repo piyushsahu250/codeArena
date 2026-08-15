@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Folder } from "lucide-react";
+import { Folder, BookOpen, Layers, AlertTriangle } from "lucide-react";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
+import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import { useConfirm } from "../context/ConfirmContext";
+import { useAuth } from "../context/AuthContext";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -16,6 +18,28 @@ const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "Tru
 export default function QuestionBank() {
   const navigate = useNavigate();
   const confirmDialog = useConfirm();
+  const { user } = useAuth();
+  // Subject/Unit/Topic is now the mandatory, primary organizing axis (spec section 5's Subject ->
+  // Unit -> count tree); QuestionFolder stays available as a secondary, optional grouping (e.g.
+  // "Midterm Prep" spanning subjects) — neither replaces the other, see the approved plan's design
+  // decision. "subjects" is the default view a staff member lands on.
+  const [viewMode, setViewMode] = useState("subjects"); // "subjects" | "folders"
+  const [subjects, setSubjects] = useState(null);
+  const [activeSubject, setActiveSubject] = useState(null); // a row from GET /subjects, or null
+  const [activeUnit, setActiveUnit] = useState(null); // a unit from activeSubject.units, the synthetic "__none__" bucket, or null
+  const [subjectAssignments, setSubjectAssignments] = useState(null); // ADMIN-only: StaffSubjectAssignment rows for activeSubject
+  const [grantStaffId, setGrantStaffId] = useState("");
+  const [staffDirectory, setStaffDirectory] = useState(null);
+  const [granting, setGranting] = useState(false);
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
+  const [bulkSubjectId, setBulkSubjectId] = useState(null);
+  const [bulkUnitId, setBulkUnitId] = useState(null);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [creatingSubjectRoot, setCreatingSubjectRoot] = useState(false);
+  const [newUnitName, setNewUnitName] = useState("");
+  const [creatingUnitInSubject, setCreatingUnitInSubject] = useState(false);
+
   const [folders, setFolders] = useState(null);
   const [activeFolder, setActiveFolder] = useState(null);
   const [newFolderName, setNewFolderName] = useState("");
@@ -35,6 +59,8 @@ export default function QuestionBank() {
   const [q, setQ] = useState("");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
+  const [topicId, setTopicId] = useState("");
+  const [unitTopics, setUnitTopics] = useState([]);
   const [difficulty, setDifficulty] = useState("");
   const [questionType, setQuestionType] = useState("");
   const [createdById, setCreatedById] = useState("");
@@ -61,9 +87,107 @@ export default function QuestionBank() {
   }
   useEffect(loadFolders, []);
 
-  useEffect(() => {
+  function loadSubjects() {
+    return api.get("/subjects").then((res) => {
+      setSubjects(res.data);
+      return res.data;
+    });
+  }
+  useEffect(() => { loadSubjects(); }, []);
+
+  async function createSubjectRoot(e) {
+    e.preventDefault();
+    if (!newSubjectName.trim()) return;
+    setCreatingSubjectRoot(true);
+    try {
+      const { data } = await api.post("/subjects", { name: newSubjectName.trim() });
+      setNewSubjectName("");
+      const fresh = await loadSubjects();
+      setActiveSubject(fresh.find((s) => s.id === data.id) || data);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create subject");
+    } finally {
+      setCreatingSubjectRoot(false);
+    }
+  }
+
+  async function createUnitInSubject(e) {
+    e.preventDefault();
+    if (!newUnitName.trim() || !activeSubject) return;
+    setCreatingUnitInSubject(true);
+    try {
+      await api.post(`/subjects/${activeSubject.id}/units`, { name: newUnitName.trim() });
+      setNewUnitName("");
+      const fresh = await loadSubjects();
+      setActiveSubject(fresh.find((s) => s.id === activeSubject.id) || activeSubject);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create unit");
+    } finally {
+      setCreatingUnitInSubject(false);
+    }
+  }
+
+  // ADMIN-only: who currently has authoring access to activeSubject (spec section 10's actual UI).
+  function loadAssignments(subjectId) {
+    setSubjectAssignments(null);
+    api.get(`/subjects/${subjectId}/assignments`).then((res) => setSubjectAssignments(res.data));
+    if (!staffDirectory) {
+      api.get("/tests/staff-directory").then((res) => setStaffDirectory(res.data)).catch(() => setStaffDirectory([]));
+    }
+  }
+
+  async function grantSubjectAccess() {
+    if (!grantStaffId || !activeSubject) return;
+    setGranting(true);
+    try {
+      await api.post(`/subjects/${activeSubject.id}/assignments`, { staffId: grantStaffId });
+      setGrantStaffId("");
+      loadAssignments(activeSubject.id);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to grant access");
+    } finally {
+      setGranting(false);
+    }
+  }
+
+  async function revokeSubjectAccess(staffId) {
+    if (!activeSubject) return;
+    try {
+      await api.delete(`/subjects/${activeSubject.id}/assignments/${staffId}`);
+      loadAssignments(activeSubject.id);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to revoke access");
+    }
+  }
+
+  // Bulk "Assign Subject/Unit" — clears the backfill script's "needs classification" backlog
+  // (spec section 15) for a selected batch of questions without opening each one's edit form.
+  async function bulkAssignSubject() {
+    if (!bulkSubjectId || !bulkUnitId) return;
+    setBulkAssigning(true);
+    try {
+      const { data } = await api.post("/questions/bulk-assign-subject", {
+        questionIds: selectedIds, subjectId: bulkSubjectId, unitId: bulkUnitId,
+      });
+      if (data.skippedCount > 0) alert(`Assigned ${data.updatedCount} question(s). ${data.skippedCount} skipped (not yours to update).`);
+      setSelectedIds([]);
+      setShowBulkAssign(false);
+      setBulkSubjectId(null);
+      setBulkUnitId(null);
+      load();
+      loadSubjects();
+      reloadMeta();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to assign subject/unit");
+    } finally {
+      setBulkAssigning(false);
+    }
+  }
+
+  function reloadMeta() {
     api.get("/questions/meta/filters").then((res) => setMeta(res.data));
-  }, []);
+  }
+  useEffect(reloadMeta, []);
 
   // Debounce free-text search — previously fired one API call per keystroke.
   useEffect(() => {
@@ -71,16 +195,29 @@ export default function QuestionBank() {
     return () => clearTimeout(t);
   }, [qInput]);
 
+  const isBrowsing = viewMode === "folders" ? !!activeFolder : !!activeUnit;
+
   useEffect(() => {
     setPage(1);
     setSelectedIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, subject, topic, difficulty, questionType, createdById, questionStatus, aiGeneratedOnly, activeFolder]);
+  }, [q, subject, topic, topicId, difficulty, questionType, createdById, questionStatus, aiGeneratedOnly, activeFolder, activeUnit]);
 
   useEffect(() => {
-    if (activeFolder) load();
+    if (isBrowsing) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, subject, topic, difficulty, questionType, createdById, questionStatus, aiGeneratedOnly, activeFolder, page]);
+  }, [q, subject, topic, topicId, difficulty, questionType, createdById, questionStatus, aiGeneratedOnly, activeFolder, activeUnit, page]);
+
+  // Topic filter within a Unit — a real cascading list (from Topic rows under the active Unit),
+  // distinct from the legacy free-text `topic` filter used in Folders mode/for unclassified questions.
+  useEffect(() => {
+    setTopicId("");
+    if (viewMode === "subjects" && activeUnit && activeUnit.id !== "__none__" && activeUnit.id !== "__no_subject__") {
+      api.get(`/subjects/units/${activeUnit.id}/topics`).then((res) => setUnitTopics(res.data)).catch(() => setUnitTopics([]));
+    } else {
+      setUnitTopics([]);
+    }
+  }, [viewMode, activeUnit]);
 
   const foldersById = useMemo(() => new Map((folders || []).map((f) => [f.id, f])), [folders]);
 
@@ -118,13 +255,22 @@ export default function QuestionBank() {
     if (q) params.q = q;
     if (subject) params.subject = subject;
     if (topic) params.topic = topic;
+    if (topicId) params.topicId = topicId;
     if (difficulty) params.difficulty = difficulty;
     if (questionType) params.questionType = questionType;
     if (createdById) params.createdById = createdById;
     if (questionStatus) params.questionStatus = questionStatus;
     if (aiGeneratedOnly) params.aiGenerated = "true";
-    if (activeFolder?.id === "__none__") params.folderId = "__none__";
-    else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+    if (viewMode === "folders") {
+      if (activeFolder?.id === "__none__") params.folderId = "__none__";
+      else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+    } else if (viewMode === "subjects" && activeUnit) {
+      if (activeUnit.id === "__no_subject__") params.subjectId = "__none__";
+      else {
+        params.subjectId = activeSubject.id;
+        params.unitId = activeUnit.id === "__none__" ? "__none__" : activeUnit.id;
+      }
+    }
     api.get("/questions", { params }).then((res) => {
       setQuestions(res.data.rows);
       setPageMeta({ page: res.data.page, totalPages: res.data.totalPages, total: res.data.total });
@@ -358,8 +504,16 @@ export default function QuestionBank() {
   async function downloadFile(url, filename, overrideParams) {
     const params = overrideParams || { q, subject, topic, difficulty, questionType, createdById };
     if (!overrideParams) {
-      if (activeFolder?.id === "__none__") params.folderId = "__none__";
-      else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+      if (viewMode === "folders") {
+        if (activeFolder?.id === "__none__") params.folderId = "__none__";
+        else if (activeFolder && activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+      } else if (viewMode === "subjects" && activeUnit) {
+        if (activeUnit.id === "__no_subject__") params.subjectId = "__none__";
+        else {
+          params.subjectId = activeSubject.id;
+          params.unitId = activeUnit.id === "__none__" ? "__none__" : activeUnit.id;
+        }
+      }
     }
     const res = await api.get(url, { responseType: "blob", params });
     const blobUrl = URL.createObjectURL(res.data);
@@ -378,9 +532,15 @@ export default function QuestionBank() {
     try {
       const formData = new FormData();
       formData.append("file", importFile);
-      if (activeFolder && activeFolder.id !== "__all__" && activeFolder.id !== "__none__") {
-        formData.append("folderId", activeFolder.id);
+      if (viewMode === "folders") {
+        if (activeFolder && activeFolder.id !== "__all__" && activeFolder.id !== "__none__") {
+          formData.append("folderId", activeFolder.id);
+        }
       }
+      // Note: bulk-import resolves Subject/Unit per-row from the file's own columns (see
+      // resolveSubjectUnitTopicByName in questions.js), not from a request param — browsing into
+      // a specific Unit before importing doesn't pre-target the import, it only pre-fills nothing.
+      // Uploaded rows must name their own Subject/Unit regardless of where the modal was opened from.
       formData.append("duplicateAction", duplicateAction);
       const { data } = await api.post("/questions/bulk-import", formData);
       setImportResult(data);
@@ -427,10 +587,167 @@ export default function QuestionBank() {
           </div>
         </div>
 
-        {!activeFolder ? (
+        {!isBrowsing && (
+          <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+            <button
+              className={viewMode === "subjects" ? "btn btn-primary" : "btn btn-ghost"}
+              style={{ fontSize: 13 }}
+              onClick={() => setViewMode("subjects")}
+            >
+              <BookOpen size={14} style={{ verticalAlign: -2, marginRight: 6 }} />By Subject
+            </button>
+            <button
+              className={viewMode === "folders" ? "btn btn-primary" : "btn btn-ghost"}
+              style={{ fontSize: 13 }}
+              onClick={() => setViewMode("folders")}
+            >
+              <Folder size={14} style={{ verticalAlign: -2, marginRight: 6 }} />My Folders
+            </button>
+          </div>
+        )}
+
+        {!isBrowsing && viewMode === "subjects" && (
+          !activeSubject ? (
+            <>
+              <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>
+                Every question lives under a Subject &gt; Unit &gt; (optional) Topic — this keeps "Unit 1" in Java
+                and "Unit 1" in DBMS from ever being confused with each other. Open a subject to browse its units,
+                or create a new one.
+              </p>
+              <form onSubmit={createSubjectRoot} style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                <input
+                  style={{ ...inputStyle, flex: "1 1 220px" }}
+                  placeholder="New subject name (e.g. Java, DBMS)…"
+                  value={newSubjectName}
+                  onChange={(e) => setNewSubjectName(e.target.value)}
+                />
+                <button className="btn btn-primary" disabled={!newSubjectName.trim() || creatingSubjectRoot}>
+                  {creatingSubjectRoot ? "Creating…" : "+ New Subject"}
+                </button>
+              </form>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, marginTop: 20 }}>
+                {subjects === null && <SkeletonGrid count={4} minWidth={220} />}
+                {subjects?.map((s) => (
+                  <div key={s.id} className="card" style={{ padding: 16, cursor: "pointer" }} onClick={() => setActiveSubject(s)}>
+                    <Layers size={26} />
+                    <div style={{ fontWeight: 700, marginTop: 6 }}>{s.name}</div>
+                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                      {s._count.questions} question{s._count.questions === 1 ? "" : "s"} · {s.units.length} unit{s.units.length === 1 ? "" : "s"}
+                    </div>
+                    {s.createdBy?.name && (
+                      <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>by {s.createdBy.name}</div>
+                    )}
+                  </div>
+                ))}
+                {meta.noSubjectCount > 0 && (
+                  <div
+                    className="card"
+                    style={{ padding: 16, cursor: "pointer", borderColor: "var(--rust)" }}
+                    onClick={() => setActiveUnit({ id: "__no_subject__", name: "Needs Subject Assignment" })}
+                  >
+                    <AlertTriangle size={26} color="var(--rust)" />
+                    <div style={{ fontWeight: 700, marginTop: 6 }}>Needs Subject Assignment</div>
+                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                      {meta.noSubjectCount} question{meta.noSubjectCount === 1 ? "" : "s"} from before this taxonomy existed
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 20, flexWrap: "wrap", fontSize: 13 }}>
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setActiveSubject(null)}>← All subjects</button>
+              </div>
+              <h3 style={{ fontSize: 16, marginTop: 12 }}>{activeSubject.name}</h3>
+              <p className="mono" style={{ fontSize: 12, color: "var(--mint)", marginTop: 4 }}>
+                {activeSubject._count.questions} question{activeSubject._count.questions === 1 ? "" : "s"} across {activeSubject.units.length} unit{activeSubject.units.length === 1 ? "" : "s"}
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginTop: 16 }}>
+                {activeSubject.units.map((u) => (
+                  <div key={u.id} className="card" style={{ padding: 16, cursor: "pointer" }} onClick={() => setActiveUnit(u)}>
+                    <div style={{ fontWeight: 700 }}>{u.name}</div>
+                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                      {u._count.questions} question{u._count.questions === 1 ? "" : "s"}{u._count.topics > 0 ? ` · ${u._count.topics} topic${u._count.topics === 1 ? "" : "s"}` : ""}
+                    </div>
+                  </div>
+                ))}
+                {activeSubject.units.length === 0 && <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>No units yet — add one below.</p>}
+                {activeSubject._count.questions > activeSubject.units.reduce((sum, u) => sum + u._count.questions, 0) && (
+                  <div
+                    className="card"
+                    style={{ padding: 16, cursor: "pointer", borderColor: "var(--rust)" }}
+                    onClick={() => setActiveUnit({ id: "__none__", name: "Needs Unit Assignment" })}
+                  >
+                    <AlertTriangle size={22} color="var(--rust)" />
+                    <div style={{ fontWeight: 700, marginTop: 6 }}>Needs Unit Assignment</div>
+                    <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                      {activeSubject._count.questions - activeSubject.units.reduce((sum, u) => sum + u._count.questions, 0)} question(s) not yet sorted into a unit
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={createUnitInSubject} style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                <input
+                  style={{ ...inputStyle, flex: "1 1 220px" }}
+                  placeholder={`New unit name (under "${activeSubject.name}")…`}
+                  value={newUnitName}
+                  onChange={(e) => setNewUnitName(e.target.value)}
+                />
+                <button className="btn btn-primary" disabled={!newUnitName.trim() || creatingUnitInSubject}>
+                  {creatingUnitInSubject ? "Creating…" : "+ New Unit"}
+                </button>
+              </form>
+
+              {user?.role === "ADMIN" && (
+                <div className="card" style={{ padding: 16, marginTop: 20 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Who can author under "{activeSubject.name}"?</div>
+                  <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                    {activeSubject.createdBy?.name || "The creator"} always has access. Grant other staff here — access is
+                    checked on the server, not just hidden in the UI.
+                  </p>
+                  {subjectAssignments === null && !subjectAssignments && (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, marginTop: 8 }} onClick={() => loadAssignments(activeSubject.id)}>
+                      Manage access
+                    </button>
+                  )}
+                  {subjectAssignments && (
+                    <>
+                      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                        <select style={{ ...selectStyle, minWidth: 200 }} value={grantStaffId} onChange={(e) => setGrantStaffId(e.target.value)}>
+                          <option value="">Select staff to grant…</option>
+                          {(staffDirectory || [])
+                            .filter((s) => !subjectAssignments.some((a) => a.staffId === s.id) && s.id !== activeSubject.createdById)
+                            .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                        <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={!grantStaffId || granting} onClick={grantSubjectAccess}>
+                          {granting ? "Granting…" : "Grant"}
+                        </button>
+                      </div>
+                      <div style={{ marginTop: 10 }}>
+                        {subjectAssignments.length === 0 && <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>No additional staff granted yet.</p>}
+                        {subjectAssignments.map((a) => (
+                          <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", fontSize: 13 }}>
+                            <span>{a.staff.name}</span>
+                            <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => revokeSubjectAccess(a.staffId)}>Revoke</button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )
+        )}
+
+        {!isBrowsing && viewMode === "folders" && (
           <>
-            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 20 }}>
-              Question banks are private to your institute and can be nested (e.g. "Aptitude" &gt; "Percentages"). Open a folder to browse, or create a new top-level one.
+            <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>
+              Folders are a secondary, optional way to group questions (e.g. "Midterm Prep" spanning several subjects) — Subject/Unit above stays the primary organization. Open a folder to browse, or create a new top-level one.
             </p>
             <NewFolderForm
               name={newFolderName} setName={setNewFolderName}
@@ -455,10 +772,24 @@ export default function QuestionBank() {
               ))}
             </div>
           </>
-        ) : (
+        )}
+
+        {isBrowsing && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 20, flexWrap: "wrap", fontSize: 13 }}>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setActiveFolder(null)}>← All banks</button>
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: 12, padding: "4px 10px" }}
+                onClick={() => (viewMode === "folders" ? setActiveFolder(null) : setActiveUnit(null))}
+              >
+                ← {viewMode === "folders" ? "All banks" : (activeUnit?.id === "__no_subject__" ? "All subjects" : activeSubject?.name || "Subject")}
+              </button>
+              {viewMode === "subjects" && activeUnit?.id !== "__no_subject__" && (
+                <>
+                  <span style={{ color: "var(--ink-dim)" }}>/</span>
+                  <span style={{ fontWeight: 700 }}>{activeUnit?.name}</span>
+                </>
+              )}
               {isRealFolder && breadcrumbFor(activeFolder).map((f, i) => (
                 <span key={f.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span style={{ color: "var(--ink-dim)" }}>/</span>
@@ -472,7 +803,7 @@ export default function QuestionBank() {
                 </span>
               ))}
             </div>
-            <h3 style={{ fontSize: 16, marginTop: 12 }}>{activeFolder.name}</h3>
+            <h3 style={{ fontSize: 16, marginTop: 12 }}>{viewMode === "folders" ? activeFolder.name : (activeUnit?.id === "__no_subject__" ? "Needs Subject Assignment" : `${activeSubject?.name} → ${activeUnit?.name}`)}</h3>
             {isRealFolder && activeFolder.description && (
               <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 2 }}>{activeFolder.description}</p>
             )}
@@ -526,14 +857,23 @@ export default function QuestionBank() {
                 value={qInput}
                 onChange={(e) => setQInput(e.target.value)}
               />
-              <select style={selectStyle} value={subject} onChange={(e) => setSubject(e.target.value)}>
-                <option value="">All categories (subject)</option>
-                {meta.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select style={selectStyle} value={topic} onChange={(e) => setTopic(e.target.value)}>
-                <option value="">All subcategories (topic)</option>
-                {meta.topics.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              {viewMode === "folders" ? (
+                <>
+                  <select style={selectStyle} value={subject} onChange={(e) => setSubject(e.target.value)}>
+                    <option value="">All categories (subject)</option>
+                    {meta.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select style={selectStyle} value={topic} onChange={(e) => setTopic(e.target.value)}>
+                    <option value="">All subcategories (topic)</option>
+                    {meta.topics.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </>
+              ) : unitTopics.length > 0 && (
+                <select style={selectStyle} value={topicId} onChange={(e) => setTopicId(e.target.value)}>
+                  <option value="">All topics</option>
+                  {unitTopics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              )}
               <select style={selectStyle} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
                 <option value="">All difficulties</option>
                 <option value="EASY">Easy</option>
@@ -654,9 +994,18 @@ export default function QuestionBank() {
                           AI
                         </span>
                       )}
+                      {question.subjectRef ? (
+                        <span className="mono" style={{ fontSize: 11, color: "var(--mint)" }}>
+                          {question.subjectRef.name} → {question.unitRef?.name || "?"}{question.topicRef ? ` → ${question.topicRef.name}` : ""}
+                        </span>
+                      ) : (
+                        <span className="mono" style={{ fontSize: 11, color: "var(--rust)" }}>
+                          {question.subject ? `${question.subject}${question.topic ? ` · ${question.topic}` : ""} (needs classification)` : "Needs classification"}
+                        </span>
+                      )}
                     </div>
                     <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {[question.subject, question.topic].filter(Boolean).join(" · ") || "—"} · {question.description}
+                      {question.description}
                       {question.createdBy?.name ? ` · by ${question.createdBy.name}` : ""}
                     </p>
                   </div>
@@ -709,6 +1058,9 @@ export default function QuestionBank() {
                 </button>
                 <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={exportSelected}>Export</button>
                 <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={addSelectedToTest}>Add to Test</button>
+                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowBulkAssign((s) => !s)}>
+                  Assign Subject/Unit
+                </button>
                 <button
                   className="btn btn-ghost"
                   style={{ fontSize: 12, color: "#16a34a", borderColor: "#16a34a" }}
@@ -736,6 +1088,24 @@ export default function QuestionBank() {
                   {bulkDeleting ? "Deleting…" : "Delete"}
                 </button>
                 <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setSelectedIds([])}>Deselect All</button>
+              </div>
+            )}
+
+            {showBulkAssign && selectedIds.length > 0 && (
+              <div className="card" style={{ padding: 16, marginTop: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+                  Assign Subject/Unit to {selectedIds.length} question{selectedIds.length === 1 ? "" : "s"}
+                </div>
+                <SubjectUnitPicker
+                  subjectId={bulkSubjectId} unitId={bulkUnitId} showTopic={false}
+                  onChange={({ subjectId, unitId }) => { setBulkSubjectId(subjectId); setBulkUnitId(unitId); }}
+                />
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={!bulkSubjectId || !bulkUnitId || bulkAssigning} onClick={bulkAssignSubject}>
+                    {bulkAssigning ? "Assigning…" : "Assign"}
+                  </button>
+                  <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowBulkAssign(false)}>Cancel</button>
+                </div>
               </div>
             )}
           </>

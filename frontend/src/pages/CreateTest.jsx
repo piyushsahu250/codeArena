@@ -5,6 +5,7 @@ import api from "../api";
 import Navbar from "../components/Navbar";
 import { SkeletonGrid } from "../components/Skeleton";
 import FolderPicker from "../components/FolderPicker";
+import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import StaffPicker from "../components/StaffPicker";
 import UploadProgressBar from "../components/UploadProgressBar";
@@ -69,19 +70,15 @@ export default function CreateTest() {
   // Subject isolation additions — testOwnerId gates whether the Shared With panel renders at all
   // (only the test's own creator, or an Admin, may manage sharing — see POST/DELETE
   // /tests/:id/shares's own backend check, mirrored here just for UI visibility, never trusted as
-  // the real authorization boundary). mySubjects seeds the Subject datalist from this staff
-  // member's own already-created tests, fetched once — no new endpoint needed for that.
+  // the real authorization boundary).
   const [testOwnerId, setTestOwnerId] = useState(null);
   const [shares, setShares] = useState([]); // [{ staffId, staff: { id, name } }]
-  const [mySubjects, setMySubjects] = useState([]);
+  const [subjectId, setSubjectId] = useState(null);
+  const [unitId, setUnitId] = useState(null);
 
   useEffect(() => {
     api.get("/academic-groups").then((res) => setAcademicGroups(res.data));
     api.get("/talent-pools").then((res) => setTalentPools(res.data)).catch(() => setTalentPools([]));
-    api.get("/tests").then((res) => {
-      const subjects = [...new Set(res.data.map((t) => t.subject).filter(Boolean))].sort();
-      setMySubjects(subjects);
-    }).catch(() => setMySubjects([]));
   }, []);
 
   useEffect(() => {
@@ -108,6 +105,8 @@ export default function CreateTest() {
         randomHard: t.difficultyDistribution?.hard ?? "",
       });
       setAcademicGroupIds((t.academicGroups || []).map((g) => g.academicGroupId));
+      setSubjectId(t.subjectId || null);
+      setUnitId(t.unitId || null);
       setInstituteId(t.instituteId || "");
       setTestOwnerId(t.createdById || null);
       setShares(t.shares || []);
@@ -223,6 +222,7 @@ export default function CreateTest() {
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         questionIds: isRandomMode ? undefined : selected,
+        subjectId, unitId,
         academicGroupIds: groupType === "ACADEMIC" ? academicGroupIds : [],
         instituteId: isPlatformLevel ? (instituteId || null) : undefined,
         randomQuestionsPerStudent: isRandomMode ? Number(form.randomQuestionsPerStudent) : undefined,
@@ -287,22 +287,21 @@ export default function CreateTest() {
             Test names are not required to be unique — "Unit 1 Test" for Java and "Unit 1 Test" for DBMS are two
             separate tests, told apart by Subject + Unit + who created them, never by the title alone.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={labelStyle}>Subject</label>
-              <input style={inputStyle} list="subject-options" value={form.subject} onChange={updateField("subject")} placeholder="e.g. Java" />
-              <datalist id="subject-options">
-                {mySubjects.map((s) => <option key={s} value={s} />)}
-              </datalist>
-            </div>
-            <div>
-              <label style={labelStyle}>Unit (optional)</label>
-              <input style={inputStyle} value={form.unit} onChange={updateField("unit")} placeholder="e.g. Unit 1" />
-            </div>
-            <div>
-              <label style={labelStyle}>Program (optional)</label>
-              <input style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. B.Tech CSE" />
-            </div>
+          <SubjectUnitPicker
+            subjectId={subjectId}
+            unitId={unitId}
+            showTopic={false}
+            onChange={({ subjectId: s, unitId: u, subjectName, unitName }) => {
+              setSubjectId(s);
+              setUnitId(u);
+              // Keep the legacy free-text subject/unit fields in sync — Test's own duplicate-name
+              // check (POST /tests) and any pre-migration display still reads these strings.
+              setForm((f) => ({ ...f, subject: subjectName || "", unit: unitName || "" }));
+            }}
+          />
+          <div style={{ marginTop: 12 }}>
+            <label style={labelStyle}>Program (optional)</label>
+            <input style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. B.Tech CSE" />
           </div>
 
           <label style={labelStyle}>Description</label>
@@ -599,6 +598,9 @@ export default function CreateTest() {
           onToggle={toggle}
           onQuestionsSeen={mergeQuestions}
           onClose={() => setShowBankModal(false)}
+          subjectId={subjectId}
+          unitId={unitId}
+          subjectLabel={form.subject && form.unit ? `${form.subject} → ${form.unit}` : form.subject || null}
         />
       )}
       {showBulkModal && (
@@ -617,12 +619,16 @@ export default function CreateTest() {
 // Folder-browser modal for "Add from Question Bank" — selections persist in the page's own
 // `selected` state (via onToggle), so switching folders never loses what was already picked, and
 // closing/reopening the modal (or navigating between folders repeatedly) keeps the running total.
-function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose }) {
+function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose, subjectId, unitId, subjectLabel }) {
   const [folders, setFolders] = useState(null);
   const [activeFolder, setActiveFolder] = useState(null); // null = folder list
   const [items, setItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [q, setQ] = useState("");
+  // Defaults to filtering by the test's own Subject/Unit when both are set — spec section 11:
+  // "It must NOT show DBMS -> Unit 1 questions when Java -> Unit 1 is selected." A staff member
+  // can still opt out (e.g. reusing a question written under a different Subject) via the toggle.
+  const [filterToSubject, setFilterToSubject] = useState(!!(subjectId && unitId));
 
   useEffect(() => {
     api.get("/questions/folders").then((res) => setFolders(res.data));
@@ -634,13 +640,17 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose 
     const params = { q: q || undefined, pageSize: 200 };
     if (activeFolder.id === "__none__") params.folderId = "__none__";
     else if (activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+    if (filterToSubject && subjectId && unitId) {
+      params.subjectId = subjectId;
+      params.unitId = unitId;
+    }
     api.get("/questions", { params }).then((res) => {
       setItems(res.data.rows);
       onQuestionsSeen(res.data.rows);
       setLoadingItems(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFolder, q]);
+  }, [activeFolder, q, filterToSubject]);
 
   return (
     <div className="ca-modal-overlay" onClick={onClose}>
@@ -679,6 +689,12 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose 
                 <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setActiveFolder(null)}>← Back to folders</button>
                 <input style={{ ...inputStyle, flex: 1 }} placeholder="Search this folder…" value={q} onChange={(e) => setQ(e.target.value)} />
               </div>
+              {subjectId && unitId && (
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginTop: 8, color: "var(--ink-dim)" }}>
+                  <input type="checkbox" checked={filterToSubject} onChange={(e) => setFilterToSubject(e.target.checked)} />
+                  Only show questions from this test's Subject/Unit{subjectLabel ? ` (${subjectLabel})` : ""}
+                </label>
+              )}
               <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
                 {loadingItems && <SkeletonGrid count={5} minWidth={280} />}
                 {!loadingItems && items.map((qq) => (

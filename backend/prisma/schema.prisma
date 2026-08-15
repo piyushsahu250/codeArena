@@ -112,6 +112,7 @@ model Institute {
   users           User[]
   questions       Question[]
   questionFolders QuestionFolder[]
+  subjects        Subject[]
   departments     Department[]
   academicGroups  AcademicGroup[]
   courseAssignments CourseInstituteAssignment[]
@@ -200,6 +201,8 @@ model User {
   submissions  Submission[]
   createdQuestions Question[]
   createdQuestionFolders QuestionFolder[]
+  createdSubjects  Subject[]
+  subjectAssignments StaffSubjectAssignment[]
 
   lessonProgress LessonProgress[]
   certificates    Certificate[]
@@ -316,6 +319,14 @@ model Test {
   subject      String?
   unit         String?
   program      String?
+  // Real FK counterparts to the legacy free-text subject/unit above, additive (see Question's
+  // identical subjectRef/unitId comment for the full rationale). unitId is only ever meaningful
+  // when subjectId is also set. Legacy tests predating this feature keep subjectId/unitId null and
+  // fall back to displaying the free-text subject/unit fields — see scripts/backfillSubjects.js.
+  subjectRef   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  subjectId    String?
+  unitRef      Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId       String?
   createdAt    DateTime @default(now())
 
   questions TestQuestion[]
@@ -343,6 +354,8 @@ model Test {
   @@index([startTime, endTime])
   @@index([company])
   @@index([instituteId])
+  @@index([subjectId])
+  @@index([unitId])
 }
 
 // Explicit test sharing: grants a Staff member other than the owner (createdById) access to
@@ -550,8 +563,24 @@ model Question {
   questionNumber Int          @default(autoincrement()) @unique // human-friendly display ID, e.g. "Q102"
   title          String?      // question name (optional label)
   description    String       // question text
-  subject        String?
-  topic          String?
+  subject        String?  // legacy free-text — kept as a display fallback for questions predating
+                          // subjectRef below (see scripts/backfillSubjects.js); never written by
+                          // any code path going forward, only read as a fallback.
+  topic          String?  // legacy free-text — same fallback role as subject, relative to topicRef.
+  // Subject/Unit/Topic taxonomy (Question Bank organization) — real FK relations, additive
+  // alongside the legacy free-text subject/topic above rather than replacing them, so no existing
+  // question/query is affected. subjectId+unitId are required going forward at the route layer
+  // (routes/questions.js) for every NEW question; pre-existing rows may have subjectId set (by
+  // the backfill script, inferred from the old free-text subject) with unitId left null — Unit
+  // never existed before this feature, so there's no reliable signal to infer it from, and such
+  // rows are surfaced in QuestionBank.jsx as "Needs Unit assignment" for manual review rather than
+  // guessed. topicId is always optional, even for new questions (see Topic model comment).
+  subjectRef     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  subjectId      String?
+  unitRef        Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId         String?
+  topicRef       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  topicId        String?
   // Employability & Subject Readiness module additions — all nullable/defaulted so every existing
   // question (and every existing Formal Test/Module Coding/Practice/Challenge/Interview query
   // against this table) is completely unaffected.
@@ -660,6 +689,91 @@ model Question {
   @@index([createdById])
   @@index([btlLevel])
   @@index([questionStatus])
+  @@index([subjectId])
+  @@index([unitId])
+  @@index([topicId])
+}
+
+// Subject/Unit/Topic taxonomy for the Question Bank + Test Creation systems — replaces free-text
+// Question.subject/topic and Test.subject/unit with real FK relations, per the "Subject-Wise &
+// Unit-Wise Question Bank Organization" spec. Deliberately NOT the same entity as ReadinessSubject
+// (Employability module — has its own topics:Json, assessmentModes, thresholds, all Readiness-
+// specific and unrelated to exam-question tagging) or Course/CourseModule (LMS — publish lifecycle,
+// lesson sequencing/locking, unrelated to exam-question tagging). Kept deliberately lean.
+model Subject {
+  id          String   @id @default(uuid())
+  name        String
+  code        String?
+  // null = platform-wide/legacy, same convention as QuestionFolder.instituteId — never actually
+  // produced by any current flow (every Subject is created by an Admin/Staff at a real institute),
+  // kept only for parity with the rest of this platform's nullable-institute convention.
+  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String?
+  // The Subject's own creator is always implicitly authorized to use it (checked in code via
+  // subjectAccess.js, not via a StaffSubjectAssignment row) — see that util's comment.
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  units       Unit[]
+  assignments StaffSubjectAssignment[]
+  questions   Question[]
+  tests       Test[]
+
+  @@unique([instituteId, name])
+  @@index([instituteId])
+  @@index([createdById])
+}
+
+model Unit {
+  id        String   @id @default(uuid())
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId String
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  topics    Topic[]
+  questions Question[]
+  tests     Test[]
+
+  @@unique([subjectId, name])
+  @@index([subjectId])
+}
+
+// Deliberately lightweight (spec: "Topic belongs to Unit where applicable" — optional, unlike the
+// mandatory Subject/Unit pair). No dedicated authorization layer: any staff member already
+// authorized for the parent Subject may create a new Topic inline while authoring a question, same
+// low-friction UX as the free-text topic field it replaces — see subjectAccess.js.
+model Topic {
+  id        String   @id @default(uuid())
+  unit      Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  questions Question[]
+
+  @@unique([unitId, name])
+  @@index([unitId])
+}
+
+// ADMIN-managed grant: which Subjects a STAFF member may author/upload questions and tests for
+// (spec: "Backend permission must enforce this. Do not rely only on frontend dropdown filtering.").
+// A Subject's own creator is always implicitly authorized without needing a row here (see
+// subjectAccess.js) — this table exists for explicitly granting OTHER staff access, e.g. a second
+// teacher of the same subject.
+model StaffSubjectAssignment {
+  id           String   @id @default(uuid())
+  staff        User     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId      String
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId    String
+  assignedById String
+  assignedAt   DateTime @default(now())
+
+  @@unique([staffId, subjectId])
+  @@index([subjectId])
 }
 
 // A named grouping within an institute's question bank (e.g. "Java", "DBMS Midterm"), nestable

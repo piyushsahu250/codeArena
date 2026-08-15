@@ -10,6 +10,7 @@ const { questionVisibilityWhere, ownsQuestionRow } = require("../utils/questionV
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const { validateQuestionForVerification } = require("../utils/questionValidation");
+const { canStaffUseSubject, resolveSubjectUnitTopic } = require("../utils/subjectAccess");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -21,7 +22,7 @@ const BTL_LEVELS = [1, 2, 3, 4, 5, 6];
 const QUESTION_STATUSES = ["DRAFT", "UNDER_REVIEW", "VERIFIED", "PUBLISHED", "ARCHIVED"];
 
 const TEMPLATE_HEADERS = [
-  "Question Name", "Subject", "Topic", "Question Text", "Question Type",
+  "Question Name", "Subject", "Unit", "Topic", "Question Text", "Question Type",
   "Options", "Correct Answer", "Marks", "Difficulty Level", "Explanation",
 ];
 
@@ -30,7 +31,7 @@ const TEMPLATE_HEADERS = [
 // `||` (e.g. "5->25||3->9||10->100") — documented in the template's own header note + sample row.
 // Constraints/Input Format/Output Format map onto Question.constraints/inputFormat/outputFormat.
 const CODING_TEMPLATE_HEADERS = [
-  "Question Title", "Topic", "Problem Statement", "Difficulty", "Programming Languages",
+  "Question Title", "Subject", "Unit", "Topic", "Problem Statement", "Difficulty", "Programming Languages",
   "Time Limit (seconds)", "Memory Limit (MB)", "Marks", "Constraints", "Input Format", "Output Format",
   "Sample Input 1", "Sample Output 1", "Sample Explanation 1",
   "Sample Input 2", "Sample Output 2", "Sample Explanation 2",
@@ -42,6 +43,8 @@ const CODING_TEMPLATE_HEADERS = [
 
 const CODING_IMPORT_HEADER_ALIASES = {
   title: ["question title", "title", "question name", "name"],
+  subject: ["subject", "subject course", "subject/course"],
+  unit: ["unit"],
   topic: ["topic"],
   description: ["problem statement", "question text", "description"],
   difficulty: ["difficulty", "difficulty level"],
@@ -128,10 +131,43 @@ function normalizeCorrectIndices(raw, options, isMulti) {
   return isMulti ? unique : unique.slice(0, 1);
 }
 
+// Bulk-upload counterpart to resolveSubjectUnitTopic (utils/subjectAccess.js) — resolves plain-text Subject/Unit/
+// Topic column values to real rows, enforcing the same authorization + "Unit must belong to
+// Subject" rule (spec section 8's exact rejection example: a Unit named the same as one under a
+// different Subject is rejected, not silently accepted). Topic is create-if-missing (case-
+// insensitive), matching the manual /subjects/units/:id/topics route, since it's optional/
+// lightweight by design — unlike Subject/Unit, which must already exist (see "Subject-First
+// Workflow", spec section 9: pick from what's already configured, don't type a new one mid-upload).
+async function resolveSubjectUnitTopicByName(req, { subjectName, unitName, topicName }) {
+  if (!subjectName) return { error: "Subject is required" };
+  if (!unitName) return { error: "Unit is required" };
+  const institute = req.requesterInstituteId ? { OR: [{ instituteId: req.requesterInstituteId }, { instituteId: null }] } : {};
+  const subject = await prisma.subject.findFirst({ where: { ...institute, name: { equals: subjectName, mode: "insensitive" } } });
+  if (!subject || !(await canStaffUseSubject(req, subject.id))) {
+    return { error: `Subject "${subjectName}" not found or you're not authorized to use it` };
+  }
+  const unit = await prisma.unit.findFirst({ where: { subjectId: subject.id, name: { equals: unitName, mode: "insensitive" } } });
+  if (!unit) {
+    return { error: `"${unitName}" does not belong to Subject "${subjectName}"` };
+  }
+  let topicId = null;
+  if (topicName) {
+    let topic = await prisma.topic.findFirst({ where: { unitId: unit.id, name: { equals: topicName, mode: "insensitive" } } });
+    if (!topic) topic = await prisma.topic.create({ data: { unitId: unit.id, name: topicName } });
+    topicId = topic.id;
+  }
+  return { subjectId: subject.id, unitId: unit.id, topicId };
+}
+
 function buildWhere(query, req) {
   const where = { AND: [questionVisibilityWhere(req)] };
   if (query.subject) where.subject = query.subject;
   if (query.topic) where.topic = query.topic;
+  if (query.subjectId === "__none__") where.subjectId = null;
+  else if (query.subjectId) where.subjectId = query.subjectId;
+  if (query.unitId === "__none__") where.unitId = null;
+  else if (query.unitId) where.unitId = query.unitId;
+  if (query.topicId) where.topicId = query.topicId;
   if (query.difficulty && DIFFICULTIES.includes(query.difficulty)) where.difficulty = query.difficulty;
   if (query.questionType && QUESTION_TYPES.includes(query.questionType)) where.questionType = query.questionType;
   if (query.folderId === "__none__") where.folderId = null;
@@ -178,10 +214,14 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       allowDuplicate, subtopic, btlLevel, skillTested, questionStatus, aiGenerated,
+      subjectId, unitId, topicId,
     } = req.body;
 
     if (!description) return res.status(400).json({ error: "Question text is required" });
     const type = QUESTION_TYPES.includes(questionType) ? questionType : "CODING";
+
+    const resolvedSubject = await resolveSubjectUnitTopic(req, { subjectId, unitId, topicId });
+    if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
 
     if (folderId) {
       const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
@@ -195,6 +235,10 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
         where: {
           ...questionVisibilityWhere(req),
           folderId: folderId || null,
+          // Subject+Unit-scoped — "Java Unit 1" and "DBMS Unit 1" must never be cross-flagged as
+          // duplicates of each other just because the question text happens to match (spec section 13).
+          subjectId: resolvedSubject.subjectId,
+          unitId: resolvedSubject.unitId,
           description: { equals: description.trim(), mode: "insensitive" },
         },
       });
@@ -211,6 +255,9 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       description,
       subject: subject || null,
       topic: topic || null,
+      subjectId: resolvedSubject.subjectId,
+      unitId: resolvedSubject.unitId,
+      topicId: resolvedSubject.topicId,
       questionType: type,
       difficulty: difficulty || "EASY",
       points: points ?? 10,
@@ -325,7 +372,13 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
   const [questions, total] = await Promise.all([
     prisma.question.findMany({
       where,
-      include: { _count: { select: { testCases: true } }, createdBy: { select: { id: true, name: true } } },
+      include: {
+        _count: { select: { testCases: true } },
+        createdBy: { select: { id: true, name: true } },
+        subjectRef: { select: { id: true, name: true } },
+        unitRef: { select: { id: true, name: true } },
+        topicRef: { select: { id: true, name: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -352,10 +405,24 @@ router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachR
   const creators = creatorIds.length
     ? await prisma.user.findMany({ where: { id: { in: creatorIds.map((c) => c.createdById) } }, select: { id: true, name: true } })
     : [];
+  // "Needs classification" — questions predating the Subject/Unit taxonomy (subjectId null) or
+  // backfilled with a Subject but no reliable signal to infer a Unit from (unitId null) — spec
+  // section 15's explicit "flag for admin review" instruction, surfaced as a filter here.
+  const [needsClassificationCount, noSubjectCount] = await Promise.all([
+    prisma.question.count({ where: { ...visible, OR: [{ subjectId: null }, { unitId: null }] } }),
+    // Separate, narrower count (subjectId null only) — powers the root-level "Needs Subject
+    // Assignment" tile in the Subject/Unit tree view, distinct from needsClassificationCount above
+    // which also includes questions that have a Subject but no Unit yet.
+    prisma.question.count({ where: { ...visible, subjectId: null } }),
+  ]);
   res.json({
+    // Legacy free-text lists — kept for filtering/displaying pre-migration questions that still
+    // only carry the old subject/topic strings (see Question.subject's schema comment).
     subjects: subjects.map((s) => s.subject).filter(Boolean).sort(),
     topics: topics.map((t) => t.topic).filter(Boolean).sort(),
     creators: creators.sort((a, b) => a.name.localeCompare(b.name)),
+    needsClassificationCount,
+    noSubjectCount,
   });
 });
 
@@ -586,6 +653,32 @@ router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   res.json({ movedCount: movableIds.length, skippedCount: questionIds.length - movableIds.length });
 });
 
+// Bulk "Assign Subject/Unit" — the working tool for clearing the backfill script's "needs
+// classification" backlog (spec section 15) without opening each question's edit form. Same
+// ownership-filter-then-updateMany pattern as bulk-move, plus the same
+// resolveSubjectUnitTopic validation/authorization every other Subject/Unit write goes through.
+router.post("/bulk-assign-subject", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
+  if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
+  const resolved = await resolveSubjectUnitTopic(req, {
+    subjectId: req.body.subjectId, unitId: req.body.unitId, topicId: req.body.topicId,
+  });
+  if (resolved.error) return res.status(400).json({ error: resolved.error });
+
+  const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
+  const updatableIds = owned.filter((q) => ownsQuestionRow(req, q)).map((q) => q.id);
+  if (updatableIds.length === 0) return res.status(403).json({ error: "None of the selected questions are in your institute's question bank" });
+  await prisma.question.updateMany({
+    where: { id: { in: updatableIds } },
+    data: { subjectId: resolved.subjectId, unitId: resolved.unitId, topicId: resolved.topicId },
+  });
+  await logAudit({
+    req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+    instituteId: req.requesterInstituteId, details: { bulk: true, type: "subject_assigned", count: updatableIds.length, subjectId: resolved.subjectId, unitId: resolved.unitId },
+  });
+  res.json({ updatedCount: updatableIds.length, skippedCount: questionIds.length - updatableIds.length });
+});
+
 // Bulk review-status transition — powers the Question Bank's review queue (filter by Draft/Under
 // Review, select a batch, Verify or Archive in one action) instead of opening each question's
 // edit form individually. Same ownership-filter-then-updateMany pattern as bulk-move; no FK
@@ -739,7 +832,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
     headers = CODING_TEMPLATE_HEADERS;
     sampleRows = [
       [
-        "Sum of Two Numbers", "Math", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
+        "Sum of Two Numbers", "Java", "Unit 1", "Math", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
         2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
         "2 3", "5", "2 + 3 = 5",
         "10 20", "30", "",
@@ -755,7 +848,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
         // FUNCTION-mode test case inputs use one line per parameter (never space-separated on one
         // line, unlike STDIO) — a two-scalar-parameter signature like add(a, b) needs "2\n3", not
         // "2 3", matching exactly what functionHarness.js's generated driver parses per parameter.
-        "Add Two Numbers (Function)", "Math", "Implement a function that returns the sum of two integers.", "Easy", "Java, Python, C++",
+        "Add Two Numbers (Function)", "Java", "Unit 1", "Math", "Implement a function that returns the sum of two integers.", "Easy", "Java, Python, C++",
         2, 256, 10, "1 <= a, b <= 10^9", "N/A — function parameters, not stdin", "N/A — return value, not stdout",
         "2\n3", "5", "2 + 3 = 5",
         "10\n20", "30", "",
@@ -769,9 +862,9 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
   } else {
     headers = TEMPLATE_HEADERS;
     sampleRows = [
-      ["Capital of France", "Geography", "Europe", "What is the capital of France?", "Multiple Choice", "Paris|London|Berlin|Madrid", "Paris", 5, "Easy", "Paris has been the capital since 987 AD."],
-      ["Water boils at 100C", "Science", "Physics", "Water boils at 100°C at sea level.", "True/False", "", "True", 2, "Easy", ""],
-      ["Prime numbers", "Math", "Number Theory", "Which of the following are prime numbers?", "Multiple Select", "2|3|4|9", "2,3", 5, "Medium", "2 and 3 are prime; 4 and 9 are not."],
+      ["Capital of France", "Geography", "Unit 1", "Europe", "What is the capital of France?", "Multiple Choice", "Paris|London|Berlin|Madrid", "Paris", 5, "Easy", "Paris has been the capital since 987 AD."],
+      ["Water boils at 100C", "Science", "Unit 1", "Physics", "Water boils at 100°C at sea level.", "True/False", "", "True", 2, "Easy", ""],
+      ["Prime numbers", "Math", "Unit 2", "Number Theory", "Which of the following are prime numbers?", "Multiple Select", "2|3|4|9", "2,3", 5, "Medium", "2 and 3 are prime; 4 and 9 are not."],
     ];
     filename = "question-bank-template.xlsx";
   }
@@ -796,9 +889,14 @@ router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
           id: { in: Array.isArray(req.query.questionIds) ? req.query.questionIds : String(req.query.questionIds).split(",").map((s) => s.trim()).filter(Boolean) },
           ...questionVisibilityWhere(req),
         },
+        include: { subjectRef: { select: { name: true } }, unitRef: { select: { name: true } } },
         orderBy: { questionNumber: "asc" },
       })
-    : await prisma.question.findMany({ where: buildWhere(req.query, req), orderBy: { questionNumber: "asc" } });
+    : await prisma.question.findMany({
+        where: buildWhere(req.query, req),
+        include: { subjectRef: { select: { name: true } }, unitRef: { select: { name: true } } },
+        orderBy: { questionNumber: "asc" },
+      });
 
   const rows = questions.map((q) => {
     const options = Array.isArray(q.options) ? q.options : [];
@@ -806,7 +904,8 @@ router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
     return [
       `Q${q.questionNumber}`,
       q.title || "",
-      q.subject || "",
+      q.subjectRef?.name || q.subject || "",
+      q.unitRef?.name || "",
       q.topic || "",
       q.description,
       TYPE_LABELS[q.questionType] || q.questionType,
@@ -845,7 +944,8 @@ const DIFFICULTY_ALIASES = { easy: "EASY", medium: "MEDIUM", hard: "HARD" };
 
 const IMPORT_HEADER_ALIASES = {
   title: ["question name", "name"],
-  subject: ["subject"],
+  subject: ["subject", "subject course", "subject/course"],
+  unit: ["unit"],
   topic: ["topic"],
   description: ["question text", "question", "text"],
   questionType: ["question type", "type"],
@@ -915,18 +1015,21 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
     // dedup checks below entirely — every valid row is created regardless of matches.
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
     const seenDescriptions = new Set(); // within-file duplicate detection, mirrors bulk-import-coding's seenTitles
-    const existingDescriptionsByFolder = new Map(); // folderId ("" = unfiled) -> Set of existing descriptions, loaded lazily
+    // Keyed by folderId + subjectId + unitId, not folderId alone — "Java Unit 1 Question A" and
+    // "DBMS Unit 1 Question A" must never be cross-flagged as duplicates of each other just
+    // because the question text happens to match (spec section 13).
+    const existingDescriptionsByScope = new Map();
 
-    async function existingDescriptions(fId) {
-      const key = fId || "";
-      if (!existingDescriptionsByFolder.has(key)) {
+    async function existingDescriptions(fId, subjectId, unitId) {
+      const key = `${fId || ""}::${subjectId || ""}::${unitId || ""}`;
+      if (!existingDescriptionsByScope.has(key)) {
         const rows = await prisma.question.findMany({
-          where: { folderId: fId || null, ...questionVisibilityWhere(req) },
+          where: { folderId: fId || null, subjectId: subjectId || null, unitId: unitId || null, ...questionVisibilityWhere(req) },
           select: { description: true },
         });
-        existingDescriptionsByFolder.set(key, new Set(rows.map((r) => (r.description || "").trim().toLowerCase()).filter(Boolean)));
+        existingDescriptionsByScope.set(key, new Set(rows.map((r) => (r.description || "").trim().toLowerCase()).filter(Boolean)));
       }
-      return existingDescriptionsByFolder.get(key);
+      return existingDescriptionsByScope.get(key);
     }
 
     for (let i = 0; i < rows.length; i++) {
@@ -952,21 +1055,28 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
         continue;
       }
 
+      const subject = field(row, "subject");
+      const unit = field(row, "unit");
+      const topic = field(row, "topic");
+      const resolvedSubject = await resolveSubjectUnitTopicByName(req, { subjectName: subject, unitName: unit, topicName: topic });
+      if (resolvedSubject.error) {
+        errors.push({ row: rowNum, reason: resolvedSubject.error });
+        continue;
+      }
+
       const descKey = description.trim().toLowerCase();
       if (duplicateAction !== "import") {
         if (seenDescriptions.has(descKey)) {
           skipped.push({ row: rowNum, reason: "Duplicate question text within this file" });
           continue;
         }
-        const existing = await existingDescriptions(folderId);
+        const existing = await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId);
         if (existing.has(descKey)) {
-          skipped.push({ row: rowNum, reason: "A question with this text already exists in that Question Bank" });
+          skipped.push({ row: rowNum, reason: "A question with this text already exists under that Subject/Unit" });
           continue;
         }
       }
 
-      const subject = field(row, "subject");
-      const topic = field(row, "topic");
       const optionsRaw = field(row, "options").split("|").map((s) => s.trim()).filter(Boolean);
       const correctAnswerRaw = field(row, "correctAnswer");
       const pointsRaw = field(row, "points");
@@ -981,6 +1091,9 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
             description,
             subject: subject || null,
             topic: topic || null,
+            subjectId: resolvedSubject.subjectId,
+            unitId: resolvedSubject.unitId,
+            topicId: resolvedSubject.topicId,
             questionType,
             difficulty: DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || "EASY",
             points: Number(pointsRaw) || 10,
@@ -993,7 +1106,7 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
           },
         });
         seenDescriptions.add(descKey);
-        (await existingDescriptions(folderId)).add(descKey);
+        (await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId)).add(descKey);
         created.push(question);
       } catch (err) {
         errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
@@ -1089,18 +1202,20 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
     const seenTitles = new Set(); // within-file duplicate detection
     const folderIdByName = new Map(); // bank name (lowercased) -> folderId, resolved/created once per name
-    const existingTitlesByFolder = new Map(); // folderId ("" = unfiled) -> Set of existing titles, loaded lazily
+    // Keyed by folderId + subjectId + unitId, not folderId alone — same "Java Unit 1" vs "DBMS
+    // Unit 1" isolation rule as the quiz import above (spec section 13).
+    const existingTitlesByScope = new Map();
 
-    async function existingTitles(folderId) {
-      const key = folderId || "";
-      if (!existingTitlesByFolder.has(key)) {
+    async function existingTitles(folderId, subjectId, unitId) {
+      const key = `${folderId || ""}::${subjectId || ""}::${unitId || ""}`;
+      if (!existingTitlesByScope.has(key)) {
         const rows = await prisma.question.findMany({
-          where: { folderId: folderId || null, questionType: "CODING", ...questionVisibilityWhere(req) },
+          where: { folderId: folderId || null, subjectId: subjectId || null, unitId: unitId || null, questionType: "CODING", ...questionVisibilityWhere(req) },
           select: { title: true },
         });
-        existingTitlesByFolder.set(key, new Set(rows.map((r) => (r.title || "").toLowerCase()).filter(Boolean)));
+        existingTitlesByScope.set(key, new Set(rows.map((r) => (r.title || "").toLowerCase()).filter(Boolean)));
       }
-      return existingTitlesByFolder.get(key);
+      return existingTitlesByScope.get(key);
     }
 
     async function resolveBankFolder(name) {
@@ -1132,6 +1247,14 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
       const titleKey = title.toLowerCase();
       if (duplicateAction !== "import" && seenTitles.has(titleKey)) {
         skipped.push({ row: rowNum, reason: `Duplicate title within this file: "${title}"` });
+        continue;
+      }
+
+      const resolvedSubject = await resolveSubjectUnitTopicByName(req, {
+        subjectName: field(row, "subject"), unitName: field(row, "unit"), topicName: field(row, "topic"),
+      });
+      if (resolvedSubject.error) {
+        errors.push({ row: rowNum, reason: resolvedSubject.error });
         continue;
       }
 
@@ -1223,9 +1346,9 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
 
       try {
         const folderId = await resolveBankFolder(bankName);
-        const titles = await existingTitles(folderId);
+        const titles = await existingTitles(folderId, resolvedSubject.subjectId, resolvedSubject.unitId);
         if (duplicateAction !== "import" && titles.has(titleKey)) {
-          skipped.push({ row: rowNum, reason: `A question titled "${title}" already exists in that Question Bank` });
+          skipped.push({ row: rowNum, reason: `A question titled "${title}" already exists under that Subject/Unit` });
           continue;
         }
 
@@ -1239,6 +1362,9 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
           data: {
             title,
             topic: field(row, "topic") || null,
+            subjectId: resolvedSubject.subjectId,
+            unitId: resolvedSubject.unitId,
+            topicId: resolvedSubject.topicId,
             description,
             questionType: "CODING",
             difficulty,
@@ -1318,6 +1444,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       subtopic, btlLevel, skillTested, questionStatus,
+      subjectId, unitId, topicId,
     } = req.body;
 
     if (folderId !== undefined && folderId !== null && folderId !== existing.folderId) {
@@ -1327,6 +1454,21 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       }
     }
 
+    // Classification (Subject/Unit/Topic) is only re-validated when the caller actually sends it —
+    // an edit that doesn't touch classification (e.g. fixing a typo) doesn't force reclassifying a
+    // legacy "Needs classification" question. Any UI built against this route going forward
+    // (CreateQuestion.jsx) always sends the current subjectId/unitId, so this branch runs on every
+    // save from the new picker while leaving old, unrelated PATCH callers unaffected.
+    let resolvedSubject = { subjectId: existing.subjectId, unitId: existing.unitId, topicId: existing.topicId };
+    if (subjectId !== undefined || unitId !== undefined) {
+      resolvedSubject = await resolveSubjectUnitTopic(req, {
+        subjectId: subjectId !== undefined ? subjectId : existing.subjectId,
+        unitId: unitId !== undefined ? unitId : existing.unitId,
+        topicId: topicId !== undefined ? topicId : existing.topicId,
+      });
+      if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
+    }
+
     const type = QUESTION_TYPES.includes(questionType) ? questionType : existing.questionType;
 
     const data = {
@@ -1334,6 +1476,9 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       description: description ?? existing.description,
       subject: subject ?? existing.subject,
       topic: topic ?? existing.topic,
+      subjectId: resolvedSubject.subjectId,
+      unitId: resolvedSubject.unitId,
+      topicId: resolvedSubject.topicId,
       questionType: type,
       difficulty: difficulty || existing.difficulty,
       points: points ?? existing.points,

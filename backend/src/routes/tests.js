@@ -8,6 +8,7 @@ const { isTestVisibleToStudent, testEligibilityWhere } = require("../utils/testE
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwnership");
+const { resolveSubjectUnitTopic } = require("../utils/subjectAccess");
 
 const router = express.Router();
 
@@ -142,7 +143,17 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
       company, instituteId: bodyInstituteId,
       subject, unit, program, allowDuplicate,
+      subjectId, unitId,
     } = req.body;
+
+    // Subject/Unit FK — optional (mirrors the legacy free-text subject/unit's own "(optional)"
+    // convention), but when a subjectId IS provided, unitId must be too and both are validated +
+    // authorization-checked the same way Question authoring is (spec sections 10-12).
+    let resolvedSubject = { subjectId: null, unitId: null };
+    if (subjectId) {
+      resolvedSubject = await resolveSubjectUnitTopic(req, { subjectId, unitId });
+      if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
+    }
 
     // Create-only duplicate warning, same shape as questions.js's (~L192-206): only meaningful
     // when Subject is actually set (an unnamed/quick test isn't a "duplicate" of anything), scoped
@@ -208,6 +219,8 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
         difficultyDistribution: mode === "RANDOM" ? difficultyDistribution || null : null,
         subject: subject?.trim() || null,
         unit: unit?.trim() || null,
+        subjectId: resolvedSubject.subjectId,
+        unitId: resolvedSubject.unitId,
         program: program?.trim() || null,
         createdById: req.user.id,
         instituteId: effectiveInstituteId,
@@ -245,7 +258,20 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
       company, instituteId: bodyInstituteId, subject, unit, program,
+      subjectId, unitId,
     } = req.body;
+
+    let resolvedSubject = { subjectId: existing.subjectId, unitId: existing.unitId };
+    if (subjectId !== undefined || unitId !== undefined) {
+      if (subjectId) {
+        resolvedSubject = await resolveSubjectUnitTopic(req, {
+          subjectId, unitId: unitId !== undefined ? unitId : existing.unitId,
+        });
+        if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
+      } else {
+        resolvedSubject = { subjectId: null, unitId: null };
+      }
+    }
 
     // Same platform-level-only institute scoping as POST / above — institute-scoped Staff/Admin
     // already can't reach this line for a test outside their own institute (checked above), and
@@ -285,6 +311,8 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       company: company !== undefined ? (company?.trim() || null) : existing.company,
       subject: subject !== undefined ? (subject?.trim() || null) : existing.subject,
       unit: unit !== undefined ? (unit?.trim() || null) : existing.unit,
+      subjectId: resolvedSubject.subjectId,
+      unitId: resolvedSubject.unitId,
       program: program !== undefined ? (program?.trim() || null) : existing.program,
       durationMin: durationMin !== undefined ? Number(durationMin) : existing.durationMin,
       passingMarks: passingMarks !== undefined ? (passingMarks === "" ? null : Number(passingMarks)) : existing.passingMarks,
