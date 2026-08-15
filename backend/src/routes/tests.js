@@ -8,9 +8,22 @@ const { isTestVisibleToStudent, testEligibilityWhere } = require("../utils/testE
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwnership");
-const { resolveSubjectUnitTopic } = require("../utils/subjectAccess");
+const { resolveSubjectUnitTopic, canStaffUseSubject } = require("../utils/subjectAccess");
 
 const router = express.Router();
+
+// Test's Subject/Unit is looser than Question's mandatory pair: a Subject alone (no Unit) is a
+// valid, common case here — e.g. a company placement round ("TNP" / Training & Placement) has no
+// natural Unit 1/2/3 structure the way a Java or DBMS course does, so forcing staff to invent a
+// Unit just to save the test (which resolveSubjectUnitTopic would otherwise require) was blocking
+// real test creation. When a unitId IS supplied, it's still validated against the subject exactly
+// like Question authoring; when omitted, only the Subject itself is authorization-checked.
+async function resolveTestSubjectUnit(req, { subjectId, unitId }) {
+  if (!subjectId) return { subjectId: null, unitId: null };
+  if (unitId) return resolveSubjectUnitTopic(req, { subjectId, unitId });
+  if (!(await canStaffUseSubject(req, subjectId))) return { error: "You aren't authorized to use this subject" };
+  return { subjectId, unitId: null };
+}
 
 function questionCreateData(questionIds, questionTimeLimits) {
   return (questionIds || []).map((qId, idx) => ({
@@ -147,13 +160,11 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
     } = req.body;
 
     // Subject/Unit FK — optional (mirrors the legacy free-text subject/unit's own "(optional)"
-    // convention), but when a subjectId IS provided, unitId must be too and both are validated +
-    // authorization-checked the same way Question authoring is (spec sections 10-12).
-    let resolvedSubject = { subjectId: null, unitId: null };
-    if (subjectId) {
-      resolvedSubject = await resolveSubjectUnitTopic(req, { subjectId, unitId });
-      if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
-    }
+    // convention); Unit itself is also optional even when Subject is set (see
+    // resolveTestSubjectUnit) — a Subject-only test (e.g. a company placement round with no Unit
+    // structure) is valid, unlike Question authoring where the pair is mandatory.
+    const resolvedSubject = await resolveTestSubjectUnit(req, { subjectId, unitId });
+    if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
 
     // Create-only duplicate warning, same shape as questions.js's (~L192-206): only meaningful
     // when Subject is actually set (an unnamed/quick test isn't a "duplicate" of anything), scoped
@@ -264,7 +275,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     let resolvedSubject = { subjectId: existing.subjectId, unitId: existing.unitId };
     if (subjectId !== undefined || unitId !== undefined) {
       if (subjectId) {
-        resolvedSubject = await resolveSubjectUnitTopic(req, {
+        resolvedSubject = await resolveTestSubjectUnit(req, {
           subjectId, unitId: unitId !== undefined ? unitId : existing.unitId,
         });
         if (resolvedSubject.error) return res.status(400).json({ error: resolvedSubject.error });
