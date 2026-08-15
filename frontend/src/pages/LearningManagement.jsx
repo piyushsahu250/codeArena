@@ -597,8 +597,12 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
 
   async function remove(l) {
     if (!confirm(`Delete lesson "${l.title}"?`)) return;
-    await api.delete(`/learning/lessons/${l.id}`);
-    onRefresh();
+    try {
+      await api.delete(`/learning/lessons/${l.id}`);
+      onRefresh();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete lesson");
+    }
   }
 
   async function reorder(l, delta) {
@@ -1488,8 +1492,12 @@ function ChapterListPanel({ moduleId, onSelect }) {
 
   async function remove(c) {
     if (!confirm(`Delete chapter "${c.title}" and all its topics/levels? This cannot be undone.`)) return;
-    await api.delete(`/learning/chapters/${c.id}`);
-    load();
+    try {
+      await api.delete(`/learning/chapters/${c.id}`);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete chapter");
+    }
   }
 
   async function reorder(c, delta) {
@@ -1638,8 +1646,12 @@ function ChapterTopicsPanel({ chapterId }) {
 
   async function remove(t) {
     if (!confirm(`Delete topic "${t.title}"?`)) return;
-    await api.delete(`/learning/lessons/${t.id}`);
-    load();
+    try {
+      await api.delete(`/learning/lessons/${t.id}`);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete topic");
+    }
   }
 
   async function reorder(t, delta) {

@@ -1148,6 +1148,24 @@ router.delete("/modules/:id", authenticate, requireRole("ADMIN"), async (req, re
   try {
     const mod = await prisma.courseModule.findUnique({ where: { id: req.params.id } });
     if (!mod) return res.status(404).json({ error: "Module not found" });
+    // Same rationale as the Chapter delete guard just above: Lesson->module, Chapter->module, and
+    // ModuleCodingTest->module/->chapter are all onDelete:Cascade, so deleting a module would
+    // otherwise silently wipe every lesson/level under it plus all student progress and coding
+    // attempts recorded against them — Cascade never raises a catchable FK error. Lesson.moduleId
+    // is denormalized onto every lesson (chapter-scoped or not), so filtering progress by it alone
+    // covers both; a "Level" has moduleId set only when NOT chapter-scoped, so attempts also need
+    // the chapter->moduleId path checked.
+    const [progressCount, directAttemptCount, chapterAttemptCount] = await Promise.all([
+      prisma.lessonProgress.count({ where: { lesson: { moduleId: mod.id } } }),
+      prisma.moduleCodingAttempt.count({ where: { moduleCodingTest: { moduleId: mod.id } } }),
+      prisma.moduleCodingAttempt.count({ where: { moduleCodingTest: { chapter: { moduleId: mod.id } } } }),
+    ]);
+    const attemptCount = directAttemptCount + chapterAttemptCount;
+    if (progressCount > 0 || attemptCount > 0) {
+      return res.status(409).json({
+        error: `Cannot delete this module: ${progressCount} student lesson-progress record(s) and ${attemptCount} coding-assessment attempt(s) exist under it. Deactivate the module instead, or remove its individual chapters/lessons/levels first.`,
+      });
+    }
     await prisma.courseModule.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
@@ -1248,6 +1266,20 @@ router.delete("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, r
   try {
     const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
     if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    // Lesson->chapter and ModuleCodingTest->chapter are both onDelete:Cascade in schema.prisma,
+    // which in turn cascades to LessonProgress and ModuleCodingAttempt — a chapter delete would
+    // otherwise silently destroy real student completion/attempt data with no FK-violation error
+    // to catch (Cascade never throws P2003). Block outright rather than allow an override here:
+    // reorganizing content should never be able to erase a student's record of having done it.
+    const [progressCount, attemptCount] = await Promise.all([
+      prisma.lessonProgress.count({ where: { lesson: { chapterId: chapter.id } } }),
+      prisma.moduleCodingAttempt.count({ where: { moduleCodingTest: { chapterId: chapter.id } } }),
+    ]);
+    if (progressCount > 0 || attemptCount > 0) {
+      return res.status(409).json({
+        error: `Cannot delete this chapter: ${progressCount} student lesson-progress record(s) and ${attemptCount} coding-assessment attempt(s) exist under it. Deactivate the chapter instead, or move/delete its individual lessons and levels first.`,
+      });
+    }
     await prisma.chapter.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
@@ -1359,6 +1391,14 @@ router.delete("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, re
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    // Lesson->LessonProgress is onDelete:Cascade — same rationale as the chapter/module guards
+    // above: block rather than silently erase a student's completion record for this lesson.
+    const progressCount = await prisma.lessonProgress.count({ where: { lessonId: lesson.id } });
+    if (progressCount > 0) {
+      return res.status(409).json({
+        error: `Cannot delete this lesson: ${progressCount} student has recorded progress on it. Deactivate it instead if you want to hide it from students.`,
+      });
+    }
     await prisma.lesson.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
