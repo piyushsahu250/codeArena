@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Editor from "@monaco-editor/react";
-import api from "../api";
+import api, { API_BASE_URL, performExpiredRedirect } from "../api";
 import { Mic, Square } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
 import { useTheme } from "../context/ThemeContext";
@@ -49,15 +49,28 @@ export default function InterviewSession() {
   const [violationCount, setViolationCount] = useState(0);
   const [maxViolations, setMaxViolations] = useState(3);
   const [violationWarning, setViolationWarning] = useState(null);
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
   const recognitionRef = useRef(null);
   const finalizedRef = useRef(false);
+  const deadlineRef = useRef(null); // absolute ms timestamp this interview auto-submits at
+  const clockOffsetRef = useRef(0); // serverTime - Date.now() at load; corrects a skewed device clock
   const { theme } = useTheme();
   const dark = theme === "dark";
+
+  // A concurrent login elsewhere (or any other authExpired 401) mid-interview dispatches this
+  // instead of api.js's usual instant window.location.href redirect — see api.js for why. Shows
+  // an in-page explanation so the student isn't silently yanked to /login with no idea why.
+  useEffect(() => {
+    function handleExpired() { setSessionExpiredNotice(true); }
+    window.addEventListener("app:session-expired", handleExpired);
+    return () => window.removeEventListener("app:session-expired", handleExpired);
+  }, []);
 
   useEffect(() => {
     api.get(`/interview/sessions/${id}`).then(async (res) => {
       setData(res.data);
       setViolationCount(res.data.session.violationCount || 0);
+      if (typeof res.data.serverTime === "number") clockOffsetRef.current = res.data.serverTime - Date.now();
       const initial = {};
       for (const q of res.data.questions) {
         initial[q.id] = {
@@ -86,16 +99,30 @@ export default function InterviewSession() {
       setLangDrafts(initialLangDrafts);
       const durationMin = res.data.session.config?.durationMin;
       if (durationMin && res.data.session.status === "IN_PROGRESS") {
-        const elapsedSec = Math.floor((Date.now() - new Date(res.data.session.startedAt).getTime()) / 1000);
-        setSecondsLeft(Math.max(0, durationMin * 60 - elapsedSec));
+        const deadline = new Date(res.data.session.startedAt).getTime() + durationMin * 60 * 1000;
+        deadlineRef.current = deadline;
+        setSecondsLeft(Math.max(0, Math.floor((deadline - (Date.now() + clockOffsetRef.current)) / 1000)));
+      }
+
+      // Resume mid-interview after a refresh: if this session already has at least one real
+      // (non-skipped) answer, the student already cleared the readiness/fullscreen gate once this
+      // session — skip the full checklist and drop them back in at the first still-unanswered
+      // question instead of silently restarting them at question 1 and re-running preflight.
+      const hasProgress = res.data.questions.some((q) => q.answer && q.answer.skipped === false);
+      if (res.data.session.status === "IN_PROGRESS" && hasProgress) {
+        setActiveIdx(Math.min(res.data.resumeIndex ?? 0, res.data.questions.length - 1));
+        setPhase("resume");
       }
     }).catch((err) => setError(err.response?.data?.error || "Failed to load session"));
   }, [id]);
 
   useEffect(() => {
     if (phase !== "active" || secondsLeft === null) return;
-    if (secondsLeft <= 0) { finalize(); return; }
-    const t = setInterval(() => setSecondsLeft((s) => (s === null ? null : s - 1)), 1000);
+    if (secondsLeft <= 0) { finalize("TIME_EXPIRED"); return; }
+    const t = setInterval(() => {
+      if (deadlineRef.current == null) { setSecondsLeft((s) => (s === null ? null : s - 1)); return; }
+      setSecondsLeft(Math.max(0, Math.floor((deadlineRef.current - (Date.now() + clockOffsetRef.current)) / 1000)));
+    }, 1000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, secondsLeft === 0]);
@@ -116,11 +143,27 @@ export default function InterviewSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDraft.code, activeDraft.language, activeQuestion?.id, phase]);
 
+  // A normal axios POST can be aborted mid-flight when the page is actually torn down, so this
+  // uses fetch's `keepalive` flag (designed exactly for "send this request even though the page is
+  // unloading"; unlike navigator.sendBeacon, it still supports the Authorization header this API
+  // requires) — mirrors TestTaking.jsx's identical helper.
+  function keepaliveSave(path, body) {
+    try {
+      const token = localStorage.getItem("token");
+      fetch(`${API_BASE_URL}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+        keepalive: true,
+      }).catch(() => {});
+    } catch { /* best-effort only */ }
+  }
+
   useEffect(() => {
     if (phase !== "active" || !activeQuestion) return;
     const handler = () => {
       if (activeQuestion.category === "CODING") {
-        api.post(`/interview/sessions/${id}/questions/${activeQuestion.id}/draft`, { code: activeDraft.code, language: activeDraft.language }).catch(() => {});
+        keepaliveSave(`/interview/sessions/${id}/questions/${activeQuestion.id}/draft`, { code: activeDraft.code, language: activeDraft.language });
       }
     };
     window.addEventListener("beforeunload", handler);
@@ -182,10 +225,58 @@ export default function InterviewSession() {
     setPhase("active");
   }
 
+  // Same as begin(), but also re-requests the camera/mic stream first — the lightweight "resume"
+  // screen skips the full ReadinessChecklist (which is where that would normally happen), so this
+  // single click has to cover both the media re-grant and the fullscreen user-gesture requirement.
+  async function resumeSession() {
+    try { await proctor.requestMedia(); } catch { /* best-effort — the in-session status banners already surface a failure */ }
+    await begin();
+  }
+
+  if (sessionExpiredNotice) {
+    return (
+      <div className={`interview-prep ${dark ? "dark" : ""}`}>
+        <Navbar />
+        <div style={{ maxWidth: 560, margin: "80px auto", padding: 24 }}>
+          <div className="ip-glass" style={{ padding: 32, textAlign: "center" }}>
+            <h2 style={{ color: "var(--rust)" }}>Your session ended</h2>
+            <p style={{ marginTop: 10, opacity: 0.8 }}>
+              You were signed out — most likely because this account was logged into elsewhere. Your progress up to
+              your last saved answer has been preserved; log back in to resume this interview.
+            </p>
+            <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={performExpiredRedirect}>Continue to Login</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error) return <div className={`interview-prep ${dark ? "dark" : ""}`}><Navbar /><div style={{ maxWidth: 800, margin: "0 auto", padding: 48 }}><p style={{ color: "var(--rust)" }}>{error}</p><Link to="/interview" className="btn btn-ghost">← AI Mock Interview</Link></div></div>;
   if (!data) return <div className={`interview-prep ${dark ? "dark" : ""}`}><Navbar /><div style={{ maxWidth: 800, margin: "0 auto", padding: 48 }} className="mono">Loading…</div></div>;
 
   const { session, questions } = data;
+
+  if (phase === "resume") {
+    return (
+      <div className={`interview-prep ${dark ? "dark" : ""}`}>
+        <Navbar />
+        <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+          <div className="ip-glass" style={{ padding: 32, maxWidth: 560, marginTop: 24, textAlign: "center" }}>
+            <h2>Resume Interview</h2>
+            <ChalkUnderline />
+            <p style={{ fontSize: 13, marginTop: 14, opacity: 0.85 }}>
+              Your progress has been saved — you're picking up at question {activeIdx + 1} of {questions.length}.
+              Continuing will turn your camera/microphone back on and re-enter fullscreen for the rest of the
+              interview.
+            </p>
+            <button className="btn btn-primary" style={{ marginTop: 20, width: "100%", padding: "12px 24px" }} onClick={resumeSession}>
+              Resume Interview (Fullscreen)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === "terminated") {
     return (
@@ -367,13 +458,20 @@ export default function InterviewSession() {
     }
   }
 
-  async function finalize() {
+  async function finalize(reason) {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
     setSaving(true);
     try {
       await saveAnswer(false);
-      const { data: res } = await api.post(`/interview/sessions/${id}/finalize`);
+      const { data: res } = await api.post(`/interview/sessions/${id}/finalize`, reason ? { reason } : {});
+      if (res.premature) {
+        // Server disagrees time is actually up (client clock was fast) — resync the offset and
+        // keep the interview running instead of ending it early.
+        if (typeof res.serverNow === "number") clockOffsetRef.current = res.serverNow - Date.now();
+        finalizedRef.current = false;
+        return;
+      }
       proctor.stopMedia();
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
       navigate(`/interview/report/${id}`, { state: { report: res.report, recommendedLearning: res.recommendedLearning } });
@@ -571,7 +669,7 @@ export default function InterviewSession() {
                 {saving ? "Scoring round…" : session.currentRoundNumber < roundPlan.length ? "Submit Round →" : "Submit Interview"}
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={finalize} disabled={saving}>{saving ? "Submitting…" : "Submit Interview"}</button>
+              <button className="btn btn-primary" onClick={() => finalize()} disabled={saving}>{saving ? "Submitting…" : "Submit Interview"}</button>
             )}
           </div>
         </div>

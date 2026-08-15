@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 
@@ -30,8 +30,14 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   onViolationRef.current = onViolation;
 
   // Marks the moment `active` most recently flipped true — the anchor for ACTIVATION_GRACE_MS.
+  // useLayoutEffect (not useEffect) is deliberate: it must commit synchronously in the same paint
+  // cycle that flips `active`, before the browser's own fullscreenchange/visibilitychange events
+  // from that same requestFullscreen() call can reach the listeners below. A passive useEffect
+  // schedules asynchronously after paint, which could in practice land AFTER those events fire —
+  // silently defeating the grace window on exactly the "click Begin Interview" interaction it
+  // exists to protect, and letting a phantom violation through as a real counted strike.
   const activatedAtRef = useRef(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     activatedAtRef.current = active ? Date.now() : null;
   }, [active]);
 
@@ -389,6 +395,16 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   // (track muted programmatically) — either alone missed real-world drop scenarios reported as
   // "not reliably detecting". Polls every 2s (was 5s) since a mic/camera outage during a live
   // interview needs to surface fast, not lag up to 5 seconds behind.
+  // A track going non-"live" for one poll is often a brief driver hiccup, not a real drop — burning
+  // one of only MAX_INTERVIEW_VIOLATIONS strikes on a 2-second hardware blip contradicts the
+  // proctoring policy's own intent (a temporary camera/mic failure should warn/recover, not
+  // terminate). CAMERA_DROPPED/MIC_DROPPED is only actually reported once the track has stayed down
+  // for DROP_REPORT_STREAK consecutive polls; the UI status badge still updates immediately either
+  // way, so a genuine drop is visible to the student right away even before it counts as a strike.
+  const DROP_REPORT_STREAK = 3; // 3 * 2s poll interval = 6s sustained before it counts as a violation
+  const cameraDownStreakRef = useRef(0);
+  const micDownStreakRef = useRef(0);
+
   useEffect(() => {
     if (!active || (!requireWebcam && !requireMicrophone)) return;
     const stream = mediaStreamRef.current;
@@ -403,7 +419,12 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
         if (next !== cameraStatusRef.current) {
           cameraStatusRef.current = next;
           setCameraStatus(next);
-          if (next === "UNAVAILABLE") report("CAMERA_DROPPED");
+        }
+        if (live) {
+          cameraDownStreakRef.current = 0;
+        } else {
+          cameraDownStreakRef.current += 1;
+          if (cameraDownStreakRef.current === DROP_REPORT_STREAK) report("CAMERA_DROPPED");
         }
       }
       if (requireMicrophone && audioTracks.length) {
@@ -412,7 +433,12 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
         if (next !== micStatusRef.current) {
           micStatusRef.current = next;
           setMicStatus(next);
-          if (next === "UNAVAILABLE") report("MIC_DROPPED");
+        }
+        if (live) {
+          micDownStreakRef.current = 0;
+        } else {
+          micDownStreakRef.current += 1;
+          if (micDownStreakRef.current === DROP_REPORT_STREAK) report("MIC_DROPPED");
         }
       }
     }

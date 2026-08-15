@@ -34,14 +34,29 @@ api.interceptors.request.use((config) => {
 // cleanly. The guard flag stops several requests failing at once (common — most pages fire
 // multiple calls on mount) from triggering redundant redirects.
 let redirectingToLogin = false;
+export function performExpiredRedirect() {
+  redirectingToLogin = true;
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.location.href = "/login?expired=1";
+}
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.data?.authExpired && !redirectingToLogin && window.location.pathname !== "/login") {
-      redirectingToLogin = true;
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login?expired=1";
+      // A Mock Interview in progress needs a chance to tell the student what happened (and that
+      // their last saved answer is preserved) before the tab is yanked out from under them — an
+      // instant window.location.href here is a raw browser navigation that bypasses
+      // InterviewSession.jsx's React state entirely, with no save attempt and no explanation.
+      // InterviewSession.jsx listens for this event, shows an in-page message, and calls
+      // performExpiredRedirect() itself once acknowledged. Every other route keeps the original
+      // instant-redirect behavior unchanged.
+      if (window.location.pathname.startsWith("/interview/session/")) {
+        redirectingToLogin = true; // still guard against repeat dispatches from parallel failed requests
+        window.dispatchEvent(new CustomEvent("app:session-expired"));
+        return Promise.reject(err);
+      }
+      performExpiredRedirect();
     }
     return Promise.reject(err);
   }

@@ -36,6 +36,20 @@ const SESSION_QUESTION_COUNT = { HR: 6, TECHNICAL: 6, APTITUDE: 10, CODING: 3, S
 const MOCK_DURATION_MIN = 30;
 const COMPANY_ROUND_DURATION_MIN = 45;
 const MAX_INTERVIEW_VIOLATIONS = 3;
+
+// Server-side deadline, mirroring submissions.js/moduleCoding.js's identical deadlineOf() pattern
+// — sessions with no configured durationMin (plain category drills, resume-based) never had a
+// client-side timer either, so they correctly never expire here.
+function deadlineOf(session) {
+  const durationMin = session.config?.durationMin;
+  if (!durationMin) return Infinity;
+  return new Date(session.startedAt).getTime() + durationMin * 60 * 1000;
+}
+// A client-side auto-submit ("reason: TIME_EXPIRED") is only trusted once the server's own clock
+// agrees the deadline has actually passed, within this grace window — identical rationale to
+// PREMATURE_FINALIZE_GRACE_MS in submissions.js/moduleCoding.js.
+const PREMATURE_FINALIZE_GRACE_MS = 15000;
+
 const VALID_CATEGORIES = ["HR", "TECHNICAL", "CODING", "APTITUDE", "SYSTEM_DESIGN", "BEHAVIORAL", "MANAGERIAL"];
 // Free-text categories (as opposed to APTITUDE's MCQ or CODING's editor) — these get voice
 // input and the short-answer depth-probe follow-up.
@@ -93,10 +107,12 @@ function sanitizeQuestion(q) {
 }
 
 // "Soft" narrowing fields — a combination that hasn't been seeded yet falls back to the broader
-// pool rather than a hard error (company-specific/package-band/experience-level banks are seeded
-// modestly on purpose and grown via the admin CMS over time). subject/difficulty/aptitudeCategory
-// stay "hard" filters, applied unconditionally when present, unchanged from before.
-const SOFT_FILTER_FIELDS = ["company", "packageBand", "experienceLevel"];
+// pool rather than a hard error (company-specific/package-band/experience-level/difficulty banks
+// are seeded modestly on purpose and grown via the admin CMS over time). subject/aptitudeCategory
+// stay "hard" filters, applied unconditionally when present, unchanged from before. difficulty
+// moved here because it used to be a hard filter with no fallback — a single under-seeded
+// difficulty tier could 400 an otherwise-valid session start with no recourse.
+const SOFT_FILTER_FIELDS = ["company", "packageBand", "experienceLevel", "difficulty"];
 
 // Weighted-without-replacement sample using a CompanyInterviewProfile.categoryWeights entry:
 // { topicWeights: {"Arrays": 0.3, ...}, difficultyMix: {EASY:0.3,MEDIUM:0.5,HARD:0.2} }. A
@@ -145,7 +161,6 @@ function weightedSample(pool, weights, count) {
 async function pickQuestions(category, config, count, options = {}) {
   const hardWhere = { category, isActive: true, generatedForStudentId: null };
   if (config.subject) hardWhere.subject = config.subject;
-  if (config.difficulty) hardWhere.difficulty = config.difficulty;
   if (config.aptitudeCategory) hardWhere.aptitudeCategory = config.aptitudeCategory;
 
   const softWhere = {};
@@ -289,15 +304,37 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       include: { answers: true },
     });
     if (existing) {
-      const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: existing.answers.map((a) => a.questionId) } } });
-      // In-progress sessions store their question order as answer rows created up front (see below),
-      // so this reconstructs the original order via createdAt.
-      const ordered = existing.answers
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-        .map((a) => questions.find((q) => q.id === a.questionId))
-        .filter(Boolean);
-      logger.info("INTERVIEW_RESUMED", { sessionId: existing.id, studentId: req.user.id, questionCount: ordered.length });
-      return res.json({ session: existing, questions: ordered.map(sanitizeQuestion), resumed: true });
+      // Two ways a matched "existing" session isn't actually resumable: (1) it has zero answer
+      // rows — impossible for a session created going forward now that creation is transactional
+      // below, but a stale row from before that fix could still be sitting in the DB, and this
+      // route used to silently re-serve it forever (permanently "won't start" for that student);
+      // (2) for a Company Round, the student picked a DIFFERENT company than the one this session
+      // was created for — silently resuming would serve the wrong company's questions under the
+      // new company's label. Either way, abandon it (a status flip only — nothing is deleted) and
+      // fall through to create a fresh session below instead of leaving the student stuck.
+      const companyMismatch = isCompanyRound && config?.company && existing.config?.company
+        && String(existing.config.company).trim().toLowerCase() !== String(config.company).trim().toLowerCase();
+      if (existing.answers.length === 0 || companyMismatch) {
+        await prisma.interviewSession.update({ where: { id: existing.id }, data: { status: "ABANDONED" } });
+        logger.info("INTERVIEW_ABANDONED", {
+          sessionId: existing.id, studentId: req.user.id,
+          reason: existing.answers.length === 0 ? "EMPTY_SESSION" : "COMPANY_MISMATCH",
+        });
+      } else {
+        const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: existing.answers.map((a) => a.questionId) } } });
+        // In-progress sessions store their question order as answer rows created up front (see below),
+        // so this reconstructs the original order via createdAt.
+        const ordered = existing.answers
+          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+          .map((a) => questions.find((q) => q.id === a.questionId))
+          .filter(Boolean);
+        logger.info("INTERVIEW_RESUMED", { sessionId: existing.id, studentId: req.user.id, questionCount: ordered.length });
+        logAudit({
+          req, action: AUDIT_ACTIONS.INTERVIEW_SESSION_RESUMED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
+          details: { sessionId: existing.id },
+        });
+        return res.json({ session: existing, questions: ordered.map(sanitizeQuestion), resumed: true, serverTime: Date.now() });
+      }
     }
 
     let questions = [];
@@ -407,11 +444,18 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       sessionData = { ...sessionData, category };
     }
 
-    const session = await prisma.interviewSession.create({ data: sessionData });
-    // Pre-create empty answer rows in question order so /sessions/:id/answer is a plain
-    // upsert-by-unique-key, and resuming later can reconstruct the original order from them.
-    await prisma.interviewAnswer.createMany({
-      data: questions.map((q) => ({ sessionId: session.id, questionId: q.id, skipped: true })),
+    // Session creation + its pre-created answer-order rows (so /sessions/:id/answer is a plain
+    // upsert-by-unique-key, and resuming later can reconstruct the original order from them) are
+    // one atomic state transition — a stray failure between two separate writes here used to leave
+    // a committed, permanently-empty IN_PROGRESS session behind (see the auto-abandon check above,
+    // which cleans up any such rows left by this bug prior to the fix). Transact them together,
+    // same pattern as finalizeSession() below.
+    const session = await prisma.$transaction(async (tx) => {
+      const s = await tx.interviewSession.create({ data: sessionData });
+      await tx.interviewAnswer.createMany({
+        data: questions.map((q) => ({ sessionId: s.id, questionId: q.id, skipped: true })),
+      });
+      return s;
     });
 
     logger.info("INTERVIEW_CREATED", {
@@ -419,7 +463,11 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) 
       type: session.isMock ? "MOCK" : session.isResumeBased ? "RESUME_BASED" : session.isCompanyRound ? "COMPANY_ROUND" : session.talentPoolConfigId ? "TALENT_POOL" : session.category,
       company: session.config?.company || null, questionCount: questions.length, usedFallback: !!session.config?.generalFallbackCategories?.length,
     });
-    res.json({ session, questions: questions.map(sanitizeQuestion), resumed: false });
+    logAudit({
+      req, action: AUDIT_ACTIONS.INTERVIEW_SESSION_STARTED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
+      details: { sessionId: session.id, type: session.isMock ? "MOCK" : session.isResumeBased ? "RESUME_BASED" : session.isCompanyRound ? "COMPANY_ROUND" : session.talentPoolConfigId ? "TALENT_POOL" : session.category, company: session.config?.company || null },
+    });
+    res.json({ session, questions: questions.map(sanitizeQuestion), resumed: false, serverTime: Date.now() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to start interview session" });
@@ -456,7 +504,12 @@ router.get("/sessions/:id", authenticate, requireRole("STUDENT"), async (req, re
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
     const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
     const recommendedLearning = session.report ? await buildRecommendations(session.report.weakAreas) : [];
-    res.json({ session, questions: ordered, recommendedLearning });
+    // Resume position on refresh/remount: the first still-`skipped:true` row in creation order —
+    // every answer row starts skipped:true at session-creation time and flips to false the moment
+    // the student actually submits that question, so this is "the first question not yet visited"
+    // without needing a separately-persisted "current question" field.
+    const resumeIndexRaw = ordered.findIndex((q) => q.answer.skipped);
+    res.json({ session, questions: ordered, recommendedLearning, serverTime: Date.now(), resumeIndex: resumeIndexRaw === -1 ? 0 : resumeIndexRaw });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load session" });
@@ -547,6 +600,7 @@ router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), asyn
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
     if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
 
     const { questionId, code, language } = req.body;
     const question = await prisma.interviewQuestion.findUnique({ where: { id: questionId } });
@@ -610,6 +664,7 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), async 
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
     if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
 
     const { questionId, answerText, code, language, skipped, timeTakenSec } = req.body;
     const question = await prisma.interviewQuestion.findUnique({ where: { id: questionId } });
@@ -689,6 +744,7 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
     if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
     const roundPlan = Array.isArray(session.roundPlanSnapshot) ? session.roundPlanSnapshot : null;
     if (!roundPlan) return res.status(400).json({ error: "This session has no round structure" });
 
@@ -710,14 +766,14 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
     if (!passed) {
       for (let i = idx + 1; i < roundResults.length; i++) roundResults[i] = { ...roundResults[i], status: "NOT_REACHED" };
       await prisma.interviewSession.update({ where: { id: session.id }, data: { roundResults, eliminatedAtRound: session.currentRoundNumber } });
-      const { session: updated, report } = await finalizeSession({ ...session, roundResults, eliminatedAtRound: session.currentRoundNumber });
+      const { session: updated, report } = await finalizeSession({ ...session, roundResults, eliminatedAtRound: session.currentRoundNumber }, {}, req);
       return res.json({ eliminated: true, completed: true, session: updated, report });
     }
 
     const nextIdx = idx + 1;
     if (nextIdx >= roundPlan.length) {
       await prisma.interviewSession.update({ where: { id: session.id }, data: { roundResults } });
-      const { session: updated, report } = await finalizeSession({ ...session, roundResults });
+      const { session: updated, report } = await finalizeSession({ ...session, roundResults }, {}, req);
       return res.json({ eliminated: false, completed: true, session: updated, report });
     }
 
@@ -732,15 +788,18 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
       // getting the student stuck on a round that can never start.
       for (let i = nextIdx; i < roundResults.length; i++) roundResults[i] = { ...roundResults[i], status: "NOT_REACHED" };
       await prisma.interviewSession.update({ where: { id: session.id }, data: { roundResults } });
-      const { session: updated, report } = await finalizeSession({ ...session, roundResults });
+      const { session: updated, report } = await finalizeSession({ ...session, roundResults }, {}, req);
       return res.json({ eliminated: false, completed: true, session: updated, report, note: "No further round questions were available." });
     }
 
-    await prisma.interviewAnswer.createMany({ data: picked.items.map((q) => ({ sessionId: session.id, questionId: q.id, skipped: true })) });
     roundResults[nextIdx] = { ...roundResults[nextIdx], status: "IN_PROGRESS", questionIds: picked.items.map((q) => q.id) };
-    const updatedSession = await prisma.interviewSession.update({
-      where: { id: session.id }, data: { currentRoundNumber: nextRound.roundNumber, roundResults },
-    });
+    // Same class of bug as session-start above: the next round's answer rows and the session's
+    // round-pointer update describe one atomic transition — transact them together so a stray
+    // failure can't leave the session pointed at a round with no answer rows to resume into.
+    const [, updatedSession] = await prisma.$transaction([
+      prisma.interviewAnswer.createMany({ data: picked.items.map((q) => ({ sessionId: session.id, questionId: q.id, skipped: true })) }),
+      prisma.interviewSession.update({ where: { id: session.id }, data: { currentRoundNumber: nextRound.roundNumber, roundResults } }),
+    ]);
     logger.info("ROUND_ADVANCED", { sessionId: session.id, roundNumber: nextRound.roundNumber, category: nextRound.category, questionCount: picked.items.length, usedFallback: picked.usedFallback });
 
     res.json({ eliminated: false, completed: false, session: updatedSession, nextRoundQuestions: picked.items.map(sanitizeQuestion) });
@@ -753,7 +812,7 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
 // Shared by the normal finalize flow and the proctoring-violation auto-terminate path — a
 // terminated session still gets a real report built from whatever was genuinely answered before
 // termination (partial credit), not an empty/blank one.
-async function finalizeSession(session, { status = "COMPLETED", terminationReason = null } = {}) {
+async function finalizeSession(session, { status = "COMPLETED", terminationReason = null } = {}, req = null) {
   const answers = await prisma.interviewAnswer.findMany({ where: { sessionId: session.id } });
   const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
   const answersWithQuestions = answers.map((a) => ({ ...a, question: questions.find((q) => q.id === a.questionId) || {} }));
@@ -769,6 +828,14 @@ async function finalizeSession(session, { status = "COMPLETED", terminationReaso
   ]);
   logger.info(status === "TERMINATED" ? "INTERVIEW_TERMINATED" : "INTERVIEW_COMPLETED", {
     sessionId: session.id, studentId: session.studentId, terminationReason, overallScore: report.overallScore,
+  });
+  // Durable audit trail for session-lifecycle events — previously only ever hit ephemeral console
+  // logs, so diagnosing "why did this student's interview end" had no queryable history at all.
+  // Fire-and-forget: must never be able to fail the finalize response it's describing.
+  logAudit({
+    req, action: status === "TERMINATED" ? AUDIT_ACTIONS.INTERVIEW_SESSION_TERMINATED : AUDIT_ACTIONS.INTERVIEW_SESSION_COMPLETED,
+    actorId: session.studentId, actorRole: "STUDENT", studentId: session.studentId,
+    details: { sessionId: session.id, terminationReason, overallScore: report.overallScore },
   });
 
   // Notify the student their report is ready — scoped to Mock/Company Round sessions only
@@ -805,7 +872,20 @@ router.post("/sessions/:id/finalize", authenticate, requireRole("STUDENT"), asyn
       return res.json({ session, report: session.report });
     }
 
-    const { session: updated, report } = await finalizeSession(session);
+    // A client-triggered "time's up" auto-finalize is only trusted once the server's own clock
+    // agrees the deadline has actually passed, within a grace window — identical rationale to
+    // submissions.js/moduleCoding.js's premature-finalize guard (protects against a fast client
+    // clock finalizing a session early). A manual Submit click (reason omitted) is never blocked —
+    // a student is always allowed to submit early.
+    if (req.body?.reason === "TIME_EXPIRED") {
+      const remainingMs = deadlineOf(session) - Date.now();
+      if (remainingMs > PREMATURE_FINALIZE_GRACE_MS) {
+        return res.json({ premature: true, deadline: deadlineOf(session), serverNow: Date.now() });
+      }
+    }
+
+    const terminationReason = Date.now() > deadlineOf(session) ? "TIME_EXPIRED" : null;
+    const { session: updated, report } = await finalizeSession(session, { terminationReason }, req);
     const recommendedLearning = await buildRecommendations(report.weakAreas);
     res.json({ session: updated, report, recommendedLearning });
   } catch (err) {
@@ -831,15 +911,30 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
 
     const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
     const penalized = PENALIZED_VIOLATION_TYPES.has(type);
-    await prisma.interviewViolation.create({ data: { sessionId: session.id, type, penalized } });
-
     const violationCount = penalized ? session.violationCount + 1 : session.violationCount;
-    if (penalized) await prisma.interviewSession.update({ where: { id: session.id }, data: { violationCount } });
+    // The violation log row and the session's running count describe one event — transact them
+    // together (same class of fix as session-start/round-advance above) when penalized, rather
+    // than as two separate writes that could partially land and leave the count out of sync with
+    // the log it's supposed to be derived from.
+    if (penalized) {
+      await prisma.$transaction([
+        prisma.interviewViolation.create({ data: { sessionId: session.id, type, penalized } }),
+        prisma.interviewSession.update({ where: { id: session.id }, data: { violationCount } }),
+      ]);
+    } else {
+      await prisma.interviewViolation.create({ data: { sessionId: session.id, type, penalized } });
+    }
     logger.info("VIOLATION_RECORDED", { sessionId: session.id, type, penalized, violationCount });
+    if (penalized) {
+      logAudit({
+        req, action: AUDIT_ACTIONS.INTERVIEW_VIOLATION_RECORDED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
+        details: { sessionId: session.id, type, violationCount },
+      });
+    }
 
     const terminated = penalized && violationCount >= MAX_INTERVIEW_VIOLATIONS;
     if (terminated) {
-      await finalizeSession({ ...session, violationCount }, { status: "TERMINATED", terminationReason: "MAX_VIOLATIONS" });
+      await finalizeSession({ ...session, violationCount }, { status: "TERMINATED", terminationReason: "MAX_VIOLATIONS" }, req);
     }
 
     res.json({ violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, penalized, terminated });

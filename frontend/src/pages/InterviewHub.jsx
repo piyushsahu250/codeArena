@@ -46,6 +46,7 @@ export default function InterviewHub() {
   const [setupCard, setSetupCard] = useState(null);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState(null);
+  const [resuming, setResuming] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [config, setConfig] = useState({
     subject: "Java", topic: "Arrays", difficulty: "EASY", language: "java",
@@ -80,6 +81,15 @@ export default function InterviewHub() {
             ? { isCompanyRound: true, config: { company: config.company, difficulty: config.difficulty, ...commonConfig() } }
             : { category, config: extraConfig || {} };
       const { data } = await api.post("/interview/sessions", body);
+      if (data.resumed) {
+        // The server silently reused an existing in-progress session of this shape instead of
+        // creating a new one (see interview.js's resume-matching) — surface that plainly rather
+        // than letting the student think they're starting fresh, per a brief pause before
+        // navigating into InterviewSession.jsx's own richer "Resume Interview" screen.
+        setResuming(true);
+        setTimeout(() => navigate(`/interview/session/${data.session.id}`), 700);
+        return;
+      }
       navigate(`/interview/session/${data.session.id}`);
     } catch (err) {
       const serverMessage = err.response?.data?.error;
@@ -149,6 +159,12 @@ export default function InterviewHub() {
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
               {summary.improvementSuggestions.map((s, i) => <li key={i}>{s}</li>)}
             </ul>
+          </div>
+        )}
+
+        {resuming && (
+          <div className="ip-glass" style={{ padding: 16, marginTop: 16, border: "1px solid var(--ip-accent)" }}>
+            <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>Resuming your previous in-progress interview…</p>
           </div>
         )}
 

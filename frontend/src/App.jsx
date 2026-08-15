@@ -7,6 +7,7 @@ import { ToastProvider, useToast } from "./context/ToastContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
 import { SidebarUIProvider } from "./context/SidebarContext";
 import LoadingScreen from "./components/LoadingScreen";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Sidebar from "./components/Sidebar";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -218,9 +219,11 @@ export default function App() {
             path="/interview/session/:id"
             element={
               <Protected roles={["STUDENT"]} noChrome>
-                <Suspense fallback={<LoadingScreen />}>
-                  <InterviewSession />
-                </Suspense>
+                <ErrorBoundary>
+                  <Suspense fallback={<LoadingScreen />}>
+                    <InterviewSession />
+                  </Suspense>
+                </ErrorBoundary>
               </Protected>
             }
           />
