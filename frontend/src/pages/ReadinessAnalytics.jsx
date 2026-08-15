@@ -46,9 +46,16 @@ export default function ReadinessAnalytics() {
   const [compareGroupIds, setCompareGroupIds] = useState([]);
   const [activeCompareIds, setActiveCompareIds] = useState([]); // only set once "Compare Selected Groups" is clicked
 
+  // Institute filter — harmless no-op for a scoped Admin (backend ignores this param and always
+  // uses their own institute); the only way an unscoped Platform Admin can narrow this dashboard
+  // to one institute instead of a blended cross-institute view. Same pattern as AcademicGroups.jsx.
+  const [institutes, setInstitutes] = useState([]);
+  const [filterInstituteId, setFilterInstituteId] = useState("");
+
   useEffect(() => {
     api.get("/readiness/admin/subjects").then((res) => setSubjects(res.data)).catch(() => {});
     api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => {});
+    api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
   }, []);
 
   const departmentOptions = useMemo(() => {
@@ -66,6 +73,7 @@ export default function ReadinessAnalytics() {
     const p = {};
     if (subjectId) p.subjectId = subjectId;
     if (assessmentMode) p.assessmentMode = assessmentMode;
+    if (filterInstituteId) p.instituteId = filterInstituteId;
     if (activeCompareIds.length) {
       p.compareGroupIds = activeCompareIds.join(",");
       return p; // compare mode overrides the single-scope batch/department/section filter
@@ -74,7 +82,7 @@ export default function ReadinessAnalytics() {
     if (filterDepartmentId) p.departmentId = filterDepartmentId;
     if (filterSection) p.section = filterSection;
     return p;
-  }, [subjectId, assessmentMode, filterBatch, filterDepartmentId, filterSection, activeCompareIds]);
+  }, [subjectId, assessmentMode, filterBatch, filterDepartmentId, filterSection, filterInstituteId, activeCompareIds]);
 
   useEffect(() => {
     api.get("/readiness/admin/analytics", { params: queryParams })
@@ -117,6 +125,13 @@ export default function ReadinessAnalytics() {
         </p>
 
         <div className="card" style={{ padding: 16, marginTop: 24, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <label style={labelStyle}>Institute</label>
+            <select style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)} disabled={compareMode}>
+              <option value="">All institutes</option>
+              {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+          </div>
           <div>
             <label style={labelStyle}>Subject</label>
             <select style={inputStyle} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setAssessmentMode(""); }} disabled={compareMode}>

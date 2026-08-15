@@ -69,6 +69,12 @@ export default function ReadinessSubjects() {
   const [filterBatch, setFilterBatch] = useState("");
   const [filterDepartmentId, setFilterDepartmentId] = useState("");
   const [filterSection, setFilterSection] = useState("");
+  // Institute filter — a harmless no-op for a scoped Admin (the backend ignores this param and
+  // always uses their own institute), but the only way an unscoped Platform Admin can narrow this
+  // list to one institute at a time instead of seeing every institute's subjects blended together.
+  // Same always-rendered dropdown pattern AcademicGroups.jsx already uses for the identical case.
+  const [institutes, setInstitutes] = useState([]);
+  const [filterInstituteId, setFilterInstituteId] = useState("");
 
   const departmentOptions = useMemo(() => {
     const map = new Map();
@@ -79,11 +85,12 @@ export default function ReadinessSubjects() {
   const sectionOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.section))].sort(), [academicGroups]);
 
   function load() {
-    api.get("/readiness/admin/subjects", { params: { batch: filterBatch || undefined, departmentId: filterDepartmentId || undefined, section: filterSection || undefined } })
+    api.get("/readiness/admin/subjects", { params: { batch: filterBatch || undefined, departmentId: filterDepartmentId || undefined, section: filterSection || undefined, instituteId: filterInstituteId || undefined } })
       .then((res) => setSubjects(res.data)).catch(() => toast.error("Failed to load subjects"));
   }
-  useEffect(load, [filterBatch, filterDepartmentId, filterSection]);
+  useEffect(load, [filterBatch, filterDepartmentId, filterSection, filterInstituteId]);
   useEffect(() => { api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => {}); }, []);
+  useEffect(() => { api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {}); }, []);
 
   function startCreate() {
     setForm(emptyForm());
@@ -288,6 +295,13 @@ export default function ReadinessSubjects() {
         {editingId === null && (
           <div style={{ marginTop: 20 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+              <div style={{ flex: "1 1 160px" }}>
+                <label style={{ ...labelStyle, marginTop: 0 }}>Institute</label>
+                <select style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
+                  <option value="">All institutes</option>
+                  {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+              </div>
               <div style={{ flex: "1 1 140px" }}>
                 <label style={{ ...labelStyle, marginTop: 0 }}>Batch</label>
                 <select style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}>
@@ -309,8 +323,8 @@ export default function ReadinessSubjects() {
                   {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              {(filterBatch || filterDepartmentId || filterSection) && (
-                <button className="btn btn-ghost" style={{ ...smallBtn, alignSelf: "flex-end" }} onClick={() => { setFilterBatch(""); setFilterDepartmentId(""); setFilterSection(""); }}>Clear filters</button>
+              {(filterBatch || filterDepartmentId || filterSection || filterInstituteId) && (
+                <button className="btn btn-ghost" style={{ ...smallBtn, alignSelf: "flex-end" }} onClick={() => { setFilterBatch(""); setFilterDepartmentId(""); setFilterSection(""); setFilterInstituteId(""); }}>Clear filters</button>
               )}
             </div>
 

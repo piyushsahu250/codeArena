@@ -29,6 +29,14 @@ async function staffAcademicGroupIds(req) {
   return rows.map((r) => r.academicGroupId).filter(Boolean);
 }
 
+// Institute to scope a list/analytics query to — a scoped Admin/Staff's own institute always
+// wins (never overridable by a client-supplied query param); an unscoped Platform Admin may
+// optionally narrow to one institute via ?instituteId=, mirroring academicGroups.js's identical
+// GET / pattern (spec: an Admin institute filter for the multi-institute view).
+function resolvedInstituteId(req) {
+  return req.requesterInstituteId || req.query.instituteId || null;
+}
+
 // Rejects any academicGroupId outside a scoped Admin/Staff's own institute — mirrors courses.js's
 // assertAssignmentScope for CourseAcademicGroupAssignment. Unscoped Platform Admin
 // (req.requesterInstituteId === null) is unrestricted, same convention as every other
@@ -98,7 +106,7 @@ router.get("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attac
     const filterWhere = hasDisplayFilter ? { academicGroupAssignments: { some: { academicGroup: groupMatch } } } : {};
 
     const subjects = await prisma.readinessSubject.findMany({
-      where: { ...instituteWhere(req.requesterInstituteId), ...scopeWhere, ...filterWhere },
+      where: { ...instituteWhere(resolvedInstituteId(req)), ...scopeWhere, ...filterWhere },
       include: { _count: { select: { academicGroupAssignments: true } } },
       orderBy: { name: "asc" },
     });
@@ -160,6 +168,19 @@ router.post("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), atta
     data.instituteId = req.requesterInstituteId || req.body.instituteId || null;
     data.createdById = req.user.id;
 
+    // Case-insensitive duplicate-name guard, scoped to the institute — nothing on this model
+    // enforces uniqueness at the DB level (no @@unique, unlike Subject/Unit added for the Question
+    // Bank feature), so without this check the same institute could silently end up with two
+    // subjects both named "DSA". A platform-wide subject (instituteId: null) sharing a name with an
+    // institute-scoped one isn't a real collision, so this only runs when instituteId is set.
+    if (data.instituteId) {
+      const dup = await prisma.readinessSubject.findFirst({
+        where: { name: { equals: data.name, mode: "insensitive" }, instituteId: data.instituteId },
+        select: { id: true },
+      });
+      if (dup) return res.status(409).json({ error: `A subject named "${data.name}" already exists for this institute.` });
+    }
+
     const subject = await prisma.readinessSubject.create({ data });
     await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: data.instituteId, details: { subjectId: subject.id, name: subject.name, created: true } });
 
@@ -184,6 +205,17 @@ router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"),
 
     const data = {};
     for (const f of SUBJECT_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f];
+
+    // Same duplicate-name guard as POST above, only when the name is actually being changed —
+    // instituteId can't move via PATCH (not in SUBJECT_FIELDS), so `existing.instituteId` is
+    // always the correct scope to check against.
+    if (data.name !== undefined && existing.instituteId) {
+      const dup = await prisma.readinessSubject.findFirst({
+        where: { name: { equals: data.name, mode: "insensitive" }, instituteId: existing.instituteId, id: { not: req.params.id } },
+        select: { id: true },
+      });
+      if (dup) return res.status(409).json({ error: `A subject named "${data.name}" already exists for this institute.` });
+    }
 
     const subject = await prisma.readinessSubject.update({ where: { id: req.params.id }, data });
     await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, updated: true } });
@@ -594,7 +626,8 @@ router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "S
 const READINESS_REPORT_CAP = 10000;
 
 async function loadFilteredReports(req, academicGroupOverride) {
-  const studentWhere = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+  const scopedInstituteId = resolvedInstituteId(req);
+  const studentWhere = scopedInstituteId ? { instituteId: scopedInstituteId } : {};
   const { batch, departmentId, section } = req.query;
   const academicGroupFilter = academicGroupOverride || { ...(batch ? { batch } : {}), ...(departmentId ? { departmentId } : {}), ...(section ? { section } : {}) };
   if (Object.keys(academicGroupFilter).length) studentWhere.academicGroup = academicGroupFilter;
@@ -725,7 +758,7 @@ async function computeReadinessAnalyticsComparison(req, academicGroupIds) {
 router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const compareGroupIds = req.query.compareGroupIds ? String(req.query.compareGroupIds).split(",").map((s) => s.trim()).filter(Boolean) : [];
-    const instituteKey = req.requesterInstituteId || "all";
+    const instituteKey = resolvedInstituteId(req) || "all";
     const filterKey = JSON.stringify(req.query);
     const analytics = compareGroupIds.length
       ? await cached(`readinessAnalyticsCompare:${instituteKey}:${filterKey}`, 60 * 1000, () => computeReadinessAnalyticsComparison(req, compareGroupIds))
@@ -747,8 +780,9 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
 
     // Academic-context header (spec section 16: every export must carry it) — describes the scope
     // this export was actually filtered to, not one student's context (this is aggregate data).
+    const scopedInstituteId = resolvedInstituteId(req);
     const [institute, department, subject] = await Promise.all([
-      req.requesterInstituteId ? prisma.institute.findUnique({ where: { id: req.requesterInstituteId }, select: { name: true } }) : null,
+      scopedInstituteId ? prisma.institute.findUnique({ where: { id: scopedInstituteId }, select: { name: true } }) : null,
       req.query.departmentId ? prisma.department.findUnique({ where: { id: req.query.departmentId }, select: { name: true } }) : null,
       req.query.subjectId ? prisma.readinessSubject.findUnique({ where: { id: req.query.subjectId }, select: { name: true } }) : null,
     ]);
@@ -813,7 +847,7 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
 router.get("/placement/overview", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const analytics = await cached(
-      `readinessPlacementOverview:${req.requesterInstituteId || "all"}:${JSON.stringify(req.query)}`,
+      `readinessPlacementOverview:${resolvedInstituteId(req) || "all"}:${JSON.stringify(req.query)}`,
       60 * 1000,
       () => computeReadinessAnalytics(req)
     );
