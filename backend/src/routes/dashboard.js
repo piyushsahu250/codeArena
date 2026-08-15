@@ -6,6 +6,8 @@ const { getModuleLockMap } = require("../utils/learningLock");
 const { computeGroupRank } = require("../utils/groupRank");
 const { testEligibilityWhere } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
+const { cached } = require("../utils/cache");
+const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 
 const router = express.Router();
 
@@ -168,6 +170,10 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
       learningProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
     }
 
+    const recommendations = await cached(`recommendations:${student.id}`, 5 * 60 * 1000, () =>
+      computeLearningRecommendations(prisma, student.id)
+    );
+
     res.json({
       cards: {
         testsAssigned: perf.summary.totalTestsAssigned,
@@ -193,6 +199,7 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
       recentTestResults: perf.testHistory.filter((h) => h.status !== "IN_PROGRESS").slice(0, 5),
       recentActivity,
       notifications,
+      recommendations,
     });
   } catch (err) {
     // Detailed context server-side only — the client only ever sees the generic message below,

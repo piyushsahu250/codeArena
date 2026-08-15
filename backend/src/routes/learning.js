@@ -15,6 +15,8 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
+const { cached } = require("../utils/cache");
+const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -438,8 +440,12 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), as
 
     await prisma.lessonProgress.upsert({
       where: { studentId_lessonId: { studentId: req.user.id, lessonId: lesson.id } },
-      update: { status: nextStatus, completedAt: nextStatus === "COMPLETED" ? existing?.completedAt || new Date() : null },
-      create: { studentId: req.user.id, lessonId: lesson.id, status: nextStatus, completedAt: nextStatus === "COMPLETED" ? new Date() : null },
+      // score always reflects this attempt, even on a retake after already passing — the
+      // Recommendations engine (learningRecommendations.js) wants "how did they actually do
+      // most recently," not the best-ever score, since a fresh low score on a retake is exactly
+      // the "review this topic" signal it looks for.
+      update: { status: nextStatus, score, completedAt: nextStatus === "COMPLETED" ? existing?.completedAt || new Date() : null },
+      create: { studentId: req.user.id, lessonId: lesson.id, status: nextStatus, score, completedAt: nextStatus === "COMPLETED" ? new Date() : null },
     });
 
     let gamification = null;
@@ -463,6 +469,22 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), as
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to submit practice test" });
+  }
+});
+
+// =========================== Learning Recommendations (rule-based) ===========================
+// Same cached() key as GET /dashboard/student's recommendations block — a student loading both
+// the dashboard and the Learning Hub within the same 5-minute window costs one real computation.
+
+router.get("/recommendations", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const recommendations = await cached(`recommendations:${req.user.id}`, 5 * 60 * 1000, () =>
+      computeLearningRecommendations(prisma, req.user.id)
+    );
+    res.json({ recommendations });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load recommendations" });
   }
 });
 

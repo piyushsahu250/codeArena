@@ -294,6 +294,28 @@ export default function StudentDashboard() {
                 )}
               </Section>
             </div>
+
+            {/* Recommended for You — rule-based, from GET /dashboard/student's recommendations field */}
+            {!loading && dash.recommendations && dash.recommendations.length > 0 && (
+              <Section title="Recommended for You" icon={Sparkles} style={{ marginTop: SECTION_GAP }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                  {dash.recommendations.map((r, i) => (
+                    <Link
+                      key={i}
+                      to={r.actionUrl}
+                      style={{
+                        display: "block", padding: "14px 16px", borderRadius: 10, border: "1px solid var(--line)",
+                        background: "var(--surface)", textDecoration: "none", color: "inherit",
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{r.title}</div>
+                      <div style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 10 }}>{r.description}</div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--mint)" }}>{r.actionLabel} →</span>
+                    </Link>
+                  ))}
+                </div>
+              </Section>
+            )}
           </>
         )}
 
