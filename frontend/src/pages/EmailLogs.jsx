@@ -14,6 +14,21 @@ const TYPE_LABEL = {
 // button a beat earlier client-side; the server enforces the real cap regardless.
 const MAX_EMAIL_RETRIES = 5;
 
+// A real send resolves to SENT/FAILED within seconds. A row still PENDING/RETRYING after this
+// long didn't get interrupted mid-flight — the background sender (or the request that awaited
+// it) crashed or the process restarted before it could write the final status, most commonly
+// because a Render redeploy landed mid-send. These orphaned rows never self-heal, so they need
+// the same Retry path as an explicit FAILED — the backend retry route already accepts any status.
+const STUCK_THRESHOLD_MS = 2 * 60 * 1000;
+
+function isRetryable(log) {
+  if (log.status === "FAILED") return true;
+  if (log.status === "PENDING" || log.status === "RETRYING") {
+    return Date.now() - new Date(log.createdAt).getTime() > STUCK_THRESHOLD_MS;
+  }
+  return false;
+}
+
 export default function EmailLogs() {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -267,13 +282,17 @@ export default function EmailLogs() {
                   </td>
                   <td style={{ padding: "10px 12px", color: "var(--rust)", fontSize: 12, maxWidth: 260 }}>{log.errorMessage || "—"}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                    {log.status === "FAILED" && (
+                    {isRetryable(log) ? (
                       (log.retryCount ?? 0) >= MAX_EMAIL_RETRIES ? (
                         <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>Retry limit reached</span>
                       ) : (
                         <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => retry(log)} disabled={retryingId === log.id}>
                           {retryingId === log.id ? "Retrying…" : `Retry${log.retryCount ? ` (${log.retryCount}/${MAX_EMAIL_RETRIES})` : ""}`}
                         </button>
+                      )
+                    ) : (
+                      (log.status === "PENDING" || log.status === "RETRYING") && (
+                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>Sending…</span>
                       )
                     )}
                   </td>
