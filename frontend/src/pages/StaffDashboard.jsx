@@ -195,8 +195,8 @@ export default function StaffDashboard() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="page-container" style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1>Staff control room</h1>
             <ChalkUnderline />
@@ -274,7 +274,7 @@ export default function StaffDashboard() {
 
         <h3 ref={manageTestsRef} style={{ fontSize: 16, marginTop: 32, marginBottom: 4, scrollMarginTop: 24 }}>Manage Tests</h3>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
           <button
             className={scope === "MINE" ? "btn btn-dark" : "btn btn-ghost"}
             onClick={() => setScope("MINE")}

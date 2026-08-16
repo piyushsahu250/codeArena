@@ -91,7 +91,7 @@ export default function ClerkDashboard() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
+      <div className="page-container" style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1>Placement Cell — {user?.name}</h1>
@@ -161,7 +161,7 @@ export default function ClerkDashboard() {
         )}
 
         {/* Offer Analytics */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginTop: 28, marginBottom: 10 }}>
           <h3 style={{ fontSize: 16 }}>Placement Offer Analytics</h3>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
             <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} />

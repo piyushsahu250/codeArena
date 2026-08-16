@@ -75,6 +75,18 @@ body.has-sidebar.sidebar-collapsed { padding-left: var(--sidebar-w-collapsed); }
   body.has-sidebar, body.has-sidebar.sidebar-collapsed { padding-left: 0; }
 }
 
+/* Shared responsive page padding — most dashboard/list pages wrap their content in
+   `maxWidth + margin: "0 auto" + padding: "48px 24px"` inline. That padding was never
+   accompanied by a mobile reduction, so on a real phone width the fixed 24px side padding plus
+   any unwrapped flex row inside it (a header, a button group, a card's own internal row) could
+   push content past the viewport edge instead of just feeling a little tight. This class
+   supplies just the padding half of that pattern so pages that opt in get a narrower, mobile-
+   appropriate gutter below 640px without changing their per-page maxWidth/margin. */
+.page-container { padding: 48px 24px; }
+@media (max-width: 640px) {
+  .page-container { padding: 24px 16px; }
+}
+
 h1, h2, h3 {
   font-family: var(--font-display);
   font-weight: 700;

@@ -219,7 +219,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 24px" }}>
+      <div className="page-container" style={{ maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
           <div>
             <h1>Admin control room</h1>
@@ -563,7 +563,7 @@ export default function AdminDashboard() {
 
 function UserRow({ u, onResetPassword, onDelete }) {
   return (
-    <div className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
       <div>
         <div style={{ fontWeight: 600, fontSize: 14 }}>{u.name}</div>
         <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{u.email}</div>
@@ -573,7 +573,7 @@ function UserRow({ u, onResetPassword, onDelete }) {
           {(u.registrationNumber || u.employeeId) ? ` · ${u.registrationNumber ? `PRN ${u.registrationNumber}` : `ID ${u.employeeId}`}` : ""}
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         {u.isActive === false && <span className="badge" style={{ background: "var(--rust)", color: "#fff" }}>Inactive</span>}
         <span className="badge">{u.role}</span>
         {u.role === "STUDENT" && (
