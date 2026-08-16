@@ -181,7 +181,7 @@ export default function BulkUpload() {
                       )}
                       {batchSummary.failed > 0 && (
                         <span style={{ color: "var(--rust)", fontWeight: 600 }}>
-                          ✗ {batchSummary.failed} could not be delivered — see <Link to="/admin/email-logs">Email Logs</Link> for details and retry.{" "}
+                          ✗ {batchSummary.failed} could not be delivered — see <Link to={`/admin/email-logs?batchId=${result.batchId}`}>Email Logs</Link> for details and retry.{" "}
                         </span>
                       )}
                       {batchSummary.pending > 0 && (

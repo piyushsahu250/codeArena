@@ -5,7 +5,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { getSnapshot } = require("../utils/metrics");
 const { getQueueStatus } = require("../utils/queue");
 const { cached } = require("../utils/cache");
-const { sendMail, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
+const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
 const { credentialsResendTemplate } = require("../utils/emailTemplates");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
@@ -118,15 +118,35 @@ router.get("/question-audit", authenticate, requireRole("ADMIN"), async (req, re
   }
 });
 
+// Shared where-builder for the email-logs list route below — mirrors the buildAdminChallengeWhere
+// pattern already established in challenges.js (status + free-text search + exact match filters).
+function buildEmailLogWhere({ status, type, q, from, to, batchId }) {
+  const where = {};
+  if (status && ["PENDING", "SENT", "FAILED", "RETRYING"].includes(status)) where.status = status;
+  if (type) where.emailType = type;
+  if (batchId) where.batchId = batchId;
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt.gte = new Date(from);
+    if (to) where.createdAt.lte = new Date(to);
+  }
+  if (q) {
+    where.OR = [
+      { recipientName: { contains: q, mode: "insensitive" } },
+      { recipientEmail: { contains: q, mode: "insensitive" } },
+      { student: { registrationNumber: { contains: q, mode: "insensitive" } } },
+    ];
+  }
+  return where;
+}
+
 // ADMIN: outbound email delivery log — every welcome/password-reset send attempt, with real
-// provider-confirmed status (never inferred). Optional ?status=FAILED filter, page/pageSize
-// paginated (previously a hard 300-row cap with no way to see older entries).
+// provider-confirmed status (never inferred). Filterable by status/type/date-range/batch, plus a
+// free-text search across recipient name/email/registration number, page/pageSize paginated
+// (previously a hard 300-row cap with no way to see older entries).
 router.get("/email-logs", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
-    const where = {};
-    if (req.query.status && ["PENDING", "SENT", "FAILED", "RETRYING"].includes(req.query.status)) {
-      where.status = req.query.status;
-    }
+    const where = buildEmailLogWhere(req.query);
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
     const [logs, total] = await Promise.all([
@@ -137,7 +157,7 @@ router.get("/email-logs", authenticate, requireRole("ADMIN"), async (req, res) =
         take: pageSize,
         select: {
           id: true, studentId: true, recipientName: true, recipientEmail: true, emailType: true,
-          status: true, errorMessage: true, messageId: true, retryCount: true, createdAt: true, sentAt: true,
+          status: true, errorMessage: true, messageId: true, retryCount: true, batchId: true, createdAt: true, sentAt: true,
         },
       }),
       prisma.emailLog.count({ where }),
@@ -171,6 +191,55 @@ router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMI
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load batch summary" });
+  }
+});
+
+// ADMIN: whether the mail transport is actually configured, plus cheap delivery-health
+// aggregates — never echoes MAIL_PASSWORD or any secret, only presence/absence.
+router.get("/email-logs/status", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const connected = !!(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD);
+    const [lastSent, failedCount, queuedCount] = await Promise.all([
+      prisma.emailLog.findFirst({ where: { status: "SENT" }, orderBy: { sentAt: "desc" }, select: { sentAt: true } }),
+      prisma.emailLog.count({ where: { status: "FAILED" } }),
+      prisma.emailLog.count({ where: { status: { in: ["PENDING", "RETRYING"] } } }),
+    ]);
+    res.json({
+      connected,
+      senderEmail: process.env.MAIL_FROM || null,
+      lastSuccessfulAt: lastSent?.sentAt || null,
+      failedCount,
+      queuedCount,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load email system status" });
+  }
+});
+
+// ADMIN: sends a real test email to a given address to confirm the configured mailbox actually
+// works, without needing to trigger an unrelated account-creation/reset flow first. Logged like
+// any other email so it's visible (and debuggable) in the list above.
+router.post("/email-logs/test", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const to = String(req.body.to || "").trim();
+    const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+    const result = await sendMailLogged(prisma, {
+      to,
+      name: "Test recipient",
+      emailType: "OTHER_SYSTEM_EMAIL",
+      subject: "CodeArena Test Email",
+      html: wrapBranded(`<p>This is a test email sent from the CodeArena admin panel by ${admin?.name || req.user.email} to confirm the mail system is working.</p>`),
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.EMAIL_TEST_SENT,
+      actorId: req.user.id, actorName: admin?.name || req.user.email, actorRole: req.user.role,
+      details: { to, emailSent: !!result.ok, emailError: result.error || null },
+    });
+    res.json({ ok: !!result.ok, error: result.error || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to send test email" });
   }
 });
 

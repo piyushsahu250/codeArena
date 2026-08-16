@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -16,15 +16,35 @@ const MAX_EMAIL_RETRIES = 5;
 
 export default function EmailLogs() {
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [logs, setLogs] = useState(null);
   const [pageMeta, setPageMeta] = useState({ page: 1, totalPages: 1, total: 0 });
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [q, setQ] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [batchId, setBatchId] = useState(searchParams.get("batchId") || "");
   const [retryingId, setRetryingId] = useState(null);
+
+  const [status, setStatus] = useState(null); // system-status panel
+  const [testTo, setTestTo] = useState("");
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState(null); // { ok, error }
+
+  function loadStatus() {
+    api.get("/admin/email-logs/status").then((res) => setStatus(res.data)).catch(() => {});
+  }
 
   function load() {
     const params = { page, pageSize: 50 };
     if (statusFilter) params.status = statusFilter;
+    if (typeFilter) params.type = typeFilter;
+    if (q.trim()) params.q = q.trim();
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (batchId) params.batchId = batchId;
     api.get("/admin/email-logs", { params }).then((res) => {
       setLogs(res.data.rows);
       setPageMeta({ page: res.data.page, totalPages: res.data.totalPages, total: res.data.total });
@@ -32,10 +52,44 @@ export default function EmailLogs() {
   }
 
   useEffect(() => {
+    loadStatus();
+  }, []);
+
+  useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
-  useEffect(load, [statusFilter, page]);
+  }, [statusFilter, typeFilter, q, from, to, batchId]);
+  useEffect(load, [statusFilter, typeFilter, q, from, to, batchId, page]);
+
+  function clearBatchFilter() {
+    setBatchId("");
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("batchId");
+      return next;
+    });
+  }
+
+  async function sendTestEmail(e) {
+    e.preventDefault();
+    if (!testTo.trim()) return;
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      const { data } = await api.post("/admin/email-logs/test", { to: testTo.trim() });
+      setTestResult(data);
+      if (data.ok) toast.success("Test email sent — check the inbox.");
+      else toast.error(`Test email failed: ${data.error || "Unknown error"}`);
+      loadStatus();
+      load();
+    } catch (err) {
+      const msg = err.response?.data?.error || "Failed to send test email";
+      setTestResult({ ok: false, error: msg });
+      toast.error(msg);
+    } finally {
+      setTestSending(false);
+    }
+  }
 
   // There's no way to literally "resend" the original message — passwords are never stored in
   // plaintext, so a retry generates a fresh unique password (same as any other reset) and sends
@@ -54,6 +108,7 @@ export default function EmailLogs() {
         data.emailSent ? "Email resent successfully." : `Retry failed: ${data.emailError || "Unknown error"}`
       );
       load();
+      loadStatus();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to retry");
     } finally {
@@ -77,11 +132,68 @@ export default function EmailLogs() {
 
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>
           Every welcome and password-reset email the platform has attempted to send, with the real status
-          confirmed by the email provider — not just "the code ran without throwing."
+          confirmed by the mail server — not just "the code ran without throwing."
           {failedCount > 0 && <span style={{ color: "var(--rust)", fontWeight: 600 }}> {failedCount} failed and can be retried below.</span>}
         </p>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+        {/* Email system status panel */}
+        <div className="card" style={{ marginTop: 16, padding: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: status?.connected ? "var(--mint)" : "var(--rust)",
+                  display: "inline-block",
+                }}
+              />
+              <span style={{ fontWeight: 700, fontSize: 13 }}>
+                {status ? (status.connected ? "Email System Connected" : "Email System Not Connected") : "Checking…"}
+              </span>
+            </div>
+            {status?.senderEmail && (
+              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+                Sender: <span className="mono">{status.senderEmail}</span>
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+              Last successful send: {status?.lastSuccessfulAt ? new Date(status.lastSuccessfulAt).toLocaleString() : "—"}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+              Queued: <span className="mono" style={{ fontWeight: 700 }}>{status?.queuedCount ?? "—"}</span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+              Failed: <span className="mono" style={{ fontWeight: 700, color: status?.failedCount > 0 ? "var(--rust)" : undefined }}>{status?.failedCount ?? "—"}</span>
+            </div>
+          </div>
+
+          <form onSubmit={sendTestEmail} style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="email"
+              placeholder="Send a test email to…"
+              value={testTo}
+              onChange={(e) => setTestTo(e.target.value)}
+              style={{ flex: "1 1 240px", padding: "6px 10px", fontSize: 13 }}
+            />
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }} disabled={!testTo.trim() || testSending}>
+              {testSending ? "Sending…" : "Send Test Email"}
+            </button>
+            {testResult && (
+              <span style={{ fontSize: 12, color: testResult.ok ? "var(--mint)" : "var(--rust)", fontWeight: 600 }}>
+                {testResult.ok ? "✓ Sent" : `✗ Failed: ${testResult.error || "Unknown error"}`}
+              </span>
+            )}
+          </form>
+        </div>
+
+        {batchId && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>
+            <span>Filtered to upload batch <span className="mono">{batchId}</span></span>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 10px" }} onClick={clearBatchFilter}>Clear</button>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
           {["", "SENT", "FAILED", "PENDING", "RETRYING"].map((s) => (
             <button
               key={s || "all"}
@@ -92,6 +204,39 @@ export default function EmailLogs() {
               {s || "All"}
             </button>
           ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ fontSize: 13, padding: "6px 10px" }}>
+            <option value="">All types</option>
+            {Object.entries(TYPE_LABEL).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Search email, name, or PRN…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            style={{ fontSize: 13, padding: "6px 10px", minWidth: 220 }}
+          />
+          <label style={{ fontSize: 12, color: "var(--ink-dim)", display: "flex", alignItems: "center", gap: 6 }}>
+            From
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ fontSize: 13, padding: "5px 8px" }} />
+          </label>
+          <label style={{ fontSize: 12, color: "var(--ink-dim)", display: "flex", alignItems: "center", gap: 6 }}>
+            To
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ fontSize: 13, padding: "5px 8px" }} />
+          </label>
+          {(typeFilter || q || from || to) && (
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: 12, padding: "5px 10px" }}
+              onClick={() => { setTypeFilter(""); setQ(""); setFrom(""); setTo(""); }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
@@ -135,7 +280,7 @@ export default function EmailLogs() {
                 </tr>
               ))}
               {logs?.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No email activity yet.</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No email activity matches these filters.</td></tr>
               )}
             </tbody>
           </table>
