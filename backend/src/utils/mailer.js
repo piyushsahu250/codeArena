@@ -102,4 +102,33 @@ async function sendMailLogged(prisma, { to, name, subject, html, emailType, stud
   return result;
 }
 
-module.exports = { sendMail, sendMailLogged, wrapBranded };
+const MAX_EMAIL_RETRIES = Number(process.env.MAX_EMAIL_RETRIES) || 5;
+
+// Retries a specific, already-failed EmailLog row in place — updates the SAME row's
+// status/retryCount/errorMessage rather than sendMailLogged's usual "create a fresh row" behavior,
+// since a retry is a continuation of one delivery attempt, not a new email event. `sendFn` is the
+// actual `() => sendMail({...})` call, built by the caller (typically with a freshly generated
+// password baked into a fresh template — plaintext passwords are never stored, so there is no
+// original message body to literally resend, only the same kind of email built again).
+async function retryEmailLogged(prisma, logId, sendFn) {
+  const log = await prisma.emailLog.findUnique({ where: { id: logId } });
+  if (!log) return { ok: false, error: "Email log entry not found" };
+  if (log.retryCount >= MAX_EMAIL_RETRIES) {
+    return { ok: false, error: `Retry limit reached (${MAX_EMAIL_RETRIES} attempts) — this email will not be retried automatically again.` };
+  }
+
+  await prisma.emailLog.update({ where: { id: logId }, data: { status: "RETRYING", retryCount: log.retryCount + 1 } });
+  const result = await sendFn();
+  await prisma.emailLog.update({
+    where: { id: logId },
+    data: {
+      status: result.ok ? "SENT" : "FAILED",
+      errorMessage: result.ok ? null : result.error || "Unknown error",
+      messageId: result.messageId || null,
+      sentAt: result.ok ? new Date() : null,
+    },
+  }).catch(() => {});
+  return { ...result, retryCount: log.retryCount + 1 };
+}
+
+module.exports = { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES };

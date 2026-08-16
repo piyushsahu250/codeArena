@@ -6,6 +6,7 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
+const { accountCredentialsTemplate, credentialsResendTemplate } = require("../utils/emailTemplates");
 const { computeStudentPerformance } = require("../utils/studentPerformance");
 const { generatePerformancePdf } = require("../utils/reportPdf");
 const { generateTempPassword, validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../utils/password");
@@ -370,25 +371,17 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
         to: user.email,
         name: user.name,
         studentId: user.id,
-        emailType: "WELCOME",
-        subject: "Welcome to CodeArena – Your Student Account Has Been Created",
-        html: wrapBranded(`
-          <p>Dear ${user.name},</p>
-          <p>Welcome to CodeArena! Your student account has been created successfully.</p>
-          <p><strong>Login Details</strong></p>
-          <p>
-            Name: ${user.name}<br/>
-            Institute: ${institute.name}<br/>
-            ${academicGroup ? `Department: ${academicGroup.department.name} · Section: ${academicGroup.section}<br/>` : ""}
-            ${batchYear ? `Batch: ${batchYear}<br/>` : ""}
-            Email: ${user.email}<br/>
-            Temporary Password: <strong>${generatedPassword}</strong>
-          </p>
-          <p>Login URL: <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a></p>
-          <p>For security reasons, you will be required to change your password during your first login.</p>
-          <p>If you have any questions, please contact your institute administrator.</p>
-          <p>Regards,<br/>CodeArena Team</p>
-        `),
+        emailType: "CREDENTIALS",
+        subject: "Your CodeArena Account Has Been Created",
+        html: wrapBranded(accountCredentialsTemplate({
+          name: user.name,
+          email: user.email,
+          password: generatedPassword,
+          registrationNumber: normalizedRegNumber,
+          institute: institute.name,
+          departmentSection: academicGroup ? `Department: ${academicGroup.department.name} · Section: ${academicGroup.section}` : null,
+          batchYear,
+        })),
       }).catch((e) => ({ ok: false, error: e.message }));
       emailSent = !!mailResult.ok;
       emailError = mailResult.error || null;
@@ -397,9 +390,9 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
         to: user.email,
         name: user.name,
         studentId: user.id,
-        emailType: "WELCOME",
-        subject: "Your CodeArena account",
-        html: wrapBranded(`<p>Hi ${user.name},</p><p>Your account has been created.</p><p><strong>Login email:</strong> ${user.email}<br/><strong>Temporary password:</strong> ${generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
+        emailType: "CREDENTIALS",
+        subject: "Your CodeArena Account Has Been Created",
+        html: wrapBranded(accountCredentialsTemplate({ name: user.name, email: user.email, password: generatedPassword })),
       }).catch((e) => ({ ok: false, error: e.message }));
       emailSent = !!mailResult.ok;
       emailError = mailResult.error || null;
@@ -819,10 +812,10 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
           to: u.email,
           name: u.name,
           studentId: u.id,
-          emailType: "WELCOME",
+          emailType: "CREDENTIALS",
           batchId,
-          subject: "Your CodeArena account",
-          html: wrapBranded(`<p>Hi ${u.name},</p><p>Your student account has been created.</p><p><strong>Login email:</strong> ${u.email}<br/><strong>Temporary password:</strong> ${u.generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
+          subject: "Your CodeArena Account Has Been Created",
+          html: wrapBranded(accountCredentialsTemplate({ name: u.name, email: u.email, password: u.generatedPassword, registrationNumber: u.registrationNumber })),
         }).catch((e) => ({ ok: false, error: e.message }))
       ).catch((err) => console.error("[users.bulk-upload] background email batch failed:", err));
     }
@@ -1269,9 +1262,9 @@ router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "STAFF"), 
         to: user.email,
         name: user.name,
         studentId: user.id,
-        emailType: "PASSWORD_RESET",
-        subject: "Your CodeArena password has been reset",
-        html: wrapBranded(`<p>Hi ${user.name},</p><p>Your password has been reset by an administrator.</p><p><strong>Login email:</strong> ${user.email}<br/><strong>New temporary password:</strong> ${newPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
+        emailType: "CREDENTIALS_RESEND",
+        subject: "Your CodeArena Password Has Been Reset",
+        html: wrapBranded(credentialsResendTemplate({ name: user.name, email: user.email, password: newPassword })),
       }).catch((e) => ({ ok: false, error: e.message }));
       emailSent = !!mailResult.ok;
       emailError = mailResult.error || null;
@@ -1346,10 +1339,10 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
           to: u.email,
           name: u.name,
           studentId: u.id,
-          emailType: "PASSWORD_RESET",
+          emailType: "CREDENTIALS_RESEND",
           batchId,
-          subject: "Your CodeArena password has been reset",
-          html: wrapBranded(`<p>Hi ${u.name},</p><p>Your password has been reset by an administrator.</p><p><strong>Login email:</strong> ${u.email}<br/><strong>New temporary password:</strong> ${u.generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
+          subject: "Your CodeArena Password Has Been Reset",
+          html: wrapBranded(credentialsResendTemplate({ name: u.name, email: u.email, password: u.generatedPassword })),
         }).catch((e) => ({ ok: false, error: e.message }))
       ).catch((err) => console.error("[users.bulk-regenerate-password] background email batch failed:", err));
     }

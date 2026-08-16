@@ -1,9 +1,14 @@
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { getSnapshot } = require("../utils/metrics");
 const { getQueueStatus } = require("../utils/queue");
 const { cached } = require("../utils/cache");
+const { sendMail, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
+const { credentialsResendTemplate } = require("../utils/emailTemplates");
+const { generateTempPassword, recordPasswordChange } = require("../utils/password");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -166,6 +171,54 @@ router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMI
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load batch summary" });
+  }
+});
+
+// ADMIN/STAFF: retries a specific failed EmailLog row in place (matches the existing
+// requireRole gate on POST /users/:id/reset-password, which this route replaces as the Email
+// Logs page's retry action). Since plaintext temp passwords are never stored, a "retry" here
+// necessarily issues a fresh password for the student — there is no original message body to
+// literally resend — but unlike the old workaround (which created a brand-new EmailLog row every
+// time), this updates the SAME row's retryCount/status and enforces MAX_EMAIL_RETRIES.
+router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const log = await prisma.emailLog.findUnique({ where: { id: req.params.id } });
+    if (!log) return res.status(404).json({ error: "Email log entry not found" });
+    if (!log.studentId) return res.status(400).json({ error: "Can't retry — this student's account no longer exists." });
+    if (log.retryCount >= MAX_EMAIL_RETRIES) {
+      return res.status(409).json({ error: `Retry limit reached (${MAX_EMAIL_RETRIES} attempts).`, retryCount: log.retryCount });
+    }
+
+    const student = await prisma.user.findUnique({ where: { id: log.studentId } });
+    if (!student) return res.status(400).json({ error: "Can't retry — this student's account no longer exists." });
+
+    const newPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
+      await recordPasswordChange(tx, student.id, passwordHash, null);
+    });
+
+    const result = await retryEmailLogged(prisma, log.id, () =>
+      sendMail({
+        to: student.email,
+        subject: "Your CodeArena Password Has Been Reset",
+        html: wrapBranded(credentialsResendTemplate({ name: student.name, email: student.email, password: newPassword })),
+      })
+    );
+
+    const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.EMAIL_RETRIED,
+      actorId: req.user.id, actorName: admin?.name || req.user.email, actorRole: req.user.role,
+      studentId: student.id,
+      details: { emailLogId: log.id, retryCount: result.retryCount, emailSent: !!result.ok, emailError: result.error || null },
+    });
+
+    res.json({ success: true, emailSent: !!result.ok, emailError: result.error || null, retryCount: result.retryCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to retry email" });
   }
 });
 

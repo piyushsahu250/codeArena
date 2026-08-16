@@ -6,7 +6,13 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import { useToast } from "../context/ToastContext";
 
 const STATUS_COLOR = { PENDING: "var(--ink-dim)", SENT: "var(--mint)", FAILED: "var(--rust)", RETRYING: "var(--amber-dark)" };
-const TYPE_LABEL = { WELCOME: "Welcome Email", PASSWORD_RESET: "Password Reset" };
+const TYPE_LABEL = {
+  WELCOME: "Welcome Email", PASSWORD_RESET: "Password Reset",
+  CREDENTIALS: "Credentials", CREDENTIALS_RESEND: "Credentials Resend", OTHER_SYSTEM_EMAIL: "System Email",
+};
+// Matches backend/src/utils/mailer.js's MAX_EMAIL_RETRIES default — used only to disable the
+// button a beat earlier client-side; the server enforces the real cap regardless.
+const MAX_EMAIL_RETRIES = 5;
 
 export default function EmailLogs() {
   const toast = useToast();
@@ -33,8 +39,9 @@ export default function EmailLogs() {
 
   // There's no way to literally "resend" the original message — passwords are never stored in
   // plaintext, so a retry generates a fresh unique password (same as any other reset) and sends
-  // a new email with it. This calls the same reset-password endpoint the Student Management
-  // "Send Credentials" action uses.
+  // a new email with it. Unlike the old workaround (calling the generic reset-password route,
+  // which always created a brand-new EmailLog row), this dedicated route updates the SAME log
+  // row's retryCount/status and enforces a real retry cap server-side.
   async function retry(log) {
     if (!log.studentId) {
       toast.error("Can't retry — this student's account no longer exists.");
@@ -42,7 +49,7 @@ export default function EmailLogs() {
     }
     setRetryingId(log.id);
     try {
-      const { data } = await api.post(`/users/${log.studentId}/reset-password`, { sendEmail: true });
+      const { data } = await api.post(`/admin/email-logs/${log.id}/retry`);
       toast[data.emailSent ? "success" : "error"](
         data.emailSent ? "Email resent successfully." : `Retry failed: ${data.emailError || "Unknown error"}`
       );
@@ -116,9 +123,13 @@ export default function EmailLogs() {
                   <td style={{ padding: "10px 12px", color: "var(--rust)", fontSize: 12, maxWidth: 260 }}>{log.errorMessage || "—"}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
                     {log.status === "FAILED" && (
-                      <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => retry(log)} disabled={retryingId === log.id}>
-                        {retryingId === log.id ? "Retrying…" : "Retry"}
-                      </button>
+                      (log.retryCount ?? 0) >= MAX_EMAIL_RETRIES ? (
+                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>Retry limit reached</span>
+                      ) : (
+                        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => retry(log)} disabled={retryingId === log.id}>
+                          {retryingId === log.id ? "Retrying…" : `Retry${log.retryCount ? ` (${log.retryCount}/${MAX_EMAIL_RETRIES})` : ""}`}
+                        </button>
+                      )
                     )}
                   </td>
                 </tr>
