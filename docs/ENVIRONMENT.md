@@ -51,6 +51,12 @@ normal account password — Google blocks plain-password SMTP login by default. 
 automatic redeploy; there is no way to configure this from inside the application, and the value
 is never visible again in the dashboard once saved (Render masks it after entry).
 
+**Setting these on Cloud Run**: secrets (`MAIL_PASSWORD` and the other sensitive values) go into
+Secret Manager and are mounted as env vars via `--set-secrets`; non-sensitive values like
+`MAIL_HOST`/`MAIL_PORT`/`MAIL_FROM`/`MAIL_FROM_NAME` are plain `--set-env-vars`. See
+[CLOUD_RUN_MIGRATION.md](CLOUD_RUN_MIGRATION.md) for exact commands. Render's outbound SMTP is
+blocked on ports 25/465/587 as of 2025-09-26 (free tier) — this is why the backend is migrating.
+
 ## Judge / Compiler
 
 | Variable | Purpose |

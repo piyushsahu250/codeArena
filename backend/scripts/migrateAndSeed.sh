@@ -1,0 +1,8 @@
+#!/bin/sh
+# One-time-per-deploy migration/backfill/seed chain — previously baked directly into the
+# Docker CMD (and re-run on every container boot, which was fine on Render since the container
+# only restarts on a new deploy). Extracted verbatim (same commands, same order, same `; true`
+# fault-tolerance) so it can run once per deploy as a Cloud Run Job instead of on every cold
+# start of the Cloud Run Service, which would otherwise scale-to-zero and re-run this whole
+# chain on every idle->active wake-up. No logic changed here — only when it runs.
+node prisma/dedupeDuplicateSubmissions.js; node scripts/migrateRegistrationNumbers.js; npx prisma db push --skip-generate --accept-data-loss && (node scripts/migrateAcademicGroups.js; true) && (node scripts/fixFunctionModeTestCaseInputs.js; true) && (node scripts/backfillModuleCodingTestCases.js; true) && (node scripts/auditFunctionModeTestCaseInputs.js; true) && (node scripts/backfillChapters.js; true) && (node scripts/backfillCourseVisibility.js; true) && (node scripts/backfillTestInstituteId.js; true) && (node scripts/backfillTestSubjectUnit.js; true) && (node scripts/backfillGarbledRollNumbers.js; true) && (node scripts/backfillProfileEncryption.js; true) && (node scripts/fixIntegratedMTechAcademicGroup.js; true) && (node scripts/addSearchIndexes.js; true) && (node scripts/addChallengeScopeIndexes.js; true) && (node scripts/seedReadinessSubjects.js; true) && (node scripts/backfillSubjects.js; true) && (npm run seed || true)

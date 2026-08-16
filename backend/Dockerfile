@@ -47,4 +47,8 @@ RUN npx prisma generate
 RUN chown -R root:root /app && chmod -R 750 /app
 
 EXPOSE 4000
-CMD ["sh", "-c", "node prisma/dedupeDuplicateSubmissions.js; node scripts/migrateRegistrationNumbers.js; npx prisma db push --skip-generate --accept-data-loss && (node scripts/migrateAcademicGroups.js; true) && (node scripts/fixFunctionModeTestCaseInputs.js; true) && (node scripts/backfillModuleCodingTestCases.js; true) && (node scripts/auditFunctionModeTestCaseInputs.js; true) && (node scripts/backfillChapters.js; true) && (node scripts/backfillCourseVisibility.js; true) && (node scripts/backfillTestInstituteId.js; true) && (node scripts/backfillTestSubjectUnit.js; true) && (node scripts/backfillGarbledRollNumbers.js; true) && (node scripts/backfillProfileEncryption.js; true) && (node scripts/fixIntegratedMTechAcademicGroup.js; true) && (node scripts/addSearchIndexes.js; true) && (node scripts/addChallengeScopeIndexes.js; true) && (node scripts/seedReadinessSubjects.js; true) && (node scripts/backfillSubjects.js; true) && (npm run seed || true) && npm start"]
+# docker-entrypoint.sh auto-detects whether this container is running as the Render service, a
+# Cloud Run Service revision, or the Cloud Run migration Job, and behaves accordingly — see its
+# header comment. This keeps Render's deploy behavior (migrate-then-start, every boot) completely
+# unchanged while letting Cloud Run split migrations into a once-per-deploy Job.
+CMD ["sh", "docker-entrypoint.sh"]

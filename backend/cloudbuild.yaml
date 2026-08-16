@@ -1,0 +1,66 @@
+# Cloud Build pipeline for the CodeArena backend on Cloud Run.
+#
+# Order matters: build -> push -> run migrations to completion -> deploy the Service. A deploy
+# must never serve traffic against a schema the migration Job hasn't finished applying yet.
+#
+# This assumes the Artifact Registry repo and the Cloud Run Job resource already exist (created
+# once, manually — see docs/CLOUD_RUN_MIGRATION.md). This file only builds/pushes a new image and
+# points the existing Job/Service at it; it does not create GCP resources.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    dir: backend
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}
+
+  # Point the migration Job at the new image, then run it and wait for it to finish.
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - update
+      - ${_JOB_NAME}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:$SHORT_SHA
+      - --region=${_REGION}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - execute
+      - ${_JOB_NAME}
+      - --region=${_REGION}
+      - --wait
+
+  # Migrations succeeded — safe to deploy the Service. COMMIT_SHA feeds /api/health's deploy
+  # verification, same role RENDER_GIT_COMMIT plays on Render (see backend/src/index.js).
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:$SHORT_SHA
+      - --region=${_REGION}
+      - --update-env-vars=COMMIT_SHA=$SHORT_SHA
+
+substitutions:
+  _REGION: asia-south1
+  _REPO_NAME: codearena
+  _SERVICE_NAME: codearena-backend
+  _JOB_NAME: codearena-backend-migrate
+
+options:
+  logging: CLOUD_LOGGING_ONLY
