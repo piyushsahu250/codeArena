@@ -547,7 +547,7 @@ function RecommendedLearningBlock({ learning, interviewSummary }) {
       {currentModule && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 13 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><BookOpen size={14} /> Continue <strong>{currentModule.title}</strong> to keep your learning streak going.</span>
-          <Link to={`/learning/${learning.course.slug}/lesson/${currentModule.lessons[0]?.id}`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>Go →</Link>
+          <Link to={`/learning/${learning.course.slug}/lesson/${learning.resumeLessonId}`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>Go →</Link>
         </div>
       )}
       {weakAreas.length > 0 && (
@@ -594,7 +594,7 @@ function LearningProgressBlock({ learning }) {
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginBottom: 6 }}>Current Module</div>
           {currentModule ? (
-            <Link to={`/learning/${course.slug}/lesson/${currentModule.lessons[0]?.id}`} style={{ fontSize: 13, color: "var(--amber-dark)" }}>◐ {currentModule.title}</Link>
+            <Link to={`/learning/${course.slug}/lesson/${resumeLessonId}`} style={{ fontSize: 13, color: "var(--amber-dark)" }}>◐ {currentModule.title}</Link>
           ) : <span style={{ fontSize: 13, color: "var(--ink-dim)" }}>Course complete!</span>}
         </div>
         <div>
