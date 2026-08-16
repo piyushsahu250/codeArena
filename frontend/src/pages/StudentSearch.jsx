@@ -247,7 +247,7 @@ export default function StudentSearch({ basePath }) {
         data.results.map((u) => [u.name, u.email, u.rollNumber, u.generatedPassword])
       );
       toast.success(
-        `${data.results.length} password${data.results.length === 1 ? "" : "s"} regenerated — CSV downloaded${emailCredentials ? " and emails sent" : ""}.`
+        `${data.results.length} password${data.results.length === 1 ? "" : "s"} regenerated — CSV downloaded${emailCredentials ? ` and ${data.emailsQueued} email${data.emailsQueued === 1 ? "" : "s"} queued for delivery` : ""}.`
       );
       setSelected([]);
     } catch (err) {

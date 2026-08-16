@@ -15,6 +15,14 @@ const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, isValidRollNumber, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
+const { mapWithConcurrency } = require("../utils/queue");
+const crypto = require("crypto");
+
+// Bounded-concurrency cap for background bulk credential-email sends (bulk-upload,
+// bulk-regenerate-password) — small enough not to open dozens of simultaneous SMTP connections
+// on this project's single low-resource instance, matching the same concurrency-limiting posture
+// queue.js already applies to the judge.
+const EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -780,36 +788,44 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
       }
     }
 
-    let emailsSentCount = 0;
-    let emailsFailedCount = 0;
-    if (sendCredentials && created.length > 0) {
-      for (const u of created) {
-        const mailResult = await sendMailLogged(prisma, {
-          to: u.email,
-          name: u.name,
-          studentId: u.id,
-          emailType: "WELCOME",
-          subject: "Your CodeArena account",
-          html: wrapBranded(`<p>Hi ${u.name},</p><p>Your student account has been created.</p><p><strong>Login email:</strong> ${u.email}<br/><strong>Temporary password:</strong> ${u.generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
-        }).catch((e) => ({ ok: false, error: e.message }));
-        u.emailSent = !!mailResult.ok;
-        if (mailResult.ok) emailsSentCount++;
-        else emailsFailedCount++;
-      }
-    }
+    // Credential emails are never sent synchronously inside this request — for a few hundred
+    // students that would hold the HTTP response open for the full duration of every send. The
+    // response goes out immediately with a batchId; sending happens as a bounded-concurrency
+    // background pass afterward (see below), and the admin polls
+    // GET /admin/email-logs/batch/:batchId/summary for live sent/failed counts.
+    const batchId = sendCredentials && created.length > 0 ? crypto.randomUUID() : null;
+    const emailsQueued = batchId ? created.length : 0;
 
     res.json({
       total: rows.length,
       createdCount: created.length,
       duplicateCount: duplicates.length,
       errorCount: errors.length,
-      created: created.map((u) => ({ name: u.name, email: u.email, registrationNumber: u.registrationNumber, rollNumber: u.rollNumber, generatedPassword: u.generatedPassword, emailSent: u.emailSent ?? null })),
+      created: created.map((u) => ({ name: u.name, email: u.email, registrationNumber: u.registrationNumber, rollNumber: u.rollNumber, generatedPassword: u.generatedPassword })),
       duplicates,
       errors,
       sendCredentials,
-      emailsSentCount,
-      emailsFailedCount,
+      emailsQueued,
+      batchId,
     });
+
+    if (batchId) {
+      // Fire-and-forget after the response is already sent — same pattern as auth.js's
+      // maybeSendLoginAlert. Not awaited, so an error here can never reach the outer catch below
+      // (which would otherwise try to send a second response and crash with
+      // ERR_HTTP_HEADERS_SENT); mapWithConcurrency's own promise rejection is caught locally.
+      mapWithConcurrency(created, EMAIL_CONCURRENCY, (u) =>
+        sendMailLogged(prisma, {
+          to: u.email,
+          name: u.name,
+          studentId: u.id,
+          emailType: "WELCOME",
+          batchId,
+          subject: "Your CodeArena account",
+          html: wrapBranded(`<p>Hi ${u.name},</p><p>Your student account has been created.</p><p><strong>Login email:</strong> ${u.email}<br/><strong>Temporary password:</strong> ${u.generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
+        }).catch((e) => ({ ok: false, error: e.message }))
+      ).catch((err) => console.error("[users.bulk-upload] background email batch failed:", err));
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Bulk upload failed" });
@@ -1302,21 +1318,7 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
         await tx.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: true } });
         await recordPasswordChange(tx, user.id, passwordHash, null);
       });
-      results.push({ id: user.id, name: user.name, email: user.email, rollNumber: user.rollNumber, generatedPassword, emailSent: null, emailError: null });
-    }
-    if (req.body.sendEmail) {
-      for (const u of results) {
-        const mailResult = await sendMailLogged(prisma, {
-          to: u.email,
-          name: u.name,
-          studentId: u.id,
-          emailType: "PASSWORD_RESET",
-          subject: "Your CodeArena password has been reset",
-          html: wrapBranded(`<p>Hi ${u.name},</p><p>Your password has been reset by an administrator.</p><p><strong>Login email:</strong> ${u.email}<br/><strong>New temporary password:</strong> ${u.generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
-        }).catch((e) => ({ ok: false, error: e.message }));
-        u.emailSent = !!mailResult.ok;
-        u.emailError = mailResult.error || null;
-      }
+      results.push({ id: user.id, name: user.name, email: user.email, rollNumber: user.rollNumber, generatedPassword });
     }
     const failedIds = ids.filter((id) => !users.some((u) => u.id === id));
 
@@ -1330,7 +1332,27 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
       },
     }).catch(() => {});
 
-    res.json({ results, failedIds });
+    // The CSV of new passwords (built client-side from `results`, which is already complete) is
+    // the reliable fallback regardless of email outcome, so it's fine for the response to go out
+    // before any email has actually sent — same background-after-response pattern as bulk-upload.
+    const batchId = req.body.sendEmail && results.length > 0 ? crypto.randomUUID() : null;
+    const emailsQueued = batchId ? results.length : 0;
+
+    res.json({ results, failedIds, emailsQueued, batchId });
+
+    if (batchId) {
+      mapWithConcurrency(results, EMAIL_CONCURRENCY, (u) =>
+        sendMailLogged(prisma, {
+          to: u.email,
+          name: u.name,
+          studentId: u.id,
+          emailType: "PASSWORD_RESET",
+          batchId,
+          subject: "Your CodeArena password has been reset",
+          html: wrapBranded(`<p>Hi ${u.name},</p><p>Your password has been reset by an administrator.</p><p><strong>Login email:</strong> ${u.email}<br/><strong>New temporary password:</strong> ${u.generatedPassword}</p><p>Sign in at <a href="${FRONTEND_URL}/login">${FRONTEND_URL}/login</a> — you'll be asked to set a new password on first login.</p>`),
+        }).catch((e) => ({ ok: false, error: e.message }))
+      ).catch((err) => console.error("[users.bulk-regenerate-password] background email batch failed:", err));
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to regenerate passwords" });

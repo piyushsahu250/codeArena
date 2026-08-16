@@ -955,17 +955,22 @@ model EmailLog {
   studentId       String?
   recipientName   String
   recipientEmail  String
-  emailType       String // "WELCOME" | "PASSWORD_RESET"
+  emailType       String // free text — see AUDIT of call sites for the current taxonomy
   status          EmailStatus @default(PENDING)
   errorMessage    String?
   messageId       String?
   retryCount      Int         @default(0)
+  // Groups every EmailLog row written by one bulk operation (bulk-upload, bulk-regenerate-
+  // password) so the admin UI can show a live "N sent / N failed" summary for that one batch
+  // without scanning the whole table. Null for single-student sends (create/reset/retry/test).
+  batchId         String?
   createdAt       DateTime    @default(now())
   sentAt          DateTime?
 
   @@index([status])
   @@index([studentId])
   @@index([createdAt])
+  @@index([batchId])
 }
 
 // Persisted in-app notification — did not exist anywhere on the platform before the Talent Pool

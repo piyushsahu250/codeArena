@@ -144,6 +144,31 @@ router.get("/email-logs", authenticate, requireRole("ADMIN"), async (req, res) =
   }
 });
 
+// ADMIN: live counts for one bulk-send batch (bulk-upload / bulk-regenerate-password), keyed by
+// the batchId those routes return immediately in their response — since credential emails for a
+// batch now send in the background after that response, the frontend polls this cheap groupBy
+// to show a live sent/failed summary instead of a number that was only ever true at request time.
+router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const counts = await prisma.emailLog.groupBy({
+      by: ["status"],
+      where: { batchId: req.params.batchId },
+      _count: { status: true },
+    });
+    const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count.status]));
+    const queued = counts.reduce((sum, c) => sum + c._count.status, 0);
+    res.json({
+      queued,
+      sent: byStatus.SENT || 0,
+      failed: byStatus.FAILED || 0,
+      pending: (byStatus.PENDING || 0) + (byStatus.RETRYING || 0),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load batch summary" });
+  }
+});
+
 // ADMIN: real-time system monitoring. Every number here is genuinely measured from this one
 // Node process and this one database connection — nothing is estimated or simulated. What this
 // deliberately does NOT show: system-wide CPU% (Node doesn't expose host CPU utilization without

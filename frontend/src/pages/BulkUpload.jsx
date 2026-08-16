@@ -1,9 +1,15 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import UploadProgressBar from "../components/UploadProgressBar";
+
+// How long to keep polling a batch's live send status before giving up and pointing the admin at
+// Email Logs instead — generous enough for a few hundred students at EMAIL_CONCURRENCY=5 without
+// polling forever if something got stuck.
+const BATCH_POLL_INTERVAL_MS = 3000;
+const BATCH_POLL_MAX_ATTEMPTS = 20;
 
 export default function BulkUpload() {
   const [file, setFile] = useState(null);
@@ -12,7 +18,35 @@ export default function BulkUpload() {
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [batchSummary, setBatchSummary] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Credential emails for this batch now send in the background after the upload response
+  // already came back (see backend/src/routes/users.js's bulk-upload route) — so the sent/failed
+  // counts aren't known at upload time. Poll the lightweight batch-summary endpoint until every
+  // queued email reaches a terminal status, or the attempt cap is hit.
+  useEffect(() => {
+    if (!result?.batchId) { setBatchSummary(null); return; }
+    let cancelled = false;
+    let attempts = 0;
+    setBatchSummary(null);
+
+    const poll = async () => {
+      if (cancelled) return;
+      attempts++;
+      try {
+        const { data } = await api.get(`/admin/email-logs/batch/${result.batchId}/summary`);
+        if (cancelled) return;
+        setBatchSummary(data);
+        const done = data.sent + data.failed >= result.emailsQueued;
+        if (!done && attempts < BATCH_POLL_MAX_ATTEMPTS) setTimeout(poll, BATCH_POLL_INTERVAL_MS);
+      } catch {
+        if (attempts < BATCH_POLL_MAX_ATTEMPTS) setTimeout(poll, BATCH_POLL_INTERVAL_MS);
+      }
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [result?.batchId]);
 
   async function downloadTemplate() {
     setDownloadingTemplate(true);
@@ -134,13 +168,26 @@ export default function BulkUpload() {
                 {result.duplicateCount > 0 && ` ${result.duplicateCount} skipped as duplicates.`}
                 {result.errorCount > 0 && ` ${result.errorCount} failed validation.`}
               </p>
-              {result.sendCredentials && (
+              {result.sendCredentials && result.emailsQueued > 0 && (
                 <p style={{ fontSize: 13, marginTop: 8 }}>
-                  {result.emailsSentCount > 0 && <span style={{ color: "var(--mint)", fontWeight: 600 }}>✓ {result.emailsSentCount} welcome email{result.emailsSentCount === 1 ? "" : "s"} sent successfully. </span>}
-                  {result.emailsFailedCount > 0 && (
-                    <span style={{ color: "var(--rust)", fontWeight: 600 }}>
-                      ✗ {result.emailsFailedCount} email{result.emailsFailedCount === 1 ? "" : "s"} could not be delivered — see <Link to="/admin/email-logs">Email Logs</Link> for details and retry.
+                  {!batchSummary ? (
+                    <span style={{ color: "var(--ink-dim)" }}>
+                      {result.emailsQueued} credential email{result.emailsQueued === 1 ? "" : "s"} queued — sending now…
                     </span>
+                  ) : (
+                    <>
+                      {batchSummary.sent > 0 && (
+                        <span style={{ color: "var(--mint)", fontWeight: 600 }}>✓ {batchSummary.sent} sent. </span>
+                      )}
+                      {batchSummary.failed > 0 && (
+                        <span style={{ color: "var(--rust)", fontWeight: 600 }}>
+                          ✗ {batchSummary.failed} could not be delivered — see <Link to="/admin/email-logs">Email Logs</Link> for details and retry.{" "}
+                        </span>
+                      )}
+                      {batchSummary.pending > 0 && (
+                        <span style={{ color: "var(--ink-dim)" }}>{batchSummary.pending} still sending…</span>
+                      )}
+                    </>
                   )}
                 </p>
               )}
