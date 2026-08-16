@@ -505,53 +505,72 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     where = { isPublished: true, ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId) };
   }
 
+  // Staff need the full management payload (assignment badges, ownership/sharing, per-group
+  // headcounts for the Manage Tests UI); students only ever render title/company/timing/duration/
+  // question-count/myStatus (confirmed against every student-facing caller: StudentDashboard.jsx,
+  // CompanyTests.jsx) — so this list is branched by role rather than sending the same heavy
+  // multi-join staff payload to every student polling their assigned-tests list. That heavy shape
+  // (nested class/academicGroup/institute details, per-group user counts, shares, createdBy) was
+  // previously sent to students unconditionally — real, avoidable DB/JSON work on every request,
+  // which compounds badly when many students load this list around the same time (e.g. checking
+  // whether a scheduled test has opened yet).
   const tests = await prisma.test.findMany({
     where,
     orderBy: { startTime: "asc" },
-    include: {
-      _count: { select: { questions: true, attempts: true } },
-      // Needed so the Manage Tests filter/badge UI can tell a genuinely platform-wide test
-      // (instituteId null, zero group/class assignments) apart from one that's institute-scoped
-      // via Test.instituteId directly but has no per-group assignment yet — those two cases used
-      // to be indistinguishable client-side since only academicGroups[]/classes[] carried an
-      // institute, never the test itself.
-      institute: { select: { id: true, name: true } },
-      classes: {
-        include: {
-          class: {
-            select: {
-              id: true,
-              name: true,
-              batchYear: true,
-              instituteId: true,
-              institute: { select: { id: true, name: true } },
-              _count: { select: { users: true } },
+    ...(isStaff
+      ? {
+          include: {
+            _count: { select: { questions: true, attempts: true } },
+            // Needed so the Manage Tests filter/badge UI can tell a genuinely platform-wide test
+            // (instituteId null, zero group/class assignments) apart from one that's institute-scoped
+            // via Test.instituteId directly but has no per-group assignment yet — those two cases used
+            // to be indistinguishable client-side since only academicGroups[]/classes[] carried an
+            // institute, never the test itself.
+            institute: { select: { id: true, name: true } },
+            classes: {
+              include: {
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    batchYear: true,
+                    instituteId: true,
+                    institute: { select: { id: true, name: true } },
+                    _count: { select: { users: true } },
+                  },
+                },
+              },
             },
-          },
-        },
-      },
-      academicGroups: {
-        include: {
-          academicGroup: {
-            select: {
-              id: true,
-              batch: true,
-              section: true,
-              instituteId: true,
-              institute: { select: { id: true, name: true } },
-              department: { select: { id: true, name: true } },
-              _count: { select: { users: true } },
+            academicGroups: {
+              include: {
+                academicGroup: {
+                  select: {
+                    id: true,
+                    batch: true,
+                    section: true,
+                    instituteId: true,
+                    institute: { select: { id: true, name: true } },
+                    department: { select: { id: true, name: true } },
+                    _count: { select: { users: true } },
+                  },
+                },
+              },
             },
+            talentPools: { select: { poolId: true } },
+            createdBy: { select: { id: true, name: true } },
+            // Lets the frontend badge "Shared with me" vs "My Tests" and tell canStaffAccessTest-style
+            // checks apart client-side — negligible extra join, included unconditionally rather than
+            // branched on role for simplicity.
+            shares: { select: { staffId: true } },
           },
-        },
-      },
-      talentPools: { select: { poolId: true } },
-      createdBy: { select: { id: true, name: true } },
-      // Lets the frontend badge "Shared with me" vs "My Tests" and tell canStaffAccessTest-style
-      // checks apart client-side — negligible extra join, included unconditionally rather than
-      // branched on role for simplicity.
-      shares: { select: { staffId: true } },
-    },
+        }
+      : {
+          select: {
+            id: true, title: true, company: true, startTime: true, endTime: true, durationMin: true,
+            attendanceMandatory: true,
+            _count: { select: { questions: true } },
+          },
+        }),
   });
 
   if (isStaff) return res.json(tests);
