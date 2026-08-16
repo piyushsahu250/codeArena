@@ -36,13 +36,20 @@ supported default; any standard SMTP provider works the same way).
 |---|---|
 | `MAIL_HOST` | SMTP server hostname, e.g. `smtp.gmail.com`. |
 | `MAIL_PORT` | SMTP port — `587` (STARTTLS, recommended) or `465` (implicit TLS). |
-| `MAIL_USER` | SMTP username — for Gmail, the full mailbox address. |
+| `MAIL_USER` | SMTP username — for Gmail, the full mailbox address, e.g. `codearena001@gmail.com`. |
 | `MAIL_PASSWORD` | SMTP password — for Gmail, a 16-character **App Password** (myaccount.google.com/apppasswords, requires 2FA enabled on the account), never the account's normal login password. |
-| `MAIL_FROM` | From-address for outbound email, e.g. `"CodeArena <youraddress@gmail.com>"`. Most providers (including Gmail) reject a From address that doesn't match the authenticated mailbox. |
+| `MAIL_FROM` | From-address for outbound email, e.g. `codearena001@gmail.com`. Most providers (including Gmail) reject a From address that doesn't match the authenticated mailbox. |
+| `MAIL_FROM_NAME` | Optional display name shown alongside `MAIL_FROM`, e.g. `CodeArena`. If set and `MAIL_FROM` is a bare address, the mailer combines them into `"CodeArena <codearena001@gmail.com>"` automatically — `MAIL_FROM` doesn't need to be pre-formatted. |
 
 If `MAIL_HOST`/`MAIL_USER`/`MAIL_PASSWORD` are not all set, the mailer runs in a safe "not
 configured" mode — every send attempt is logged and recorded in `EmailLog` as `FAILED` with a
 clear reason, never silently reported as successful.
+
+**Setting these on Render**: Dashboard → the backend service → Environment tab → Add Environment
+Variable, one row per name above. `MAIL_PASSWORD` must be the Gmail **App Password**, not the
+normal account password — Google blocks plain-password SMTP login by default. Save triggers an
+automatic redeploy; there is no way to configure this from inside the application, and the value
+is never visible again in the dashboard once saved (Render masks it after entry).
 
 ## Judge / Compiler
 

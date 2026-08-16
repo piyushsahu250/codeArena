@@ -272,7 +272,7 @@ router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF")
       sendMail({
         to: student.email,
         subject: "Your CodeArena Password Has Been Reset",
-        html: wrapBranded(credentialsResendTemplate({ name: student.name, email: student.email, password: newPassword })),
+        html: credentialsResendTemplate({ name: student.name, email: student.email, password: newPassword }),
       })
     );
 

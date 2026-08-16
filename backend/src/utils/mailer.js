@@ -8,7 +8,16 @@
  */
 const nodemailer = require("nodemailer");
 
-const FROM = process.env.MAIL_FROM || "CodeArena <no-reply@codearena.local>";
+// MAIL_FROM_NAME is optional — most providers (Gmail included) accept a plain address for
+// MAIL_FROM, so this combines the two into "Name <address>" for the SMTP From header without
+// requiring the address itself to be pre-formatted. If MAIL_FROM already looks pre-formatted
+// (contains "<"), it's used as-is and MAIL_FROM_NAME is ignored to avoid double-wrapping.
+const RAW_MAIL_FROM = process.env.MAIL_FROM || process.env.MAIL_USER || "";
+const FROM = RAW_MAIL_FROM
+  ? (process.env.MAIL_FROM_NAME && !RAW_MAIL_FROM.includes("<")
+      ? `${process.env.MAIL_FROM_NAME} <${RAW_MAIL_FROM}>`
+      : RAW_MAIL_FROM)
+  : "CodeArena <no-reply@codearena.local>";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
 const LOGO_URL = `${FRONTEND_URL}/branding/logo.png`;
 

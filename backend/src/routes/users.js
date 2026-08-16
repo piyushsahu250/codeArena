@@ -373,7 +373,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
         studentId: user.id,
         emailType: "CREDENTIALS",
         subject: "Your CodeArena Account Has Been Created",
-        html: wrapBranded(accountCredentialsTemplate({
+        html: accountCredentialsTemplate({
           name: user.name,
           email: user.email,
           password: generatedPassword,
@@ -381,7 +381,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
           institute: institute.name,
           departmentSection: academicGroup ? `Department: ${academicGroup.department.name} · Section: ${academicGroup.section}` : null,
           batchYear,
-        })),
+        }),
       }).catch((e) => ({ ok: false, error: e.message }));
       emailSent = !!mailResult.ok;
       emailError = mailResult.error || null;
@@ -392,7 +392,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
         studentId: user.id,
         emailType: "CREDENTIALS",
         subject: "Your CodeArena Account Has Been Created",
-        html: wrapBranded(accountCredentialsTemplate({ name: user.name, email: user.email, password: generatedPassword })),
+        html: accountCredentialsTemplate({ name: user.name, email: user.email, password: generatedPassword }),
       }).catch((e) => ({ ok: false, error: e.message }));
       emailSent = !!mailResult.ok;
       emailError = mailResult.error || null;
@@ -815,7 +815,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
           emailType: "CREDENTIALS",
           batchId,
           subject: "Your CodeArena Account Has Been Created",
-          html: wrapBranded(accountCredentialsTemplate({ name: u.name, email: u.email, password: u.generatedPassword, registrationNumber: u.registrationNumber })),
+          html: accountCredentialsTemplate({ name: u.name, email: u.email, password: u.generatedPassword, registrationNumber: u.registrationNumber }),
         }).catch((e) => ({ ok: false, error: e.message }))
       ).catch((err) => console.error("[users.bulk-upload] background email batch failed:", err));
     }
@@ -1264,7 +1264,7 @@ router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "STAFF"), 
         studentId: user.id,
         emailType: "CREDENTIALS_RESEND",
         subject: "Your CodeArena Password Has Been Reset",
-        html: wrapBranded(credentialsResendTemplate({ name: user.name, email: user.email, password: newPassword })),
+        html: credentialsResendTemplate({ name: user.name, email: user.email, password: newPassword }),
       }).catch((e) => ({ ok: false, error: e.message }));
       emailSent = !!mailResult.ok;
       emailError = mailResult.error || null;
@@ -1342,7 +1342,7 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
           emailType: "CREDENTIALS_RESEND",
           batchId,
           subject: "Your CodeArena Password Has Been Reset",
-          html: wrapBranded(credentialsResendTemplate({ name: u.name, email: u.email, password: u.generatedPassword })),
+          html: credentialsResendTemplate({ name: u.name, email: u.email, password: u.generatedPassword }),
         }).catch((e) => ({ ok: false, error: e.message }))
       ).catch((err) => console.error("[users.bulk-regenerate-password] background email batch failed:", err));
     }
