@@ -352,7 +352,7 @@ export default function StudentPerformance({ basePath }) {
                 {downloadingProfile ? "Preparing…" : "Download Profile PDF"}
               </button>
             )}
-            {isManager && (
+            {isManager && user.role !== "CLERK" && (
               <button className="btn btn-ghost" onClick={resetPassword} disabled={resetting} title="Generates a new unique password and emails it to the student">
                 {resetting ? "Sending…" : "Send Credentials"}
               </button>

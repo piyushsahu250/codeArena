@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const prisma = require("../prisma");
 const { dbRateLimit } = require("../utils/dbRateLimit");
 const { getClientIp } = require("../utils/clientIp");
-const { sendMail, sendMailLogged, wrapBranded } = require("../utils/mailer");
+const { sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { createSession, endSession } = require("../utils/sessions");
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange, isPasswordExpired } = require("../utils/password");
@@ -197,8 +197,11 @@ router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
       });
 
       const resetLink = `${FRONTEND_URL}/reset-password?token=${token}`;
-      await sendMail({
+      await sendMailLogged(prisma, {
         to: user.email,
+        name: user.name,
+        studentId: user.id,
+        emailType: "PASSWORD_RESET",
         subject: "Reset your CodeArena password",
         html: wrapBranded(`<p>Hi ${user.name},</p><p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you didn't request this, you can ignore this email.</p>`),
       });
@@ -240,8 +243,11 @@ router.post("/reset-password", async (req, res) => {
       await recordPasswordChange(tx, user.id, passwordHash, user.institute?.passwordHistoryDepth);
     });
 
-    sendMail({
+    sendMailLogged(prisma, {
       to: user.email,
+      name: user.name,
+      studentId: user.id,
+      emailType: "OTHER_SYSTEM_EMAIL",
       subject: "Your CodeArena password was changed",
       html: wrapBranded(`<p>Hi ${user.name},</p><p>Your password was just changed via the "forgot password" link. If this wasn't you, contact your administrator immediately.</p>`),
     }).catch((err) => console.error("[auth] password-change alert email failed:", err.message));
