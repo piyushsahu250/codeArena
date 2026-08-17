@@ -20,6 +20,14 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await api.post("/auth/reset-password", { token, newPassword });
+      // The backend now revokes every session on this account the moment the reset succeeds, but
+      // if this same browser happened to still be holding a token/user from an earlier login on
+      // this account (e.g. the student reset their password in a second tab while still logged in
+      // on the first), that stale token would otherwise linger in localStorage doing nothing
+      // useful until the next request 401s it out — clear it up front instead so this device
+      // genuinely requires the new password on its very next login, same as every other device.
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setSuccess(true);
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
@@ -45,7 +53,7 @@ export default function ResetPassword() {
         <h2>Reset your password</h2>
 
         {success ? (
-          <p style={{ color: "var(--mint)", fontSize: 14, marginTop: 12 }}>Password updated. Redirecting to sign in…</p>
+          <p style={{ color: "var(--mint)", fontSize: 14, marginTop: 12 }}>Password reset successfully. Please log in with your new password — you'll need to sign in again on any other devices too.</p>
         ) : (
           <>
             <label style={labelStyle}>New password</label>

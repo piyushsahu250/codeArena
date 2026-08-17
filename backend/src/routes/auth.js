@@ -5,7 +5,7 @@ const prisma = require("../prisma");
 const { dbRateLimit } = require("../utils/dbRateLimit");
 const { getClientIp } = require("../utils/clientIp");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
-const { createSession, endSession } = require("../utils/sessions");
+const { createSession, endSession, revokeAllSessions } = require("../utils/sessions");
 const { logAudit, parseDevice, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validatePasswordComplexity, isPasswordReused, recordPasswordChange, isPasswordExpired } = require("../utils/password");
 const { authenticate } = require("../middleware/auth");
@@ -56,6 +56,22 @@ const forgotPasswordLimiter = dbRateLimit({
   max: 3,
   keyGenerator: (req) => `forgot-password:${getClientIp(req)}`,
   message: { error: "Too many password reset requests. Please try again later." },
+});
+
+// POST /reset-password (the route that actually redeems a reset token) previously had no rate
+// limit of its own — forgotPasswordLimiter only guards how often a NEW link can be requested, not
+// how many times an existing token can be tried against this route. The token itself is a
+// crypto.randomBytes(32) value (256 bits of entropy), so brute-forcing it directly is not
+// practically feasible regardless of rate limiting, but this closes the gap anyway as
+// defense-in-depth against a compromised/leaked token being replayed repeatedly, or automated
+// probing. IP-keyed (not token-keyed — keying by the secret being tested would defeat the point),
+// generous enough that a legitimate user retrying after a typo/complexity-rejected password across
+// a couple of devices never gets blocked.
+const resetPasswordLimiter = dbRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `reset-password:${getClientIp(req)}`,
+  message: { error: "Too many password reset attempts. Please try again later." },
 });
 
 // Best-effort, non-blocking — a login alert failing to send must never fail or slow the login
@@ -214,7 +230,7 @@ router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   }
 });
 
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", resetPasswordLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) return res.status(400).json({ error: "token and newPassword are required" });
@@ -223,10 +239,18 @@ router.post("/reset-password", async (req, res) => {
 
     const user = await prisma.user.findFirst({ where: { resetTokenHash: hashToken(token) }, include: { institute: true } });
     if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+      // Only logged (with a studentId) when the token matched a real account but had already
+      // expired or been consumed — a token that matches no account at all isn't attributable to
+      // anyone and isn't logged, same as a wrong login password only gets LOGIN_FAILED when the
+      // email itself was real (see /login above).
+      if (user) {
+        logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_RESET_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { reason: "expired_or_used_token" } });
+      }
       return res.status(400).json({ error: "This reset link is invalid or has expired" });
     }
 
     if (await isPasswordReused(prisma, user.id, newPassword, user.institute?.passwordHistoryDepth)) {
+      logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_RESET_FAILED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { reason: "password_reused" } });
       return res.status(400).json({ error: `You've used this password recently. Choose a password you haven't used in your last ${user.institute?.passwordHistoryDepth ?? 3} passwords.` });
     }
 
@@ -234,7 +258,9 @@ router.post("/reset-password", async (req, res) => {
     // The hash write and the passwordChangedAt/PasswordHistory write must succeed or fail
     // together — a crash between them would leave a changed password with no expiry stamp and
     // no reuse-history record, silently breaking both password-expiry enforcement and reuse
-    // prevention for this account.
+    // prevention for this account. resetTokenHash/resetTokenExpiry are cleared in the same write,
+    // so the token is single-use — a replay attempt after this point falls into the "invalid or
+    // expired" branch above regardless of whether the original expiry window has elapsed yet.
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
@@ -243,16 +269,27 @@ router.post("/reset-password", async (req, res) => {
       await recordPasswordChange(tx, user.id, passwordHash, user.institute?.passwordHistoryDepth);
     });
 
+    // Close every session this account was already authenticated on — before this point, a
+    // student who forgot their password but was still logged in on another device/browser/tab
+    // (or an attacker who'd already stolen a live session token) would stay authenticated on the
+    // OLD password's session straight through the reset, since a JWT's own signature has no way
+    // to know its issuing password was just superseded. This is the same revokeAllSessions() the
+    // admin-triggered "Reset Password & Send Credentials" flow already uses (see users.js/
+    // admin.js) — applying the identical mechanism here rather than inventing a second one.
+    await revokeAllSessions(user.id).catch(() => {});
+
+    logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_RESET, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { via: "self_service_forgot_password", sessionsRevoked: true } });
+
     sendMailLogged(prisma, {
       to: user.email,
       name: user.name,
       studentId: user.id,
       emailType: "OTHER_SYSTEM_EMAIL",
       subject: "Your CodeArena password was changed",
-      html: wrapBranded(`<p>Hi ${user.name},</p><p>Your password was just changed via the "forgot password" link. If this wasn't you, contact your administrator immediately.</p>`),
+      html: wrapBranded(`<p>Hi ${user.name},</p><p>Your password was just changed via the "forgot password" link, and any devices you were previously signed in on have been signed out. If this wasn't you, contact your administrator immediately.</p>`),
     }).catch((err) => console.error("[auth] password-change alert email failed:", err.message));
 
-    res.json({ message: "Password updated. You can now sign in." });
+    res.json({ message: "Password updated. Please sign in again with your new password." });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to reset password" });
