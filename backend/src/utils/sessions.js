@@ -58,4 +58,19 @@ async function endSession(jti) {
   cache.invalidate(`session-active:${jti}`);
 }
 
-module.exports = { createSession, isSessionActive, endSession };
+// Closes every currently-active session for a user — used when their password changes via an
+// admin-triggered reset, so a device that was already logged in (possibly the very reason the
+// reset was needed, e.g. a suspected-compromised account) doesn't stay authenticated on the old
+// credential until its 12h token naturally expires. Same close-and-invalidate pattern
+// createSession() already uses for its singleSessionOnly branch, just applied unconditionally
+// here rather than only when that institute setting is on. Not wired into the student's own
+// self-service forgot-password flow — that's a separate, pre-existing gap left alone here since
+// it wasn't part of what this change touches.
+async function revokeAllSessions(userId) {
+  const toClose = await prisma.loginSession.findMany({ where: { userId, isActive: true }, select: { token: true } });
+  if (toClose.length === 0) return;
+  await prisma.loginSession.updateMany({ where: { userId, isActive: true }, data: { isActive: false, logoutAt: new Date() } });
+  for (const s of toClose) cache.invalidate(`session-active:${s.token}`);
+}
+
+module.exports = { createSession, isSessionActive, endSession, revokeAllSessions };

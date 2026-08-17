@@ -8,6 +8,7 @@ const { cached } = require("../utils/cache");
 const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
 const { credentialsResendTemplate } = require("../utils/emailTemplates");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
+const { revokeAllSessions } = require("../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
@@ -267,6 +268,7 @@ router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF")
       await tx.user.update({ where: { id: student.id }, data: { passwordHash, mustChangePassword: true } });
       await recordPasswordChange(tx, student.id, passwordHash, null);
     });
+    await revokeAllSessions(student.id).catch(() => {}); // same reasoning as users.js's reset-password routes
 
     const result = await retryEmailLogged(prisma, log.id, () =>
       sendMail({

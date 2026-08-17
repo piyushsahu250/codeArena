@@ -10,7 +10,7 @@ const { accountCredentialsTemplate, credentialsResendTemplate } = require("../ut
 const { computeStudentPerformance } = require("../utils/studentPerformance");
 const { generatePerformancePdf } = require("../utils/reportPdf");
 const { generateTempPassword, validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../utils/password");
-const { createSession } = require("../utils/sessions");
+const { createSession, revokeAllSessions } = require("../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
@@ -1255,6 +1255,11 @@ router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "STAFF"), 
       });
       await recordPasswordChange(tx, req.params.id, passwordHash, null); // system-generated — skip reuse-block, still tracked for future dedup
     });
+    // Close any session the account is currently logged in on — an admin-triggered reset (often
+    // done precisely because the account may be compromised, or the student is locked out and an
+    // old session shouldn't quietly outlive the credential change) shouldn't leave a pre-existing
+    // login valid until its 12h token naturally expires.
+    await revokeAllSessions(req.params.id).catch(() => {});
     let emailSent = null; // null = not requested, true/false = requested + outcome
     let emailError = null;
     if (req.body.sendEmail) {
@@ -1311,6 +1316,7 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
         await tx.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: true } });
         await recordPasswordChange(tx, user.id, passwordHash, null);
       });
+      await revokeAllSessions(user.id).catch(() => {}); // same reasoning as the single-reset route above
       results.push({ id: user.id, name: user.name, email: user.email, rollNumber: user.rollNumber, generatedPassword });
     }
     const failedIds = ids.filter((id) => !users.some((u) => u.id === id));
