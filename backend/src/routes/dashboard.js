@@ -74,7 +74,7 @@ async function getRecentActivity(studentId) {
   return items;
 }
 
-async function getNotifications(student) {
+async function getNotifications(student, javaCourse) {
   const notifications = [];
   const now = new Date();
   const in48h = new Date(now.getTime() + 48 * 3600 * 1000);
@@ -105,7 +105,6 @@ async function getNotifications(student) {
     }
   }
 
-  const javaCourse = await prisma.course.findUnique({ where: { slug: "java" } });
   if (javaCourse) {
     const modules = await prisma.courseModule.findMany({ where: { courseId: javaCourse.id }, orderBy: { order: "asc" } });
     const lockMap = await getModuleLockMap(prisma, student.id, javaCourse.id);
@@ -157,9 +156,22 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
     const rank = await computeGroupRank(student.id, student.academicGroupId);
     const streak = await getCodingStreak(student.id);
     const certificatesEarned = await prisma.certificate.count({ where: { studentId: student.id } });
-    const recentActivity = await getRecentActivity(student.id);
-    const notifications = await getNotifications(student);
     const javaCourse = await prisma.course.findUnique({ where: { slug: "java" } });
+
+    // recentActivity/notifications/recommendations are secondary — the frontend already renders a
+    // clean empty state for each of them (StudentDashboard.jsx's EmptyState) and none of them feed
+    // the cards/performanceSummary numbers above. Previously, a failure in ANY of these three
+    // (e.g. a slow/erroring query under load) took down the entire response with a 500, forcing
+    // the whole dashboard into its no-fallback DashSummaryError screen even though the actually
+    // load-bearing data (cards, rank, performance) had already succeeded. Isolating each one so it
+    // degrades to an empty result instead directly shrinks how often a student sees "Unable to
+    // load your dashboard" for what is, from their perspective, unrelated to their actual stats.
+    // Still sequential, not Promise.all — same pool-contention reasoning as above; only the
+    // per-call failure isolation is new here, not the concurrency shape.
+    const recentActivity = await getRecentActivity(student.id).catch((err) => { console.error("[dashboard/student] recentActivity failed", err.message); return []; });
+    const notifications = await getNotifications(student, javaCourse).catch((err) => { console.error("[dashboard/student] notifications failed", err.message); return []; });
+    const recommendations = await cached(`recommendations:${student.id}`, 5 * 60 * 1000, () => computeLearningRecommendations(prisma, student.id))
+      .catch((err) => { console.error("[dashboard/student] recommendations failed", err.message); return []; });
 
     let learningProgressPercent = 0;
     if (javaCourse) {
@@ -169,10 +181,6 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
       });
       learningProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
     }
-
-    const recommendations = await cached(`recommendations:${student.id}`, 5 * 60 * 1000, () =>
-      computeLearningRecommendations(prisma, student.id)
-    );
 
     res.json({
       cards: {
