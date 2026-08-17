@@ -1,10 +1,23 @@
 /**
- * Email sender over real SMTP (nodemailer) — deliberately not a third-party
- * transactional email API (no Resend/SendGrid/Mailgun/etc.). Transport is
- * whatever mailbox is configured via MAIL_HOST/MAIL_PORT/MAIL_USER/
- * MAIL_PASSWORD (e.g. Gmail SMTP with an App Password); MAIL_FROM must match
- * the authenticated account for most providers (Gmail rejects mismatched
- * From addresses).
+ * Email sender — deliberately not a third-party transactional email API (no
+ * Resend/SendGrid/Mailgun/etc.). Two real-SMTP-adjacent transports are
+ * supported, tried in this order:
+ *
+ * 1. Google Apps Script bridge (APPS_SCRIPT_WEB_APP_URL + APPS_SCRIPT_SHARED_SECRET) —
+ *    an HTTPS POST from this backend to a Web App deployed from the user's own Google
+ *    account, which then calls MailApp.sendEmail() inside Google's infrastructure. This
+ *    exists specifically because Render's free tier blocks outbound SMTP (ports 25/465/587)
+ *    but does NOT block ordinary outbound HTTPS — the bridge only ever needs port 443, so
+ *    it works on hosting tiers raw SMTP cannot reach at all. See
+ *    docs/APPS_SCRIPT_EMAIL_SETUP.md for the Apps Script source and deployment steps (that
+ *    side lives in the user's own Google account — nothing this repo can execute directly).
+ * 2. Direct SMTP via nodemailer (MAIL_HOST/MAIL_PORT/MAIL_USER/MAIL_PASSWORD) — the
+ *    original transport, kept as a fallback for any host that does permit outbound SMTP
+ *    (e.g. a future Cloud Run migration). Untouched from before.
+ *
+ * Both return the exact same { ok, error?, messageId? } shape from sendMail() below, so
+ * every caller (sendMailLogged, retryEmailLogged, and everything built on them) is
+ * completely unaware of which transport actually sent a given message.
  */
 const nodemailer = require("nodemailer");
 
@@ -55,9 +68,52 @@ function wrapBranded(bodyHtml) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_WEB_APP_URL || null;
+const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SHARED_SECRET || null;
+// Apps Script Web Apps commonly take several seconds to spin up on a cold call, plus a
+// redirect hop (script.google.com -> script.googleusercontent.com) that fetch() follows
+// automatically — 20s gives real headroom without hanging a request indefinitely if Google's
+// side is genuinely unreachable.
+const APPS_SCRIPT_TIMEOUT_MS = 20000;
+
+// Posts one email through the Apps Script bridge (see file header). The secret travels in the
+// POST body, never in a URL query string, so it can't end up in a proxy/access log anywhere
+// between here and Google. Returns the same { ok, error?, messageId? } shape sendMail() itself
+// returns, so callers never need to know which transport actually handled a message.
+async function sendViaAppsScript({ to, subject, html }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), APPS_SCRIPT_TIMEOUT_MS);
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: APPS_SCRIPT_SECRET, type: "send", to, subject, html, fromName: process.env.MAIL_FROM_NAME || "CodeArena" }),
+      signal: controller.signal,
+    });
+    // Apps Script Web Apps always answer with HTTP 200 for a request that reached doPost() at
+    // all (it has no concept of returning a different HTTP status code to the caller) — the
+    // actual outcome lives entirely in the JSON body this bridge is written to return, so a
+    // non-200 here means the request never reached the script's own logic (wrong URL, Google-
+    // side outage, deployment not published, etc.), not a declared send failure.
+    if (!res.ok) {
+      return { ok: false, error: `Apps Script bridge returned HTTP ${res.status} — check the deployed Web App URL is correct and still published.` };
+    }
+    const data = await res.json().catch(() => null);
+    if (!data) return { ok: false, error: "Apps Script bridge returned a non-JSON response." };
+    if (!data.ok) return { ok: false, error: data.error || "Apps Script bridge reported failure with no reason given." };
+    return { ok: true, messageId: null }; // MailApp.sendEmail() doesn't expose a message id
+  } catch (err) {
+    if (err.name === "AbortError") return { ok: false, error: `Apps Script bridge timed out after ${APPS_SCRIPT_TIMEOUT_MS / 1000}s.` };
+    return { ok: false, error: `Failed to reach Apps Script bridge: ${err.message}` };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Returns { ok: boolean, error?: string, messageId?: string, simulated?: true }.
-// `ok: true` is only ever returned once the SMTP server has actually accepted the message for
-// delivery — there is no path that reports success without a confirmed accept from the mailbox.
+// `ok: true` is only ever returned once the mail transport (Apps Script bridge or direct SMTP)
+// has actually confirmed the message was accepted for delivery — there is no path that reports
+// success without that confirmation.
 async function sendMail({ to, subject, html }) {
   console.log(`[mailer] Sending "${subject}" to ${to}…`);
 
@@ -66,9 +122,17 @@ async function sendMail({ to, subject, html }) {
     return { ok: false, error: "Invalid recipient email address" };
   }
 
+  if (APPS_SCRIPT_URL && APPS_SCRIPT_SECRET) {
+    console.log("[mailer] Sending via Google Apps Script bridge...");
+    const result = await sendViaAppsScript({ to, subject, html });
+    if (result.ok) console.log("[mailer] Email accepted by Apps Script bridge — Status: SUCCESS");
+    else console.error("[mailer] Apps Script bridge send error:", result.error);
+    return result;
+  }
+
   if (!transporter) {
-    console.error(`[mailer] MAIL_HOST/MAIL_USER/MAIL_PASSWORD are not fully set — email NOT sent (logging content only):\n  to: ${to}\n  subject: ${subject}`);
-    return { ok: false, simulated: true, error: "Email service is not configured on the server (MAIL_HOST/MAIL_USER/MAIL_PASSWORD missing) — no email was actually sent." };
+    console.error(`[mailer] Neither the Apps Script bridge (APPS_SCRIPT_WEB_APP_URL/APPS_SCRIPT_SHARED_SECRET) nor SMTP (MAIL_HOST/MAIL_USER/MAIL_PASSWORD) is configured — email NOT sent (logging content only):\n  to: ${to}\n  subject: ${subject}`);
+    return { ok: false, simulated: true, error: "Email service is not configured on the server — no email was actually sent." };
   }
 
   console.log("[mailer] Connecting to SMTP server...");

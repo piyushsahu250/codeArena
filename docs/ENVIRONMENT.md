@@ -28,9 +28,25 @@
 
 ## Email
 
-Email delivery is real SMTP (via `nodemailer`) — deliberately not a third-party transactional
-email API. Point it at any real mailbox (Gmail/Google Workspace SMTP with an App Password is the
-supported default; any standard SMTP provider works the same way).
+Two transports exist, deliberately not a third-party transactional email API. `sendMail()`
+(`backend/src/utils/mailer.js`) tries them in this order:
+
+**1. Google Apps Script bridge (preferred on Render)** — an HTTPS POST from this backend to a
+Web App deployed from a Google account, which runs `MailApp.sendEmail()` inside Google's own
+infrastructure. This exists because Render's free tier blocks outbound SMTP (ports 25/465/587)
+entirely, but does not block outbound HTTPS — the bridge only ever needs port 443. See
+[docs/apps-script/CodeArenaEmailBridge.gs](apps-script/CodeArenaEmailBridge.gs) for the Apps
+Script source and the setup steps in its own header comment (that side lives in a Google
+account this repo has no access to — it must be deployed manually, once).
+
+| Variable | Purpose |
+|---|---|
+| `APPS_SCRIPT_WEB_APP_URL` | The deployed Apps Script Web App's `/exec` URL. |
+| `APPS_SCRIPT_SHARED_SECRET` | Shared bearer secret the backend sends with every request; the script rejects anything that doesn't match its own Script Properties value of the same name. Not a Gmail password — a value you generate yourself (e.g. `openssl rand -hex 32`). |
+
+**2. Direct SMTP via `nodemailer`** — the original transport, kept as a fallback for any host that
+does permit outbound SMTP (e.g. Cloud Run). Only used when the Apps Script variables above are
+unset.
 
 | Variable | Purpose |
 |---|---|
@@ -39,17 +55,19 @@ supported default; any standard SMTP provider works the same way).
 | `MAIL_USER` | SMTP username — for Gmail, the full mailbox address, e.g. `codearena001@gmail.com`. |
 | `MAIL_PASSWORD` | SMTP password — for Gmail, a 16-character **App Password** (myaccount.google.com/apppasswords, requires 2FA enabled on the account), never the account's normal login password. |
 | `MAIL_FROM` | From-address for outbound email, e.g. `codearena001@gmail.com`. Most providers (including Gmail) reject a From address that doesn't match the authenticated mailbox. |
-| `MAIL_FROM_NAME` | Optional display name shown alongside `MAIL_FROM`, e.g. `CodeArena`. If set and `MAIL_FROM` is a bare address, the mailer combines them into `"CodeArena <codearena001@gmail.com>"` automatically — `MAIL_FROM` doesn't need to be pre-formatted. |
+| `MAIL_FROM_NAME` | Optional display name shown alongside `MAIL_FROM`, e.g. `CodeArena`. If set and `MAIL_FROM` is a bare address, the mailer combines them into `"CodeArena <codearena001@gmail.com>"` automatically — `MAIL_FROM` doesn't need to be pre-formatted. Also used as the Apps Script bridge's display name when set. |
 
-If `MAIL_HOST`/`MAIL_USER`/`MAIL_PASSWORD` are not all set, the mailer runs in a safe "not
-configured" mode — every send attempt is logged and recorded in `EmailLog` as `FAILED` with a
-clear reason, never silently reported as successful.
+If neither transport is configured, the mailer runs in a safe "not configured" mode — every send
+attempt is logged and recorded in `EmailLog` as `FAILED` with a clear reason, never silently
+reported as successful.
 
 **Setting these on Render**: Dashboard → the backend service → Environment tab → Add Environment
-Variable, one row per name above. `MAIL_PASSWORD` must be the Gmail **App Password**, not the
-normal account password — Google blocks plain-password SMTP login by default. Save triggers an
-automatic redeploy; there is no way to configure this from inside the application, and the value
-is never visible again in the dashboard once saved (Render masks it after entry).
+Variable, one row per name above. On Render specifically, set `APPS_SCRIPT_WEB_APP_URL` +
+`APPS_SCRIPT_SHARED_SECRET` (outbound SMTP is blocked there regardless of what `MAIL_*` is set
+to). If using the SMTP fallback anywhere else, `MAIL_PASSWORD` must be the Gmail **App Password**,
+not the normal account password. Save triggers an automatic redeploy; there is no way to configure
+this from inside the application, and secret values are never visible again in the dashboard once
+saved (Render masks them after entry).
 
 **Setting these on Cloud Run**: secrets (`MAIL_PASSWORD` and the other sensitive values) go into
 Secret Manager and are mounted as env vars via `--set-secrets`; non-sensitive values like
