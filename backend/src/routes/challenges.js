@@ -2,6 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
+const { attachRequesterInstitute } = require("../middleware/institute");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { processGamification } = require("../utils/gamification");
@@ -63,6 +64,19 @@ function sanitizeQuestion(q) {
   };
 }
 
+// Re-resolves "the challenge currently valid for this student" (same isActive + institute/
+// academicGroup scoping + date-window rules /daily/today and /weekly/current already apply via
+// resolveMostSpecificChallenge) and requires the requested :id to match it. Without this, /run
+// and /submit below only checked "does a row with this id exist" — a deactivated ("Inactive" in
+// the admin UI, i.e. unpublished) challenge, a challenge scoped to a different institute/academic
+// group, or a past/future day's challenge stayed fully runnable and gradeable-for-XP by anyone who
+// still had its id, completely bypassing the admin "Active" toggle and student scoping.
+async function assertChallengeIsCurrent(model, dateField, dateValue, studentId, challengeId) {
+  const scope = await loadStudentScope(studentId);
+  const resolved = await resolveMostSpecificChallenge(model, dateField, dateValue, scope);
+  return !!resolved && resolved.id === challengeId;
+}
+
 async function runAgainstVisible(question, language, code) {
   const visible = question.testCases.filter((tc) => !tc.isHidden);
   return runQueued(() =>
@@ -102,6 +116,20 @@ function buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status })
   if (difficulty) question.difficulty = difficulty;
   if (status) question.questionStatus = status;
   return Object.keys(question).length > 0 ? { question } : {};
+}
+
+// DailyChallenge/WeeklyChallenge rows (unlike the underlying platform-wide Question bank they
+// schedule from) carry a real instituteId — an institute-scoped ADMIN/STAFF must not see, edit,
+// toggle, delete, or duplicate another institute's scheduled challenge, and a scoped requester
+// creating a new one must not be able to target an arbitrary instituteId from the request body.
+// Same null-means-global, scoped-requesters-excluded-from-global-writes convention as
+// questionVisibility.js's ownsQuestionRow (Question Bank) — kept local here since these two
+// models have no createdById column to also check.
+function instituteScopedWhere(requesterInstituteId) {
+  return requesterInstituteId ? { OR: [{ instituteId: requesterInstituteId }, { instituteId: null }] } : {};
+}
+function ownsChallengeRow(req, row) {
+  return !req.requesterInstituteId || row.instituteId === req.requesterInstituteId;
 }
 
 // Hard-blocks scheduling a question with no way to grade it at all; everything else is a
@@ -245,6 +273,9 @@ router.post("/daily/:id/run", authenticate, requireRole("STUDENT"), runLimiter, 
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!dc) return res.status(404).json({ error: "Challenge not found" });
+    if (!(await assertChallengeIsCurrent(prisma.dailyChallenge, "date", dayStart(new Date()), req.user.id, dc.id))) {
+      return res.status(403).json({ error: "This challenge is not currently available." });
+    }
     const { language, code } = req.body;
     const result = await runAgainstVisible(dc.question, language, code);
     res.json(result);
@@ -258,6 +289,9 @@ router.post("/daily/:id/submit", authenticate, requireRole("STUDENT"), runLimite
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!dc) return res.status(404).json({ error: "Challenge not found" });
+    if (!(await assertChallengeIsCurrent(prisma.dailyChallenge, "date", dayStart(new Date()), req.user.id, dc.id))) {
+      return res.status(403).json({ error: "This challenge is not currently available." });
+    }
     const { language, code } = req.body;
     const result = await gradeAgainstHidden(dc.question, language, code);
 
@@ -323,6 +357,9 @@ router.post("/weekly/:id/run", authenticate, requireRole("STUDENT"), runLimiter,
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!wc) return res.status(404).json({ error: "Challenge not found" });
+    if (!(await assertChallengeIsCurrent(prisma.weeklyChallenge, "weekStart", isoWeekStart(new Date()), req.user.id, wc.id))) {
+      return res.status(403).json({ error: "This challenge is not currently available." });
+    }
     const { language, code } = req.body;
     const result = await runAgainstVisible(wc.question, language, code);
     res.json(result);
@@ -336,6 +373,9 @@ router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), runLimit
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!wc) return res.status(404).json({ error: "Challenge not found" });
+    if (!(await assertChallengeIsCurrent(prisma.weeklyChallenge, "weekStart", isoWeekStart(new Date()), req.user.id, wc.id))) {
+      return res.status(403).json({ error: "This challenge is not currently available." });
+    }
     const { language, code } = req.body;
     const result = await gradeAgainstHidden(wc.question, language, code);
 
@@ -372,16 +412,19 @@ router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), runLimit
 });
 
 // =============================== ADMIN: scheduling ===============================
-// Platform-wide (no institute scoping on these models, same as the underlying Question bank
-// they schedule from) — write access is ADMIN-only, matching the convention already used for
-// other global content (gamification.js's XP-rule/badge admin routes); STAFF gets read access.
+// Unlike the underlying Question bank they schedule from (platform-wide, no institute concept),
+// DailyChallenge/WeeklyChallenge rows DO carry instituteId/academicGroupId — see
+// instituteScopedWhere/ownsChallengeRow above. Write access is ADMIN-only (matching the
+// convention used for other global-content admin routes); STAFF gets read access. A NULL
+// instituteId row is a genuinely platform-wide challenge, visible to every institute in list
+// views, but only a platform-level admin (no instituteId on their own account) can write to it.
 
-router.get("/admin/daily", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/daily", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { q, subjectId, topicId, difficulty, status } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
-    const where = buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status });
+    const where = { ...buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status }), ...instituteScopedWhere(req.requesterInstituteId) };
     const [rows, total] = await Promise.all([
       prisma.dailyChallenge.findMany({
         where,
@@ -404,14 +447,17 @@ router.get("/admin/daily", authenticate, requireRole("ADMIN", "STAFF"), async (r
   }
 });
 
-router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const { questionId } = req.body;
     if (!questionId) return res.status(400).json({ error: "questionId is required" });
     const question = await prisma.question.findUnique({ where: { id: questionId }, select: { id: true, questionType: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING") return res.status(400).json({ error: "Only coding questions can be scheduled as a challenge" });
     const dc = await prisma.dailyChallenge.update({ where: { id: req.params.id }, data: { questionId } });
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_SCHEDULED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", id: dc.id, questionId } });
     res.json(dc);
   } catch (err) {
     console.error(err);
@@ -419,10 +465,10 @@ router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req,
   }
 });
 
-router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true } });
-    if (!existing) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true, instituteId: true } });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const dc = await prisma.dailyChallenge.update({ where: { id: req.params.id }, data: { isActive: !existing.isActive } });
     await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", id: dc.id, isActive: dc.isActive } });
     res.json(dc);
@@ -432,9 +478,13 @@ router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN"), asyn
   }
 });
 
-router.post("/admin/daily", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/daily", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const { date, questionId, instituteId, academicGroupId } = req.body;
+    const { date, questionId, academicGroupId } = req.body;
+    // An institute-scoped ADMIN can only ever schedule against their own institute, regardless of
+    // what instituteId the request body sends — only a platform-level admin (requesterInstituteId
+    // null) can target an arbitrary institute or leave it null for a genuinely global challenge.
+    const instituteId = req.requesterInstituteId || req.body.instituteId || null;
     if (!date || !questionId) return res.status(400).json({ error: "date and questionId are required" });
     if (academicGroupId && !instituteId) return res.status(400).json({ error: "academicGroupId requires instituteId" });
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
@@ -464,8 +514,10 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN"), async (req, res)
 // (same "block destructive delete when dependent data exists" pattern already shipped for
 // Chapter/Module/Lesson) — an admin who genuinely wants it gone can still deactivate it via
 // the toggle route above; only an empty slot can be hard-deleted.
-router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const submissionCount = await prisma.dailyChallengeSubmission.count({ where: { dailyChallengeId: req.params.id } });
     if (submissionCount > 0) {
       await prisma.dailyChallenge.update({ where: { id: req.params.id }, data: { isActive: false } });
@@ -482,10 +534,10 @@ router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), async (req
 
 // Reuses the file's own sanitizeQuestion — admin preview is guaranteed identical to what a
 // student sees (hidden cases still stripped) because it's the same function, not a re-implementation.
-router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
-    if (!dc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    if (!dc || !ownsChallengeRow(req, dc)) return res.status(404).json({ error: "Scheduled challenge not found" });
     res.json({ question: sanitizeQuestion(dc.question) });
   } catch (err) {
     console.error(err);
@@ -496,10 +548,10 @@ router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "STAFF
 // Short TTL cache — this is a per-row admin panel view, not a page-load-critical stat, so a small
 // amount of staleness after a fresh submission is an acceptable tradeoff against re-aggregating
 // every submission on every open of the panel.
-router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const exists = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true } });
-    if (!exists) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const exists = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true, instituteId: true } });
+    if (!exists || !ownsChallengeRow(req, exists)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const analytics = await cached(`challenge:analytics:daily:${req.params.id}`, 2 * 60 * 1000, () =>
       computeChallengeAnalytics(prisma.dailyChallengeSubmission, "dailyChallengeId", req.params.id)
     );
@@ -510,10 +562,10 @@ router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "STA
   }
 });
 
-router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
-    if (!dc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    if (!dc || !ownsChallengeRow(req, dc)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const copy = await duplicateQuestionRow(dc.question, req.user.id);
     await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_DUPLICATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", sourceId: dc.id, newQuestionId: copy.id } });
     res.json({ question: copy });
@@ -523,12 +575,12 @@ router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN"), as
   }
 });
 
-router.get("/admin/weekly", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/weekly", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { q, subjectId, topicId, difficulty, status } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
-    const where = buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status });
+    const where = { ...buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status }), ...instituteScopedWhere(req.requesterInstituteId) };
     const [rows, total] = await Promise.all([
       prisma.weeklyChallenge.findMany({
         where,
@@ -551,14 +603,17 @@ router.get("/admin/weekly", authenticate, requireRole("ADMIN", "STAFF"), async (
   }
 });
 
-router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const { questionId } = req.body;
     if (!questionId) return res.status(400).json({ error: "questionId is required" });
     const question = await prisma.question.findUnique({ where: { id: questionId }, select: { id: true, questionType: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING") return res.status(400).json({ error: "Only coding questions can be scheduled as a challenge" });
     const wc = await prisma.weeklyChallenge.update({ where: { id: req.params.id }, data: { questionId } });
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_SCHEDULED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", id: wc.id, questionId } });
     res.json(wc);
   } catch (err) {
     console.error(err);
@@ -566,10 +621,10 @@ router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN"), async (req
   }
 });
 
-router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true } });
-    if (!existing) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true, instituteId: true } });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const wc = await prisma.weeklyChallenge.update({ where: { id: req.params.id }, data: { isActive: !existing.isActive } });
     await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", id: wc.id, isActive: wc.isActive } });
     res.json(wc);
@@ -579,9 +634,11 @@ router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN"), asy
   }
 });
 
-router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/weekly", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const { weekStart, questionId, instituteId, academicGroupId } = req.body;
+    const { weekStart, questionId, academicGroupId } = req.body;
+    // Same institute-lockdown as POST /admin/daily above — see its comment.
+    const instituteId = req.requesterInstituteId || req.body.instituteId || null;
     if (!weekStart || !questionId) return res.status(400).json({ error: "weekStart and questionId are required" });
     if (academicGroupId && !instituteId) return res.status(400).json({ error: "academicGroupId requires instituteId" });
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
@@ -605,8 +662,10 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), async (req, res
   }
 });
 
-router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const submissionCount = await prisma.weeklyChallengeSubmission.count({ where: { weeklyChallengeId: req.params.id } });
     if (submissionCount > 0) {
       await prisma.weeklyChallenge.update({ where: { id: req.params.id }, data: { isActive: false } });
@@ -621,10 +680,10 @@ router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN"), async (re
   }
 });
 
-router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
-    if (!wc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    if (!wc || !ownsChallengeRow(req, wc)) return res.status(404).json({ error: "Scheduled challenge not found" });
     res.json({ question: sanitizeQuestion(wc.question) });
   } catch (err) {
     console.error(err);
@@ -632,10 +691,10 @@ router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "STAF
   }
 });
 
-router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const exists = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true } });
-    if (!exists) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const exists = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true, instituteId: true } });
+    if (!exists || !ownsChallengeRow(req, exists)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const analytics = await cached(`challenge:analytics:weekly:${req.params.id}`, 2 * 60 * 1000, () =>
       computeChallengeAnalytics(prisma.weeklyChallengeSubmission, "weeklyChallengeId", req.params.id)
     );
@@ -646,10 +705,10 @@ router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "ST
   }
 });
 
-router.post("/admin/weekly/:id/duplicate", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/weekly/:id/duplicate", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
-    if (!wc) return res.status(404).json({ error: "Scheduled challenge not found" });
+    if (!wc || !ownsChallengeRow(req, wc)) return res.status(404).json({ error: "Scheduled challenge not found" });
     const copy = await duplicateQuestionRow(wc.question, req.user.id);
     await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_DUPLICATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", sourceId: wc.id, newQuestionId: copy.id } });
     res.json({ question: copy });

@@ -81,6 +81,7 @@ export default function QuestionBank() {
   const [bulkStatusUpdating, setBulkStatusUpdating] = useState(false);
   const [clearingFolder, setClearingFolder] = useState(false);
   const [duplicateAction, setDuplicateAction] = useState("skip");
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   function loadFolders() {
     api.get("/questions/folders").then((res) => setFolders(res.data));
@@ -323,7 +324,7 @@ export default function QuestionBank() {
     }
     const parts = [`Questions: ${preview.questionCount}`, `Sub-banks: ${preview.subBankCount}`];
     if (preview.blockedCount > 0) {
-      parts.push(`${preview.blockedCount} question${preview.blockedCount === 1 ? "" : "s"} used in a Test will be kept, and this bank won't be fully deleted`);
+      parts.push(`${preview.blockedCount} question${preview.blockedCount === 1 ? "" : "s"} used in a Test or with student submissions will be kept, and this bank won't be fully deleted`);
     }
     const ok = await confirmDialog({
       title: `Delete "${folder.name}"?`,
@@ -354,7 +355,8 @@ export default function QuestionBank() {
     try {
       const { data } = await api.post(`/questions/folders/${folder.id}/clear`);
       if (data.blocked?.length > 0) {
-        alert(`Cleared ${data.clearedCount} question(s). ${data.blocked.length} question(s) used in a Test couldn't be deleted and remain in this bank.`);
+        const lines = data.blocked.map((b) => `• ${b.title}: ${b.reason}`).join("\n");
+        alert(`Cleared ${data.clearedCount} question(s). ${data.blocked.length} couldn't be deleted and remain in this bank:\n\n${lines}`);
       }
       setSelectedIds([]);
       load();
@@ -463,7 +465,10 @@ export default function QuestionBank() {
     try {
       const { data } = await api.post("/questions/bulk-delete", { questionIds: selectedIds });
       if (data.blocked?.length > 0) {
-        alert(`Deleted ${data.deletedCount} question(s). ${data.blocked.length} question(s) used in a Test couldn't be deleted.`);
+        // Reasons now include both "used in a Test" (FK-restrict) and "has student submissions —
+        // archive instead" (the new history guard) — list them out rather than assuming one cause.
+        const lines = data.blocked.map((b) => `• ${b.title}: ${b.reason}`).join("\n");
+        alert(`Deleted ${data.deletedCount} question(s). ${data.blocked.length} couldn't be deleted:\n\n${lines}`);
       }
       setSelectedIds([]);
       load();
@@ -497,7 +502,26 @@ export default function QuestionBank() {
       load();
       loadFolders();
     } catch (err) {
+      // The backend now blocks deletion (409) of a question that already has student
+      // submissions/attempts — surface that message as-is rather than the generic fallback, since
+      // it's the actionable guidance ("Archive instead") the admin needs here.
       alert(err.response?.data?.error || "Failed to delete question");
+    }
+  }
+
+  // Duplicate: clone this one question (incl. test cases) right where it already lives, as a
+  // starting point for a variant — the row-level counterpart to the bulk "Copy" action below
+  // (which is scoped to copying into a DIFFERENT bank and can't target the same folder).
+  async function handleDuplicate(question) {
+    setDuplicatingId(question.id);
+    try {
+      await api.post(`/questions/${question.id}/duplicate`);
+      load();
+      loadFolders();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to duplicate question");
+    } finally {
+      setDuplicatingId(null);
     }
   }
 
@@ -1014,6 +1038,9 @@ export default function QuestionBank() {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Link to={`/staff/questions/${question.id}/edit`} className="btn btn-ghost">Edit</Link>
+                    <button className="btn btn-ghost" disabled={duplicatingId === question.id} onClick={() => handleDuplicate(question)}>
+                      {duplicatingId === question.id ? "Duplicating…" : "Duplicate"}
+                    </button>
                     <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={() => handleDelete(question)}>Delete</button>
                   </div>
                 </div>

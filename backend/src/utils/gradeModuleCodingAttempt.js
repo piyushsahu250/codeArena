@@ -150,8 +150,18 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
     }
   }
 
-  const updated = await prisma.moduleCodingAttempt.update({
-    where: { id: attemptId },
+  // Atomic claim, not a plain update: the route-level `status !== "IN_PROGRESS"` short-circuit
+  // that guards every caller of this function (finalize, the violation auto-submit, and /start's
+  // resume-disabled/time-expired paths) reads status BEFORE the async grading work above runs, so
+  // two of those calls can race for the same attempt — a double-click on Submit, a client retry,
+  // or a violation-triggered auto-submit landing at the same moment as a manual finalize — and
+  // both reach here having both seen IN_PROGRESS. updateMany's WHERE re-checks status at write
+  // time, so only the first writer actually flips it (count===1); the loser's write is a no-op.
+  // Callers must only treat their own call as "the one that finalized this attempt" (e.g. for
+  // awarding pass XP exactly once) when wasFinalizedByThisCall is true — see moduleCoding.js's
+  // /finalize route.
+  const claim = await prisma.moduleCodingAttempt.updateMany({
+    where: { id: attemptId, status: "IN_PROGRESS" },
     data: {
       status: reason ? "AUTO_SUBMITTED" : "SUBMITTED",
       score,
@@ -160,8 +170,9 @@ async function gradeModuleCodingAttempt(attemptId, { reason } = {}) {
       autoSubmitReason: reason || null,
     },
   });
+  const updated = await prisma.moduleCodingAttempt.findUnique({ where: { id: attemptId } });
 
-  return { ...updated, questionBreakdown };
+  return { ...updated, questionBreakdown, wasFinalizedByThisCall: claim.count > 0 };
 }
 
 module.exports = { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission };

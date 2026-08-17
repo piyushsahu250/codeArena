@@ -159,8 +159,45 @@ async function resolveSubjectUnitTopicByName(req, { subjectName, unitName, topic
   return { subjectId: subject.id, unitId: unit.id, topicId };
 }
 
+// A hard delete must never destroy the record of a question a student has already been graded on
+// (spec: "Do not permanently delete challenges that already have student submissions ... use
+// archive/soft delete where appropriate"). Every delete route below already relies on Prisma's own
+// FK-restrict errors (P2003/P2014, e.g. "used in a Test") to block a delete — but that mechanism
+// does NOT cover every place a question can carry real student work: Submission.questionId and
+// ModuleCodingSubmission.questionId are plain columns with no enforced FK to Question at all (a
+// hard delete would silently succeed and orphan them), and ModuleCodingAttemptQuestion's FK is
+// onDelete: Cascade (a hard delete would silently wipe the record of what an already-graded Module
+// Coding attempt was assigned, instead of being blocked like TestQuestion is). This check runs
+// before every hard-delete path in this file and flags any question with such history so the
+// caller can refuse the delete — pointing the admin at Review Status "Archived" instead — rather
+// than silently losing it.
+async function questionIdsWithSubmissionHistory(questionIds) {
+  if (!questionIds || questionIds.length === 0) return new Set();
+  const [submissions, moduleCodingSubmissions, moduleCodingAttemptQuestions, dailyChallenges, weeklyChallenges] = await Promise.all([
+    prisma.submission.findMany({ where: { questionId: { in: questionIds } }, select: { questionId: true }, distinct: ["questionId"] }),
+    prisma.moduleCodingSubmission.findMany({ where: { questionId: { in: questionIds } }, select: { questionId: true }, distinct: ["questionId"] }),
+    prisma.moduleCodingAttemptQuestion.findMany({ where: { questionId: { in: questionIds } }, select: { questionId: true }, distinct: ["questionId"] }),
+    prisma.dailyChallenge.findMany({ where: { questionId: { in: questionIds }, submissions: { some: {} } }, select: { questionId: true } }),
+    prisma.weeklyChallenge.findMany({ where: { questionId: { in: questionIds }, submissions: { some: {} } }, select: { questionId: true } }),
+  ]);
+  const ids = new Set();
+  for (const row of [...submissions, ...moduleCodingSubmissions, ...moduleCodingAttemptQuestions, ...dailyChallenges, ...weeklyChallenges]) {
+    ids.add(row.questionId);
+  }
+  return ids;
+}
+
+const SUBMISSION_HISTORY_BLOCK_MESSAGE =
+  "This question already has student submissions and can't be permanently deleted. Set its Review Status to Archived instead to remove it from future use while preserving those records.";
+
 function buildWhere(query, req) {
-  const where = { AND: [questionVisibilityWhere(req)] };
+  // Module Coding Test questions live in this same Question table (moduleCodingTestId set) but
+  // are a completely separate authoring surface (see routes/moduleCoding.js's admin CRUD) — they
+  // carry no folder/institute/creator of their own (instituteId/createdById/folderId all null),
+  // which questionVisibilityWhere's "null = shared, visible to everyone" convention would
+  // otherwise let leak straight into every institute's general Question Bank list/export/search,
+  // mixed in with real standalone bank questions. Excluded here unconditionally.
+  const where = { AND: [questionVisibilityWhere(req), { moduleCodingTestId: null }] };
   if (query.subject) where.subject = query.subject;
   if (query.topic) where.topic = query.topic;
   if (query.subjectId === "__none__") where.subjectId = null;
@@ -391,7 +428,10 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
 // Distinct subjects/topics/creators — powers the filter dropdowns. Scoped the same way the list
 // is, so the dropdowns never surface a value that only exists in another institute's bank.
 router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const visible = questionVisibilityWhere(req);
+  // Same moduleCodingTestId exclusion as buildWhere() above — without it, Module Coding Test
+  // questions (no folder/subject/unit of their own) inflate "Needs Subject Assignment" and the
+  // review-queue counts with rows that were never meant to be classified in this Question Bank.
+  const visible = { ...questionVisibilityWhere(req), moduleCodingTestId: null };
   // A STAFF requester only ever sees their own + legacy content anyway (see
   // questionVisibilityWhere), so surfacing other creators' identities here would be pointless —
   // skip the query rather than compute a list nobody's Question Bank view can act on.
@@ -513,11 +553,20 @@ router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "ST
 
   const folderIds = await collectDescendantFolders(folder.id);
   const questions = await prisma.question.findMany({ where: { folderId: { in: folderIds } }, select: { id: true } });
-  const blocked = questions.length > 0
-    ? await prisma.testQuestion.findMany({ where: { questionId: { in: questions.map((q) => q.id) } }, select: { questionId: true }, distinct: ["questionId"] })
-    : [];
+  const questionIds = questions.map((q) => q.id);
+  // Two independent reasons a question can survive the delete below: attached to a Test
+  // (FK-restrict) or carrying real student submission/attempt history (the history guard added
+  // to the recursive delete route) — union both so this preview's count actually matches what
+  // the delete is about to do, rather than only accounting for the Test case.
+  const [testBlocked, historyBlockedIds] = await Promise.all([
+    questionIds.length > 0
+      ? prisma.testQuestion.findMany({ where: { questionId: { in: questionIds } }, select: { questionId: true }, distinct: ["questionId"] })
+      : [],
+    questionIdsWithSubmissionHistory(questionIds),
+  ]);
+  const blockedIds = new Set([...testBlocked.map((b) => b.questionId), ...historyBlockedIds]);
 
-  res.json({ questionCount: questions.length, subBankCount: folderIds.length - 1, blockedCount: blocked.length });
+  res.json({ questionCount: questions.length, subBankCount: folderIds.length - 1, blockedCount: blockedIds.size });
 });
 
 // Replaces the earlier "folder must be empty" block. Recursively deletes every question in
@@ -535,6 +584,7 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
 
   const folderIds = await collectDescendantFolders(folder.id); // BFS order: root first, deepest last
   const questions = await prisma.question.findMany({ where: { folderId: { in: folderIds } } });
+  const withHistory = await questionIdsWithSubmissionHistory(questions.map((q) => q.id));
 
   let deletedQuestionCount = 0;
   const remainingByFolder = new Map();
@@ -542,8 +592,10 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
     // A STAFF requester's recursive delete must never touch another staff member's private
     // questions, even ones nested inside a shared/legacy folder the requester is otherwise
     // allowed to delete — skip-and-count exactly like the FK-restrict (P2003/P2014) case below,
-    // so that folder simply survives with only the untouched content left in it.
-    if (!ownsQuestionRow(req, q)) {
+    // so that folder simply survives with only the untouched content left in it. A question with
+    // real student submission history (see questionIdsWithSubmissionHistory) is skipped the same
+    // way — never hard-deleted just because it happened to be inside a folder someone deleted.
+    if (!ownsQuestionRow(req, q) || withHistory.has(q.id)) {
       remainingByFolder.set(q.folderId, (remainingByFolder.get(q.folderId) || 0) + 1);
       continue;
     }
@@ -734,10 +786,15 @@ router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachR
   const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
   if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
   const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
+  const withHistory = await questionIdsWithSubmissionHistory(owned.map((q) => q.id));
   const blocked = [];
   let deletedCount = 0;
   for (const q of owned) {
     if (!ownsQuestionRow(req, q)) continue;
+    if (withHistory.has(q.id)) {
+      blocked.push({ id: q.id, title: q.title || q.description.slice(0, 60), reason: "Has student submissions — archive instead" });
+      continue;
+    }
     try {
       await prisma.question.delete({ where: { id: q.id } });
       deletedCount++;
@@ -803,10 +860,15 @@ router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), a
   if (!folder || !ownsQuestionRow(req, folder)) return res.status(404).json({ error: "Question bank not found" });
 
   const questions = await prisma.question.findMany({ where: { folderId: folder.id } });
+  const withHistory = await questionIdsWithSubmissionHistory(questions.map((q) => q.id));
   const blocked = [];
   let clearedCount = 0;
   for (const q of questions) {
     if (!ownsQuestionRow(req, q)) continue;
+    if (withHistory.has(q.id)) {
+      blocked.push({ id: q.id, title: q.title || q.description.slice(0, 60), reason: "Has student submissions — archive instead" });
+      continue;
+    }
     try {
       await prisma.question.delete({ where: { id: q.id } });
       clearedCount++;
@@ -1420,6 +1482,47 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
   }
 });
 
+// Duplicate: clone a single question (incl. test cases) right where it already lives — the
+// single-row counterpart to bulk-copy above. Unlike bulk-copy (which exists to move a question
+// into a DIFFERENT bank, and deliberately skips a same-folder target to avoid exact
+// self-duplicates), Duplicate exists to give an admin a near-identical starting point in the SAME
+// bank, e.g. "Two Sum" -> "Two Sum (Copy)" as a base for a variant question. Was previously
+// missing entirely — an admin's only way to get a near-copy was Export then re-import (quiz types
+// only; coding questions have no import path at all — see bulk-import's rejection above) or
+// retyping the whole question by hand.
+router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const original = await prisma.question.findUnique({ where: { id: req.params.id }, include: { testCases: true } });
+    if (!original || !ownsQuestionRow(req, original)) return res.status(404).json({ error: "Question not found" });
+
+    const { id, questionNumber, createdAt, testCases, createdById: _c, instituteId: _i, ...rest } = original;
+    const clone = await prisma.question.create({
+      data: {
+        ...rest,
+        title: rest.title ? `${rest.title} (Copy)` : rest.title,
+        // A duplicate is unreviewed content until an admin re-checks it, regardless of the
+        // original's own review status — same "never auto-publish unreviewed content" rule
+        // applied to AI-generated questions elsewhere in this file.
+        questionStatus: "DRAFT",
+        instituteId: req.requesterInstituteId,
+        createdById: req.user.id,
+        testCases: {
+          create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || null })),
+        },
+      },
+      include: { testCases: true },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { questionId: clone.id, title: clone.title || clone.description.slice(0, 60), duplicatedFrom: original.id },
+    });
+    res.json(clone);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to duplicate question") });
+  }
+});
+
 router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const question = await prisma.question.findUnique({
     where: { id: req.params.id },
@@ -1528,8 +1631,15 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
         if (testCases.filter((tc) => tc.isHidden).length < 10) {
           return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
         }
-        await prisma.testCase.deleteMany({ where: { questionId: existing.id } });
+        // Nested deleteMany+create inside the SAME update() call below, rather than a separate
+        // prisma.testCase.deleteMany() executed here — keeps the replace atomic with the update. A
+        // separate up-front deleteMany left a real corruption window: the VERIFIED-status gate a
+        // few lines down can still return 400 (e.g. a bad FUNCTION signature) AFTER test cases were
+        // already wiped but BEFORE prisma.question.update() ever ran to recreate them, leaving the
+        // question with zero test cases in the DB. Nesting both inside `data` means neither runs
+        // unless update() itself is actually reached.
         data.testCases = {
+          deleteMany: {},
           create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden ?? true, explanation: tc.explanation || null })),
         };
       }
@@ -1553,8 +1663,11 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
         if (testCases.filter((tc) => tc.isHidden).length < 5) {
           return res.status(400).json({ error: "Each SQL question needs at least 5 hidden test cases for final evaluation" });
         }
-        await prisma.testCase.deleteMany({ where: { questionId: existing.id } });
+        // See the identical comment in the CODING branch above — nested inside `data` rather than
+        // a separate up-front deleteMany, so the VERIFIED-status gate below can never leave this
+        // question's test cases wiped without a replacement.
         data.testCases = {
+          deleteMany: {},
           create: testCases.map((tc) => ({ input: tc.input || "", expected: tc.expected, isHidden: tc.isHidden ?? true, explanation: tc.explanation || null })),
         };
       }
@@ -1592,6 +1705,10 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
   try {
     const existing = await prisma.question.findUnique({ where: { id: req.params.id } });
     if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    const withHistory = await questionIdsWithSubmissionHistory([existing.id]);
+    if (withHistory.has(existing.id)) {
+      return res.status(409).json({ error: SUBMISSION_HISTORY_BLOCK_MESSAGE });
+    }
     await prisma.question.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.QUESTION_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,

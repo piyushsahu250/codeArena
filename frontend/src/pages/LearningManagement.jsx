@@ -1204,6 +1204,13 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
+  // Reuse an existing Question Bank CODING question instead of always retyping one from scratch —
+  // the same "pick from the bank" convenience CreateTest.jsx already has for Formal Tests, backed
+  // by POST .../questions/link (clones the source question into this test's pool).
+  const [bankOpen, setBankOpen] = useState(false);
+  const [bankSearch, setBankSearch] = useState("");
+  const [bankResults, setBankResults] = useState(null);
+  const [linkingId, setLinkingId] = useState(null);
 
   async function bulkImport(e) {
     e.preventDefault();
@@ -1274,8 +1281,39 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
 
   async function remove(q) {
     if (!confirm("Delete this question?")) return;
-    await api.delete(`/module-coding/admin/questions/${q.id}`);
-    onRefresh();
+    try {
+      await api.delete(`/module-coding/admin/questions/${q.id}`);
+      onRefresh();
+    } catch (err) {
+      // The backend blocks deletion (409) of a question that already has student
+      // attempts/submissions, rather than silently wiping that history — surface its message
+      // as-is instead of failing silently (this call previously had no error handling at all).
+      alert(err.response?.data?.error || "Failed to delete question");
+    }
+  }
+
+  // Debounced search against the shared Question Bank, CODING questions only — mirrors
+  // QuestionBank.jsx's own 350ms debounce pattern.
+  useEffect(() => {
+    if (!bankOpen) return;
+    const t = setTimeout(() => {
+      api.get("/questions", { params: { questionType: "CODING", q: bankSearch || undefined, pageSize: 20 } })
+        .then((res) => setBankResults(res.data.rows))
+        .catch(() => setBankResults([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [bankOpen, bankSearch]);
+
+  async function linkFromBank(q) {
+    setLinkingId(q.id);
+    try {
+      await api.post(`/module-coding/admin/tests/${testId}/questions/link`, { questionId: q.id });
+      onRefresh();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to add question from bank");
+    } finally {
+      setLinkingId(null);
+    }
   }
 
   return (
@@ -1284,11 +1322,42 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
         <h3 style={{ fontSize: 15 }}>Question pool</h3>
         {isAdmin && (
           <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBankOpen((b) => !b)}>{bankOpen ? "Cancel" : "🔍 Add from Question Bank"}</button>
             <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setBulkOpen((b) => !b)}>{bulkOpen ? "Cancel" : "⬆ Bulk upload"}</button>
             <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "+ Add question"}</button>
           </div>
         )}
       </div>
+
+      {isAdmin && bankOpen && (
+        <div className="card" style={{ padding: 16, marginTop: 12 }}>
+          <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
+            Search the shared Question Bank for an existing coding question and add a copy of it to this test's pool,
+            instead of retyping one from scratch. Only questions with at least 2 visible and 10 hidden test cases can be added.
+          </p>
+          <input
+            style={{ ...inputStyle, marginTop: 8 }}
+            placeholder="Search by title or problem statement…"
+            value={bankSearch}
+            onChange={(e) => setBankSearch(e.target.value)}
+          />
+          <div style={{ display: "grid", gap: 6, marginTop: 10, maxHeight: 280, overflowY: "auto" }}>
+            {bankResults === null && <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>Loading…</p>}
+            {bankResults?.length === 0 && <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>No coding questions match.</p>}
+            {bankResults?.map((q) => (
+              <div key={q.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{q.title || "(untitled)"}</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.description}</div>
+                </div>
+                <button className="btn btn-ghost" style={{ fontSize: 12, flexShrink: 0 }} disabled={linkingId === q.id} onClick={() => linkFromBank(q)}>
+                  {linkingId === q.id ? "Adding…" : "+ Add"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isAdmin && bulkOpen && (
         <div className="card" style={{ padding: 16, marginTop: 12 }}>

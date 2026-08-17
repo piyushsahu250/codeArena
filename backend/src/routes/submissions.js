@@ -142,9 +142,20 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
     // create/update here would race under concurrent autosave triggers (10s interval tick vs.
     // question-switch flush vs. beforeunload flush all firing close together) and could create
     // two rows for the same question, leaving grading to pick between them arbitrarily.
+    //
+    // The `update` branch deliberately only touches language/code, never verdict/score/passedCases/
+    // totalCases — this used to also reset those to PENDING/0 on every autosave, which meant typing
+    // even one more character after an explicit Submit-code click (see /submit-code below) silently
+    // wiped that already-graded, already-locked-in result back to ungraded. If the student then ran
+    // out of time (or never re-submitted) before touching that question again, finalize would grade
+    // whatever the last autosaved draft happened to be and permanently discard the earned score —
+    // a real, silent scoring-accuracy loss, not just a cosmetic issue. A question that was never
+    // explicitly submitted is unaffected: its row is already sitting at the PENDING/0 defaults (set
+    // by `create` below, or by a prior autosave), so simply not re-writing those fields here is a
+    // no-op for it and changes nothing about the existing "graded once at finalize" behavior.
     await prisma.submission.upsert({
       where: { attemptId_questionId: { attemptId, questionId } },
-      update: { language: savedLanguage || "", code: code || "", verdict: "PENDING", score: 0, passedCases: 0, totalCases: 0, timeMs: null, memoryKb: null },
+      update: { language: savedLanguage || "", code: code || "" },
       create: { attemptId, questionId, studentId: req.user.id, language: savedLanguage || "", code: code || "", verdict: "PENDING" },
     });
 
@@ -181,6 +192,15 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
     }
     const savedLanguage = question.questionType === "SQL" ? "sql" : language;
 
+    // Snapshot the question's already-locked-in result (if any) BEFORE this resubmission
+    // overwrites it — see the restore-if-worse step below, which is what actually makes the
+    // "best scoring submission always counts" comment above true. Without this, since there is
+    // only ever one Submission row per (attemptId, questionId) (see the atomic upsert), a
+    // resubmission that scores worse than a prior explicit Submit would simply clobber the better
+    // result with no way to recover it.
+    const priorBest = await prisma.submission.findUnique({ where: { attemptId_questionId: { attemptId, questionId } } });
+    const hadLockedBest = !!priorBest && priorBest.verdict !== "PENDING";
+
     const sub = await prisma.submission.upsert({
       where: { attemptId_questionId: { attemptId, questionId } },
       update: { language: savedLanguage || "", code: code || "", verdict: "PENDING", score: 0, passedCases: 0, totalCases: 0, timeMs: null, memoryKb: null },
@@ -188,6 +208,26 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
     });
 
     const result = await gradeCodingSubmission(sub, question);
+
+    // If this resubmission scored worse than the previously locked-in best, restore that best in
+    // full (code, language, and every grading field together — never mix a stored verdict with
+    // code that didn't earn it). The response below still reports THIS attempt's true, live result
+    // so the student sees an honest verdict for what they just ran; only the persisted/scored
+    // record is protected from regressing.
+    if (hadLockedBest) {
+      const freshSub = await prisma.submission.findUnique({ where: { id: sub.id } });
+      if (freshSub && priorBest.score > freshSub.score) {
+        await prisma.submission.update({
+          where: { id: sub.id },
+          data: {
+            code: priorBest.code, language: priorBest.language, verdict: priorBest.verdict,
+            score: priorBest.score, passedCases: priorBest.passedCases, totalCases: priorBest.totalCases,
+            timeMs: priorBest.timeMs, memoryKb: priorBest.memoryKb,
+          },
+        });
+      }
+    }
+
     await recomputeAttemptScore(attemptId);
 
     res.json(sanitizeCodingResult(result));
@@ -309,18 +349,29 @@ router.post("/finalize/:attemptId", authenticate, requireRole("STUDENT"), async 
     // status a violation-triggered auto-submit already uses, and mirrors moduleCoding.js's
     // TIME_EXPIRED handling for Module Coding Test attempts.
     const isLate = Date.now() > deadlineOf(attempt);
-    const updated = await prisma.testAttempt.update({
-      where: { id: req.params.attemptId },
+
+    // Atomic claim, not a plain update: the IN_PROGRESS check above ran before the (possibly slow,
+    // judge-bound) grading call, so two finalize requests racing for the same attempt — a
+    // double-click before the Submit button disables, or a client retry on a slow network — can
+    // both reach here having both seen status still IN_PROGRESS. updateMany's WHERE re-checks
+    // status at write time, so only the first writer actually flips it (count===1); the loser's
+    // write is a no-op (count===0) and must NOT award TEST_COMPLETE XP a second time for what is,
+    // from the student's perspective, a single "I submitted my test" action.
+    const claim = await prisma.testAttempt.updateMany({
+      where: { id: req.params.attemptId, status: "IN_PROGRESS" },
       data: { status: isLate ? "AUTO_SUBMITTED" : "SUBMITTED", submittedAt: new Date() },
     });
+    const updated = await prisma.testAttempt.findUnique({ where: { id: req.params.attemptId } });
 
     let gamification = null;
-    try {
-      gamification = await processGamification(req.user.id, {
-        xpActivities: ["TEST_COMPLETE"], xpMeta: { attemptId: attempt.id }, streakEligible: true,
-      });
-    } catch (e) {
-      console.error("gamification failed", e);
+    if (claim.count > 0) {
+      try {
+        gamification = await processGamification(req.user.id, {
+          xpActivities: ["TEST_COMPLETE"], xpMeta: { attemptId: attempt.id }, streakEligible: true,
+        });
+      } catch (e) {
+        console.error("gamification failed", e);
+      }
     }
 
     res.json({ ...updated, gamification });

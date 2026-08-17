@@ -323,9 +323,18 @@ router.post("/attempts/:attemptId/autosave", authenticate, requireRole("STUDENT"
     const { questionId, language, code } = req.body;
     // Atomic upsert on the (attemptId, questionId) unique constraint — see submissions.js's
     // /autosave for why a findFirst-then-create/update pattern here is a real race hazard.
+    //
+    // The `update` branch only touches language/code, never verdict/passedCases/totalCases/score —
+    // it used to also reset those to PENDING/0 on every autosave, which meant any edit made after
+    // an explicit Submit-code click (below) silently erased that already-graded, locked-in result.
+    // If the student didn't explicitly re-submit that question before time ran out, finalize would
+    // grade whatever code was last autosaved and permanently discard the score they'd already
+    // earned. A question that was never explicitly submitted is unaffected — its row already sits
+    // at the PENDING/0 defaults (from `create` below or a prior autosave), so not re-writing those
+    // fields here changes nothing for it.
     await prisma.moduleCodingSubmission.upsert({
       where: { attemptId_questionId: { attemptId: attempt.id, questionId } },
-      update: { language: language || "", code: code || "", verdict: "PENDING", passedCases: 0, totalCases: 0, timeMs: null, memoryKb: null },
+      update: { language: language || "", code: code || "" },
       create: { attemptId: attempt.id, questionId, studentId: req.user.id, language: language || "", code: code || "", verdict: "PENDING" },
     });
     res.json({ status: "SAVED" });
@@ -350,6 +359,13 @@ router.post("/attempts/:attemptId/submit-code", authenticate, requireRole("STUDE
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 
+    // Snapshot the question's already-locked-in result (if any) before this resubmission
+    // overwrites it — restored below if the new attempt scores worse, so a student can never
+    // accidentally erase an already-earned better score just by resubmitting (or by autosave
+    // saving further edits afterward — see /autosave above for the companion fix).
+    const priorBest = await prisma.moduleCodingSubmission.findUnique({ where: { attemptId_questionId: { attemptId: attempt.id, questionId } } });
+    const hadLockedBest = !!priorBest && priorBest.verdict !== "PENDING";
+
     const sub = await prisma.moduleCodingSubmission.upsert({
       where: { attemptId_questionId: { attemptId: attempt.id, questionId } },
       update: { language: language || "", code: code || "", verdict: "PENDING", passedCases: 0, totalCases: 0, timeMs: null, memoryKb: null },
@@ -357,6 +373,25 @@ router.post("/attempts/:attemptId/submit-code", authenticate, requireRole("STUDE
     });
 
     const result = await gradeOneModuleCodingSubmission(sub, question);
+
+    // If this resubmission scored worse than the previously locked-in best, restore that best in
+    // full (code/language/verdict/score together, never mixed) — the response below still reports
+    // this attempt's true, live result so the student sees an honest verdict for what they just
+    // ran; only the persisted/scored record is protected from regressing.
+    if (hadLockedBest) {
+      const freshSub = await prisma.moduleCodingSubmission.findUnique({ where: { id: sub.id } });
+      if (freshSub && priorBest.score > freshSub.score) {
+        await prisma.moduleCodingSubmission.update({
+          where: { id: sub.id },
+          data: {
+            code: priorBest.code, language: priorBest.language, verdict: priorBest.verdict,
+            score: priorBest.score, passedCases: priorBest.passedCases, totalCases: priorBest.totalCases,
+            timeMs: priorBest.timeMs, memoryKb: priorBest.memoryKb,
+          },
+        });
+      }
+    }
+
     const { details, ...safeResult } = result;
     res.json(safeResult);
   } catch (err) {
@@ -417,8 +452,14 @@ router.post("/attempts/:attemptId/finalize", authenticate, requireRole("STUDENT"
     const reason = Date.now() > deadlineOf(attempt) ? "TIME_EXPIRED" : null;
     const updated = await gradeModuleCodingAttempt(attempt.id, { reason });
 
+    // wasFinalizedByThisCall is false when a concurrent request (double-click, client retry, or a
+    // violation-triggered auto-submit landing at the same instant) already won the race to
+    // actually flip this attempt out of IN_PROGRESS (see gradeModuleCodingAttempt's atomic claim).
+    // Without this check, both racing requests would independently see `alreadyAwarded === 0`
+    // (excluding only their own attempt id, which is the SAME attempt for both) and both award
+    // MODULE_CODING_PASS XP for what is really one single completion event.
     let gamification = null;
-    if (updated.passed) {
+    if (updated.wasFinalizedByThisCall && updated.passed) {
       try {
         const alreadyAwarded = await prisma.moduleCodingAttempt.count({
           where: { moduleCodingTestId: attempt.moduleCodingTestId, studentId: req.user.id, passed: true, id: { not: updated.id } },
@@ -641,6 +682,51 @@ router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN"), as
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to add question" });
+  }
+});
+
+// ADMIN: attach an existing Question Bank CODING question onto this test's pool, instead of
+// forcing every question to be authored from scratch here. CreateTest.jsx already lets an admin
+// pick an existing question for a Formal Test (GET /questions + the real many-to-many
+// TestQuestion join) — Module Coding Tests had no equivalent reuse path at all, only the
+// hand-author form above and bulk-import. This clones the source question (title/problem
+// statement/starter code/test cases) into a new row scoped to this test, rather than reassigning
+// the original in place: Question.moduleCodingTestId is a single nullable FK (a question can
+// belong to at most one Module Coding Test's pool at a time), so moving the original instead of
+// cloning would silently pull it out of the shared Question Bank — and out of any Formal Test it's
+// already attached to via TestQuestion.
+router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN"), async (req, res) => {
+  try {
+    const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
+    if (!test) return res.status(404).json({ error: "Coding assessment not found" });
+
+    const source = await prisma.question.findUnique({ where: { id: req.body.questionId }, include: { testCases: true } });
+    if (!source || source.questionType !== "CODING") return res.status(404).json({ error: "Coding question not found" });
+
+    const visible = source.testCases.filter((tc) => !tc.isHidden).length;
+    const hidden = source.testCases.filter((tc) => tc.isHidden).length;
+    if (visible < 2 || hidden < 10) {
+      return res.status(400).json({ error: `That question doesn't meet this test's minimum test-case requirements (needs 2 visible, 10 hidden — has ${visible} visible, ${hidden} hidden)` });
+    }
+
+    const {
+      id, questionNumber, createdAt, testCases, folderId, instituteId, createdById,
+      subjectId, unitId, topicId, moduleCodingTestId, questionStatus, ...rest
+    } = source;
+    const clone = await prisma.question.create({
+      data: {
+        ...rest,
+        moduleCodingTestId: test.id,
+        testCases: {
+          create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || null })),
+        },
+      },
+      include: { testCases: true },
+    });
+    res.json(clone);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to add question from bank") });
   }
 });
 
@@ -896,8 +982,11 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (
       if (testCases.filter((tc) => tc.isHidden).length < 10) {
         return res.status(400).json({ error: "Each question needs at least 10 hidden test cases for final evaluation" });
       }
-      await prisma.testCase.deleteMany({ where: { questionId: req.params.id } });
-      data.testCases = { create: testCases.map((tc) => ({ input: tc.input || "", expected: tc.expected || "", isHidden: !!tc.isHidden, explanation: tc.explanation || null })) };
+      // Nested deleteMany+create inside the SAME update() call below, instead of a separate
+      // prisma.testCase.deleteMany() run ahead of it — keeps the replace atomic with the update,
+      // so a failure in the update() call itself can never leave this question's old test cases
+      // wiped with no replacement written (same fix applied to questions.js's PATCH /:id).
+      data.testCases = { deleteMany: {}, create: testCases.map((tc) => ({ input: tc.input || "", expected: tc.expected || "", isHidden: !!tc.isHidden, explanation: tc.explanation || null })) };
     }
     const q = await prisma.question.update({ where: { id: req.params.id }, data, include: { testCases: true } });
     res.json(q);
@@ -907,8 +996,26 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (
   }
 });
 
+// A hard delete here must never destroy the record of a question a student has already been
+// graded on (spec: "Do not permanently delete challenges that already have student submissions
+// ... use archive/soft delete where appropriate"). Question.moduleCodingTestId carries NO
+// FK-restrict back to Question (a Module Coding Test question is only ever removed from its pool
+// by deleting the row outright, there's no join table to restrict on the way TestQuestion does for
+// Formal Tests) and ModuleCodingSubmission.questionId is a plain column with no enforced FK at
+// all — so without this check, deleting a question a student already has graded submissions for
+// would succeed silently: ModuleCodingAttemptQuestion rows (onDelete: Cascade) documenting which
+// questions that attempt was assigned would be wiped, and any ModuleCodingSubmission rows (code,
+// score, verdict) would be left pointing at a questionId that no longer exists — breaking that
+// student's attempt-review screen with no admin-visible error at delete time.
 router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
   try {
+    const [hasSubmissions, hasAttemptSnapshots] = await Promise.all([
+      prisma.moduleCodingSubmission.findFirst({ where: { questionId: req.params.id }, select: { id: true } }),
+      prisma.moduleCodingAttemptQuestion.findFirst({ where: { questionId: req.params.id }, select: { id: true } }),
+    ]);
+    if (hasSubmissions || hasAttemptSnapshots) {
+      return res.status(409).json({ error: "This question already has student attempts/submissions and can't be permanently deleted. Edit it instead, or contact engineering to archive it without losing student records." });
+    }
     await prisma.question.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
