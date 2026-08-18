@@ -18,19 +18,27 @@ function dbRateLimit({ windowMs, max, keyGenerator, message, skipSuccessful = fa
     try {
       key = keyGenerator(req);
       const windowStart = new Date(Date.now() - windowMs);
-      // Cleanup + count + (for the non-skipSuccessful path) the insert all run inside one
-      // transaction — same connection for the whole check, so there's no gap where a count on one
-      // pooled connection could miss a create that just committed on another. Two rapid requests
-      // hitting this concurrently still can't both slip through under the limit: Postgres serializes
-      // writes to the same key's rows, so the second transaction's count always sees the first's
-      // committed insert once it commits.
+      // Count + (for the non-skipSuccessful path) the insert run inside one transaction — same
+      // connection for the whole check, so there's no gap where a count on one pooled connection
+      // could miss a create that just committed on another. Two rapid requests hitting this
+      // concurrently still can't both slip through under the limit: Postgres serializes writes to
+      // the same key's rows, so the second transaction's count always sees the first's committed
+      // insert once it commits.
+      //
+      // Stale-row cleanup (rows older than this window) is NOT in this transaction — it's not
+      // needed for correctness here, since count()'s own `createdAt: { gte: windowStart }` clause
+      // already excludes those rows from the result regardless of whether they've been deleted
+      // yet. Running it synchronously on every single login/forgot-password/reset-password
+      // request added a full extra DB round trip to the hot path of literally every auth request
+      // on this platform for zero behavioral benefit — moved to fire-and-forget below, same
+      // non-blocking pattern this file already uses for the async insert further down.
       const allowed = await prisma.$transaction(async (tx) => {
-        await tx.rateLimitHit.deleteMany({ where: { key, createdAt: { lt: windowStart } } });
         const count = await tx.rateLimitHit.count({ where: { key, createdAt: { gte: windowStart } } });
         if (count >= max) return false;
         if (!skipSuccessful) await tx.rateLimitHit.create({ data: { key } });
         return true;
       });
+      prisma.rateLimitHit.deleteMany({ where: { key, createdAt: { lt: windowStart } } }).catch((err) => console.error("[dbRateLimit] stale-row cleanup failed:", err.message));
       if (!allowed) {
         res.setHeader("Retry-After", String(Math.ceil(windowMs / 1000)));
         return res.status(429).json(message);
