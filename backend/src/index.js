@@ -68,8 +68,15 @@ app.use(compression());
 // token the frontend attaches explicitly, never an ambient cookie, so this is defense in depth
 // rather than the actual access boundary). Requests with no Origin header (curl, server-to-server,
 // mobile) are unaffected — CORS only applies to browser-issued cross-origin requests.
+// EXTRA_ALLOWED_ORIGINS (optional, comma-separated) exists specifically for the codearena.site
+// domain cutover: the old Vercel URL must keep working right up until traffic is fully verified
+// on the new domain (see docs/DEPLOYMENT.md's migration notes) — a single-origin FRONTEND_URL
+// can't express "allow both at once" during that window. Safe to unset once the cutover is done
+// and FRONTEND_URL itself points at the new canonical domain.
+const extraAllowedOrigins = (process.env.EXTRA_ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean);
 const allowedOrigins = [
   process.env.FRONTEND_URL || "https://codearena-app.vercel.app",
+  ...extraAllowedOrigins,
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
