@@ -1014,11 +1014,22 @@ router.get("/password-reset-history", authenticate, requireRole("ADMIN", "STAFF"
   }
 });
 
+// Clerk's own audit-log access is scoped to what a Placement Cell / Document Verification role
+// actually needs to review — not the institute's full action stream (login/logout, question-bank
+// edits, test creation, etc.), which was previously reachable simply because this route granted
+// CLERK the same unfiltered `where` as ADMIN/STAFF once institute-scoped. Kept in sync with
+// ClerkDashboard.jsx's actual surface (Documents + Placement).
+const CLERK_AUDIT_ACTIONS = [
+  AUDIT_ACTIONS.DOCUMENT_UPLOADED, AUDIT_ACTIONS.DOCUMENT_UPDATED, AUDIT_ACTIONS.DOCUMENT_VERIFIED, AUDIT_ACTIONS.DOCUMENT_DELETED,
+  AUDIT_ACTIONS.PLACEMENT_OFFER_VERIFIED, AUDIT_ACTIONS.PLACEMENT_ELIGIBILITY_CHANGED,
+];
+
 // ADMIN/STAFF/CLERK: general-purpose, searchable/filterable/exportable audit trail — the
 // enterprise spec's requirement over and above the narrow password-reset-only view above.
 // Staff/Clerk are scoped to their own institute the same way as everywhere else on this
 // platform; an unscoped platform Admin sees every institute. CLERK included so Clerk can view
-// document-verification history (Document Verification permission review). Same "capped
+// document-verification history (Document Verification permission review) — see
+// CLERK_AUDIT_ACTIONS above for exactly which action types that covers. Same "capped
 // operational log, not a paginated archive" convention as the routes around it, at a slightly
 // higher cap since this view covers every action type.
 router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
@@ -1026,7 +1037,11 @@ router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), a
     const { action, studentId, from, to, format } = req.query;
     const where = {
       ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}),
-      ...(action ? { action } : {}),
+      // A CLERK-supplied ?action= is intersected against the allowlist rather than trusted
+      // outright, so the query param itself can never be used to see outside Clerk's real scope.
+      ...(req.user.role === "CLERK"
+        ? { action: action && CLERK_AUDIT_ACTIONS.includes(action) ? action : { in: CLERK_AUDIT_ACTIONS } }
+        : (action ? { action } : {})),
       ...(studentId ? { studentId } : {}),
       ...(from || to ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
     };
@@ -1161,6 +1176,7 @@ router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "S
       ["Student Performance Report"],
       [],
       ["Name", data.student.name],
+      ["Registration Number (PRN)", data.student.registrationNumber || "—"],
       ["Roll Number", data.student.rollNumber || "—"],
       ["Official Email", data.student.email],
       ["Mobile", data.student.mobile || "—"],

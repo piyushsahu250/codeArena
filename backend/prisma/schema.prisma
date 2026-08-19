@@ -910,6 +910,31 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// Real Export History (spec: "Queued/Processing/Completed/Failed/Expired" per past export), backed
+// by an actual table rather than only the generic AuditLog DATA_EXPORTED entry that already existed.
+// Rows are written synchronously around each export.js /:entity call, since every export on this
+// platform completes within the same request (row-capped at 5,000, no queue/worker infra exists) —
+// this is genuine status/history tracking, not a claim of background/async processing. No FK
+// relation to User, matching AuditLog's denormalized-actor convention above (a plain adminId string,
+// not a relation) — an export job row must survive the requesting user being deleted later.
+model ExportJob {
+  id              String    @id @default(uuid())
+  entity          String
+  format          String
+  filters         Json?
+  status          String // QUEUED | PROCESSING | COMPLETED | FAILED
+  rowCount        Int?
+  errorMessage    String?
+  requestedById   String
+  requestedByName String
+  instituteId     String?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  @@index([requestedById, createdAt])
+  @@index([instituteId, createdAt])
+}
+
 model PasswordHistory {
   id           String   @id @default(uuid())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)

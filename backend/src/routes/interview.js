@@ -2079,7 +2079,7 @@ router.get("/admin/sessions/export", authenticate, requireRole("ADMIN", "STAFF")
     const rows = sessions.map((s) => {
       const r = toReportRow(s);
       return {
-        "Student Name": r.studentName, "Roll Number": r.rollNumber || "", "Registration Number": r.registrationNumber || "",
+        "Student Name": r.studentName, "Roll Number": r.rollNumber || "", "Registration Number (PRN)": r.registrationNumber || "",
         "Institute": r.institute || "", "Academic Group": r.groupLabel || "", "Batch": r.batchYear || "", "Department": r.department || "",
         "Interview Type": r.type, "Company": r.company || "", "Date": r.date ? new Date(r.date).toLocaleString() : "",
         "Score (%)": r.score ?? "", "Status": r.status,

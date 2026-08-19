@@ -951,7 +951,7 @@ router.get("/admin/export", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
       Institute: e.examination.institute.name,
       "Student Name": e.student.name,
       "Roll Number": e.student.rollNumber || "",
-      "Registration Number": e.student.registrationNumber || "",
+      "Registration Number (PRN)": e.student.registrationNumber || "",
       Department: e.student.academicGroup?.department?.name || "",
       Batch: e.student.academicGroup?.batch || "",
       Division: e.student.academicGroup?.section || "",

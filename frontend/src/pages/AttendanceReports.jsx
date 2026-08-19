@@ -129,7 +129,7 @@ export default function AttendanceReports() {
 
   const columns = [
     ...(isPlatformAdmin ? ["Institute"] : []),
-    "Roll Number", "Student Name", "Registration Number", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date",
+    "Roll Number", "Student Name", "Registration Number (PRN)", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date",
   ];
 
   const filteredRows = useMemo(() => {
@@ -137,7 +137,7 @@ export default function AttendanceReports() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) =>
       (r["Roll Number"] || "").toLowerCase().includes(q) ||
-      (r["Registration Number"] || "").toLowerCase().includes(q) ||
+      (r["Registration Number (PRN)"] || "").toLowerCase().includes(q) ||
       (r["Student Name"] || "").toLowerCase().includes(q)
     );
   }, [rows, search]);
@@ -286,7 +286,7 @@ export default function AttendanceReports() {
                     <div style={{ color: "var(--ink-dim)", marginTop: 4 }}>{r.Subject} · Lecture {r["Lecture #"]} · {r.Date}</div>
                     {isPlatformAdmin && <div style={{ color: "var(--ink-dim)", marginTop: 2, fontWeight: 600 }}>{r.Institute}</div>}
                     <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>{r.Department} · {r.Section}</div>
-                    <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>PRN: {r["Registration Number"]} · Faculty: {r.Faculty}</div>
+                    <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>PRN: {r["Registration Number (PRN)"]} · Faculty: {r.Faculty}</div>
                   </div>
                 ))}
               </div>
@@ -305,7 +305,7 @@ export default function AttendanceReports() {
                     {filteredRows.map((r, i) => (
                       <tr key={i} style={{ borderBottom: "1px solid var(--line)" }}>
                         {columns.map((k) => (
-                          <td key={k} style={{ padding: "6px 8px" }} className={k === "Roll Number" || k === "Registration Number" ? "mono" : undefined}>{r[k]}</td>
+                          <td key={k} style={{ padding: "6px 8px" }} className={k === "Roll Number" || k === "Registration Number (PRN)" ? "mono" : undefined}>{r[k]}</td>
                         ))}
                         <td style={{ padding: "6px 8px", fontWeight: 700, color: STATUS_COLORS[r.Status] || "var(--ink)" }}>{r.Status}</td>
                       </tr>

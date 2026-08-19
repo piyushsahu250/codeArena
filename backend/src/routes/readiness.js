@@ -643,7 +643,7 @@ async function loadFilteredReports(req, academicGroupOverride) {
     where: { assessment: assessmentWhere, student: studentWhere },
     include: {
       assessment: { select: { subjectId: true, assessmentMode: true, subject: { select: { name: true } } } },
-      student: { select: { id: true, name: true, registrationNumber: true, program: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
+      student: { select: { id: true, name: true, registrationNumber: true, rollNumber: true, program: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } } } },
     },
     // Same hard ceiling resultManagement.js's/attendance.js's exports use on an otherwise-unbounded
     // filtered load — this function feeds both the dashboard and the Excel export, and neither had
@@ -710,7 +710,7 @@ async function computeReadinessAnalytics(req, academicGroupOverride) {
 
   const atRiskStudents = reports
     .filter((r) => r.readinessLevel === "NEEDS_IMPROVEMENT" || r.readinessLevel === "FOUNDATION_REQUIRED")
-    .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
+    .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, rollNumber: r.student.rollNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
     .sort((a, b) => a.overallScore - b.overallScore)
     .slice(0, 50);
 
@@ -718,7 +718,7 @@ async function computeReadinessAnalytics(req, academicGroupOverride) {
   // 50-row cap for the same reason (a runaway/unfiltered request shouldn't return an unbounded list).
   const topPerformers = reports
     .filter((r) => r.readinessLevel === "JOB_READY" || r.readinessLevel === "EXCELLENTLY_READY")
-    .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
+    .map((r) => ({ studentId: r.studentId, name: r.student.name, registrationNumber: r.student.registrationNumber, rollNumber: r.student.rollNumber, subject: r.assessment.subject.name, overallScore: r.overallScore, readinessLevel: r.readinessLevel }))
     .sort((a, b) => b.overallScore - a.overallScore)
     .slice(0, 50);
 
@@ -810,14 +810,14 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
 
     const atRiskRows = [
-      ["Name", "Registration Number", "Subject", "Overall Score", "Readiness Level"],
-      ...analytics.atRiskStudents.map((s) => [s.name, s.registrationNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
+      ["Name", "Registration Number (PRN)", "Roll Number", "Subject", "Overall Score", "Readiness Level"],
+      ...analytics.atRiskStudents.map((s) => [s.name, s.registrationNumber || "", s.rollNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
     ];
     const atRiskSheet = XLSX.utils.aoa_to_sheet(atRiskRows);
 
     const topPerformerRows = [
-      ["Name", "Registration Number", "Subject", "Overall Score", "Readiness Level"],
-      ...analytics.topPerformers.map((s) => [s.name, s.registrationNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
+      ["Name", "Registration Number (PRN)", "Roll Number", "Subject", "Overall Score", "Readiness Level"],
+      ...analytics.topPerformers.map((s) => [s.name, s.registrationNumber || "", s.rollNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
     ];
     const topPerformerSheet = XLSX.utils.aoa_to_sheet(topPerformerRows);
 

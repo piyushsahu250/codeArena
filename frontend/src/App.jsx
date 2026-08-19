@@ -321,6 +321,7 @@ export default function App() {
           <Route path="/clerk/companies" element={<Protected roles={["CLERK"]}><CompanyMaster /></Protected>} />
           <Route path="/clerk/results" element={<Protected roles={["CLERK"]}><ResultManagement /></Protected>} />
           <Route path="/clerk/audit-log" element={<Protected roles={["CLERK"]}><AuditLogPage basePath="/clerk" /></Protected>} />
+          <Route path="/clerk/exports" element={<Protected roles={["CLERK"]}><ExportCenter basePath="/clerk" /></Protected>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

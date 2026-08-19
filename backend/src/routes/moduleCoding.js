@@ -1141,7 +1141,7 @@ router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN"), attach
       take: 5000,
     });
     const rows = attempts.map((a) => ({
-      Student: a.student.name, Email: a.student.email, RollNumber: a.student.rollNumber || "", RegistrationNumber: a.student.registrationNumber || "",
+      Student: a.student.name, Email: a.student.email, "Roll Number": a.student.rollNumber || "", "Registration Number (PRN)": a.student.registrationNumber || "",
       Attempt: a.attemptNumber, Status: a.status, Score: a.score, Passed: a.passed ? "Yes" : "No",
       Violations: a.violationCount, StartedAt: a.startedAt.toISOString(), SubmittedAt: a.submittedAt ? a.submittedAt.toISOString() : "",
     }));

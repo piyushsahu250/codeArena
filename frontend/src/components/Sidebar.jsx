@@ -43,6 +43,7 @@ const MENU = {
       { label: "Company Master", to: "/clerk/companies", icon: Building },
       { label: "Results", to: "/clerk/results", icon: ClipboardList },
       { label: "Audit Log", to: "/clerk/audit-log", icon: History },
+      { label: "Export Center", to: "/clerk/exports", icon: Download },
     ] },
     { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
   ],

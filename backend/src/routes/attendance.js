@@ -1009,7 +1009,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
         "Lecture Type": LECTURE_TYPE_LABELS[plan.lectureType] || plan.lectureType,
         Test: r.session.test?.title || "",
         "Roll Number": r.student.rollNumber || "",
-        "Registration Number": r.student.registrationNumber || "",
+        "Registration Number (PRN)": r.student.registrationNumber || "",
         "Student Name": r.student.name,
         Status: r.status,
       };

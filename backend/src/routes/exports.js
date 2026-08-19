@@ -5,6 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { sendExport } = require("../utils/exportFile");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { questionVisibilityWhere } = require("../utils/questionVisibility");
+const { dedupe } = require("../utils/requestDedup");
 
 const router = express.Router();
 
@@ -12,6 +13,27 @@ const router = express.Router();
 // convention as this platform's other unbounded list views. Anyone needing the full untruncated
 // dataset has the on-demand full-database backup (backend/src/routes/backup.js) for that.
 const MAX_ROWS = 5000;
+
+// Same UTC-midnight normalization attendance.js's /reports uses, so a date-range filter here never
+// drifts a day depending on the requester's local timezone offset. Returns null for anything
+// unparseable, matching that file's convention (a bad date silently doesn't filter, rather than 500ing).
+function normalizeDate(input) {
+  if (!input) return null;
+  const match = String(input).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const d = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function dateRangeWhere(field, query) {
+  const { dateFrom, dateTo } = query || {};
+  if (!dateFrom && !dateTo) return {};
+  const range = {};
+  const from = normalizeDate(dateFrom);
+  const to = normalizeDate(dateTo);
+  if (from) range.gte = from;
+  if (to) range.lte = to;
+  return Object.keys(range).length ? { [field]: range } : {};
+}
 
 // Each builder takes the requester's instituteId (null = platform-level Super Admin, sees every
 // institute — same convention as attachRequesterInstitute everywhere else) and returns an array
@@ -55,7 +77,7 @@ const ENTITIES = {
       const pendingCount = studentOffers.filter((o) => o.verificationStatus === "PENDING").length;
       const highest = studentOffers.reduce((max, o) => (!max || o.offeredPackage > max.offeredPackage ? o : max), null);
       return {
-        "Roll Number": u.rollNumber || "", Name: u.name, "Registration Number": u.registrationNumber || "", Email: u.email,
+        "Roll Number": u.rollNumber || "", Name: u.name, "Registration Number (PRN)": u.registrationNumber || "", Email: u.email,
         Department: u.academicGroup?.department?.name || u.department || "", Mobile: u.mobile || "", Program: u.program || "",
         "Batch Year": u.academicGroup?.batch || u.batchYear || "", Section: u.academicGroup?.section || u.section || "",
         Institute: u.institute?.name || "",
@@ -90,23 +112,23 @@ const ENTITIES = {
     }));
   },
 
-  results: async (instituteId) => {
+  results: async (instituteId, query = {}) => {
     const rows = await prisma.testAttempt.findMany({
-      where: instituteId ? { student: { instituteId } } : {},
+      where: { ...(instituteId ? { student: { instituteId } } : {}), ...dateRangeWhere("startedAt", query) },
       take: MAX_ROWS,
       orderBy: { startedAt: "desc" },
       include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, test: { select: { title: true } } },
     });
     return rows.map((a) => ({
-      "Roll Number": a.student.rollNumber || "", Student: a.student.name, "Registration Number": a.student.registrationNumber || "", Email: a.student.email,
+      "Roll Number": a.student.rollNumber || "", Student: a.student.name, "Registration Number (PRN)": a.student.registrationNumber || "", Email: a.student.email,
       Test: a.test.title, Score: a.totalScore, Status: a.status, "Tab Switches": a.tabSwitchCount,
       "Started At": a.startedAt.toISOString(), "Submitted At": a.submittedAt ? a.submittedAt.toISOString() : "",
     }));
   },
 
-  reports: async (instituteId) => {
+  reports: async (instituteId, query = {}) => {
     const rows = await prisma.interviewReport.findMany({
-      where: instituteId ? { student: { instituteId } } : {},
+      where: { ...(instituteId ? { student: { instituteId } } : {}), ...dateRangeWhere("createdAt", query) },
       take: MAX_ROWS,
       orderBy: { createdAt: "desc" },
       include: {
@@ -121,15 +143,15 @@ const ENTITIES = {
     }));
   },
 
-  certificates: async (instituteId) => {
+  certificates: async (instituteId, query = {}) => {
     const rows = await prisma.certificate.findMany({
-      where: instituteId ? { student: { instituteId } } : {},
+      where: { ...(instituteId ? { student: { instituteId } } : {}), ...dateRangeWhere("issuedAt", query) },
       take: MAX_ROWS,
       orderBy: { issuedAt: "desc" },
-      include: { student: { select: { name: true, email: true } } },
+      include: { student: { select: { name: true, email: true, registrationNumber: true } } },
     });
     return rows.map((c) => ({
-      Student: c.student.name, Email: c.student.email, Type: c.type, "Program/Title": c.programName || c.title,
+      Student: c.student.name, "Registration Number (PRN)": c.student.registrationNumber || "", Email: c.student.email, Type: c.type, "Program/Title": c.programName || c.title,
       "Certificate Code": c.certificateCode, Status: c.status, "Issued At": c.issuedAt.toISOString(),
     }));
   },
@@ -174,7 +196,7 @@ const ENTITIES = {
       resumes.map((r) => [r.studentId, Array.isArray(r.skills) ? r.skills.map((s) => s.name).filter(Boolean).join(", ") : ""])
     );
     return members.map((m) => ({
-      "Roll Number": m.student.rollNumber || "", Name: m.student.name, "Registration Number": m.student.registrationNumber || "",
+      "Roll Number": m.student.rollNumber || "", Name: m.student.name, "Registration Number (PRN)": m.student.registrationNumber || "",
       Email: m.student.email, Department: m.student.academicGroup?.department?.name || "", Batch: m.student.academicGroup?.batch || "",
       "Placement Status": placementByStudent.get(m.studentId) === "INTERESTED" ? "Registered"
         : placementByStudent.get(m.studentId) === "NOT_INTERESTED" ? "Not Registered" : "Not Set",
@@ -196,12 +218,38 @@ router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), att
     return res.status(403).json({ error: "Insufficient permissions" });
   }
 
+  const format = req.query.format || "csv";
+  // Coalesces the exact same user re-requesting the exact same export (double-click, a retried
+  // request) into one in-flight run instead of two — the second caller gets the first's result
+  // rather than kicking off its own duplicate query. Keyed on the actual filters, not just the
+  // entity, so two DIFFERENT filtered exports by the same user never collide.
+  const dedupeKey = `export:${req.user.id}:${req.params.entity}:${JSON.stringify(req.query)}`;
+
+  const job = await prisma.exportJob.create({
+    data: {
+      entity: req.params.entity, format, filters: req.query, status: "PROCESSING",
+      requestedById: req.user.id, requestedByName: req.user.name, instituteId: req.requesterInstituteId,
+    },
+  }).catch((err) => { console.error("[exports] failed to create ExportJob record:", err.message); return null; });
+
   try {
-    const rows = await builder(req.requesterInstituteId, req.query, req);
+    const rows = await dedupe(dedupeKey, () => builder(req.requesterInstituteId, req.query, req));
+
+    if (job) {
+      await prisma.exportJob.update({
+        where: { id: job.id }, data: { status: "COMPLETED", rowCount: rows.length, completedAt: new Date() },
+      }).catch(() => {});
+    }
     await logAudit({
       req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-      instituteId: req.requesterInstituteId, details: { entity: req.params.entity, format: req.query.format || "csv", rowCount: rows.length },
+      instituteId: req.requesterInstituteId, details: { entity: req.params.entity, format, filters: req.query, rowCount: rows.length },
     });
+
+    // A filtered export with zero matches would otherwise silently download a confusing
+    // header-only (or fully empty) file — 204 lets the frontend distinguish "nothing matched"
+    // from "here's your file" without inspecting file content, even under responseType: "blob".
+    if (rows.length === 0) return res.status(204).end();
+
     sendExport(res, {
       rows,
       filenameBase: `codearena-${req.params.entity}-${new Date().toISOString().slice(0, 10)}`,
@@ -209,7 +257,38 @@ router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), att
     });
   } catch (err) {
     console.error(err);
+    if (job) {
+      await prisma.exportJob.update({
+        where: { id: job.id }, data: { status: "FAILED", errorMessage: String(err.message || err).slice(0, 500), completedAt: new Date() },
+      }).catch(() => {});
+    }
     res.status(500).json({ error: "Export failed" });
+  }
+});
+
+// Export History — the requester's own past export jobs (Admin/institute-scoped Admin also sees
+// their institute's other Staff/Clerk exports, same convention as the audit-log viewer; a
+// non-institute-scoped Staff/Clerk only ever sees their own). Paginated like every other list
+// route on this platform — this can grow without bound otherwise.
+router.get("/history/mine", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 20));
+    const where = req.user.role === "ADMIN" && req.requesterInstituteId
+      ? { instituteId: req.requesterInstituteId }
+      : req.user.role === "ADMIN" && !req.requesterInstituteId
+        ? {}
+        : { requestedById: req.user.id };
+    const [rows, total] = await Promise.all([
+      prisma.exportJob.findMany({
+        where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize,
+      }),
+      prisma.exportJob.count({ where }),
+    ]);
+    res.json({ rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load export history" });
   }
 });
 
