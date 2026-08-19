@@ -11,6 +11,8 @@ services:
         sync: false # set this manually to your Postgres connection string (e.g. from Neon)
       - key: PORT
         value: 4000
+      - key: JUDGE_DROP_PRIVILEGES
+        value: "true" # student-submitted code must never execute as root — see backend/src/utils/judge.js's DROP_PRIVILEGES comment. The Dockerfile already builds the dedicated non-root `sandbox` uid/gid; this was the missing switch to actually use it.
       - key: ANTHROPIC_API_KEY
         sync: false # set manually to enable any AI feature (question generation, hints, resume review, interview feedback)
       - key: ENABLE_AI_AUTO_REFRESH
