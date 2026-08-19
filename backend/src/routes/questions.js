@@ -11,6 +11,9 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const { validateQuestionForVerification } = require("../utils/questionValidation");
 const { canStaffUseSubject, resolveSubjectUnitTopic } = require("../utils/subjectAccess");
+const { judgeSubmission } = require("../utils/judge");
+const { runQueued } = require("../utils/queue");
+const { cached } = require("../utils/cache");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -31,7 +34,7 @@ const TEMPLATE_HEADERS = [
 // `||` (e.g. "5->25||3->9||10->100") — documented in the template's own header note + sample row.
 // Constraints/Input Format/Output Format map onto Question.constraints/inputFormat/outputFormat.
 const CODING_TEMPLATE_HEADERS = [
-  "Question Title", "Subject", "Unit", "Topic", "Problem Statement", "Difficulty", "Programming Languages",
+  "Question Title", "Subject", "Unit", "Topic", "Subtopic", "Problem Statement", "Difficulty", "Programming Languages",
   "Time Limit (seconds)", "Memory Limit (MB)", "Marks", "Constraints", "Input Format", "Output Format",
   "Sample Input 1", "Sample Output 1", "Sample Explanation 1",
   "Sample Input 2", "Sample Output 2", "Sample Explanation 2",
@@ -46,6 +49,7 @@ const CODING_IMPORT_HEADER_ALIASES = {
   subject: ["subject", "subject course", "subject/course"],
   unit: ["unit"],
   topic: ["topic"],
+  subtopic: ["subtopic"],
   description: ["problem statement", "question text", "description"],
   difficulty: ["difficulty", "difficulty level"],
   languages: ["programming languages", "languages"],
@@ -241,13 +245,142 @@ router.post("/preview-starter-code", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
+// ADMIN/STAFF: run a question's reference solution through the judge against its own test cases,
+// before the question is ever shown to a student. Same judgeSubmission()+runQueued() pipeline a
+// real student submission goes through — the only way to actually confirm every expected output is
+// correct (a structural check like questionValidation.js's can't catch a wrong expected value, an
+// infinite loop, or a test case that doesn't match the function signature). One language at a time,
+// mirroring how starter code is authored/previewed per-language.
+router.post("/validate-test-cases", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const { language, code, testCases, evaluationType, functionSignature, sqlSchema, timeLimitMs, memoryLimitKb } = req.body;
+    if (!language || !code || !code.trim()) {
+      return res.status(400).json({ error: "A reference solution is required to validate" });
+    }
+    const cases = Array.isArray(testCases) ? testCases : [];
+    if (cases.length === 0) return res.status(400).json({ error: "No test cases to validate against" });
+
+    const result = await runQueued(() =>
+      judgeSubmission({
+        language, code, testCases: cases,
+        timeLimitMs: timeLimitMs || 2000,
+        memoryLimitKb: memoryLimitKb || undefined,
+        evaluationType, functionSignature, sqlSchema,
+      })
+    );
+
+    res.json({
+      passedCases: result.passedCases,
+      totalCases: result.totalCases,
+      verdict: result.verdict,
+      allPassed: result.passedCases === result.totalCases,
+      errorSummary: result.errorSummary,
+      details: result.details,
+    });
+  } catch (err) {
+    if (err.queueBusy) {
+      return res.status(503).json({ error: "Code execution is currently busy. Please try again shortly.", queueBusy: true });
+    }
+    res.status(400).json({ error: safeErrorMessage(err, "Could not validate test cases") });
+  }
+});
+
+// Institute-wide (or Staff-own-content) question bank health: counts by status/type/difficulty,
+// plus real attempt-based stats — attempts, avg score, pass rate, avg runtime — computed with
+// Prisma groupBy/aggregate directly against Submission rows, never by loading and summing rows in
+// JS. Bounded to the 3000 most-recently-created CODING/SQL questions in scope for the attempt-stats
+// half, the same cap other institute-wide analytics routes in this codebase use (see
+// readiness.js/resultManagement.js "bound unbounded analytics query" fixes) so a Super Admin
+// viewing a huge global bank never triggers an unbounded Submission scan. Submission rows only
+// come from Formal Test coding questions (see Submission schema comment) — Practice/Module/
+// Interview coding runs live in separate, unrelated tables, so this reflects formal-assessment
+// performance specifically, not every place a question has ever been attempted.
+async function computeQuestionAnalytics(req) {
+  const where = questionVisibilityWhere(req);
+
+  const [byStatus, byType, byDifficulty, total] = await Promise.all([
+    prisma.question.groupBy({ by: ["questionStatus"], where, _count: true }),
+    prisma.question.groupBy({ by: ["questionType"], where, _count: true }),
+    prisma.question.groupBy({ by: ["difficulty"], where, _count: true }),
+    prisma.question.count({ where }),
+  ]);
+
+  const scopedQuestions = await prisma.question.findMany({
+    where: { ...where, questionType: { in: ["CODING", "SQL"] } },
+    select: { id: true, title: true, description: true, subject: true, topic: true },
+    take: 3000,
+    orderBy: { createdAt: "desc" },
+  });
+  const idToQuestion = new Map(scopedQuestions.map((q) => [q.id, q]));
+  const ids = scopedQuestions.map((q) => q.id);
+
+  const perQuestion = ids.length > 0
+    ? await prisma.submission.groupBy({
+        by: ["questionId"],
+        where: { questionId: { in: ids } },
+        _count: true,
+        _avg: { score: true, timeMs: true },
+        _sum: { passedCases: true, totalCases: true },
+      })
+    : [];
+
+  const withStats = perQuestion.map((p) => {
+    const q = idToQuestion.get(p.questionId);
+    const totalCases = p._sum.totalCases || 0;
+    return {
+      questionId: p.questionId,
+      title: q?.title || (q?.description ? q.description.slice(0, 60) : "Untitled"),
+      subject: q?.subject || null,
+      topic: q?.topic || null,
+      attempts: p._count,
+      avgScore: Math.round((p._avg.score || 0) * 10) / 10,
+      passRate: totalCases > 0 ? Math.round(((p._sum.passedCases || 0) / totalCases) * 1000) / 10 : null,
+      avgTimeMs: p._avg.timeMs != null ? Math.round(p._avg.timeMs) : null,
+    };
+  });
+
+  const totalAttempts = withStats.reduce((s, q) => s + q.attempts, 0);
+  const avgScoreOverall = withStats.length > 0 ? withStats.reduce((s, q) => s + q.avgScore, 0) / withStats.length : 0;
+
+  const mostDifficult = withStats.filter((q) => q.attempts >= 3 && q.passRate !== null)
+    .sort((a, b) => a.passRate - b.passRate).slice(0, 10);
+  const mostAttempted = [...withStats].sort((a, b) => b.attempts - a.attempts).slice(0, 10);
+
+  return {
+    totals: {
+      total,
+      byStatus: Object.fromEntries(byStatus.map((r) => [r.questionStatus, r._count])),
+      byType: Object.fromEntries(byType.map((r) => [r.questionType, r._count])),
+      byDifficulty: Object.fromEntries(byDifficulty.map((r) => [r.difficulty, r._count])),
+    },
+    attempts: {
+      questionsAttempted: withStats.length,
+      totalAttempts,
+      avgScore: Math.round(avgScoreOverall * 10) / 10,
+    },
+    mostDifficult,
+    mostAttempted,
+  };
+}
+
+// ADMIN/STAFF: see the computeQuestionAnalytics() comment above for scope and methodology.
+router.get("/analytics/summary", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteKey = req.requesterInstituteId || "all";
+    const data = await cached(`questionAnalytics:${instituteKey}:${req.user.role}:${req.user.id}`, 60 * 1000, () => computeQuestionAnalytics(req));
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: safeErrorMessage(err, "Failed to load question analytics") });
+  }
+});
+
 // Create a question (any type)
 router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       title, description, subject, topic, questionType, difficulty, points, explanation,
       timeLimitMs, starterCode, testCases, options, correctAnswer, folderId,
-      evaluationType, functionSignature, starterCodeByLanguage, memoryLimitKb, tags, sqlSchema,
+      evaluationType, functionSignature, starterCodeByLanguage, referenceSolution, memoryLimitKb, tags, sqlSchema,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       allowDuplicate, subtopic, btlLevel, skillTested, questionStatus, aiGenerated,
@@ -349,6 +482,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
       data.evaluationType = resolved.evaluationType;
       data.functionSignature = resolved.functionSignature;
       if (resolved.starterCodeByLanguage) data.starterCodeByLanguage = resolved.starterCodeByLanguage;
+      if (referenceSolution && typeof referenceSolution === "object") data.referenceSolution = referenceSolution;
       data.testCases = {
         create: cases.map((tc) => ({
           input: tc.input,
@@ -769,7 +903,7 @@ router.post("/bulk-status", authenticate, requireRole("ADMIN", "STAFF"), attachR
   }
 
   if (finalized.length > 0) {
-    await prisma.question.updateMany({ where: { id: { in: finalized.map((q) => q.id) } }, data: { questionStatus } });
+    await prisma.question.updateMany({ where: { id: { in: finalized.map((q) => q.id) } }, data: { questionStatus, updatedById: req.user.id } });
   }
   await logAudit({
     req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
@@ -894,7 +1028,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
     headers = CODING_TEMPLATE_HEADERS;
     sampleRows = [
       [
-        "Sum of Two Numbers", "Java", "Unit 1", "Math", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
+        "Sum of Two Numbers", "Java", "Unit 1", "Math", "Addition", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
         2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
         "2 3", "5", "2 + 3 = 5",
         "10 20", "30", "",
@@ -1424,6 +1558,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
           data: {
             title,
             topic: field(row, "topic") || null,
+            subtopic: field(row, "subtopic") || null,
             subjectId: resolvedSubject.subjectId,
             unitId: resolvedSubject.unitId,
             topicId: resolvedSubject.topicId,
@@ -1543,7 +1678,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     const {
       title, description, subject, topic, questionType, difficulty, points, explanation,
       timeLimitMs, starterCode, testCases, options, correctAnswer, folderId,
-      evaluationType, functionSignature, starterCodeByLanguage, memoryLimitKb, tags, sqlSchema,
+      evaluationType, functionSignature, starterCodeByLanguage, referenceSolution, memoryLimitKb, tags, sqlSchema,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       subtopic, btlLevel, skillTested, questionStatus,
@@ -1575,6 +1710,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     const type = QUESTION_TYPES.includes(questionType) ? questionType : existing.questionType;
 
     const data = {
+      updatedById: req.user.id,
       title: title ?? existing.title,
       description: description ?? existing.description,
       subject: subject ?? existing.subject,
@@ -1622,6 +1758,9 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
       data.evaluationType = resolved.evaluationType;
       data.functionSignature = resolved.functionSignature;
       if (resolved.starterCodeByLanguage) data.starterCodeByLanguage = resolved.starterCodeByLanguage;
+      if (referenceSolution !== undefined) {
+        data.referenceSolution = referenceSolution && typeof referenceSolution === "object" ? referenceSolution : null;
+      }
       data.sqlSchema = null; // clear a stale value left over if this question used to be type SQL
 
       if (testCases) {

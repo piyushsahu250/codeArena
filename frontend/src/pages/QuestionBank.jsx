@@ -12,6 +12,15 @@ import { useAuth } from "../context/AuthContext";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
+function Stat({ label, value }) {
+  return (
+    <div>
+      <div className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>{label}</div>
+    </div>
+  );
+}
+
 // activeFolder: null = root folder-picker view; { id: "__all__", name: "All Questions" };
 // { id: "__none__", name: "Uncategorized" }; or a real folder row from GET /questions/folders
 // (id, name, category, description, parentId, _count: { questions, children }).
@@ -82,6 +91,19 @@ export default function QuestionBank() {
   const [clearingFolder, setClearingFolder] = useState(false);
   const [duplicateAction, setDuplicateAction] = useState("skip");
   const [duplicatingId, setDuplicatingId] = useState(null);
+
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  function toggleAnalytics() {
+    const next = !showAnalytics;
+    setShowAnalytics(next);
+    if (next && !analytics) {
+      setAnalyticsLoading(true);
+      api.get("/questions/analytics/summary").then((res) => setAnalytics(res.data)).finally(() => setAnalyticsLoading(false));
+    }
+  }
 
   function loadFolders() {
     api.get("/questions/folders").then((res) => setFolders(res.data));
@@ -607,9 +629,44 @@ export default function QuestionBank() {
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <Link to="/staff" className="btn btn-ghost">← Staff control room</Link>
+            <button className="btn btn-ghost" onClick={toggleAnalytics}>{showAnalytics ? "Hide analytics" : "Analytics"}</button>
             <Link to="/staff/questions/new" className="btn btn-primary">+ Add question</Link>
           </div>
         </div>
+
+        {showAnalytics && (
+          <div style={{ marginTop: 16, padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius)" }}>
+            {analyticsLoading && <p className="mono" style={{ fontSize: 13, margin: 0 }}>Loading analytics…</p>}
+            {!analyticsLoading && analytics && (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+                  <Stat label="Total questions" value={analytics.totals.total} />
+                  <Stat label="Published" value={analytics.totals.byStatus.PUBLISHED || 0} />
+                  <Stat label="Draft / Review" value={(analytics.totals.byStatus.DRAFT || 0) + (analytics.totals.byStatus.UNDER_REVIEW || 0)} />
+                  <Stat label="Questions attempted" value={analytics.attempts.questionsAttempted} />
+                  <Stat label="Total attempts" value={analytics.attempts.totalAttempts} />
+                  <Stat label="Avg score" value={analytics.attempts.avgScore} />
+                </div>
+                {analytics.mostDifficult.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Most difficult (lowest pass rate, 3+ attempts)</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+                      {analytics.mostDifficult.map((q) => (
+                        <div key={q.questionId} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <span>{q.title}{q.subject ? ` — ${q.subject}` : ""}</span>
+                          <span className="mono" style={{ color: "var(--rust)" }}>{q.passRate}% pass · {q.attempts} attempts</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {!analyticsLoading && analytics && analytics.attempts.totalAttempts === 0 && (
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "8px 0 0" }}>No Formal Test submissions recorded yet for questions in scope.</p>
+            )}
+          </div>
+        )}
 
         {!isBrowsing && (
           <div style={{ display: "flex", gap: 8, marginTop: 20 }}>

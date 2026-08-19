@@ -327,6 +327,42 @@ router.post("/daily/:id/submit", authenticate, requireRole("STUDENT"), runLimite
   }
 });
 
+// STUDENT: autosave in-progress code for today's Daily Challenge — same CodeDraft pattern already
+// used by Practice Coding (learning.js) and Mock Interview coding (interview.js), keyed by
+// challenge id so a refresh, reconnect, or accidental tab close restores in-progress work instead
+// of resetting to starter code. No "is this challenge still current" gate here (unlike run/submit)
+// — a draft written just before the challenge rolls over is harmless to keep, and gating would only
+// risk losing a student's last few keystrokes right at the deadline.
+router.post("/daily/:id/autosave", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const { language, code } = req.body;
+    if (typeof code !== "string" || !language) return res.status(400).json({ error: "language and code are required" });
+    await prisma.codeDraft.upsert({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "DAILY_CHALLENGE", contextId: req.params.id } },
+      update: { code, language },
+      create: { studentId: req.user.id, contextType: "DAILY_CHALLENGE", contextId: req.params.id, code, language },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Autosave failed" });
+  }
+});
+
+// STUDENT: fetch the saved draft (if any), so reopening today's Daily Challenge restores
+// in-progress code instead of resetting to the question's starter code.
+router.get("/daily/:id/draft", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const draft = await prisma.codeDraft.findUnique({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "DAILY_CHALLENGE", contextId: req.params.id } },
+    });
+    res.json(draft ? { code: draft.code, language: draft.language } : null);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load draft" });
+  }
+});
+
 // =============================== STUDENT: Weekly Challenge ===============================
 
 router.get("/weekly/current", authenticate, requireRole("STUDENT"), async (req, res) => {
@@ -408,6 +444,36 @@ router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), runLimit
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Submission failed" });
+  }
+});
+
+// STUDENT: autosave/draft for this week's Weekly Challenge — same CodeDraft pattern as the Daily
+// Challenge routes above.
+router.post("/weekly/:id/autosave", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const { language, code } = req.body;
+    if (typeof code !== "string" || !language) return res.status(400).json({ error: "language and code are required" });
+    await prisma.codeDraft.upsert({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "WEEKLY_CHALLENGE", contextId: req.params.id } },
+      update: { code, language },
+      create: { studentId: req.user.id, contextType: "WEEKLY_CHALLENGE", contextId: req.params.id, code, language },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Autosave failed" });
+  }
+});
+
+router.get("/weekly/:id/draft", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const draft = await prisma.codeDraft.findUnique({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "WEEKLY_CHALLENGE", contextId: req.params.id } },
+    });
+    res.json(draft ? { code: draft.code, language: draft.language } : null);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load draft" });
   }
 });
 

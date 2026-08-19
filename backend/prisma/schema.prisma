@@ -199,7 +199,8 @@ model User {
   sharedTests  TestShare[]    @relation("TestSharedWith") // tests explicitly shared with this staff member by someone else
   attempts     TestAttempt[]
   submissions  Submission[]
-  createdQuestions Question[]
+  createdQuestions Question[] @relation("QuestionCreatedBy")
+  updatedQuestions Question[] @relation("QuestionUpdatedBy")
   createdQuestionFolders QuestionFolder[]
   createdSubjects  Subject[]
   subjectAssignments StaffSubjectAssignment[]
@@ -602,12 +603,22 @@ model Question {
   points         Int          @default(10) // marks
   explanation    String?
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt // bumped automatically on every field change, including via bulk-status/bulk-import
 
   // CODING-only fields
   timeLimitMs   Int     @default(2000)
   memoryLimitKb Int?    // null = use the judge's global default (JUDGE_MEMORY_LIMIT_KB)
   starterCode   String? // legacy single-language fallback, kept for old questions/callers
   starterCodeByLanguage Json? // { java, python, cpp, c, javascript } — preferred when present
+  // Admin/Staff-authored working solution(s), keyed by language same shape as
+  // starterCodeByLanguage — { java, python, cpp, c, javascript }. Used only for the "Validate Test
+  // Cases" authoring flow (runs this through the judge against every test case to catch a wrong
+  // expected output, a timeout, or a malformed case before the question ever reaches students) and
+  // as an internal quality-control reference. Every student-facing sanitizeQuestion()-style
+  // function across moduleCoding.js/challenges.js/learning.js/interview.js/readiness.js is an
+  // explicit-field allowlist that never lists this key, so it can never leak to a student payload
+  // by omission the way a blocklist could.
+  referenceSolution Json?
   tags          Json?   // string[], e.g. ["Arrays","Dynamic Programming"]
 
   // "Professional structure" fields (LeetCode/HackerRank-style problem statement) — all optional
@@ -678,8 +689,14 @@ model Question {
   instituteId String?
   folder      QuestionFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   folderId    String?
-  createdBy   User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User? @relation("QuestionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdById String? // nullable — questions created before this field existed have no recorded author
+  // Who last edited this question, distinct from createdBy — set on every PATCH (single edit,
+  // bulk-status transition, bulk-import overwrite), never on creation. Both this and createdBy
+  // above now need an explicit relation name — Prisma requires disambiguating names as soon as a
+  // second FK to the same model (User) exists on Question.
+  updatedBy   User? @relation("QuestionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById String?
 
   @@index([subject])
   @@index([topic])
@@ -688,6 +705,7 @@ model Question {
   @@index([instituteId])
   @@index([folderId])
   @@index([createdById])
+  @@index([updatedById])
   @@index([btlLevel])
   @@index([questionStatus])
   @@index([subjectId])

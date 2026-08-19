@@ -9,6 +9,8 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import CodeResultBlock from "../components/CodeResultBlock";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 
+const AUTOSAVE_DEBOUNCE_MS = 2000;
+
 // Weekly Challenge — the same mechanics as DailyChallenge.jsx (see that file for the fuller
 // comment) but keyed by ISO week instead of calendar day, higher XP reward, no daily calendar
 // strip since there's only ever one "current" week.
@@ -23,21 +25,59 @@ export default function WeeklyChallenge() {
   const [running, setRunning] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const langDraftsRef = useRef({});
+  const autosaveTimerRef = useRef(null);
+  const codeRef = useRef(code);
+  const languageRef = useRef(language);
+  const challengeIdRef = useRef(null);
+  codeRef.current = code;
+  languageRef.current = language;
 
   useEffect(() => {
     api.get("/challenges/weekly/current")
-      .then((res) => {
+      .then(async (res) => {
         setData(res.data);
         if (res.data.challenge) {
+          challengeIdRef.current = res.data.challenge.id;
           const sub = res.data.submission;
           const lang = sub?.language || "java";
           setLanguage(lang);
           setCode(sub?.code || res.data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+          try {
+            const { data: draft } = await api.get(`/challenges/weekly/${res.data.challenge.id}/draft`);
+            if (draft) { setCode(draft.code); setLanguage(draft.language); }
+          } catch { /* no draft yet */ }
         }
       })
-      .catch(() => setError("Failed to load this week's challenge"));
+      .catch(() => setError("Failed to load this week's challenge"))
+      .finally(() => setDraftLoaded(true));
     api.get("/challenges/stats").then((res) => setStats(res.data)).catch(() => {});
+  }, []);
+
+  function flushAutosave() {
+    if (!challengeIdRef.current) return;
+    api.post(`/challenges/weekly/${challengeIdRef.current}/autosave`, { code: codeRef.current, language: languageRef.current }).catch(() => {});
+  }
+
+  useEffect(() => {
+    if (!draftLoaded || !challengeIdRef.current) return;
+    clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(flushAutosave, AUTOSAVE_DEBOUNCE_MS);
+    return () => clearTimeout(autosaveTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, language, draftLoaded]);
+
+  useEffect(() => {
+    const handler = () => flushAutosave();
+    window.addEventListener("beforeunload", handler);
+    window.addEventListener("pagehide", handler);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      window.removeEventListener("pagehide", handler);
+      flushAutosave();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleLanguageChange(lang) {

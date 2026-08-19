@@ -9,6 +9,7 @@ import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import { useConfirm } from "../context/ConfirmContext";
+import { CODE_LANGUAGES } from "../utils/codeEditorDefaults";
 
 const QUESTION_TYPES = [
   { value: "CODING", label: "Coding" },
@@ -62,6 +63,16 @@ export default function CreateQuestion() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
+
+  // Admin/Staff-authored working solution, keyed by language — run through the same judge a
+  // student submission goes through, against this question's own test cases, to catch a wrong
+  // expected output or a case that doesn't match the signature before publishing. Never sent to
+  // students (see backend Question.referenceSolution schema comment).
+  const [referenceSolution, setReferenceSolution] = useState({});
+  const [refLanguage, setRefLanguage] = useState("java");
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState(null);
+  const [validationError, setValidationError] = useState("");
 
   const [aiConfigured, setAiConfigured] = useState(true); // optimistic until checked, avoids a flash of "unavailable"
   const [aiSubject, setAiSubject] = useState("");
@@ -147,6 +158,7 @@ export default function CreateQuestion() {
       });
       setAiGenerated(!!q.aiGenerated);
       if (q.functionSignature) setSignature(q.functionSignature);
+      if (q.referenceSolution && typeof q.referenceSolution === "object") setReferenceSolution(q.referenceSolution);
       if (q.questionType === "CODING" || q.questionType === "SQL") {
         setTestCases(q.testCases?.length ? q.testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || "" })) : [{ input: "", expected: "", isHidden: false, explanation: "" }]);
       } else {
@@ -160,6 +172,30 @@ export default function CreateQuestion() {
       setLoading(false);
     });
   }, [id, isEdit]);
+
+  async function validateReferenceSolution() {
+    const code = referenceSolution[refLanguage] || "";
+    if (!code.trim()) return setValidationError("Write a reference solution before validating");
+    setValidating(true);
+    setValidationError("");
+    setValidationResult(null);
+    try {
+      const { data } = await api.post("/questions/validate-test-cases", {
+        language: refLanguage,
+        code,
+        testCases,
+        evaluationType: form.evaluationType,
+        functionSignature: form.evaluationType === "FUNCTION" ? signature : undefined,
+        timeLimitMs: Number(form.timeLimitMs) || 2000,
+        memoryLimitKb: form.memoryLimitKb ? Math.round(Number(form.memoryLimitKb) * 1024) : undefined,
+      });
+      setValidationResult(data);
+    } catch (err) {
+      setValidationError(err.response?.data?.error || "Validation failed");
+    } finally {
+      setValidating(false);
+    }
+  }
 
   function updateField(field) {
     return (e) => setForm({ ...form, [field]: e.target.value });
@@ -218,6 +254,7 @@ export default function CreateQuestion() {
       if (form.questionType === "CODING") {
         payload.testCases = testCases;
         if (form.evaluationType === "FUNCTION") payload.functionSignature = signature;
+        payload.referenceSolution = Object.keys(referenceSolution).some((k) => referenceSolution[k]?.trim()) ? referenceSolution : undefined;
       } else if (form.questionType === "SQL") {
         payload.testCases = testCases;
         payload.sqlSchema = form.sqlSchema;
@@ -442,6 +479,52 @@ export default function CreateQuestion() {
                 minVisible={2}
                 minHidden={10}
               />
+
+              <div style={{ marginTop: 24, padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius)" }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Reference Solution &amp; Validation</div>
+                <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 0, marginBottom: 12 }}>
+                  Optional, but recommended before publishing — write a working solution and run it through the judge against every test case above to catch a wrong expected output or a broken case before students ever see it. Never shown to students.
+                </p>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  <select
+                    style={{ ...inputStyle, width: "auto" }}
+                    value={refLanguage}
+                    onChange={(e) => { setRefLanguage(e.target.value); setValidationResult(null); setValidationError(""); }}
+                  >
+                    {CODE_LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                  </select>
+                  <button type="button" className="btn btn-ghost" disabled={validating} onClick={validateReferenceSolution}>
+                    {validating ? "Validating…" : "Validate Test Cases"}
+                  </button>
+                </div>
+                <textarea
+                  style={{ ...inputStyle, minHeight: 160, fontFamily: "var(--font-mono)" }}
+                  value={referenceSolution[refLanguage] || ""}
+                  onChange={(e) => setReferenceSolution((prev) => ({ ...prev, [refLanguage]: e.target.value }))}
+                  placeholder={`Write a working ${CODE_LANGUAGES.find((l) => l.id === refLanguage)?.label || refLanguage} solution here…`}
+                />
+                {validationError && <div style={{ color: "var(--rust)", fontSize: 12, marginTop: 8 }}>{validationError}</div>}
+                {validationResult && (
+                  <div style={{ marginTop: 10, fontSize: 12 }}>
+                    <div style={{ fontWeight: 700, color: validationResult.allPassed ? "var(--mint)" : "var(--rust)" }}>
+                      {validationResult.passedCases}/{validationResult.totalCases} test cases passed
+                      {validationResult.allPassed ? " — all clear" : ` (${validationResult.verdict})`}
+                    </div>
+                    {!validationResult.allPassed && Array.isArray(validationResult.details) && (
+                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" }}>
+                        {validationResult.details.filter((d) => d.verdict !== "PASS").map((d, i) => (
+                          <div key={i} style={{ padding: 8, background: "var(--card-bg)", border: "1px solid var(--line)", borderRadius: 6 }}>
+                            <div style={{ fontWeight: 700 }}>Case {i + 1}: {d.verdict}</div>
+                            <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>Input: {d.input}</div>
+                            <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>Expected: {d.expected}</div>
+                            <div className="mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>Got: {d.actual}{d.error ? ` (${d.error})` : ""}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </>
           )}
 
