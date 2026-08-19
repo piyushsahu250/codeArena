@@ -12,7 +12,7 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
-import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const JUDGE_TIMEOUT_MS = 20000;
@@ -658,7 +658,7 @@ export default function InterviewSession() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
                 <select className="ip-select" value={draft.language} onChange={(e) => handleLanguageChange(e.target.value)}>
-                  {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                  {supportedLanguages(q).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                 </select>
                 <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={saving} runDisabled={micBlocked} submitDisabled={micBlocked} />
               </div>

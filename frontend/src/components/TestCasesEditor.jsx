@@ -1,4 +1,7 @@
+import { Copy, ArrowUp, ArrowDown } from "lucide-react";
+
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginTop: 14, marginBottom: 6 };
+const iconBtnStyle = { background: "none", border: "none", color: "var(--ink-dim)", cursor: "pointer", display: "flex", alignItems: "center", padding: 4 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14, fontFamily: "var(--font-body)" };
 
 // Shared admin-side test-case editor — same per-row shape (input/expected/isHidden/explanation)
@@ -26,6 +29,18 @@ export default function TestCasesEditor({
   }
   function removeCase(idx) {
     onChange(testCases.filter((_, i) => i !== idx));
+  }
+  function duplicateCase(idx) {
+    const next = [...testCases];
+    next.splice(idx + 1, 0, { ...testCases[idx] });
+    onChange(next);
+  }
+  function moveCase(idx, direction) {
+    const target = idx + direction;
+    if (target < 0 || target >= testCases.length) return;
+    const next = [...testCases];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
   }
 
   const visibleCount = testCases.filter((tc) => !tc.isHidden).length;
@@ -68,9 +83,20 @@ export default function TestCasesEditor({
               <input type="checkbox" checked={tc.isHidden} onChange={(e) => updateCase(idx, "isHidden", e.target.checked)} />
               Hidden (not shown to students as a sample)
             </label>
-            {testCases.length > 1 && (
-              <button type="button" onClick={() => removeCase(idx)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }}>Remove</button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <button type="button" title="Move up" onClick={() => moveCase(idx, -1)} disabled={idx === 0} style={{ ...iconBtnStyle, opacity: idx === 0 ? 0.35 : 1 }}>
+                <ArrowUp size={15} />
+              </button>
+              <button type="button" title="Move down" onClick={() => moveCase(idx, 1)} disabled={idx === testCases.length - 1} style={{ ...iconBtnStyle, opacity: idx === testCases.length - 1 ? 0.35 : 1 }}>
+                <ArrowDown size={15} />
+              </button>
+              <button type="button" title="Duplicate" onClick={() => duplicateCase(idx)} style={iconBtnStyle}>
+                <Copy size={15} />
+              </button>
+              {testCases.length > 1 && (
+                <button type="button" onClick={() => removeCase(idx)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13, marginLeft: 6 }}>Remove</button>
+              )}
+            </div>
           </div>
         </div>
       ))}

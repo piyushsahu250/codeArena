@@ -10,7 +10,7 @@ import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import useAiStatus from "../hooks/useAiStatus";
-import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 
@@ -611,7 +611,7 @@ function PracticeQuestionCard({ question }) {
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
             <select value={language} onChange={(e) => handleLanguageChange(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line)" }}>
-              {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+              {supportedLanguages(question).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
             </select>
             <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={submitting} />
           </div>

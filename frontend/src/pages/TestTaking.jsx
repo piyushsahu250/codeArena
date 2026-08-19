@@ -9,7 +9,7 @@ import useIsMobile from "../hooks/useIsMobile";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
-import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -1371,7 +1371,7 @@ export default function TestTaking() {
                     <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", padding: "6px 10px" }}>SQL</span>
                   ) : (
                     <select value={answer?.language || "javascript"} onChange={(e) => setLanguage(e.target.value)} className="mono" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line)" }}>
-                      {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                      {supportedLanguages(current).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                     </select>
                   )}
                 </div>
