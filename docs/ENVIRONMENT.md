@@ -19,6 +19,7 @@
 |---|---|
 | `ANTHROPIC_API_KEY` | Enables all Claude-backed features (question generation, resume review/rewrite, interview feedback, learning hints, interview drafts). Features degrade to a controlled "not configured" error when unset — do not assume they're always available. |
 | `ANTHROPIC_MODEL` | Overrides the default Claude model used, if set. |
+| `ANTHROPIC_TIMEOUT_MS` | Optional. Overrides the 30000ms (30s) timeout on Claude API requests, if set. |
 
 ## Security / PII
 
