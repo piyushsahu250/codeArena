@@ -884,7 +884,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
   try {
     const {
       date, dateFrom, dateTo, academicYear, departmentId, section, academicGroupId,
-      subject, semester, facultyId, lectureType, status, studentId, talentPoolId,
+      subject, semester, facultyId, lectureType, status, studentId, talentPoolId, instituteId,
     } = req.query;
 
     // Resolve the STAFF scope (their own assignment IDs) separately from any narrowing filter the
@@ -899,10 +899,21 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
     } else if (req.requesterInstituteId) {
       // Scoped admins see both their institute's division-based rows AND their institute's
       // Talent-Pool-based rows (attendanceInstituteId) — a plain `academicGroup: {instituteId}`
-      // filter alone would silently hide the latter.
+      // filter alone would silently hide the latter. A scoped admin's own institute always wins —
+      // any `instituteId` query param they pass is ignored, never widened or redirected.
       assignmentWhere.OR = [
         { academicGroup: { instituteId: req.requesterInstituteId } },
         { attendanceInstituteId: req.requesterInstituteId },
+      ];
+    } else if (instituteId) {
+      // Platform-level admin (no institute of their own — attachRequesterInstitute left
+      // req.requesterInstituteId null) explicitly narrowing the report to one institute. Without
+      // this, a platform admin's report mixes every institute's records together with no way to
+      // separate them — same OR shape as the scoped-admin branch above, covering both
+      // division-based and Talent-Pool-based assignments.
+      assignmentWhere.OR = [
+        { academicGroup: { instituteId } },
+        { attendanceInstituteId: instituteId },
       ];
     }
     if (talentPoolId) assignmentWhere.talentPoolId = talentPoolId;
@@ -959,8 +970,8 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
                 assignment: {
                   include: {
                     staff: { select: { name: true } },
-                    class: { include: { division: { include: { department: true } } } },
-                    academicGroup: { include: { department: true } },
+                    class: { include: { division: { include: { department: true } }, institute: { select: { name: true } } } },
+                    academicGroup: { include: { department: true, institute: { select: { name: true } } } },
                     talentPool: { select: { name: true } },
                     attendanceInstitute: { select: { name: true } },
                   },
@@ -984,6 +995,10 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
       const group = assignment.academicGroup;
       return {
         Date: plan.scheduleDate.toISOString().slice(0, 10),
+        // Only meaningful when a report spans more than one institute (platform-level admin with
+        // no instituteId filter applied) — harmless to always include, since a Staff/scoped-Admin
+        // report is already implicitly one institute and every row just repeats its name.
+        Institute: group?.institute?.name || assignment.class?.institute?.name || assignment.attendanceInstitute?.name || "",
         Batch: group?.batch || assignment.class?.batchYear || "",
         Department: group?.department?.name || assignment.class?.division?.department?.name || (assignment.talentPoolId ? "Talent Pool" : ""),
         Section: group?.section || assignment.class?.division?.name || (assignment.talentPoolId ? `${assignment.talentPool?.name || ""} — ${assignment.attendanceInstitute?.name || ""}` : ""),

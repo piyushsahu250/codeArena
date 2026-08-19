@@ -18,10 +18,15 @@ const STATUS_COLORS = { PRESENT: "var(--mint)", ABSENT: "var(--rust)", LATE: "va
 export default function AttendanceReports() {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  // Only a platform-level admin (no instituteId of their own) spans more than one institute — an
+  // institute-scoped admin's report is already implicitly limited to their own institute server-side,
+  // so the picker would just be a single-option dropdown with nothing to do.
+  const isPlatformAdmin = isAdmin && !user?.instituteId;
   const isMobile = useIsMobile();
   const [myAssignments, setMyAssignments] = useState([]);
+  const [institutes, setInstitutes] = useState([]);
   const [filters, setFilters] = useState({
-    date: "", dateFrom: "", dateTo: "", academicYear: "", departmentId: "", section: "",
+    date: "", dateFrom: "", dateTo: "", instituteId: "", academicYear: "", departmentId: "", section: "",
     subject: "", semester: "", facultyId: "", lectureType: "", status: "", talentPoolId: "",
   });
   const [rows, setRows] = useState(null);
@@ -32,37 +37,50 @@ export default function AttendanceReports() {
 
   useEffect(() => {
     api.get("/attendance/my-assignments").then((res) => setMyAssignments(res.data)).catch(() => setMyAssignments([]));
-  }, []);
+    if (isPlatformAdmin) api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => setInstitutes([]));
+  }, [isPlatformAdmin]);
+
+  function assignmentInstituteId(a) {
+    return a.academicGroup?.institute?.id || a.class?.institute?.id || a.attendanceInstitute?.id || "";
+  }
+
+  // Narrows every dependent filter (Batch/Department/Section/etc.) down to the chosen institute,
+  // same way departmentId already narrows the Section list below — without this, a platform admin
+  // picking one institute would still see every other institute's batches/departments mixed in.
+  const scopedAssignments = useMemo(() => {
+    if (!filters.instituteId) return myAssignments;
+    return myAssignments.filter((a) => assignmentInstituteId(a) === filters.instituteId);
+  }, [myAssignments, filters.instituteId]);
 
   const academicYears = useMemo(() => {
-    return [...new Set(myAssignments.map((a) => a.academicGroup?.batch || a.class?.batchYear).filter(Boolean))];
-  }, [myAssignments]);
+    return [...new Set(scopedAssignments.map((a) => a.academicGroup?.batch || a.class?.batchYear).filter(Boolean))];
+  }, [scopedAssignments]);
 
   const departments = useMemo(() => {
     const map = new Map();
-    myAssignments.forEach((a) => a.academicGroup?.department && map.set(a.academicGroup.department.id, a.academicGroup.department.name));
+    scopedAssignments.forEach((a) => a.academicGroup?.department && map.set(a.academicGroup.department.id, a.academicGroup.department.name));
     return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [myAssignments]);
+  }, [scopedAssignments]);
 
   const sections = useMemo(() => {
     const set = new Set();
-    myAssignments.forEach((a) => {
+    scopedAssignments.forEach((a) => {
       if (a.academicGroup && (!filters.departmentId || a.academicGroup.departmentId === filters.departmentId)) set.add(a.academicGroup.section);
     });
     return [...set];
-  }, [myAssignments, filters.departmentId]);
+  }, [scopedAssignments, filters.departmentId]);
 
-  const semesters = useMemo(() => [...new Set(myAssignments.map((a) => a.semester))], [myAssignments]);
+  const semesters = useMemo(() => [...new Set(scopedAssignments.map((a) => a.semester))], [scopedAssignments]);
   const talentPools = useMemo(() => {
     const map = new Map();
-    myAssignments.forEach((a) => a.talentPoolId && map.set(a.talentPoolId, a.talentPool?.name || "Talent Pool"));
+    scopedAssignments.forEach((a) => a.talentPoolId && map.set(a.talentPoolId, a.talentPool?.name || "Talent Pool"));
     return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [myAssignments]);
+  }, [scopedAssignments]);
   const faculty = useMemo(() => {
     const map = new Map();
-    myAssignments.forEach((a) => map.set(a.staff.id, a.staff.name));
+    scopedAssignments.forEach((a) => map.set(a.staff.id, a.staff.name));
     return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [myAssignments]);
+  }, [scopedAssignments]);
 
   function set(field, value) {
     setFilters((f) => ({ ...f, [field]: value }));
@@ -109,7 +127,10 @@ export default function AttendanceReports() {
     }
   }
 
-  const columns = ["Roll Number", "Student Name", "Registration Number", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date"];
+  const columns = [
+    ...(isPlatformAdmin ? ["Institute"] : []),
+    "Roll Number", "Student Name", "Registration Number", "Department", "Section", "Batch", "Subject", "Semester", "Faculty", "Lecture #", "Lecture Type", "Test", "Date",
+  ];
 
   const filteredRows = useMemo(() => {
     if (!rows || !search.trim()) return rows;
@@ -146,6 +167,19 @@ export default function AttendanceReports() {
             <label style={labelStyle}>To</label>
             <input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => set("dateTo", e.target.value)} disabled={!!filters.date} />
           </div>
+          {isPlatformAdmin && (
+            <div>
+              <label style={labelStyle}>Institute</label>
+              <select
+                style={inputStyle}
+                value={filters.instituteId}
+                onChange={(e) => setFilters((f) => ({ ...f, instituteId: e.target.value, academicYear: "", departmentId: "", section: "", semester: "", talentPoolId: "", facultyId: "" }))}
+              >
+                <option value="">All Institutes</option>
+                {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label style={labelStyle}>Batch</label>
             <select style={inputStyle} value={filters.academicYear} onChange={(e) => set("academicYear", e.target.value)}>
@@ -250,6 +284,7 @@ export default function AttendanceReports() {
                       <span style={{ fontWeight: 700, color: STATUS_COLORS[r.Status] || "var(--ink)" }}>{r.Status}</span>
                     </div>
                     <div style={{ color: "var(--ink-dim)", marginTop: 4 }}>{r.Subject} · Lecture {r["Lecture #"]} · {r.Date}</div>
+                    {isPlatformAdmin && <div style={{ color: "var(--ink-dim)", marginTop: 2, fontWeight: 600 }}>{r.Institute}</div>}
                     <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>{r.Department} · {r.Section}</div>
                     <div style={{ color: "var(--ink-dim)", marginTop: 2 }}>PRN: {r["Registration Number"]} · Faculty: {r.Faculty}</div>
                   </div>
