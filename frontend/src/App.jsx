@@ -10,6 +10,19 @@ import LoadingScreen from "./components/LoadingScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Sidebar from "./components/Sidebar";
 import Landing from "./pages/Landing";
+import NotFound from "./pages/NotFound";
+import About from "./pages/marketing/About";
+import Contact from "./pages/marketing/Contact";
+import Privacy from "./pages/marketing/Privacy";
+import Terms from "./pages/marketing/Terms";
+import ForInstitutions from "./pages/marketing/ForInstitutions";
+import Features from "./pages/marketing/Features";
+import CodingPlatform from "./pages/marketing/CodingPlatform";
+import OnlineAssessment from "./pages/marketing/OnlineAssessment";
+import Lms from "./pages/marketing/Lms";
+import EmployabilityReadinessMkt from "./pages/marketing/EmployabilityReadiness";
+import AiMockInterview from "./pages/marketing/AiMockInterview";
+import CodingChallengesMkt from "./pages/marketing/CodingChallenges";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -166,6 +179,21 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
+          {/* Public marketing pages — signed-out content, no auth wrapper. See docs/SEO for why
+              these exist as real routes instead of anchors on "/" alone (per-page title/meta,
+              indexable URLs, internal linking for brand-search SEO). */}
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/for-institutions" element={<ForInstitutions />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/coding-platform" element={<CodingPlatform />} />
+          <Route path="/online-assessment" element={<OnlineAssessment />} />
+          <Route path="/lms" element={<Lms />} />
+          <Route path="/employability-readiness" element={<EmployabilityReadinessMkt />} />
+          <Route path="/ai-mock-interview" element={<AiMockInterview />} />
+          <Route path="/coding-challenges" element={<CodingChallengesMkt />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -323,7 +351,7 @@ export default function App() {
           <Route path="/clerk/audit-log" element={<Protected roles={["CLERK"]}><AuditLogPage basePath="/clerk" /></Protected>} />
           <Route path="/clerk/exports" element={<Protected roles={["CLERK"]}><ExportCenter basePath="/clerk" /></Protected>} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
       </GamificationProvider>

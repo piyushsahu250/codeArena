@@ -7,19 +7,48 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1b4332" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="CodeArena - Coding Platform: coding tests, learning modules, and skill assessments." />
+    <meta name="description" content="CodeArena is an AI-powered coding, assessment, learning and employability platform for students and educational institutions." />
+    <link rel="canonical" href="https://codearena.site/" />
     <!--
-      Static, site-wide Open Graph tags — this is a client-rendered SPA with no server-side
-      rendering, so link-preview crawlers (LinkedIn, Facebook, etc., which don't execute JS) only
-      ever see this fixed HTML. A per-certificate preview (student name/course in the card) would
-      need SSR or a prerendering function, which is out of scope here — every shared link gets
-      this same generic CodeArena preview rather than a personalized one.
+      Static, site-wide Open Graph/Twitter tags — this is a client-rendered SPA with no server-side
+      rendering, so link-preview crawlers (LinkedIn, Facebook, X, etc., which don't execute JS) only
+      ever see this fixed HTML. useSeoHead (src/hooks/useSeoHead.js) overwrites title/description/
+      canonical client-side per route for JS-rendering crawlers like Googlebot; these static values
+      are the fallback every non-JS crawler and every social share sees regardless of route. A
+      per-certificate preview (student name/course in the card) would need SSR or a prerendering
+      function, which is out of scope here — every shared link gets this same generic preview.
     -->
-    <meta property="og:title" content="CodeArena - Coding Platform" />
-    <meta property="og:description" content="Coding tests, learning modules, mock interviews, and skill assessments." />
-    <meta property="og:image" content="/branding/logo.png" />
+    <meta property="og:title" content="CodeArena | AI-Powered Coding & Assessment Platform" />
+    <meta property="og:description" content="Coding tests, learning modules, mock interviews, and skill assessments — for students and educational institutions." />
+    <meta property="og:image" content="https://codearena.site/branding/logo.png" />
     <meta property="og:type" content="website" />
-    <title>CodeArena - Coding Platform</title>
+    <meta property="og:url" content="https://codearena.site/" />
+    <meta property="og:site_name" content="CodeArena" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="CodeArena | AI-Powered Coding & Assessment Platform" />
+    <meta name="twitter:description" content="Coding tests, learning modules, mock interviews, and skill assessments — for students and educational institutions." />
+    <meta name="twitter:image" content="https://codearena.site/branding/logo.png" />
+    <title>CodeArena | AI-Powered Coding & Assessment Platform</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "CodeArena",
+        "url": "https://codearena.site",
+        "logo": "https://codearena.site/branding/logo.png",
+        "description": "CodeArena is an AI-powered coding, assessment, learning and employability platform for students and educational institutions.",
+        "email": "codearena001@gmail.com"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "CodeArena",
+        "alternateName": "Code Arena",
+        "url": "https://codearena.site"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

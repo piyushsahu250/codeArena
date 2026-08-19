@@ -1,12 +1,12 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Menu, X, Sun, Moon, ArrowRight, CheckCircle2,
+  ArrowRight, CheckCircle2,
   GraduationCap, Users, Building2, Briefcase,
   ShieldCheck, Trophy,
 } from "lucide-react";
-import { useTheme } from "../context/ThemeContext";
-import ChalkUnderline from "../components/ChalkUnderline";
+import MarketingNav from "../components/MarketingNav";
+import MarketingFooter from "../components/MarketingFooter";
+import useSeoHead from "../hooks/useSeoHead";
 import useCountUp from "../hooks/useCountUp";
 import useOnScreen from "../hooks/useOnScreen";
 import "./landing.css";
@@ -19,15 +19,21 @@ import "./landing.css";
 // capture backend yet, so every CTA points at the real /login route rather than a fake demo
 // form or an invented contact address.
 export default function Landing() {
+  useSeoHead({
+    title: "AI-Powered Coding & Assessment Platform",
+    description:
+      "CodeArena is an AI-powered coding, assessment, learning and employability platform for students and educational institutions — proctored exams, a real compiler, an LMS, and AI mock interviews in one workspace.",
+    path: "/",
+  });
   return (
     <div className="ca-landing">
-      <LandingNav />
+      <MarketingNav />
       <Hero />
       <AudienceSection />
       <StatsBand />
       <FeatureSections />
       <ClosingCta />
-      <LandingFooter />
+      <MarketingFooter />
     </div>
   );
 }
@@ -38,60 +44,6 @@ function Reveal({ children, as: Tag = "div", style, className = "" }) {
     <Tag ref={ref} className={`ca-reveal ${visible ? "in" : ""} ${className}`} style={style}>
       {children}
     </Tag>
-  );
-}
-
-function LandingNav() {
-  const { theme, toggleTheme } = useTheme();
-  const [open, setOpen] = useState(false);
-
-  const links = [
-    { href: "#practice", label: "Practice & Compiler" },
-    { href: "#assessments", label: "Assessments" },
-    { href: "#learning", label: "Learning" },
-    { href: "#placement", label: "Placement Prep" },
-    { href: "#institutes", label: "For Institutes" },
-  ];
-
-  return (
-    <nav className="ca-landing-nav">
-      <Link to="/" style={{ display: "flex", alignItems: "center" }}>
-        <div style={{ background: "#fdfbf5", borderRadius: 8, padding: "3px 10px", display: "flex", alignItems: "center" }}>
-          <img src="/branding/logo.png" alt="CodeArena" style={{ height: 30, width: "auto", display: "block" }} />
-        </div>
-      </Link>
-
-      <div className="ca-landing-nav-links">
-        {links.map((l) => (
-          <a key={l.href} href={l.href}>{l.label}</a>
-        ))}
-      </div>
-
-      <div className="ca-landing-nav-actions">
-        <button className="ca-topbar-icon-btn" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle dark/light mode">
-          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
-        <Link to="/login" className="btn btn-primary" style={{ padding: "9px 18px", fontSize: 13.5 }}>
-          Sign in
-        </Link>
-        <button
-          className="ca-topbar-icon-btn ca-landing-mobile-toggle"
-          onClick={() => setOpen((o) => !o)}
-          aria-label="Toggle menu"
-          aria-expanded={open}
-        >
-          {open ? <X size={18} /> : <Menu size={18} />}
-        </button>
-      </div>
-
-      {open && (
-        <div className="ca-landing-mobile-menu">
-          {links.map((l) => (
-            <a key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</a>
-          ))}
-        </div>
-      )}
-    </nav>
   );
 }
 
@@ -291,6 +243,7 @@ function FeatureSections() {
           "Editorial explanations and progressive hints after a wrong attempt",
         ]}
         visual={<PracticeVisual />}
+        href="/coding-platform"
       />
       <FeatureRow
         id="assessments"
@@ -304,6 +257,7 @@ function FeatureSections() {
           "Detailed per-question breakdown once results are published",
         ]}
         visual={<AssessmentVisual />}
+        href="/online-assessment"
         reverse
       />
       <FeatureRow
@@ -318,6 +272,7 @@ function FeatureSections() {
           "Progress visible to both the student and their faculty",
         ]}
         visual={<LearningVisual />}
+        href="/lms"
       />
       <FeatureRow
         id="placement"
@@ -331,6 +286,7 @@ function FeatureSections() {
           "A certificate and detailed report at the end of every session",
         ]}
         visual={<PlacementVisual />}
+        href="/ai-mock-interview"
         reverse
       />
       <FeatureRow
@@ -345,12 +301,13 @@ function FeatureSections() {
           "One-click exports for results, attendance, and certificates",
         ]}
         visual={<InstitutesVisual />}
+        href="/for-institutions"
       />
     </section>
   );
 }
 
-function FeatureRow({ id, eyebrow, title, description, bullets, visual, reverse }) {
+function FeatureRow({ id, eyebrow, title, description, bullets, visual, reverse, href }) {
   return (
     <div id={id} className={`ca-feature-row ${reverse ? "reverse" : ""}`}>
       <Reveal className="ca-feature-copy">
@@ -362,6 +319,11 @@ function FeatureRow({ id, eyebrow, title, description, bullets, visual, reverse 
             <li key={b}><CheckCircle2 size={17} />{b}</li>
           ))}
         </ul>
+        {href && (
+          <Link to={href} className="ca-feature-learn-more">
+            Learn more <ArrowRight size={14} />
+          </Link>
+        )}
       </Reveal>
       <Reveal className="ca-feature-visual-wrap">
         {visual}
@@ -504,27 +466,3 @@ function ClosingCta() {
   );
 }
 
-function LandingFooter() {
-  return (
-    <footer className="ca-landing-footer">
-      <div className="ca-landing-footer-inner">
-        <div>
-          <div style={{ background: "#fdfbf5", borderRadius: 8, padding: "3px 10px", display: "inline-flex", alignItems: "center" }}>
-            <img src="/branding/logo.png" alt="CodeArena" style={{ height: 26, width: "auto", display: "block" }} />
-          </div>
-          <ChalkUnderline width={90} />
-        </div>
-        <nav className="ca-landing-footer-links">
-          <a href="#practice">Practice</a>
-          <a href="#assessments">Assessments</a>
-          <a href="#learning">Learning</a>
-          <a href="#placement">Placement</a>
-          <Link to="/login">Sign in</Link>
-        </nav>
-      </div>
-      <div className="ca-landing-footer-bottom">
-        © {new Date().getFullYear()} CodeArena. Empowering talent through smart coding assessments.
-      </div>
-    </footer>
-  );
-}
