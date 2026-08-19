@@ -603,7 +603,12 @@ model Question {
   points         Int          @default(10) // marks
   explanation    String?
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt // bumped automatically on every field change, including via bulk-status/bulk-import
+  // @default(now()) is required here, not just @updatedAt, because this column was added to an
+  // existing table with 534 rows — without a default, `prisma db push` refuses the migration
+  // entirely ("Added the required column `updatedAt`... it is not possible to execute this
+  // step"), which is exactly what blocked every deploy since this field was introduced. The
+  // default backfills existing rows on migration; @updatedAt still auto-bumps on every future write.
+  updatedAt      DateTime     @default(now()) @updatedAt
 
   // CODING-only fields
   timeLimitMs   Int     @default(2000)
