@@ -12,14 +12,52 @@
 // separate one question from the next since coding blocks are long). A trailing/leading label
 // with no value is simply empty — never a parse error.
 
+// Label spelling is deliberately forgiving — two versions of this spec have used two different
+// conventions ("OPTION_A:" underscored-caps vs. "Option A:" spaced-title-case, "CORRECT_OPTION:"
+// vs. "Correct Answer:"), and staff typing free-hand in Notepad won't necessarily match either
+// exactly. Every label line is normalized (trim, uppercase, spaces->underscores) before matching
+// against CANONICAL_LABEL_ALIASES, so "Option A", "OPTION_A", "option a" and "Correct Answer",
+// "CORRECT_OPTION", "Correct_Answer" all resolve to the same internal field.
+const CANONICAL_LABEL_ALIASES = {
+  QUESTION: "QUESTION",
+  QUESTION_TYPE: "QUESTION_TYPE", TYPE: "QUESTION_TYPE",
+  OPTION_A: "OPTION_A", OPTION_1: "OPTION_A",
+  OPTION_B: "OPTION_B", OPTION_2: "OPTION_B",
+  OPTION_C: "OPTION_C", OPTION_3: "OPTION_C",
+  OPTION_D: "OPTION_D", OPTION_4: "OPTION_D",
+  OPTION_E: "OPTION_E", OPTION_5: "OPTION_E",
+  OPTION_F: "OPTION_F", OPTION_6: "OPTION_F",
+  CORRECT_OPTION: "CORRECT_ANSWER", CORRECT_ANSWER: "CORRECT_ANSWER", ANSWER: "CORRECT_ANSWER",
+  DIFFICULTY: "DIFFICULTY",
+  BTL: "BTL", BTL_LEVEL: "BTL",
+  SUBJECT: "SUBJECT",
+  UNIT: "UNIT",
+  TOPIC: "TOPIC",
+  EXPLANATION: "EXPLANATION",
+  MARKS: "MARKS", POINTS: "MARKS",
+  TITLE: "TITLE", QUESTION_NAME: "TITLE",
+  LANGUAGE: "LANGUAGE", PROGRAMMING_LANGUAGES: "LANGUAGE",
+  FUNCTION_NAME: "FUNCTION_NAME",
+  INPUT_FORMAT: "INPUT_FORMAT",
+  OUTPUT_FORMAT: "OUTPUT_FORMAT",
+  CONSTRAINTS: "CONSTRAINTS",
+  SAMPLE_INPUT: "SAMPLE_INPUT",
+  SAMPLE_OUTPUT: "SAMPLE_OUTPUT",
+  SAMPLE_INPUT_2: "SAMPLE_INPUT_2",
+  SAMPLE_OUTPUT_2: "SAMPLE_OUTPUT_2",
+  TEST_CASES: "TEST_CASES",
+  TIME_LIMIT_SEC: "TIME_LIMIT_SEC", TIME_LIMIT: "TIME_LIMIT_SEC",
+};
+
 function splitLabeledBlock(text) {
   const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
   const fields = {};
   let current = null;
   for (const line of lines) {
-    const m = line.match(/^([A-Za-z_]+)\s*:\s*(.*)$/);
-    if (m && KNOWN_LABELS.has(m[1].toUpperCase())) {
-      current = m[1].toUpperCase();
+    const m = line.match(/^([A-Za-z][A-Za-z0-9 _]*?)\s*:\s*(.*)$/);
+    const canonical = m && CANONICAL_LABEL_ALIASES[m[1].trim().toUpperCase().replace(/\s+/g, "_")];
+    if (canonical) {
+      current = canonical;
       fields[current] = m[2] ? [m[2]] : [];
     } else if (current) {
       fields[current].push(line);
@@ -32,29 +70,35 @@ function splitLabeledBlock(text) {
   return out;
 }
 
-const KNOWN_LABELS = new Set([
-  "QUESTION", "OPTION_A", "OPTION_B", "OPTION_C", "OPTION_D", "OPTION_E", "OPTION_F",
-  "CORRECT_OPTION", "TYPE", "DIFFICULTY", "BTL", "SUBJECT", "UNIT", "TOPIC", "EXPLANATION",
-  "LANGUAGE", "FUNCTION_NAME", "INPUT_FORMAT", "OUTPUT_FORMAT", "CONSTRAINTS",
-  "SAMPLE_INPUT", "SAMPLE_OUTPUT", "SAMPLE_INPUT_2", "SAMPLE_OUTPUT_2", "TEST_CASES",
-  "TITLE", "MARKS", "TIME_LIMIT_SEC",
-]);
-
-// Splits the whole uploaded text into per-question chunks. A blank line followed directly by a
-// new QUESTION: starts a new block; a line of 3+ dashes always starts a new block (used by the
-// coding format, whose blocks are long and may contain blank lines inside TEST_CASES).
+// Splits the whole uploaded text into per-question chunks. A line of 3+ dashes always starts a
+// new block (explicit, staff-authored separator — used by the coding format especially, whose
+// blocks are long and contain blank lines inside TEST_CASES so a blank-line heuristic alone
+// wouldn't be reliable there). Within a dash-delimited part, a new block also starts the moment a
+// recognized label repeats — e.g. a second "Question:" (or "Question Type:", or any other field)
+// means the previous question's fields are done and a new one has begun. This is deliberately
+// order-independent (doesn't assume "Question:" is always the first field staff type — the
+// platform's own downloadable template puts "Question Type:" before "Question:") rather than
+// keying off one specific label appearing first.
 function splitBlocks(text) {
   const normalized = String(text || "").replace(/\r\n/g, "\n");
-  const parts = normalized.split(/\n\s*-{3,}\s*\n/); // explicit "---" separators first
+  const dashParts = normalized.split(/\n\s*-{3,}\s*\n/);
   const blocks = [];
-  for (const part of parts) {
-    // Within a part, also split on a blank line immediately preceding a new QUESTION: line —
-    // covers the MCQ format, where staff separate questions with a blank line instead of dashes.
-    const subParts = part.split(/\n\s*\n(?=QUESTION\s*:)/i);
-    for (const sp of subParts) {
-      const trimmed = sp.trim();
-      if (trimmed) blocks.push(trimmed);
+  for (const part of dashParts) {
+    let currentLines = [];
+    let seenLabels = new Set();
+    for (const line of part.split("\n")) {
+      const m = line.match(/^([A-Za-z][A-Za-z0-9 _]*?)\s*:\s*(.*)$/);
+      const canonical = m && CANONICAL_LABEL_ALIASES[m[1].trim().toUpperCase().replace(/\s+/g, "_")];
+      if (canonical && seenLabels.has(canonical)) {
+        if (currentLines.some((l) => l.trim())) blocks.push(currentLines.join("\n"));
+        currentLines = [line];
+        seenLabels = new Set([canonical]);
+      } else {
+        if (canonical) seenLabels.add(canonical);
+        currentLines.push(line);
+      }
     }
+    if (currentLines.some((l) => l.trim())) blocks.push(currentLines.join("\n"));
   }
   return blocks;
 }
@@ -80,18 +124,23 @@ function parseNotepadMcqText(text) {
     const options = ["OPTION_A", "OPTION_B", "OPTION_C", "OPTION_D", "OPTION_E", "OPTION_F"]
       .map((k) => f[k])
       .filter((v) => v !== undefined && v !== "");
-    // Type auto-detection, so staff never need a TYPE: line for the common cases — explicit
-    // TYPE: (MCQ / TRUE_FALSE / MULTISELECT / MULTI SELECT) always wins when present.
-    let type = f.TYPE;
+    // Type auto-detection, so staff never need a Question Type: line for the common cases —
+    // an explicit one (MCQ / TRUE_FALSE / MULTISELECT / MULTI SELECT) always wins when present.
+    let type = f.QUESTION_TYPE;
     if (!type) {
       const isTrueFalse = options.length === 2 && options.every((o) => /^(true|false)$/i.test(o.trim()));
-      const correctCount = String(f.CORRECT_OPTION || "").split(/[,\s]+/).filter(Boolean).length;
+      const correctCount = String(f.CORRECT_ANSWER || "").split(/[,\s]+/).filter(Boolean).length;
       type = isTrueFalse ? "True/False" : correctCount > 1 ? "Multiple Select" : "Multiple Choice";
     }
-    const correctAnswer = String(f.CORRECT_OPTION || "")
-      .split(/[,\s]+/)
+    // Accepts a letter ("B") or comma/space-separated letters ("A, C") — converted to 1-based
+    // option numbers questions.js's normalizeCorrectIndices already parses. A value that isn't a
+    // single letter (e.g. staff typed the answer's actual text, "Queue") is passed through as-is
+    // — normalizeCorrectIndices also matches by option text case-insensitively, so this still works.
+    const correctAnswer = String(f.CORRECT_ANSWER || "")
+      .split(/[,\n]+/)
+      .map((s) => s.trim())
       .filter(Boolean)
-      .map(letterToOptionNumber)
+      .map((token) => (/^[A-Fa-f]$/.test(token) ? letterToOptionNumber(token) : token))
       .filter(Boolean)
       .join(",");
 

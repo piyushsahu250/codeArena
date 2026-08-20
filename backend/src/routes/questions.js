@@ -1124,33 +1124,91 @@ router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), a
 // including the platform's actual minimums (2 sample cases + 10 hidden cases for coding) spelled
 // out as a comment rather than left implicit.
 const MCQ_TXT_TEMPLATE = `Notepad Question Upload — Multiple Choice / True-False / Multiple Select
-One question per block, separated by a blank line. Each field is a LABEL: line — the value can
-continue on the next line(s) until the next label. TYPE: is optional (auto-detected: two options
-"True"/"False" -> True/False; more than one CORRECT_OPTION letter -> Multiple Select; otherwise
-Multiple Choice) — only add it if you want to force a specific type.
+One question per block, separated by a blank line. Each field is a "Label:" line — the value can
+continue on the next line(s) until the next label. Question Type: is optional (auto-detected: two
+options "True"/"False" -> True/False; more than one Correct Answer letter -> Multiple Select;
+otherwise Multiple Choice) — only add it if you want to force a specific type. Correct Answer
+accepts an option letter (A/B/C/D) or the option's exact text.
 
-QUESTION: What is the time complexity of binary search?
-OPTION_A: O(n)
-OPTION_B: O(log n)
-OPTION_C: O(n^2)
-OPTION_D: O(1)
-CORRECT_OPTION: B
-DIFFICULTY: Medium
-BTL: BTL-3
-SUBJECT: DSA
-UNIT: Unit 1
-TOPIC: Searching
-EXPLANATION: Binary search repeatedly divides the search space in half.
+Question Type:
+MCQ
 
-QUESTION: Water boils at 100 C at sea level.
-OPTION_A: True
-OPTION_B: False
-CORRECT_OPTION: A
-DIFFICULTY: Easy
-BTL: BTL-1
-SUBJECT: Physics
-UNIT: Unit 1
-TOPIC: States of Matter
+Subject:
+DSA
+
+Unit:
+Unit 1
+
+Topic:
+Arrays
+
+Question:
+Which data structure follows FIFO?
+
+Option A:
+Stack
+
+Option B:
+Queue
+
+Option C:
+Tree
+
+Option D:
+Graph
+
+Correct Answer:
+B
+
+Marks:
+1
+
+Difficulty:
+Easy
+
+BTL:
+BTL-1
+
+Explanation:
+Queue follows the First In First Out principle.
+
+--------------------------------------------------
+
+Question:
+What is the time complexity of binary search?
+
+Option A:
+O(n)
+
+Option B:
+O(log n)
+
+Option C:
+O(n^2)
+
+Option D:
+O(1)
+
+Correct Answer:
+B
+
+Difficulty:
+Medium
+
+BTL:
+BTL-3
+
+Subject:
+DSA
+
+Unit:
+Unit 1
+
+Topic:
+Searching
+
+Explanation:
+Binary search repeatedly divides the search space in half.
 `;
 
 const CODING_TXT_TEMPLATE = `Notepad Question Upload — Coding
