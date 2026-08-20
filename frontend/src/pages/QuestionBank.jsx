@@ -3,10 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { Folder, BookOpen, Layers, AlertTriangle } from "lucide-react";
 import api from "../api";
 import Navbar from "../components/Navbar";
-import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
 import SubjectUnitPicker from "../components/SubjectUnitPicker";
+import BulkQuestionImport from "../components/BulkQuestionImport";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -76,9 +76,6 @@ export default function QuestionBank() {
   const [questionStatus, setQuestionStatus] = useState("");
   const [aiGeneratedOnly, setAiGeneratedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [importFile, setImportFile] = useState(null);
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState(null);
   const [showImport, setShowImport] = useState(false);
 
   const [selectedIds, setSelectedIds] = useState([]);
@@ -89,7 +86,6 @@ export default function QuestionBank() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkStatusUpdating, setBulkStatusUpdating] = useState(false);
   const [clearingFolder, setClearingFolder] = useState(false);
-  const [duplicateAction, setDuplicateAction] = useState("skip");
   const [duplicatingId, setDuplicatingId] = useState(null);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -570,47 +566,15 @@ export default function QuestionBank() {
     URL.revokeObjectURL(blobUrl);
   }
 
-  async function handleImport(e) {
-    e.preventDefault();
-    if (!importFile) return;
-    setImporting(true);
-    setImportResult(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", importFile);
-      if (viewMode === "folders") {
-        if (activeFolder && activeFolder.id !== "__all__" && activeFolder.id !== "__none__") {
-          formData.append("folderId", activeFolder.id);
-        }
-      }
-      // Note: bulk-import resolves Subject/Unit per-row from the file's own columns (see
-      // resolveSubjectUnitTopicByName in questions.js), not from a request param — browsing into
-      // a specific Unit before importing doesn't pre-target the import, it only pre-fills nothing.
-      // Uploaded rows must name their own Subject/Unit regardless of where the modal was opened from.
-      formData.append("duplicateAction", duplicateAction);
-      const { data } = await api.post("/questions/bulk-import", formData);
-      setImportResult(data);
-      setImportFile(null);
-      load();
-      loadFolders();
-    } catch (err) {
-      alert(err.response?.data?.error || "Import failed");
-    } finally {
-      setImporting(false);
-    }
+  async function createFolderForImport(name) {
+    const { data: folder } = await api.post("/questions/folders", { name });
+    loadFolders();
+    return folder.id;
   }
 
-  function downloadErrorReport() {
-    const rows = (importResult.errors || []).map((e) => ["Failed", e.row, e.reason]);
-    const header = ["Status", "Row", "Reason"];
-    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
-    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "bulk-import-report.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  function handleBulkImported() {
+    load();
+    loadFolders();
   }
 
   const isRealFolder = activeFolder && activeFolder.id !== "__all__" && activeFolder.id !== "__none__";
@@ -989,61 +953,25 @@ export default function QuestionBank() {
               <button className="btn btn-ghost" onClick={() => downloadFile("/questions/export", "question-bank-export.xlsx")}>
                 ⬇ Export ({pageMeta.total})
               </button>
-              <button className="btn btn-ghost" onClick={() => downloadFile("/questions/bulk-template", "question-bank-template.xlsx")}>
-                ⬇ Download import template
-              </button>
               <button className="btn btn-ghost" onClick={() => setShowImport((s) => !s)}>
-                {showImport ? "Hide import" : "⬆ Bulk import (quiz types)"}
+                {showImport ? "Hide import" : "⬆ Bulk import"}
               </button>
             </div>
 
             {showImport && (
               <div className="card" style={{ padding: 20, marginTop: 12 }}>
-                <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
-                  Import Multiple Choice, True/False, and Multiple Select questions from an .xlsx/.csv file. Coding
-                  questions aren't supported via import — use "+ Add question" for those.
-                  {isRealFolder && ` Imported questions will be saved into "${activeFolder.name}".`}
-                </p>
-                <form onSubmit={handleImport} style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} />
-                  <select style={{ ...selectStyle, minWidth: 200 }} value={duplicateAction} onChange={(e) => setDuplicateAction(e.target.value)}>
-                    <option value="skip">Skip duplicate questions</option>
-                    <option value="import">Import duplicates anyway</option>
-                  </select>
-                  <button className="btn btn-primary" disabled={!importFile || importing}>
-                    {importing ? "Importing…" : "Import"}
-                  </button>
-                </form>
-                <UploadProgressBar active={importing} />
-                {importResult && (
-                  <div style={{ marginTop: 12 }}>
-                    <p style={{ fontSize: 14 }}>
-                      <strong>{importResult.createdCount}</strong> question{importResult.createdCount === 1 ? "" : "s"} created
-                      out of {importResult.total}.
-                      {importResult.skippedCount > 0 && ` ${importResult.skippedCount} duplicate${importResult.skippedCount === 1 ? "" : "s"} skipped.`}
-                      {importResult.errorCount > 0 && ` ${importResult.errorCount} failed.`}
-                    </p>
-                    {importResult.skipped?.length > 0 && (
-                      <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
-                        {importResult.skipped.map((s, i) => (
-                          <div key={i} style={{ fontSize: 12, color: "var(--ink-dim)" }} className="mono">Row {s.row}: {s.reason}</div>
-                        ))}
-                      </div>
-                    )}
-                    {importResult.errors.length > 0 && (
-                      <div style={{ marginTop: 8 }}>
-                        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={downloadErrorReport}>
-                          ⬇ Download error report
-                        </button>
-                        <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
-                          {importResult.errors.map((e, i) => (
-                            <div key={i} style={{ fontSize: 12, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {isRealFolder && (
+                  <p style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 10 }}>
+                    Imported questions will be saved into "{activeFolder.name}" unless a row/block names its own Question Bank.
+                  </p>
                 )}
+                <BulkQuestionImport
+                  allowCoding
+                  folders={folders || []}
+                  defaultFolderId={isRealFolder ? activeFolder.id : ""}
+                  onCreateFolder={createFolderForImport}
+                  onImported={handleBulkImported}
+                />
               </div>
             )}
 

@@ -8,7 +8,7 @@ import FolderPicker from "../components/FolderPicker";
 import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import StaffPicker from "../components/StaffPicker";
-import UploadProgressBar from "../components/UploadProgressBar";
+import BulkQuestionImport from "../components/BulkQuestionImport";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
 
@@ -722,70 +722,19 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose,
 }
 
 // Bulk-upload modal — always creates real question rows (they must exist to attach to this
-// test), the "save to bank" checkbox only controls whether they're filed into a folder for
-// future reuse or left unfiled.
+// test); the folder picker inside BulkQuestionImport only controls whether they're also filed
+// for future reuse or left unfiled.
 function BulkUploadModal({ onImported, onClose }) {
-  const [questionKind, setQuestionKind] = useState("quiz"); // "quiz" | "coding"
-  const [file, setFile] = useState(null);
-  const [saveToBank, setSaveToBank] = useState(true);
   const [folders, setFolders] = useState(null);
-  const [folderId, setFolderId] = useState("");
-  const [newFolderName, setNewFolderName] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState(null);
 
   useEffect(() => {
     api.get("/questions/folders").then((res) => setFolders(res.data));
   }, []);
 
-  async function downloadTemplate() {
-    const res = await api.get("/questions/bulk-template", { params: { type: questionKind }, responseType: "blob" });
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement("a");
-    a.href = url; a.download = questionKind === "coding" ? "coding-question-template.xlsx" : "question-bank-template.xlsx";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function handleUpload(e) {
-    e.preventDefault();
-    if (!file) return;
-    setImporting(true);
-    setResult(null);
-    try {
-      let targetFolderId = saveToBank ? folderId : "";
-      if (saveToBank && !targetFolderId && newFolderName.trim()) {
-        const { data: folder } = await api.post("/questions/folders", { name: newFolderName.trim() });
-        targetFolderId = folder.id;
-      }
-      const formData = new FormData();
-      formData.append("file", file);
-      if (targetFolderId) formData.append("folderId", targetFolderId);
-      const endpoint = questionKind === "coding" ? "/questions/bulk-import-coding" : "/questions/bulk-import";
-      const { data } = await api.post(endpoint, formData);
-      setResult(data);
-      if (data.created?.length) onImported(data.created);
-    } catch (err) {
-      alert(err.response?.data?.error || "Bulk upload failed");
-    } finally {
-      setImporting(false);
-    }
-  }
-
-  function downloadErrorReport() {
-    const rows = [
-      ...(result.errors || []).map((e) => ["Failed", e.row, e.reason]),
-      ...(result.skipped || []).map((e) => ["Skipped", e.row, e.reason]),
-    ];
-    const header = ["Status", "Row", "Reason"];
-    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
-    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "bulk-upload-report.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  async function createFolder(name) {
+    const { data: folder } = await api.post("/questions/folders", { name });
+    setFolders((prev) => [...(prev || []), folder]);
+    return folder.id;
   }
 
   return (
@@ -795,80 +744,8 @@ function BulkUploadModal({ onImported, onClose }) {
           <h3 style={{ margin: 0 }}>Bulk Upload Questions</h3>
           <button className="btn btn-ghost" onClick={onClose}>Close</button>
         </div>
-
-        <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="radio" name="bulkKind" checked={questionKind === "quiz"} onChange={() => { setQuestionKind("quiz"); setResult(null); }} />
-            Quiz (MCQ / True-False / Multi-select)
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="radio" name="bulkKind" checked={questionKind === "coding"} onChange={() => { setQuestionKind("coding"); setResult(null); }} />
-            Coding
-          </label>
-        </div>
-        <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
-          {questionKind === "coding"
-            ? "Coding questions from an .xlsx/.csv file — title, problem statement, difficulty, time/memory limits, sample + hidden test cases, and starter code per language. Each row can name its own Question Bank (created if new), or leave it blank to use the picker below."
-            : "Multiple Choice, True/False, and Multiple Select questions from an .xlsx/.csv file."}
-          {" "}Uploaded questions are added to this test immediately either way.
-        </p>
-        <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 12 }} onClick={downloadTemplate}>⬇ Download template</button>
-
-        <form onSubmit={handleUpload} style={{ marginTop: 14 }}>
-          <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 14 }}>
-            <input type="checkbox" checked={saveToBank} onChange={(e) => setSaveToBank(e.target.checked)} />
-            Save uploaded questions to Question Bank
-            {questionKind === "coding" && <span style={{ color: "var(--ink-dim)" }}>(fallback for rows with no Question Bank column)</span>}
-          </label>
-
-          {saveToBank && (
-            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-              <select style={{ ...inputStyle, flex: 1 }} value={folderId} onChange={(e) => { setFolderId(e.target.value); setNewFolderName(""); }}>
-                <option value="">Uncategorized (no folder)</option>
-                {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
-              <input
-                style={{ ...inputStyle, flex: 1 }}
-                placeholder="…or new folder name"
-                value={newFolderName}
-                onChange={(e) => { setNewFolderName(e.target.value); setFolderId(""); }}
-              />
-            </div>
-          )}
-
-          <button className="btn btn-primary" style={{ marginTop: 16, width: "100%" }} disabled={!file || importing}>
-            {importing ? "Uploading…" : "Upload"}
-          </button>
-          <UploadProgressBar active={importing} />
-        </form>
-
-        {result && (
-          <div style={{ marginTop: 14 }}>
-            <p style={{ fontSize: 13, fontWeight: 700 }}>Upload Completed</p>
-            <div style={{ fontSize: 13, marginTop: 4 }}>
-              <div>Questions Uploaded: <strong>{result.createdCount}</strong> of {result.total}</div>
-              {result.skippedCount > 0 && <div>Skipped: <strong>{result.skippedCount}</strong></div>}
-              {result.errorCount > 0 && <div style={{ color: "var(--rust)" }}>Failed: <strong>{result.errorCount}</strong></div>}
-            </div>
-            {(result.errors?.length > 0 || result.skipped?.length > 0) && (
-              <>
-                <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 12 }} onClick={downloadErrorReport}>
-                  ⬇ Download import report
-                </button>
-                <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
-                  {(result.errors || []).map((e, i) => (
-                    <div key={`e${i}`} style={{ fontSize: 11, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
-                  ))}
-                  {(result.skipped || []).map((e, i) => (
-                    <div key={`s${i}`} style={{ fontSize: 11, color: "var(--amber-dark)" }} className="mono">Row {e.row} (skipped): {e.reason}</div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>Uploaded questions are added to this test immediately once confirmed.</p>
+        <BulkQuestionImport allowCoding folders={folders || []} onCreateFolder={createFolder} onImported={onImported} />
       </div>
     </div>
   );

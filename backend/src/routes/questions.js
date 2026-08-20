@@ -5,7 +5,8 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
-const { spreadsheetFileFilter } = require("../utils/uploadFilters");
+const { spreadsheetFileFilter, spreadsheetOrTextFileFilter } = require("../utils/uploadFilters");
+const { parseNotepadMcqText, parseNotepadCodingText } = require("../utils/bulkQuestionParser");
 const { questionVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
@@ -17,6 +18,9 @@ const { cached } = require("../utils/cache");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
+// Question bulk-import specifically also accepts .txt (Notepad format) — every other bulk-upload
+// route on the platform keeps using the spreadsheet-only `upload` above.
+const uploadQuestionFile = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetOrTextFileFilter });
 
 const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL"];
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
@@ -26,7 +30,7 @@ const QUESTION_STATUSES = ["DRAFT", "UNDER_REVIEW", "VERIFIED", "PUBLISHED", "AR
 
 const TEMPLATE_HEADERS = [
   "Question Name", "Subject", "Unit", "Topic", "Question Text", "Question Type",
-  "Options", "Correct Answer", "Marks", "Difficulty Level", "Explanation",
+  "Options", "Correct Answer", "Marks", "Difficulty Level", "BTL", "Explanation",
 ];
 
 // Coding-question bulk import. A flat spreadsheet cell can't hold a nested test-case list, so
@@ -34,7 +38,7 @@ const TEMPLATE_HEADERS = [
 // `||` (e.g. "5->25||3->9||10->100") — documented in the template's own header note + sample row.
 // Constraints/Input Format/Output Format map onto Question.constraints/inputFormat/outputFormat.
 const CODING_TEMPLATE_HEADERS = [
-  "Question Title", "Subject", "Unit", "Topic", "Subtopic", "Problem Statement", "Difficulty", "Programming Languages",
+  "Question Title", "Subject", "Unit", "Topic", "Subtopic", "Problem Statement", "Difficulty", "BTL", "Programming Languages",
   "Time Limit (seconds)", "Memory Limit (MB)", "Marks", "Constraints", "Input Format", "Output Format",
   "Sample Input 1", "Sample Output 1", "Sample Explanation 1",
   "Sample Input 2", "Sample Output 2", "Sample Explanation 2",
@@ -79,8 +83,20 @@ const CODING_IMPORT_HEADER_ALIASES = {
   starterC: ["starter code c"],
   tags: ["tags"],
   questionBank: ["question bank"],
+  btl: ["btl", "btl level", "bloom s taxonomy level"],
 };
 const SUPPORTED_CODING_LANGUAGES = ["java", "python", "cpp", "c", "javascript"];
+
+// "BTL-3" / "3" / "Level 3" / "" -> 3 / null. Throws only on a value that's present but doesn't
+// resolve to 1-6 — an admin who typed something is telling us they meant to set a level, so a
+// garbled value should surface as a row error rather than silently import with no BTL at all.
+function parseBtlLevel(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  const m = s.match(/[1-6]/);
+  if (!m) throw new Error(`Invalid BTL "${raw}" — use 1-6 (or BTL-1 .. BTL-6)`);
+  return Number(m[0]);
+}
 
 // Normalizes/validates the type-specific fields (options + correctAnswer) for
 // MCQ / TRUE_FALSE / MULTISELECT questions. Returns { options, correctAnswer }
@@ -1018,17 +1034,115 @@ router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), a
   res.json({ clearedCount, skippedCount, blocked });
 });
 
-// Download a sample .xlsx template for bulk question import — quiz types by default,
-// or coding questions via ?type=coding.
+// Notepad/.txt sample templates — hand-written (not generated from the xlsx sample data) so the
+// field order and wording match exactly what a staff member typing into Notepad would see,
+// including the platform's actual minimums (2 sample cases + 10 hidden cases for coding) spelled
+// out as a comment rather than left implicit.
+const MCQ_TXT_TEMPLATE = `Notepad Question Upload — Multiple Choice / True-False / Multiple Select
+One question per block, separated by a blank line. Each field is a LABEL: line — the value can
+continue on the next line(s) until the next label. TYPE: is optional (auto-detected: two options
+"True"/"False" -> True/False; more than one CORRECT_OPTION letter -> Multiple Select; otherwise
+Multiple Choice) — only add it if you want to force a specific type.
+
+QUESTION: What is the time complexity of binary search?
+OPTION_A: O(n)
+OPTION_B: O(log n)
+OPTION_C: O(n^2)
+OPTION_D: O(1)
+CORRECT_OPTION: B
+DIFFICULTY: Medium
+BTL: BTL-3
+SUBJECT: DSA
+UNIT: Unit 1
+TOPIC: Searching
+EXPLANATION: Binary search repeatedly divides the search space in half.
+
+QUESTION: Water boils at 100 C at sea level.
+OPTION_A: True
+OPTION_B: False
+CORRECT_OPTION: A
+DIFFICULTY: Easy
+BTL: BTL-1
+SUBJECT: Physics
+UNIT: Unit 1
+TOPIC: States of Matter
+`;
+
+const CODING_TXT_TEMPLATE = `Notepad Question Upload — Coding
+One question per block, separated by a line of at least 3 dashes (---). Each field is a LABEL:
+line — the value can continue on the next line(s) until the next label. This platform requires
+2 visible sample cases (SAMPLE_INPUT/SAMPLE_OUTPUT and SAMPLE_INPUT_2/SAMPLE_OUTPUT_2) plus at
+least 10 hidden cases inside TEST_CASES (each as an INPUT: / OUTPUT: pair) — fewer than that will
+be rejected, same as the spreadsheet template.
+
+QUESTION: Write a program to find the maximum element in an array.
+LANGUAGE: C++, Java, Python
+INPUT_FORMAT: First line contains N. Second line contains N integers.
+OUTPUT_FORMAT: Print the maximum value.
+CONSTRAINTS: 1 <= N <= 100000
+SAMPLE_INPUT: 5
+10 20 5 40 15
+SAMPLE_OUTPUT: 40
+SAMPLE_INPUT_2: 3
+1 2 3
+SAMPLE_OUTPUT_2: 3
+DIFFICULTY: Medium
+BTL: BTL-3
+SUBJECT: DSA
+UNIT: Unit 1
+TOPIC: Arrays
+TEST_CASES:
+INPUT: 4
+7 2 9 4
+OUTPUT: 9
+INPUT: 1
+5
+OUTPUT: 5
+INPUT: 6
+-1 -5 -3 -2 -9 -4
+OUTPUT: -1
+INPUT: 5
+0 0 0 0 0
+OUTPUT: 0
+INPUT: 2
+1000000 999999
+OUTPUT: 1000000
+INPUT: 4
+3 3 3 3
+OUTPUT: 3
+INPUT: 7
+1 2 3 4 5 6 7
+OUTPUT: 7
+INPUT: 3
+-10 -20 -30
+OUTPUT: -10
+INPUT: 5
+100 50 100 25 100
+OUTPUT: 100
+INPUT: 2
+-5 5
+OUTPUT: 5
+`;
+
+// Download a sample template for bulk question import — quiz types by default, or coding
+// questions via ?type=coding; .xlsx by default, or Notepad/.txt via ?format=txt.
 router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
   const isCoding = req.query.type === "coding";
+
+  if (req.query.format === "txt") {
+    const body = isCoding ? CODING_TXT_TEMPLATE : MCQ_TXT_TEMPLATE;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename=${isCoding ? "coding-question-template.txt" : "question-bank-template.txt"}`);
+    return res.send(body);
+  }
+
   let headers, sampleRows, filename;
 
   if (isCoding) {
     headers = CODING_TEMPLATE_HEADERS;
     sampleRows = [
       [
-        "Sum of Two Numbers", "Java", "Unit 1", "Math", "Addition", "Read two integers and print their sum.", "Easy", "Java, Python, C++, C",
+        "Sum of Two Numbers", "Java", "Unit 1", "Math", "Addition", "Read two integers and print their sum.", "Easy", "BTL-3", "Java, Python, C++, C",
         2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
         "2 3", "5", "2 + 3 = 5",
         "10 20", "30", "",
@@ -1044,7 +1158,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
         // FUNCTION-mode test case inputs use one line per parameter (never space-separated on one
         // line, unlike STDIO) — a two-scalar-parameter signature like add(a, b) needs "2\n3", not
         // "2 3", matching exactly what functionHarness.js's generated driver parses per parameter.
-        "Add Two Numbers (Function)", "Java", "Unit 1", "Math", "Implement a function that returns the sum of two integers.", "Easy", "Java, Python, C++",
+        "Add Two Numbers (Function)", "Java", "Unit 1", "Math", "Implement a function that returns the sum of two integers.", "Easy", "BTL-3", "Java, Python, C++",
         2, 256, 10, "1 <= a, b <= 10^9", "N/A — function parameters, not stdin", "N/A — return value, not stdout",
         "2\n3", "5", "2 + 3 = 5",
         "10\n20", "30", "",
@@ -1058,9 +1172,9 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
   } else {
     headers = TEMPLATE_HEADERS;
     sampleRows = [
-      ["Capital of France", "Geography", "Unit 1", "Europe", "What is the capital of France?", "Multiple Choice", "Paris|London|Berlin|Madrid", "Paris", 5, "Easy", "Paris has been the capital since 987 AD."],
-      ["Water boils at 100C", "Science", "Unit 1", "Physics", "Water boils at 100°C at sea level.", "True/False", "", "True", 2, "Easy", ""],
-      ["Prime numbers", "Math", "Unit 2", "Number Theory", "Which of the following are prime numbers?", "Multiple Select", "2|3|4|9", "2,3", 5, "Medium", "2 and 3 are prime; 4 and 9 are not."],
+      ["Capital of France", "Geography", "Unit 1", "Europe", "What is the capital of France?", "Multiple Choice", "Paris|London|Berlin|Madrid", "Paris", 5, "Easy", "BTL-1", "Paris has been the capital since 987 AD."],
+      ["Water boils at 100C", "Science", "Unit 1", "Physics", "Water boils at 100°C at sea level.", "True/False", "", "True", 2, "Easy", "BTL-1", ""],
+      ["Prime numbers", "Math", "Unit 2", "Number Theory", "Which of the following are prime numbers?", "Multiple Select", "2|3|4|9", "2,3", 5, "Medium", "BTL-2", "2 and 3 are prime; 4 and 9 are not."],
     ];
     filename = "question-bank-template.xlsx";
   }
@@ -1150,6 +1264,7 @@ const IMPORT_HEADER_ALIASES = {
   points: ["marks", "points"],
   difficulty: ["difficulty level", "difficulty"],
   explanation: ["explanation"],
+  btl: ["btl", "btl level", "bloom s taxonomy level"],
 };
 
 function normalizeHeader(str) {
@@ -1167,161 +1282,229 @@ function buildHeaderMap(headers) {
   return map;
 }
 
-// Bulk-import quiz questions (MCQ / True-False / Multiple Select) from .xlsx/.csv.
-// Coding questions aren't supported via spreadsheet import — their test cases
-// don't map cleanly to flat rows — use the question form for those.
-//
-// Optional `folderId` in the request body files every created question into that folder (the
-// "Save uploaded questions to Question Bank" checkbox on the test-creation page) — the questions
-// are always persisted as real rows either way (they have to exist to be attachable to a test),
-// omitting folderId just leaves them unfiled rather than skipping creation.
-router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+// Reads an uploaded bulk-import file into the header-keyed row shape buildHeaderMap()/field()
+// expect — branches purely on file extension: .txt goes through the Notepad-format parser
+// (bulkQuestionParser.js), everything else goes through the existing XLSX.read path unchanged.
+// Both produce plain objects keyed by header text, so nothing downstream needs to know which
+// format a row came from.
+function parseUploadedFile(file, { coding }) {
+  const ext = String(file.originalname || "").toLowerCase().split(".").pop();
+  if (ext === "txt") {
+    const text = file.buffer.toString("utf-8");
+    const rows = coding ? parseNotepadCodingText(text) : parseNotepadMcqText(text);
+    return { rows, error: null };
+  }
+  try {
+    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    return { rows: sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [], error: null };
+  } catch {
+    return { rows: null, error: "Could not read this file. Please upload a valid .xlsx, .csv, or .txt file." };
+  }
+}
+
+// Shared core for quiz-type (MCQ/TRUE_FALSE/MULTISELECT) bulk import — used by all three routes
+// below (immediate file import, preview, and confirm-after-preview) so there is exactly one place
+// that decides what's valid, what's a duplicate, and what gets written. `commit: false` (preview)
+// runs every check and resolves subject/unit/BTL/options exactly as commit: true does, it just
+// never calls prisma.question.create — so a preview can never diverge from what confirming the
+// same rows would actually do. Duplicate-detection re-queries the DB fresh every call (never
+// trusts a cached "was valid at preview time" flag), so a confirm always reflects current state
+// even if something else changed in between.
+async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commit) {
+  const headerMap = buildHeaderMap(Object.keys(rows[0] || {}));
+  if (!headerMap.description || !headerMap.questionType) {
+    return { error: "Missing required columns. The file must include Question Text and Question Type." };
+  }
+
+  const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
+  const created = [];
+  const skipped = [];
+  const errors = [];
+  const seenDescriptions = new Set();
+  const existingDescriptionsByScope = new Map();
+
+  async function existingDescriptions(fId, subjectId, unitId) {
+    const key = `${fId || ""}::${subjectId || ""}::${unitId || ""}`;
+    if (!existingDescriptionsByScope.has(key)) {
+      const rows = await prisma.question.findMany({
+        where: { folderId: fId || null, subjectId: subjectId || null, unitId: unitId || null, ...questionVisibilityWhere(req) },
+        select: { description: true },
+      });
+      existingDescriptionsByScope.set(key, new Set(rows.map((r) => (r.description || "").trim().toLowerCase()).filter(Boolean)));
+    }
+    return existingDescriptionsByScope.get(key);
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = i + 2;
+    const row = rows[i];
+    const title = field(row, "title");
+    const description = field(row, "description");
+    const typeRaw = field(row, "questionType");
+
+    if (!title && !description && !typeRaw) continue; // blank row
+
+    if (!description) { errors.push({ row: rowNum, reason: "Missing Question Text" }); continue; }
+    const questionType = TYPE_ALIASES[normalizeHeader(typeRaw)];
+    if (!questionType) { errors.push({ row: rowNum, reason: `Unrecognized Question Type "${typeRaw}"` }); continue; }
+    if (questionType === "CODING") {
+      errors.push({ row: rowNum, reason: "Coding questions use the separate coding-question bulk upload (different template/columns), not this one" });
+      continue;
+    }
+
+    const subject = field(row, "subject");
+    const unit = field(row, "unit");
+    const topic = field(row, "topic");
+    const resolvedSubject = await resolveSubjectUnitTopicByName(req, { subjectName: subject, unitName: unit, topicName: topic });
+    if (resolvedSubject.error) { errors.push({ row: rowNum, reason: resolvedSubject.error }); continue; }
+
+    const descKey = description.trim().toLowerCase();
+    if (duplicateAction !== "import") {
+      if (seenDescriptions.has(descKey)) {
+        skipped.push({ row: rowNum, reason: "Duplicate question text within this file" });
+        continue;
+      }
+      const existing = await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId);
+      if (existing.has(descKey)) {
+        skipped.push({ row: rowNum, reason: "A question with this text already exists under that Subject/Unit" });
+        continue;
+      }
+    }
+
+    const optionsRaw = field(row, "options").split("|").map((s) => s.trim()).filter(Boolean);
+    const correctAnswerRaw = field(row, "correctAnswer");
+    const pointsRaw = field(row, "points");
+    const difficultyRaw = field(row, "difficulty");
+    const explanation = field(row, "explanation");
+
+    try {
+      const normalized = normalizeOptions(questionType, optionsRaw, correctAnswerRaw);
+      const btlLevel = parseBtlLevel(field(row, "btl"));
+      const data = {
+        title: title || null,
+        description,
+        subject: subject || null,
+        topic: topic || null,
+        subjectId: resolvedSubject.subjectId,
+        unitId: resolvedSubject.unitId,
+        topicId: resolvedSubject.topicId,
+        questionType,
+        difficulty: DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || "EASY",
+        btlLevel,
+        points: Number(pointsRaw) || 10,
+        explanation: explanation || null,
+        options: normalized.options,
+        correctAnswer: normalized.correctAnswer,
+        instituteId: req.requesterInstituteId,
+        folderId,
+        createdById: req.user.id,
+      };
+      if (commit) {
+        const question = await prisma.question.create({ data });
+        created.push(question);
+      } else {
+        created.push({ row: rowNum, title: title || null, description, questionType, difficulty: data.difficulty, btlLevel });
+      }
+      seenDescriptions.add(descKey);
+      (await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId)).add(descKey);
+    } catch (err) {
+      errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
+    }
+  }
+
+  if (commit && created.length > 0) {
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { count: created.length, folderId },
+    });
+  }
+  // Only present (and only meaningful) on a preview — the exact original row data the frontend
+  // should re-post to /bulk-import/confirm once the staff member is happy with the summary.
+  // Built from `created`'s row numbers (commit: false pushes a {row, ...} marker there instead of
+  // an actual Question) rather than re-deriving "was this row valid" from scratch, so it can never
+  // drift from what the counts above actually say passed.
+  const validRows = commit ? undefined : created.map((c) => rows[c.row - 2]);
+
+  return {
+    total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
+    skipped, errors, created, validRows,
+  };
+}
+
+async function resolveFolderForBulkImport(req, folderId) {
+  if (!folderId) return null;
+  const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
+  if (!folder || !ownsQuestionRow(req, folder)) {
+    const err = new Error("That folder isn't in your institute's question bank");
+    err.status = 403;
+    throw err;
+  }
+  return folderId;
+}
+
+// Bulk-import quiz questions (MCQ / True-False / Multiple Select) from .xlsx/.csv/.txt, writing
+// directly. Kept for backward compatibility (existing integrations/scripts) — the in-app upload
+// UI uses /bulk-import/preview + /bulk-import/confirm below instead, per the platform's
+// Preview -> Validate -> Confirm requirement, so a staff member always sees what will be created
+// before anything is actually written.
+router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-    const folderId = req.body.folderId || null;
-    if (folderId) {
-      const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
-      if (!folder || !ownsQuestionRow(req, folder)) {
-        return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
-      }
-    }
-
-    let workbook;
-    try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    } catch {
-      return res.status(400).json({ error: "Could not read this file. Please upload a valid .xlsx or .csv file." });
-    }
-
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
+    const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { rows, error } = parseUploadedFile(req.file, { coding: false });
+    if (error) return res.status(400).json({ error });
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
-
-    const headerMap = buildHeaderMap(Object.keys(rows[0]));
-    if (!headerMap.description || !headerMap.questionType) {
-      return res.status(400).json({ error: "Missing required columns. The file must include Question Text and Question Type." });
-    }
-
-    const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
-    const created = [];
-    const skipped = [];
-    const errors = [];
-    // "import" (from the frontend's duplicate-summary Skip/Import-anyway selector) disables the
-    // dedup checks below entirely — every valid row is created regardless of matches.
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const seenDescriptions = new Set(); // within-file duplicate detection, mirrors bulk-import-coding's seenTitles
-    // Keyed by folderId + subjectId + unitId, not folderId alone — "Java Unit 1 Question A" and
-    // "DBMS Unit 1 Question A" must never be cross-flagged as duplicates of each other just
-    // because the question text happens to match (spec section 13).
-    const existingDescriptionsByScope = new Map();
-
-    async function existingDescriptions(fId, subjectId, unitId) {
-      const key = `${fId || ""}::${subjectId || ""}::${unitId || ""}`;
-      if (!existingDescriptionsByScope.has(key)) {
-        const rows = await prisma.question.findMany({
-          where: { folderId: fId || null, subjectId: subjectId || null, unitId: unitId || null, ...questionVisibilityWhere(req) },
-          select: { description: true },
-        });
-        existingDescriptionsByScope.set(key, new Set(rows.map((r) => (r.description || "").trim().toLowerCase()).filter(Boolean)));
-      }
-      return existingDescriptionsByScope.get(key);
-    }
-
-    for (let i = 0; i < rows.length; i++) {
-      const rowNum = i + 2;
-      const row = rows[i];
-      const title = field(row, "title");
-      const description = field(row, "description");
-      const typeRaw = field(row, "questionType");
-
-      if (!title && !description && !typeRaw) continue; // blank row
-
-      if (!description) {
-        errors.push({ row: rowNum, reason: "Missing Question Text" });
-        continue;
-      }
-      const questionType = TYPE_ALIASES[normalizeHeader(typeRaw)];
-      if (!questionType) {
-        errors.push({ row: rowNum, reason: `Unrecognized Question Type "${typeRaw}"` });
-        continue;
-      }
-      if (questionType === "CODING") {
-        errors.push({ row: rowNum, reason: "Coding questions use the separate coding-question bulk upload (different template/columns), not this one" });
-        continue;
-      }
-
-      const subject = field(row, "subject");
-      const unit = field(row, "unit");
-      const topic = field(row, "topic");
-      const resolvedSubject = await resolveSubjectUnitTopicByName(req, { subjectName: subject, unitName: unit, topicName: topic });
-      if (resolvedSubject.error) {
-        errors.push({ row: rowNum, reason: resolvedSubject.error });
-        continue;
-      }
-
-      const descKey = description.trim().toLowerCase();
-      if (duplicateAction !== "import") {
-        if (seenDescriptions.has(descKey)) {
-          skipped.push({ row: rowNum, reason: "Duplicate question text within this file" });
-          continue;
-        }
-        const existing = await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId);
-        if (existing.has(descKey)) {
-          skipped.push({ row: rowNum, reason: "A question with this text already exists under that Subject/Unit" });
-          continue;
-        }
-      }
-
-      const optionsRaw = field(row, "options").split("|").map((s) => s.trim()).filter(Boolean);
-      const correctAnswerRaw = field(row, "correctAnswer");
-      const pointsRaw = field(row, "points");
-      const difficultyRaw = field(row, "difficulty");
-      const explanation = field(row, "explanation");
-
-      try {
-        const normalized = normalizeOptions(questionType, optionsRaw, correctAnswerRaw);
-        const question = await prisma.question.create({
-          data: {
-            title: title || null,
-            description,
-            subject: subject || null,
-            topic: topic || null,
-            subjectId: resolvedSubject.subjectId,
-            unitId: resolvedSubject.unitId,
-            topicId: resolvedSubject.topicId,
-            questionType,
-            difficulty: DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || "EASY",
-            points: Number(pointsRaw) || 10,
-            explanation: explanation || null,
-            options: normalized.options,
-            correctAnswer: normalized.correctAnswer,
-            instituteId: req.requesterInstituteId,
-            folderId,
-            createdById: req.user.id,
-          },
-        });
-        seenDescriptions.add(descKey);
-        (await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId)).add(descKey);
-        created.push(question);
-      } catch (err) {
-        errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
-      }
-    }
-
-    if (created.length > 0) {
-      await logAudit({
-        req, action: AUDIT_ACTIONS.QUESTION_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-        instituteId: req.requesterInstituteId, details: { count: created.length, folderId },
-      });
-    }
-    res.json({
-      total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
-      skipped, errors, created,
-    });
+    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction }, true);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     console.error(err);
     res.status(500).json({ error: "Bulk import failed" });
+  }
+});
+
+// Preview step: parses + validates a .xlsx/.csv/.txt file exactly as /bulk-import would, but
+// never writes to the database. Returns the same counts/errors/skipped summary plus `validRows`
+// (the original row data for everything that passed) for the frontend to show a Preview screen
+// and then re-post to /bulk-import/confirm once the staff member confirms.
+router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { rows, error } = parseUploadedFile(req.file, { coding: false });
+    if (error) return res.status(400).json({ error });
+    if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction }, false);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Preview failed" });
+  }
+});
+
+// Confirm step: takes the `validRows` a preview call returned (JSON body, not a file) and
+// actually creates them — re-running every validation/duplicate check fresh against current DB
+// state rather than trusting the preview's snapshot, since something else may have changed in the
+// meantime. This is the only place either preview or confirm ever calls prisma.question.create.
+router.post("/bulk-import/confirm", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
+    if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
+    const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction }, true);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Import failed" });
   }
 });
 
@@ -1363,73 +1546,58 @@ function parseHiddenTestCases(raw) {
 // name its own destination Question Bank (created if it doesn't exist yet); a row with no bank
 // name falls back to the `folderId` sent with the upload (the same "Save to Question Bank" picker
 // used for quiz bulk-import), and no bank at all leaves the question unfiled.
-router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+// Shared core for CODING bulk import — same "one function, commit true/false" design as
+// runQuizBulkImport above, for the same reason (a preview must run exactly the logic a confirm
+// would). The one side-effect a plain validation pass would normally cause — auto-creating a
+// named Question Bank folder that doesn't exist yet (resolveBankFolder below) — is suppressed
+// when commit is false, since Preview must never write anything; the folder is created for real
+// only when this same function is called again with commit: true at confirm time.
+async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, commit) {
+  const headerMap = buildCodingHeaderMap(Object.keys(rows[0] || {}));
+  if (!headerMap.title || !headerMap.description) {
+    return { error: "Missing required columns. The file must include Question Title and Problem Statement." };
+  }
 
-    const defaultFolderId = req.body.folderId || null;
-    if (defaultFolderId) {
-      const folder = await prisma.questionFolder.findUnique({ where: { id: defaultFolderId } });
-      if (!folder || !ownsQuestionRow(req, folder)) {
-        return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
-      }
-    }
+  const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
+  const created = [];
+  const skipped = [];
+  const errors = [];
+  const seenTitles = new Set();
+  const folderIdByName = new Map();
+  const existingTitlesByScope = new Map();
 
-    let workbook;
-    try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    } catch {
-      return res.status(400).json({ error: "Could not read this file. Please upload a valid .xlsx or .csv file." });
-    }
-
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
-    if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
-
-    const headerMap = buildCodingHeaderMap(Object.keys(rows[0]));
-    if (!headerMap.title || !headerMap.description) {
-      return res.status(400).json({ error: "Missing required columns. The file must include Question Title and Problem Statement." });
-    }
-
-    const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
-    const created = [];
-    const skipped = [];
-    const errors = [];
-    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const seenTitles = new Set(); // within-file duplicate detection
-    const folderIdByName = new Map(); // bank name (lowercased) -> folderId, resolved/created once per name
-    // Keyed by folderId + subjectId + unitId, not folderId alone — same "Java Unit 1" vs "DBMS
-    // Unit 1" isolation rule as the quiz import above (spec section 13).
-    const existingTitlesByScope = new Map();
-
-    async function existingTitles(folderId, subjectId, unitId) {
-      const key = `${folderId || ""}::${subjectId || ""}::${unitId || ""}`;
-      if (!existingTitlesByScope.has(key)) {
-        const rows = await prisma.question.findMany({
-          where: { folderId: folderId || null, subjectId: subjectId || null, unitId: unitId || null, questionType: "CODING", ...questionVisibilityWhere(req) },
-          select: { title: true },
-        });
-        existingTitlesByScope.set(key, new Set(rows.map((r) => (r.title || "").toLowerCase()).filter(Boolean)));
-      }
-      return existingTitlesByScope.get(key);
-    }
-
-    async function resolveBankFolder(name) {
-      if (!name) return defaultFolderId;
-      const key = name.toLowerCase();
-      if (folderIdByName.has(key)) return folderIdByName.get(key);
-      let folder = await prisma.questionFolder.findFirst({
-        where: { name: { equals: name, mode: "insensitive" }, ...questionVisibilityWhere(req) },
+  async function existingTitles(folderId, subjectId, unitId) {
+    const key = `${folderId || ""}::${subjectId || ""}::${unitId || ""}`;
+    if (!existingTitlesByScope.has(key)) {
+      const rows = await prisma.question.findMany({
+        where: { folderId: folderId || null, subjectId: subjectId || null, unitId: unitId || null, questionType: "CODING", ...questionVisibilityWhere(req) },
+        select: { title: true },
       });
-      if (!folder) {
-        folder = await prisma.questionFolder.create({
-          data: { name, instituteId: req.requesterInstituteId, createdById: req.user.id },
-        });
-      }
-      folderIdByName.set(key, folder.id);
-      return folder.id;
+      existingTitlesByScope.set(key, new Set(rows.map((r) => (r.title || "").toLowerCase()).filter(Boolean)));
     }
+    return existingTitlesByScope.get(key);
+  }
 
+  async function resolveBankFolder(name) {
+    if (!name) return defaultFolderId;
+    const key = name.toLowerCase();
+    if (folderIdByName.has(key)) return folderIdByName.get(key);
+    let folder = await prisma.questionFolder.findFirst({
+      where: { name: { equals: name, mode: "insensitive" }, ...questionVisibilityWhere(req) },
+    });
+    if (!folder && commit) {
+      folder = await prisma.questionFolder.create({
+        data: { name, instituteId: req.requesterInstituteId, createdById: req.user.id },
+      });
+    }
+    // Preview + folder doesn't exist yet: no id to cache/return — existingTitles(null, ...) below
+    // is still correct (a not-yet-created folder trivially has no existing questions in it).
+    const id = folder?.id || null;
+    if (id) folderIdByName.set(key, id);
+    return id;
+  }
+
+  {
     for (let i = 0; i < rows.length; i++) {
       const rowNum = i + 2;
       const row = rows[i];
@@ -1553,67 +1721,120 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
           functionSignature,
           starterCodeByLanguage,
         });
+        const btlLevel = parseBtlLevel(field(row, "btl"));
 
-        const question = await prisma.question.create({
-          data: {
-            title,
-            topic: field(row, "topic") || null,
-            subtopic: field(row, "subtopic") || null,
-            subjectId: resolvedSubject.subjectId,
-            unitId: resolvedSubject.unitId,
-            topicId: resolvedSubject.topicId,
-            description,
-            questionType: "CODING",
-            difficulty,
-            points: Number(field(row, "points")) || 10,
-            timeLimitMs: Math.round(timeLimitSec * 1000),
-            memoryLimitKb,
-            evaluationType: resolved.evaluationType,
-            functionSignature: resolved.functionSignature,
-            starterCode: Object.values(resolved.starterCodeByLanguage || starterCodeByLanguage)[0] || "",
-            starterCodeByLanguage: Object.keys(resolved.starterCodeByLanguage || starterCodeByLanguage).length > 0 ? (resolved.starterCodeByLanguage || starterCodeByLanguage) : undefined,
-            tags: tags.length > 0 ? tags : undefined,
-            constraints: field(row, "constraints") || null,
-            inputFormat: field(row, "inputFormat") || null,
-            outputFormat: field(row, "outputFormat") || null,
-            instituteId: req.requesterInstituteId,
-            folderId,
-            createdById: req.user.id,
-            testCases: {
-              create: [
-                { input: sample1In, expected: sample1Out, isHidden: false, explanation: field(row, "sampleExplanation1") || null },
-                { input: sample2In, expected: sample2Out, isHidden: false, explanation: field(row, "sampleExplanation2") || null },
-                ...hiddenCases,
-              ],
-            },
+        const data = {
+          title,
+          topic: field(row, "topic") || null,
+          subtopic: field(row, "subtopic") || null,
+          subjectId: resolvedSubject.subjectId,
+          unitId: resolvedSubject.unitId,
+          topicId: resolvedSubject.topicId,
+          description,
+          questionType: "CODING",
+          difficulty,
+          btlLevel,
+          points: Number(field(row, "points")) || 10,
+          timeLimitMs: Math.round(timeLimitSec * 1000),
+          memoryLimitKb,
+          evaluationType: resolved.evaluationType,
+          functionSignature: resolved.functionSignature,
+          starterCode: Object.values(resolved.starterCodeByLanguage || starterCodeByLanguage)[0] || "",
+          starterCodeByLanguage: Object.keys(resolved.starterCodeByLanguage || starterCodeByLanguage).length > 0 ? (resolved.starterCodeByLanguage || starterCodeByLanguage) : undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          constraints: field(row, "constraints") || null,
+          inputFormat: field(row, "inputFormat") || null,
+          outputFormat: field(row, "outputFormat") || null,
+          instituteId: req.requesterInstituteId,
+          folderId,
+          createdById: req.user.id,
+          testCases: {
+            create: [
+              { input: sample1In, expected: sample1Out, isHidden: false, explanation: field(row, "sampleExplanation1") || null },
+              { input: sample2In, expected: sample2Out, isHidden: false, explanation: field(row, "sampleExplanation2") || null },
+              ...hiddenCases,
+            ],
           },
-        });
+        };
+        if (commit) {
+          const question = await prisma.question.create({ data });
+          created.push(question);
+        } else {
+          created.push({ row: rowNum, title, description, difficulty, btlLevel });
+        }
         seenTitles.add(titleKey);
         titles.add(titleKey);
-        created.push(question);
       } catch (err) {
         errors.push({ row: rowNum, reason: safeErrorMessage(err, "Failed to create question") });
       }
     }
+  }
 
-    if (created.length > 0) {
-      await logAudit({
-        req, action: AUDIT_ACTIONS.QUESTION_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
-        instituteId: req.requesterInstituteId, details: { count: created.length, coding: true },
-      });
-    }
-    res.json({
-      total: rows.length,
-      createdCount: created.length,
-      skippedCount: skipped.length,
-      errorCount: errors.length,
-      skipped,
-      errors,
-      created,
+  if (commit && created.length > 0) {
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_IMPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { count: created.length, coding: true },
     });
+  }
+  const validRows = commit ? undefined : created.map((c) => rows[c.row - 2]);
+  return {
+    total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
+    skipped, errors, created, validRows,
+  };
+}
+
+// Bulk-import CODING questions from .xlsx/.csv/.txt, writing directly — kept for backward
+// compatibility, same as /bulk-import above. The in-app upload UI uses
+// /bulk-import-coding/preview + /bulk-import-coding/confirm instead.
+router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { rows, error } = parseUploadedFile(req.file, { coding: true });
+    if (error) return res.status(400).json({ error });
+    if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, true);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     console.error(err);
     res.status(500).json({ error: "Bulk import failed" });
+  }
+});
+
+router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { rows, error } = parseUploadedFile(req.file, { coding: true });
+    if (error) return res.status(400).json({ error });
+    if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, false);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Preview failed" });
+  }
+});
+
+router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
+    if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
+    const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, true);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Import failed" });
   }
 });
 
