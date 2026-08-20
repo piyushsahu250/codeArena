@@ -7,6 +7,7 @@ import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
+import { MathLivePreview, MathSyntaxHint } from "../components/MathLivePreview";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import { useConfirm } from "../context/ConfirmContext";
 import { CODE_LANGUAGES } from "../utils/codeEditorDefaults";
@@ -423,6 +424,8 @@ export default function CreateQuestion() {
 
           <label style={labelStyle}>Question Text</label>
           <textarea style={{ ...inputStyle, minHeight: 140 }} required value={form.description} onChange={updateField("description")} placeholder="Problem statement / question text…" />
+          <MathSyntaxHint />
+          <MathLivePreview text={form.description} />
 
           {!isQuiz && (
             <ProblemStatementFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
@@ -570,13 +573,16 @@ export default function CreateQuestion() {
                     checked={correctIndices.includes(idx)}
                     onChange={() => toggleCorrect(idx)}
                   />
-                  <input
-                    style={{ ...inputStyle, flex: 1 }}
-                    value={opt}
-                    disabled={isTrueFalse}
-                    onChange={(e) => updateOption(idx, e.target.value)}
-                    placeholder={`Option ${idx + 1}`}
-                  />
+                  <div style={{ flex: 1 }}>
+                    <input
+                      style={inputStyle}
+                      value={opt}
+                      disabled={isTrueFalse}
+                      onChange={(e) => updateOption(idx, e.target.value)}
+                      placeholder={`Option ${idx + 1}`}
+                    />
+                    <MathLivePreview text={opt} />
+                  </div>
                   {!isTrueFalse && options.length > 2 && (
                     <button type="button" onClick={() => removeOption(idx)} style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }}>Remove</button>
                   )}
@@ -585,6 +591,7 @@ export default function CreateQuestion() {
 
               <label style={labelStyle}>Explanation (optional)</label>
               <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.explanation} onChange={updateField("explanation")} placeholder="Shown to staff for review; not shown to students during the test." />
+              <MathLivePreview text={form.explanation} />
             </>
           )}
 

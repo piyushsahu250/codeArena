@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import MathText from "../components/MathText";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -38,7 +39,7 @@ export default function TestPreview() {
                   {tq.question.points} pts
                 </span>
               </div>
-              <p style={{ whiteSpace: "pre-wrap", fontSize: 14, marginTop: 10, lineHeight: 1.6 }}>{tq.question.description}</p>
+              <p style={{ whiteSpace: "pre-wrap", fontSize: 14, marginTop: 10, lineHeight: 1.6 }}><MathText text={tq.question.description} /></p>
 
               {tq.question.questionType === "CODING" ? (
                 <div style={{ marginTop: 12 }}>
@@ -59,14 +60,14 @@ export default function TestPreview() {
                       const isCorrect = (tq.question.correctAnswer || []).includes(i);
                       return (
                         <div key={i} style={{ fontSize: 13, color: isCorrect ? "var(--mint)" : "inherit", fontWeight: isCorrect ? 700 : 400 }}>
-                          {isCorrect ? "✓ " : "· "}{opt}
+                          {isCorrect ? "✓ " : "· "}<MathText text={opt} />
                         </div>
                       );
                     })}
                   </div>
                   {tq.question.explanation && (
                     <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>
-                      <strong>Explanation:</strong> {tq.question.explanation}
+                      <strong>Explanation:</strong> <MathText text={tq.question.explanation} />
                     </p>
                   )}
                 </div>

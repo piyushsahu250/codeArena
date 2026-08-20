@@ -9,6 +9,7 @@ import useIsMobile from "../hooks/useIsMobile";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
+import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
@@ -1352,7 +1353,7 @@ export default function TestTaking() {
                       checked={(answer?.selected || []).includes(idx)}
                       onChange={() => toggleOption(idx)}
                     />
-                    <span style={{ fontSize: 14 }}>{opt}</span>
+                    <span style={{ fontSize: 14 }}><MathText text={opt} /></span>
                   </label>
                 ))}
               </div>

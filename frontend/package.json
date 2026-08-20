@@ -15,6 +15,7 @@
     "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.18.1",
     "dompurify": "^3.2.4",
+    "katex": "^0.16.9",
     "lucide-react": "^0.475.0",
     "monaco-editor": "^0.55.1",
     "react": "^19.2.7",

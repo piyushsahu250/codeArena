@@ -10,6 +10,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
+import MathText from "../components/MathText";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
@@ -624,7 +625,7 @@ export default function InterviewSession() {
               <ProblemStatement question={q} />
             </div>
           ) : (
-            <p style={{ marginTop: 12, fontWeight: 600, fontSize: 16 }}>{q.prompt}</p>
+            <p style={{ marginTop: 12, fontWeight: 600, fontSize: 16 }}><MathText text={q.prompt} /></p>
           )}
 
           {FREE_TEXT_CATEGORIES.includes(q.category) && (

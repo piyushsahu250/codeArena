@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import Navbar from "../components/Navbar";
 import ProblemStatement from "../components/ProblemStatement";
+import MathText from "../components/MathText";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
@@ -223,7 +224,7 @@ export default function ReadinessAssessment() {
                 {(current.options || []).map((opt, idx) => (
                   <label key={idx} className="card" style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
                     <input type={isMulti ? "checkbox" : "radio"} name="readiness-option" checked={(ans.selected || []).includes(idx)} onChange={() => toggleOption(idx)} />
-                    <span style={{ fontSize: 14 }}>{opt}</span>
+                    <span style={{ fontSize: 14 }}><MathText text={opt} /></span>
                   </label>
                 ))}
               </div>

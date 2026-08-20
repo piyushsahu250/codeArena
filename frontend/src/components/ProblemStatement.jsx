@@ -1,4 +1,5 @@
 import { useState } from "react";
+import MathText from "./MathText";
 
 // Shared student-facing problem-statement renderer — the read-side counterpart to
 // ProblemStatementFields.jsx. Used by every coding surface (formal Tests, Module Coding Tests,
@@ -59,19 +60,19 @@ export default function ProblemStatement({ question }) {
         </div>
       )}
 
-      <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14, marginTop: 16 }}>{description}</p>
+      <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14, marginTop: 16 }}><MathText text={description} /></p>
 
       {q.realWorldScenario && (
         <div className="card" style={{ padding: 14, marginTop: 16, background: "var(--card-bg, #F7F7F5)" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>REAL-WORLD SCENARIO</div>
-          <p style={{ fontSize: 13, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.realWorldScenario}</p>
+          <p style={{ fontSize: 13, marginTop: 6, whiteSpace: "pre-wrap", lineHeight: 1.6 }}><MathText text={q.realWorldScenario} /></p>
         </div>
       )}
 
       {q.problemExplanation && (
         <details style={{ marginTop: 16 }}>
           <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 700, color: "var(--ink-dim)" }}>📖 Explanation — read this if you're not sure where to start</summary>
-          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.problemExplanation}</p>
+          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}><MathText text={q.problemExplanation} /></p>
         </details>
       )}
 
@@ -82,13 +83,13 @@ export default function ProblemStatement({ question }) {
             {q.inputFormat && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)" }}>INPUT</div>
-                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{q.inputFormat}</p>
+                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.5 }}><MathText text={q.inputFormat} /></p>
               </div>
             )}
             {q.outputFormat && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)" }}>OUTPUT</div>
-                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{q.outputFormat}</p>
+                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.5 }}><MathText text={q.outputFormat} /></p>
               </div>
             )}
           </div>
@@ -98,21 +99,21 @@ export default function ProblemStatement({ question }) {
       {q.constraints && (
         <details open style={{ marginTop: 16 }}>
           <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>CONSTRAINTS</summary>
-          <p className="mono" style={{ fontSize: 12.5, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.constraints}</p>
+          <p className="mono" style={{ fontSize: 12.5, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}><MathText text={q.constraints} /></p>
         </details>
       )}
 
       {q.edgeCases && (
         <details open style={{ marginTop: 16 }}>
           <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>EDGE CASES TO CONSIDER</summary>
-          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.edgeCases}</p>
+          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}><MathText text={q.edgeCases} /></p>
         </details>
       )}
 
       {q.notes && (
         <details open style={{ marginTop: 16 }}>
           <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>NOTES</summary>
-          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{q.notes}</p>
+          <p style={{ fontSize: 13, marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.6 }}><MathText text={q.notes} /></p>
         </details>
       )}
 
@@ -121,7 +122,7 @@ export default function ProblemStatement({ question }) {
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>HINTS</div>
           {hints.slice(0, hintsRevealed).map((h, i) => (
             <div key={i} className="card" style={{ padding: 10, marginTop: 8, fontSize: 13 }}>
-              <strong>Hint {i + 1}:</strong> <span style={{ whiteSpace: "pre-wrap" }}>{h}</span>
+              <strong>Hint {i + 1}:</strong> <span style={{ whiteSpace: "pre-wrap" }}><MathText text={h} /></span>
             </div>
           ))}
           {hintsRevealed < hints.length && (
@@ -140,7 +141,7 @@ export default function ProblemStatement({ question }) {
               <div key={i} className="card" style={{ padding: 12, marginTop: 8, fontSize: 13 }}>
                 <div className="mono"><strong>Input:</strong> {tc.input}</div>
                 <div className="mono"><strong>Expected:</strong> {tc.expected}</div>
-                {tc.explanation && <div style={{ marginTop: 6, color: "var(--ink-dim)" }}>{tc.explanation}</div>}
+                {tc.explanation && <div style={{ marginTop: 6, color: "var(--ink-dim)" }}><MathText text={tc.explanation} /></div>}
               </div>
             ))}
           </div>
@@ -158,7 +159,7 @@ export default function ProblemStatement({ question }) {
             ].map(([label, approach]) => approach?.approach && (
               <div key={label} style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 700 }}>{label}{approach.complexity ? ` — ${approach.complexity}` : ""}</div>
-                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{approach.approach}</p>
+                <p style={{ fontSize: 13, marginTop: 4, whiteSpace: "pre-wrap", lineHeight: 1.6 }}><MathText text={approach.approach} /></p>
               </div>
             ))}
           </div>
