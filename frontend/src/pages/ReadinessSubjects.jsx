@@ -54,6 +54,11 @@ export default function ReadinessSubjects() {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [warning, setWarning] = useState("");
+  // Collapsed by default — Question Types/BTL Distribution/Assessment Modes/Thresholds/Certificate
+  // all ship with sensible defaults (DEFAULT_MODES etc. above), so a first-time admin can create a
+  // working test with just a name, topics, and Save, without needing to understand BTL levels or
+  // assessment-mode keys up front. Power admins can still open this to fine-tune everything.
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [coverage, setCoverage] = useState(null); // { subjectId, ...} for whichever subject was last checked
   const [checkingCoverage, setCheckingCoverage] = useState(null);
 
@@ -86,7 +91,7 @@ export default function ReadinessSubjects() {
 
   function load() {
     api.get("/readiness/admin/subjects", { params: { batch: filterBatch || undefined, departmentId: filterDepartmentId || undefined, section: filterSection || undefined, instituteId: filterInstituteId || undefined } })
-      .then((res) => setSubjects(res.data)).catch(() => toast.error("Failed to load subjects"));
+      .then((res) => setSubjects(res.data)).catch(() => toast.error("Failed to load tests"));
   }
   useEffect(load, [filterBatch, filterDepartmentId, filterSection, filterInstituteId]);
   useEffect(() => { api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => {}); }, []);
@@ -98,6 +103,7 @@ export default function ReadinessSubjects() {
     setAssignments([]);
     setPickerGroupIds([]);
     setPickerProgram("");
+    setShowAdvanced(false);
     setEditingId("NEW");
   }
 
@@ -122,12 +128,13 @@ export default function ReadinessSubjects() {
     setWarning("");
     setPickerGroupIds([]);
     setPickerProgram("");
+    setShowAdvanced(false);
     setEditingId(s.id);
     try {
       const res = await api.get(`/readiness/admin/subjects/${s.id}`);
       applySubjectToForm(res.data);
     } catch {
-      toast.error("Failed to load subject detail");
+      toast.error("Failed to load test detail");
       applySubjectToForm(s);
     }
   }
@@ -229,10 +236,10 @@ export default function ReadinessSubjects() {
               assignments: pickerGroupIds.map((academicGroupId) => ({ academicGroupId, program: pickerProgram.trim() || null })),
             });
           } catch (assignErr) {
-            toast.error(assignErr.response?.data?.error || "Subject created, but assigning academic groups failed — assign them from the Edit screen.");
+            toast.error(assignErr.response?.data?.error || "Test created, but assigning academic groups failed — assign them from the Edit screen.");
           }
         }
-        toast.success("Subject created.");
+        toast.success("Test created.");
         // Stay on the edit screen so the admin can review/adjust the assignment right away.
         setEditingId(newSubjectId);
         setPickerGroupIds([]);
@@ -244,26 +251,26 @@ export default function ReadinessSubjects() {
           setAssignments([]);
         }
       } else {
-        toast.success("Subject updated.");
+        toast.success("Test updated.");
         setEditingId(null);
       }
       load();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to save subject");
+      toast.error(err.response?.data?.error || "Failed to save test");
     } finally {
       setSaving(false);
     }
   }
 
   async function remove(s) {
-    const ok = await confirmDialog({ title: "Delete Subject", message: `Delete "${s.name}"? This only works if no student assessments reference it yet.`, confirmLabel: "Delete" });
+    const ok = await confirmDialog({ title: "Delete Test", message: `Delete "${s.name}"? This only works if no student assessments reference it yet.`, confirmLabel: "Delete" });
     if (!ok) return;
     try {
       await api.delete(`/readiness/admin/subjects/${s.id}`);
-      toast.success("Subject deleted.");
+      toast.success("Test deleted.");
       load();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to delete subject");
+      toast.error(err.response?.data?.error || "Failed to delete test");
     }
   }
 
@@ -286,10 +293,15 @@ export default function ReadinessSubjects() {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1>Employability Readiness Subjects</h1>
+            <h1>Readiness Tests</h1>
             <ChalkUnderline />
+            <p style={{ fontSize: 13, opacity: 0.75, marginTop: 6, maxWidth: 560 }}>
+              Create a test once — pick topics, who it's for, and how long it takes. CodeArena
+              generates a fresh, individually-assembled assessment for every student automatically,
+              so you never hand-pick questions per attempt.
+            </p>
           </div>
-          {editingId === null && <button className="btn btn-primary" onClick={startCreate}>New Subject</button>}
+          {editingId === null && <button className="btn btn-primary" onClick={startCreate}>+ Create Test</button>}
         </div>
 
         {editingId === null && (
@@ -331,7 +343,12 @@ export default function ReadinessSubjects() {
             {subjects === null ? (
               <p className="mono" style={{ opacity: 0.7 }}>Loading…</p>
             ) : subjects.length === 0 ? (
-              <p style={{ opacity: 0.7 }}>No subjects match — create one, or clear the filters above.</p>
+              <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                <p style={{ opacity: 0.7, marginBottom: 14 }}>
+                  No readiness tests yet — create your first one to get started, or clear the filters above.
+                </p>
+                <button className="btn btn-primary" onClick={startCreate}>+ Create Test</button>
+              </div>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
                 {subjects.map((s) => (
@@ -385,7 +402,7 @@ export default function ReadinessSubjects() {
             <button className="btn btn-ghost" onClick={() => setEditingId(null)}>← Back to list</button>
             {warning && <p style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{warning}</p>}
 
-            <label style={labelStyle}>Subject Name</label>
+            <label style={labelStyle}>Test Name</label>
             <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Data Structures &amp; Algorithms" />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
@@ -401,7 +418,7 @@ export default function ReadinessSubjects() {
               <div style={{ fontSize: 13, fontWeight: 700 }}>Assign to Academic Groups</div>
               <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
                 {assignments.length === 0
-                  ? "No groups assigned yet — this subject is currently open to every student in the institute. Assign specific Institute/Batch/Department/Section groups below to restrict it."
+                  ? "No groups assigned yet — this test is currently open to every student in the institute. Assign specific Institute/Batch/Department/Section groups below to restrict it."
                   : "Only students in the assigned groups below (matching the group's program, if one is set) can see and start this assessment."}
               </p>
 
@@ -427,7 +444,7 @@ export default function ReadinessSubjects() {
                 <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
                 {editingId === "NEW" ? (
                   pickerGroupIds.length > 0 && (
-                    <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>{pickerGroupIds.length} group(s) selected — assigned automatically when you save the subject below.</p>
+                    <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>{pickerGroupIds.length} group(s) selected — assigned automatically when you save the test below.</p>
                   )
                 ) : (
                   <button type="button" className="btn btn-primary" style={{ ...smallBtn, marginTop: 10 }} disabled={!pickerGroupIds.length || assigning} onClick={assignGroups}>
@@ -449,98 +466,114 @@ export default function ReadinessSubjects() {
               <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addTopic}>+ Add Topic</button>
             </div>
 
-            <div className="card" style={{ padding: 14, marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Question Types Allowed</div>
-              <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>Only types this platform can actually grade — Short Answer/Case Study/System Design free-response have no grading path yet.</p>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
-                {QUESTION_TYPES.map((t) => (
-                  <label key={t.value} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                    <input type="checkbox" checked={form.questionTypesAllowed.includes(t.value)} onChange={() => toggleQuestionType(t.value)} /> {t.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="card" style={{ padding: 14, marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Default BTL Distribution (%)</div>
-              <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
-                Sum: <strong style={{ color: Math.abs(distributionSum() - 100) > 10 ? "var(--rust)" : "inherit" }}>{distributionSum()}%</strong> — should be roughly 100%.
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginTop: 8 }}>
-                {BTL_LEVELS.map((lvl) => (
-                  <div key={lvl}>
-                    <label style={{ ...labelStyle, marginTop: 0, fontSize: 11 }}>BTL {lvl}</label>
-                    <input style={inputStyle} type="number" min="0" max="100" value={form.defaultBtlDistribution[String(lvl)]}
-                      onChange={(e) => setForm({ ...form, defaultBtlDistribution: { ...form.defaultBtlDistribution, [String(lvl)]: e.target.value } })} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card" style={{ padding: 14, marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Assessment Modes</div>
-              {form.assessmentModes.map((m, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input style={{ ...inputStyle, marginTop: 0, flex: "1 1 120px" }} placeholder="KEY" value={m.key} onChange={(e) => updateMode(i, "key", e.target.value.toUpperCase().replace(/\s+/g, "_"))} />
-                  <input style={{ ...inputStyle, marginTop: 0, flex: "2 1 200px" }} placeholder="Label" value={m.label} onChange={(e) => updateMode(i, "label", e.target.value)} />
-                  <select style={{ ...inputStyle, marginTop: 0, flex: "0 1 90px" }} value={m.btlMin} onChange={(e) => updateMode(i, "btlMin", e.target.value)}>
-                    {BTL_LEVELS.map((l) => <option key={l} value={l}>Min {l}</option>)}
-                  </select>
-                  <select style={{ ...inputStyle, marginTop: 0, flex: "0 1 90px" }} value={m.btlMax} onChange={(e) => updateMode(i, "btlMax", e.target.value)}>
-                    {BTL_LEVELS.map((l) => <option key={l} value={l}>Max {l}</option>)}
-                  </select>
-                  <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => removeMode(i)}>Remove</button>
-                </div>
-              ))}
-              <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addMode}>+ Add Mode</button>
-            </div>
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-              <div><label style={labelStyle}>Default Duration (min)</label><input style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
+              <div><label style={labelStyle}>Duration (min)</label><input style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
               <div><label style={labelStyle}>Passing %</label><input style={inputStyle} type="number" value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
-            </div>
-
-            <label style={labelStyle}>Employability Indicators (comma-separated, optional)</label>
-            <input style={inputStyle} value={form.employabilityIndicators} onChange={(e) => setForm({ ...form, employabilityIndicators: e.target.value })} placeholder="e.g. SQL, Database Design, Transactions" />
-
-            <div className="card" style={{ padding: 14, marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Readiness Level Thresholds</div>
-              {form.readinessThresholds.map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
-                  <input style={{ ...inputStyle, marginTop: 0, flex: "2 1 180px" }} placeholder="LABEL" value={t.label} onChange={(e) => updateThreshold(i, "label", e.target.value.toUpperCase().replace(/\s+/g, "_"))} />
-                  <input style={{ ...inputStyle, marginTop: 0, flex: "1 1 90px" }} type="number" placeholder="Min %" value={t.min} onChange={(e) => updateThreshold(i, "min", e.target.value)} />
-                  <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => removeThreshold(i)}>Remove</button>
-                </div>
-              ))}
-              <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addThreshold}>+ Add Threshold</button>
-            </div>
-
-            <div className="card" style={{ padding: 14, marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Certificate on Completion</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-                Off by default — a student is never auto-issued an employability certificate unless enabled here with a minimum level.
-              </div>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
-                <input type="checkbox" checked={form.certificateEnabled} onChange={(e) => setForm({ ...form, certificateEnabled: e.target.checked })} /> Issue a certificate automatically when a student qualifies
-              </label>
-              {form.certificateEnabled && (
-                <div style={{ marginTop: 10 }}>
-                  <label style={labelStyle}>Minimum Readiness Level Required</label>
-                  <select style={inputStyle} value={form.certificateMinLevel} onChange={(e) => setForm({ ...form, certificateMinLevel: e.target.value })}>
-                    {[...DEFAULT_THRESHOLDS].reverse().map((t) => (
-                      <option key={t.label} value={t.label}>{t.label.replace(/_/g, " ")}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>
               <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} /> Active (visible to students)
             </label>
 
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
+              <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => setShowAdvanced((v) => !v)}>
+                {showAdvanced ? "▾ Hide advanced settings" : "▸ Advanced settings (question types, difficulty mix, pass levels, certificate)"}
+              </button>
+              <p style={{ fontSize: 11, opacity: 0.65, marginTop: 6 }}>
+                Optional — sensible defaults are already applied, so you only need this if you want to fine-tune it.
+              </p>
+
+              {showAdvanced && (
+                <>
+                  <div className="card" style={{ padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Question Types Allowed</div>
+                    <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>Only types this platform can actually grade — Short Answer/Case Study/System Design free-response have no grading path yet.</p>
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+                      {QUESTION_TYPES.map((t) => (
+                        <label key={t.value} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                          <input type="checkbox" checked={form.questionTypesAllowed.includes(t.value)} onChange={() => toggleQuestionType(t.value)} /> {t.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Difficulty Mix (BTL Distribution %)</div>
+                    <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+                      How much of the test is easy recall (BTL 1) vs. hard problem-solving (BTL 6).
+                      Sum: <strong style={{ color: Math.abs(distributionSum() - 100) > 10 ? "var(--rust)" : "inherit" }}>{distributionSum()}%</strong> — should be roughly 100%.
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginTop: 8 }}>
+                      {BTL_LEVELS.map((lvl) => (
+                        <div key={lvl}>
+                          <label style={{ ...labelStyle, marginTop: 0, fontSize: 11 }}>BTL {lvl}</label>
+                          <input style={inputStyle} type="number" min="0" max="100" value={form.defaultBtlDistribution[String(lvl)]}
+                            onChange={(e) => setForm({ ...form, defaultBtlDistribution: { ...form.defaultBtlDistribution, [String(lvl)]: e.target.value } })} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="card" style={{ padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Assessment Modes</div>
+                    <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>The different variants of this test a student can choose from (e.g. a quick Foundation check vs. the full Complete assessment).</p>
+                    {form.assessmentModes.map((m, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <input style={{ ...inputStyle, marginTop: 0, flex: "1 1 120px" }} placeholder="KEY" value={m.key} onChange={(e) => updateMode(i, "key", e.target.value.toUpperCase().replace(/\s+/g, "_"))} />
+                        <input style={{ ...inputStyle, marginTop: 0, flex: "2 1 200px" }} placeholder="Label" value={m.label} onChange={(e) => updateMode(i, "label", e.target.value)} />
+                        <select style={{ ...inputStyle, marginTop: 0, flex: "0 1 90px" }} value={m.btlMin} onChange={(e) => updateMode(i, "btlMin", e.target.value)}>
+                          {BTL_LEVELS.map((l) => <option key={l} value={l}>Min {l}</option>)}
+                        </select>
+                        <select style={{ ...inputStyle, marginTop: 0, flex: "0 1 90px" }} value={m.btlMax} onChange={(e) => updateMode(i, "btlMax", e.target.value)}>
+                          {BTL_LEVELS.map((l) => <option key={l} value={l}>Max {l}</option>)}
+                        </select>
+                        <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => removeMode(i)}>Remove</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addMode}>+ Add Mode</button>
+                  </div>
+
+                  <label style={labelStyle}>Employability Indicators (comma-separated, optional)</label>
+                  <input style={inputStyle} value={form.employabilityIndicators} onChange={(e) => setForm({ ...form, employabilityIndicators: e.target.value })} placeholder="e.g. SQL, Database Design, Transactions" />
+
+                  <div className="card" style={{ padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Readiness Level Thresholds</div>
+                    <p style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>The score bands a student's result falls into (e.g. Job Ready at 75%+).</p>
+                    {form.readinessThresholds.map((t, i) => (
+                      <div key={i} style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+                        <input style={{ ...inputStyle, marginTop: 0, flex: "2 1 180px" }} placeholder="LABEL" value={t.label} onChange={(e) => updateThreshold(i, "label", e.target.value.toUpperCase().replace(/\s+/g, "_"))} />
+                        <input style={{ ...inputStyle, marginTop: 0, flex: "1 1 90px" }} type="number" placeholder="Min %" value={t.min} onChange={(e) => updateThreshold(i, "min", e.target.value)} />
+                        <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => removeThreshold(i)}>Remove</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addThreshold}>+ Add Threshold</button>
+                  </div>
+
+                  <div className="card" style={{ padding: 14, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Certificate on Completion</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
+                      Off by default — a student is never auto-issued an employability certificate unless enabled here with a minimum level.
+                    </div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
+                      <input type="checkbox" checked={form.certificateEnabled} onChange={(e) => setForm({ ...form, certificateEnabled: e.target.checked })} /> Issue a certificate automatically when a student qualifies
+                    </label>
+                    {form.certificateEnabled && (
+                      <div style={{ marginTop: 10 }}>
+                        <label style={labelStyle}>Minimum Readiness Level Required</label>
+                        <select style={inputStyle} value={form.certificateMinLevel} onChange={(e) => setForm({ ...form, certificateMinLevel: e.target.value })}>
+                          {[...DEFAULT_THRESHOLDS].reverse().map((t) => (
+                            <option key={t.label} value={t.label}>{t.label.replace(/_/g, " ")}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
             <button className="btn btn-primary" style={{ marginTop: 20 }} disabled={saving || !form.name.trim()} onClick={save}>
-              {saving ? "Saving…" : "Save Subject"}
+              {saving ? "Saving…" : "Save Test"}
             </button>
           </div>
         )}
