@@ -19,19 +19,30 @@ function instituteWhere(requesterInstituteId) {
   return requesterInstituteId ? { OR: [{ instituteId: requesterInstituteId }, { instituteId: null }] } : {};
 }
 
-// Prisma where-fragment for list/search/duplicate-check routes.
+// Prisma where-fragment for list/search/duplicate-check routes. The third OR branch is explicit
+// folder sharing (QuestionFolderShare, schema.prisma) — a STAFF requester also sees any question
+// filed in a folder that's been explicitly shared with them, on top of their own + legacy rows.
+// This is a plain relation filter (Question -> folder -> shares), so it needs no pre-fetched data
+// and works everywhere this function is already called.
 function questionVisibilityWhere(req) {
   const institute = instituteWhere(req.requesterInstituteId);
   if (req.user?.role !== "STAFF") return institute;
-  return { AND: [institute, { OR: [{ createdById: null }, { createdById: req.user.id }] }] };
+  return { AND: [institute, { OR: [{ createdById: null }, { createdById: req.user.id }, { folder: { shares: { some: { staffId: req.user.id } } } }] }] };
 }
 
-// Boolean ownership check for a single already-loaded Question or QuestionFolder row (both share
-// the same instituteId/createdById column shape, so this works for either model).
+// Boolean ownership check for a single already-loaded Question or QuestionFolder row. Shared-
+// folder access additionally requires the row to have been fetched with the relevant relation —
+// `folder: { include: { shares: { select: { staffId: true } } } }` for a Question row, or
+// `shares: { select: { staffId: true } }` for a QuestionFolder row itself. A row fetched without
+// that relation simply can't see shared access here (row.folder?.shares / row.shares is
+// undefined) — same result as before this existed, not a new gap, just not yet wired into every
+// call site of this widely-used function.
 function ownsQuestionRow(req, row) {
   if (req.requesterInstituteId && row.instituteId !== req.requesterInstituteId) return false;
-  if (req.user?.role === "STAFF" && row.createdById && row.createdById !== req.user.id) return false;
-  return true;
+  if (req.user?.role !== "STAFF") return true;
+  if (!row.createdById || row.createdById === req.user.id) return true;
+  const shares = row.folder?.shares || row.shares;
+  return Array.isArray(shares) && shares.some((s) => s.staffId === req.user.id);
 }
 
 module.exports = { instituteWhere, questionVisibilityWhere, ownsQuestionRow };

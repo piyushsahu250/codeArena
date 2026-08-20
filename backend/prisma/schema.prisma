@@ -202,6 +202,7 @@ model User {
   createdQuestions Question[] @relation("QuestionCreatedBy")
   updatedQuestions Question[] @relation("QuestionUpdatedBy")
   createdQuestionFolders QuestionFolder[]
+  sharedQuestionFolders QuestionFolderShare[] @relation("QuestionFolderSharedWith") // folders explicitly shared with this staff member by someone else
   createdSubjects  Subject[]
   subjectAssignments StaffSubjectAssignment[]
 
@@ -828,10 +829,34 @@ model QuestionFolder {
 
   questions Question[]
   randomBankTests Test[]
+  // Explicit staff-to-staff sharing, same convention as Test.shares/TestShare below — additive on
+  // top of createdById ownership, never a substitute for it. A STAFF requester can access every
+  // question filed in this folder iff they own the folder OR appear here — see
+  // backend/src/utils/questionVisibility.js. Empty = private to the owner (and any Admin at the
+  // same institute), the inverse of the "createdById: null = shared" convention above.
+  shares QuestionFolderShare[]
 
   @@index([parentId])
   @@index([instituteId])
   @@index([createdById])
+}
+
+// Explicit Question Bank (folder) sharing: grants a Staff member other than the owner
+// (createdById) access to view/manage every question filed in one folder, without making it
+// visible to every Staff member at the institute. Managed only by the folder's owner or an
+// Admin — a shared staff member cannot re-share to a third party (no route reads this table's
+// own staffId as an authorization source for writing more rows). Mirrors TestShare exactly.
+model QuestionFolderShare {
+  id             String         @id @default(uuid())
+  folder         QuestionFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  folderId       String
+  staff          User           @relation("QuestionFolderSharedWith", fields: [staffId], references: [id], onDelete: Cascade)
+  staffId        String
+  sharedByUserId String
+  sharedByName   String
+  createdAt      DateTime       @default(now())
+
+  @@unique([folderId, staffId])
 }
 
 model TestCase {

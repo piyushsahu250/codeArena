@@ -302,7 +302,7 @@ router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN"
       })),
       skipDuplicates: true,
     });
-    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, assignedCount: assignments.length } });
+    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_TEST_ASSIGNED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, assignedCount: assignments.length } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -326,7 +326,7 @@ router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMI
     if (!(await assertReadinessAssignmentScope(req, res, academicGroupIds))) return;
 
     await prisma.readinessSubjectAcademicGroup.deleteMany({ where: { subjectId: subject.id, academicGroupId: { in: academicGroupIds } } });
-    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, unassignedCount: academicGroupIds.length } });
+    await logAudit({ req, action: AUDIT_ACTIONS.READINESS_TEST_ASSIGNED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, unassignedCount: academicGroupIds.length } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);

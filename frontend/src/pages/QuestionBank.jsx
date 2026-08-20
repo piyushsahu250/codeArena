@@ -7,6 +7,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
 import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import BulkQuestionImport from "../components/BulkQuestionImport";
+import ShareQuestionBank from "../components/ShareQuestionBank";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -867,6 +868,9 @@ export default function QuestionBank() {
               >
                 {clearingFolder ? "Clearing…" : "Clear All Questions"}
               </button>
+            )}
+            {isRealFolder && (user?.role === "ADMIN" || activeFolder.createdById === user?.id) && (
+              <ShareQuestionBank folderId={activeFolder.id} />
             )}
 
             {isRealFolder && (

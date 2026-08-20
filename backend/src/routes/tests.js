@@ -9,6 +9,7 @@ const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwnership");
 const { resolveSubjectUnitTopic, canStaffUseSubject } = require("../utils/subjectAccess");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 
@@ -456,6 +457,12 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), attach
       where: { id: req.params.id },
       data: { isPublished: !!req.body.isPublished },
     });
+    if (test.isPublished && !existing.isPublished) {
+      await logAudit({
+        req, action: AUDIT_ACTIONS.TEST_PUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+        instituteId: req.requesterInstituteId, details: { testId: test.id, title: test.title },
+      });
+    }
     res.json(test);
   } catch (err) {
     console.error(err);

@@ -653,7 +653,10 @@ router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachReque
 });
 
 router.patch("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
+  const folder = await prisma.questionFolder.findUnique({
+    where: { id: req.params.id },
+    include: { shares: { select: { staffId: true } } },
+  });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
   if (!ownsQuestionRow(req, folder)) return res.status(403).json({ error: "Not your institute's folder" });
   const data = {};
@@ -697,7 +700,10 @@ async function collectDescendantFolders(rootId) {
 // sub-tree and reports how many questions/sub-banks actually exist, plus how many of those
 // questions are attached to a Test and therefore can't be deleted (see DELETE below).
 router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
+  const folder = await prisma.questionFolder.findUnique({
+    where: { id: req.params.id },
+    include: { shares: { select: { staffId: true } } },
+  });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
   if (!ownsQuestionRow(req, folder)) return res.status(403).json({ error: "Not your institute's folder" });
 
@@ -728,7 +734,10 @@ router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "ST
 // (QuestionFolder.parent is onDelete: Cascade at the DB level, which this per-row approach
 // deliberately avoids triggering on any folder that still holds real content).
 router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
-  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
+  const folder = await prisma.questionFolder.findUnique({
+    where: { id: req.params.id },
+    include: { shares: { select: { staffId: true } } },
+  });
   if (!folder) return res.status(404).json({ error: "Folder not found" });
   if (!ownsQuestionRow(req, folder)) return res.status(403).json({ error: "Not your institute's folder" });
 
@@ -797,6 +806,81 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
     skippedQuestionCount: questions.length - deletedQuestionCount,
     fullyDeleted: deletedFolderCount === folderIds.length,
   });
+});
+
+// Explicit Question Bank (folder) sharing — grants named STAFF accounts full view/manage access
+// to a folder (and every question filed in it) without opening it to the whole institute. Only
+// the folder's own creator or an Admin may grant/revoke — mirrors tests.js's /:id/shares exactly.
+router.get("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id }, select: { id: true, createdById: true, instituteId: true } });
+  if (!folder) return res.status(404).json({ error: "Question bank not found" });
+  if (req.requesterInstituteId && folder.instituteId && folder.instituteId !== req.requesterInstituteId) {
+    return res.status(403).json({ error: "You can only manage question banks under your own institute" });
+  }
+  if (req.user.role === "STAFF" && folder.createdById !== req.user.id) {
+    return res.status(403).json({ error: "Only the question bank's creator can view its sharing" });
+  }
+  const shares = await prisma.questionFolderShare.findMany({
+    where: { folderId: folder.id },
+    include: { staff: { select: { id: true, name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  res.json(shares);
+});
+
+router.post("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { staffIds = [] } = req.body;
+    const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id }, select: { id: true, name: true, createdById: true, instituteId: true } });
+    if (!folder) return res.status(404).json({ error: "Question bank not found" });
+    if (req.requesterInstituteId && folder.instituteId && folder.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage question banks under your own institute" });
+    }
+    if (req.user.role === "STAFF" && folder.createdById !== req.user.id) {
+      return res.status(403).json({ error: "Only the question bank's creator can share it" });
+    }
+    if (staffIds.length > 0) {
+      // Never trust the client's staffIds as-is — validate every target is a real STAFF account
+      // in the requester's own institute before writing anything.
+      const staffRows = await prisma.user.findMany({
+        where: { id: { in: staffIds }, role: "STAFF", ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}) },
+        select: { id: true },
+      });
+      if (staffRows.length !== staffIds.length) {
+        return res.status(400).json({ error: "One or more selected staff members are not valid for this institute" });
+      }
+      await prisma.questionFolderShare.createMany({
+        data: staffIds.map((staffId) => ({ folderId: folder.id, staffId, sharedByUserId: req.user.id, sharedByName: req.user.name })),
+        skipDuplicates: true,
+      });
+      await logAudit({
+        req, action: AUDIT_ACTIONS.QUESTION_BANK_SHARED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+        instituteId: folder.instituteId, details: { folderId: folder.id, folderName: folder.name, sharedWithCount: staffIds.length },
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to share question bank" });
+  }
+});
+
+router.delete("/folders/:id/shares/:staffId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id }, select: { id: true, name: true, createdById: true, instituteId: true } });
+    if (!folder) return res.status(404).json({ error: "Question bank not found" });
+    if (req.requesterInstituteId && folder.instituteId && folder.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage question banks under your own institute" });
+    }
+    if (req.user.role === "STAFF" && folder.createdById !== req.user.id) {
+      return res.status(403).json({ error: "Only the question bank's creator can revoke sharing" });
+    }
+    await prisma.questionFolderShare.deleteMany({ where: { folderId: folder.id, staffId: req.params.staffId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to revoke access" });
+  }
 });
 
 // Merge :id (source) into targetId — reassigns all of source's questions and direct child
@@ -1882,7 +1966,7 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attac
 router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const question = await prisma.question.findUnique({
     where: { id: req.params.id },
-    include: { testCases: true },
+    include: { testCases: true, folder: { include: { shares: { select: { staffId: true } } } } },
   });
   // 404 (not 403) on a cross-institute id — doesn't confirm whether the id exists at all,
   // consistent with how the list endpoint already just omits rows it can't show.
@@ -1893,7 +1977,10 @@ router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterI
 // Edit a question (any type)
 router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.question.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.question.findUnique({
+      where: { id: req.params.id },
+      include: { folder: { include: { shares: { select: { staffId: true } } } } },
+    });
     if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
 
     const {
@@ -1907,7 +1994,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
     } = req.body;
 
     if (folderId !== undefined && folderId !== null && folderId !== existing.folderId) {
-      const folder = await prisma.questionFolder.findUnique({ where: { id: folderId } });
+      const folder = await prisma.questionFolder.findUnique({
+        where: { id: folderId },
+        include: { shares: { select: { staffId: true } } },
+      });
       if (!folder || !ownsQuestionRow(req, folder)) {
         return res.status(403).json({ error: "That folder isn't in your institute's question bank" });
       }
@@ -2063,7 +2153,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
 
 router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.question.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.question.findUnique({
+      where: { id: req.params.id },
+      include: { folder: { include: { shares: { select: { staffId: true } } } } },
+    });
     if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
     const withHistory = await questionIdsWithSubmissionHistory([existing.id]);
     if (withHistory.has(existing.id)) {
