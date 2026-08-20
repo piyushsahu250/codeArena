@@ -5,6 +5,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { useAuth } from "../context/AuthContext";
 
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginTop: 14, marginBottom: 6 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14, fontFamily: "var(--font-body)" };
@@ -49,6 +50,7 @@ function emptyForm() {
 export default function ReadinessSubjects() {
   const toast = useToast();
   const confirmDialog = useConfirm();
+  const { user } = useAuth();
   const [subjects, setSubjects] = useState(null);
   const [editingId, setEditingId] = useState(null); // null = list only; "NEW" = create; else subject id
   const [form, setForm] = useState(emptyForm());
@@ -59,6 +61,15 @@ export default function ReadinessSubjects() {
   // working test with just a name, topics, and Save, without needing to understand BTL levels or
   // assessment-mode keys up front. Power admins can still open this to fine-tune everything.
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // True when viewing (not editing) a test created by another staff member — visible because
+  // it's assigned to one of the current staff's own classes, per the backend's read-visibility
+  // rule, but the backend rejects PATCH/DELETE from anyone but the creator (or Admin). Mirrored
+  // here so the UI doesn't offer actions that would just fail with a 403.
+  const [viewOnly, setViewOnly] = useState(false);
+
+  function isOwner(s) {
+    return user?.role !== "STAFF" || !s.createdById || s.createdById === user?.id;
+  }
   const [coverage, setCoverage] = useState(null); // { subjectId, ...} for whichever subject was last checked
   const [checkingCoverage, setCheckingCoverage] = useState(null);
 
@@ -104,6 +115,7 @@ export default function ReadinessSubjects() {
     setPickerGroupIds([]);
     setPickerProgram("");
     setShowAdvanced(false);
+    setViewOnly(false);
     setEditingId("NEW");
   }
 
@@ -129,6 +141,7 @@ export default function ReadinessSubjects() {
     setPickerGroupIds([]);
     setPickerProgram("");
     setShowAdvanced(false);
+    setViewOnly(!isOwner(s));
     setEditingId(s.id);
     try {
       const res = await api.get(`/readiness/admin/subjects/${s.id}`);
@@ -368,10 +381,15 @@ export default function ReadinessSubjects() {
                         <button className="btn btn-ghost" style={smallBtn} onClick={() => checkCoverage(s)} disabled={checkingCoverage === s.id}>
                           {checkingCoverage === s.id ? "Checking…" : "Check Coverage"}
                         </button>
-                        <button className="btn btn-ghost" style={smallBtn} onClick={() => startEdit(s)}>Edit</button>
-                        <button className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} onClick={() => remove(s)}>Delete</button>
+                        <button className="btn btn-ghost" style={smallBtn} onClick={() => startEdit(s)}>{isOwner(s) ? "Edit" : "View"}</button>
+                        {isOwner(s) && (
+                          <button className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} onClick={() => remove(s)}>Delete</button>
+                        )}
                       </div>
                     </div>
+                    {!isOwner(s) && (
+                      <p style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>Created by another staff member — visible to you because it's assigned to one of your classes.</p>
+                    )}
 
                     {coverage && coverage.subjectId === s.id && (
                       <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
@@ -401,6 +419,11 @@ export default function ReadinessSubjects() {
           <div style={{ marginTop: 20 }}>
             <button className="btn btn-ghost" onClick={() => setEditingId(null)}>← Back to list</button>
             {warning && <p style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{warning}</p>}
+            {viewOnly && (
+              <p style={{ fontSize: 13, marginTop: 10, background: "var(--paper-alt, #f7f5f0)", padding: "8px 12px", borderRadius: 8 }}>
+                View only — this test was created by another staff member. You can see it because it's assigned to one of your classes, but only its creator (or an Admin) can edit or delete it.
+              </p>
+            )}
 
             <label style={labelStyle}>Test Name</label>
             <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Data Structures &amp; Algorithms" />
@@ -430,28 +453,32 @@ export default function ReadinessSubjects() {
                         {a.academicGroup?.institute?.name} · {a.academicGroup?.batch} · {a.academicGroup?.department?.name} · Section {a.academicGroup?.section}
                         {a.program ? ` · ${a.program}` : ""}
                       </span>
-                      <button type="button" className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} disabled={removingGroupId === a.academicGroupId} onClick={() => unassignGroup(a.academicGroupId)}>
-                        {removingGroupId === a.academicGroupId ? "Removing…" : "Remove"}
-                      </button>
+                      {!viewOnly && (
+                        <button type="button" className="btn btn-ghost" style={{ ...smallBtn, color: "var(--rust)" }} disabled={removingGroupId === a.academicGroupId} onClick={() => unassignGroup(a.academicGroupId)}>
+                          {removingGroupId === a.academicGroupId ? "Removing…" : "Remove"}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
 
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
-                <AcademicGroupPicker multi groups={academicGroups} value={pickerGroupIds} onChange={setPickerGroupIds} />
-                <label style={{ ...labelStyle, marginTop: 10 }}>Program (optional — blank applies to every program in the selected groups)</label>
-                <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
-                {editingId === "NEW" ? (
-                  pickerGroupIds.length > 0 && (
-                    <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>{pickerGroupIds.length} group(s) selected — assigned automatically when you save the test below.</p>
-                  )
-                ) : (
-                  <button type="button" className="btn btn-primary" style={{ ...smallBtn, marginTop: 10 }} disabled={!pickerGroupIds.length || assigning} onClick={assignGroups}>
-                    {assigning ? "Assigning…" : `Assign ${pickerGroupIds.length || ""} Selected Group(s)`}
-                  </button>
-                )}
-              </div>
+              {!viewOnly && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                  <AcademicGroupPicker multi groups={academicGroups} value={pickerGroupIds} onChange={setPickerGroupIds} />
+                  <label style={{ ...labelStyle, marginTop: 10 }}>Program (optional — blank applies to every program in the selected groups)</label>
+                  <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
+                  {editingId === "NEW" ? (
+                    pickerGroupIds.length > 0 && (
+                      <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>{pickerGroupIds.length} group(s) selected — assigned automatically when you save the test below.</p>
+                    )
+                  ) : (
+                    <button type="button" className="btn btn-primary" style={{ ...smallBtn, marginTop: 10 }} disabled={!pickerGroupIds.length || assigning} onClick={assignGroups}>
+                      {assigning ? "Assigning…" : `Assign ${pickerGroupIds.length || ""} Selected Group(s)`}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="card" style={{ padding: 14, marginTop: 16 }}>
@@ -572,9 +599,11 @@ export default function ReadinessSubjects() {
               )}
             </div>
 
-            <button className="btn btn-primary" style={{ marginTop: 20 }} disabled={saving || !form.name.trim()} onClick={save}>
-              {saving ? "Saving…" : "Save Test"}
-            </button>
+            {!viewOnly && (
+              <button className="btn btn-primary" style={{ marginTop: 20 }} disabled={saving || !form.name.trim()} onClick={save}>
+                {saving ? "Saving…" : "Save Test"}
+              </button>
+            )}
           </div>
         )}
       </div>

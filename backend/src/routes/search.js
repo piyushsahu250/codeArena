@@ -4,6 +4,7 @@ const { authenticate } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { testEligibilityWhere } = require("../utils/testEligibility");
 const { staffTestAccessWhere } = require("../utils/testOwnership");
+const { questionVisibilityWhere } = require("../utils/questionVisibility");
 const { courseEligibilityWhere, isEligibilityUnresolvable } = require("../utils/courseEligibility");
 
 const router = express.Router();
@@ -73,12 +74,6 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       }));
     } else {
       const instituteFilter = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
-      // Question Bank rows use the same institute-visibility rule as questions.js's own reads:
-      // an institute-scoped requester sees their own institute's questions PLUS legacy/shared rows
-      // (instituteId: null) — see instituteVisibilityWhere() in questions.js for the original.
-      const questionInstituteVisibility = req.requesterInstituteId
-        ? { OR: [{ instituteId: req.requesterInstituteId }, { instituteId: null }] }
-        : {};
 
       const students = await prisma.user.findMany({
         where: { role: "STUDENT", ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }, { registrationNumber: insensitive(q) }, { mobile: insensitive(q) }] },
@@ -109,8 +104,12 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       const courses = await prisma.course.findMany({ where: { name: insensitive(q) }, take: LIMIT });
       results.push(...courses.map((c) => ({ type: "Course", label: c.name, url: `/learning/${c.slug}` })));
 
+      // Reuses the exact same rule questions.js's own list/edit routes enforce (institute PLUS,
+      // for a STAFF requester, createdById restricted to their own + legacy rows) — previously
+      // this only re-derived the institute half locally and dropped the creator half, leaking
+      // every institute-mate's private question titles/descriptions into search results.
       const questions = await prisma.question.findMany({
-        where: { OR: [{ title: insensitive(q) }, { description: insensitive(q) }], ...questionInstituteVisibility },
+        where: { AND: [{ OR: [{ title: insensitive(q) }, { description: insensitive(q) }] }, questionVisibilityWhere(req)] },
         take: LIMIT,
       });
       results.push(...questions.map((qn) => ({

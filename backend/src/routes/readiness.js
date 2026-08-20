@@ -29,6 +29,17 @@ async function staffAcademicGroupIds(req) {
   return rows.map((r) => r.academicGroupId).filter(Boolean);
 }
 
+// Ownership check for mutating a ReadinessSubject (edit/delete/reassign groups) — mirrors
+// questionVisibility.js's ownsQuestionRow() convention: ADMIN is unrestricted, a STAFF requester
+// may only mutate a subject they created, or a legacy row with no recorded creator
+// (createdById: null). This is deliberately stricter than list-visibility below — being able to
+// SEE a subject because it's assigned to one of your classes does not make you authorized to
+// edit or delete another staff member's subject.
+function isSubjectOwner(req, subject) {
+  if (req.user.role !== "STAFF") return true;
+  return !subject.createdById || subject.createdById === req.user.id;
+}
+
 // Institute to scope a list/analytics query to — a scoped Admin/Staff's own institute always
 // wins (never overridable by a client-supplied query param); an unscoped Platform Admin may
 // optionally narrow to one institute via ?instituteId=, mirroring academicGroups.js's identical
@@ -85,23 +96,27 @@ function sanitizeQuestionForStudent(q) {
 // =========================== Admin/Staff: Subject configuration ===========================
 
 // Query params batch/departmentId/section are a display filter for the admin's cascading picker
-// (spec section 13) — narrows to subjects explicitly assigned to a matching academic group. An
-// "open to entire institute" subject (zero assignment rows) only shows up when no display filter
-// is active, since it has no assignment row to match against; this is a deliberate simplification
-// for the assignment-management list, not a security boundary (GET /subjects and POST /assessments
-// are the actual enforcement points for students).
+// (spec section 13) — narrows to subjects explicitly assigned to a matching academic group. This
+// is a display refinement on top of scopeWhere below, not a security boundary on its own (GET
+// /subjects and POST /assessments are the actual student-facing enforcement points).
 //
-// STAFF is always restricted to subjects open to the whole institute OR assigned to one of their
-// own StaffClassAssignment academic groups (spec section 10) — ADMIN sees everything.
+// STAFF visibility (scopeWhere below) is creator-based, not institute-wide: subjects they
+// created, legacy rows with no recorded creator, or any subject assigned to one of their own
+// StaffClassAssignment academic groups. ADMIN sees every subject in the institute.
 router.get("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { batch, departmentId, section } = req.query;
     const hasDisplayFilter = !!(batch || departmentId || section);
     const groupMatch = { ...(batch ? { batch } : {}), ...(departmentId ? { departmentId } : {}), ...(section ? { section } : {}) };
 
+    // STAFF sees: subjects they created (or legacy rows with no recorded creator), PLUS any
+    // subject — regardless of creator — assigned to one of their own classes (they need to see
+    // what's running for students they teach). Previously an unassigned ("open to entire
+    // institute") subject was visible to every STAFF member by default, which is exactly the
+    // "Staff A's test automatically visible to Staff B" leak the privacy model is meant to close.
     const myGroupIds = await staffAcademicGroupIds(req);
     const scopeWhere = myGroupIds !== null
-      ? { OR: [{ academicGroupAssignments: { none: {} } }, { academicGroupAssignments: { some: { academicGroupId: { in: myGroupIds } } } }] }
+      ? { OR: [{ createdById: req.user.id }, { createdById: null }, { academicGroupAssignments: { some: { academicGroupId: { in: myGroupIds } } } }] }
       : {};
     const filterWhere = hasDisplayFilter ? { academicGroupAssignments: { some: { academicGroup: groupMatch } } } : {};
 
@@ -126,6 +141,13 @@ router.get("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"), a
     if (!subject) return res.status(404).json({ error: "Subject not found" });
     if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
       return res.status(404).json({ error: "Subject not found" });
+    }
+    // Read access matches the list rule: owner/legacy, or assigned to one of the staff member's
+    // own classes. Edit/delete (below) is intentionally narrower — see isSubjectOwner().
+    if (!isSubjectOwner(req, subject)) {
+      const myGroupIds = await staffAcademicGroupIds(req);
+      const assignedToMe = subject.academicGroupAssignments.some((a) => myGroupIds.includes(a.academicGroupId));
+      if (!assignedToMe) return res.status(404).json({ error: "Subject not found" });
     }
     res.json(subject);
   } catch (err) {
@@ -198,6 +220,9 @@ router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"),
     if (req.requesterInstituteId && existing.instituteId && existing.instituteId !== req.requesterInstituteId) {
       return res.status(404).json({ error: "Subject not found" });
     }
+    if (!isSubjectOwner(req, existing)) {
+      return res.status(403).json({ error: "You can only edit readiness tests you created" });
+    }
 
     const merged = { ...existing, ...req.body };
     const validation = validateSubjectPayload(merged);
@@ -234,6 +259,9 @@ router.delete("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF")
     if (req.requesterInstituteId && existing.instituteId && existing.instituteId !== req.requesterInstituteId) {
       return res.status(404).json({ error: "Subject not found" });
     }
+    if (!isSubjectOwner(req, existing)) {
+      return res.status(403).json({ error: "You can only delete readiness tests you created" });
+    }
     const attemptCount = await prisma.readinessAssessment.count({ where: { subjectId: req.params.id } });
     if (attemptCount > 0) {
       return res.status(400).json({ error: `Cannot delete — ${attemptCount} student assessment(s) already reference this subject. Deactivate it instead.` });
@@ -258,6 +286,9 @@ router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN"
     if (!subject) return res.status(404).json({ error: "Subject not found" });
     if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
       return res.status(404).json({ error: "Subject not found" });
+    }
+    if (!isSubjectOwner(req, subject)) {
+      return res.status(403).json({ error: "You can only assign academic groups to readiness tests you created" });
     }
 
     const assignments = (Array.isArray(req.body.assignments) ? req.body.assignments : []).filter((a) => a?.academicGroupId);
@@ -285,6 +316,9 @@ router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMI
     if (!subject) return res.status(404).json({ error: "Subject not found" });
     if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
       return res.status(404).json({ error: "Subject not found" });
+    }
+    if (!isSubjectOwner(req, subject)) {
+      return res.status(403).json({ error: "You can only unassign academic groups from readiness tests you created" });
     }
 
     const academicGroupIds = Array.isArray(req.body.academicGroupIds) ? req.body.academicGroupIds : [];
