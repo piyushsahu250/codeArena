@@ -677,6 +677,7 @@ model Question {
   dailyChallenges  DailyChallenge[]
   weeklyChallenges WeeklyChallenge[]
   readinessAnswers ReadinessAnswer[]
+  readinessPoolEntries ReadinessQuestionPool[]
 
   // Set only when this question belongs to a Learning Module's proctored coding-test pool
   // (reusing this same Question/TestCase model — hidden test cases, judge grading — rather
@@ -2835,9 +2836,35 @@ model ReadinessSubject {
 
   assessments ReadinessAssessment[]
   academicGroupAssignments ReadinessSubjectAcademicGroup[]
+  questionPool ReadinessQuestionPool[]
 
   @@index([instituteId])
   @@index([createdById])
+}
+
+// Explicit staff-curated question pool for one ReadinessSubject — reuses the existing Question
+// Bank (Question model) rather than a parallel question system, per the platform's own reuse
+// requirement: a staff member picks specific questions they already own (or have folder-share
+// access to) into this subject's pool instead of relying on readinessBlueprint.js's looser
+// subject-name-text match. Backward compatible by construction: buildAssessmentBlueprint() only
+// switches a subject over to sourcing from this pool once it has at least one row here — a
+// subject with zero pool entries keeps behaving exactly as it did before this table existed.
+// Per-student BTL-based random draw at attempt time is unchanged either way (this table curates
+// the eligible SET, it is not itself a fixed per-student question list — a deliberate choice to
+// keep the platform's one dynamic-assessment-generation model rather than add a second, parallel
+// fixed-test type alongside it).
+model ReadinessQuestionPool {
+  id            String           @id @default(uuid())
+  subject       ReadinessSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId     String
+  question      Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId    String
+  addedByUserId String
+  addedByName   String
+  createdAt     DateTime         @default(now())
+
+  @@unique([subjectId, questionId])
+  @@index([questionId])
 }
 
 // Fine-grained grant: subject visible/startable only for students in this specific AcademicGroup

@@ -227,6 +227,7 @@ function buildWhere(query, req) {
   if (query.topicId) where.topicId = query.topicId;
   if (query.difficulty && DIFFICULTIES.includes(query.difficulty)) where.difficulty = query.difficulty;
   if (query.questionType && QUESTION_TYPES.includes(query.questionType)) where.questionType = query.questionType;
+  if (query.btlLevel && BTL_LEVELS.includes(Number(query.btlLevel))) where.btlLevel = Number(query.btlLevel);
   if (query.folderId === "__none__") where.folderId = null;
   else if (query.folderId) where.folderId = query.folderId;
   if (query.createdById) where.createdById = query.createdById;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import FolderPicker from "../components/FolderPicker";
@@ -52,6 +52,11 @@ export default function CreateQuestion() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const confirmDialog = useConfirm();
+  const [searchParams] = useSearchParams();
+  // Set when this page was opened from a Readiness Test's "+ Add Question" button — a
+  // newly-created question is auto-added to that test's curated pool and the staff member is
+  // returned straight to the test instead of the general Question Bank list.
+  const readinessSubjectId = searchParams.get("readinessSubjectId");
 
   const [form, setForm] = useState(emptyForm);
   const [testCases, setTestCases] = useState([{ input: "", expected: "", isHidden: false, explanation: "" }]);
@@ -266,10 +271,16 @@ export default function CreateQuestion() {
 
       if (isEdit) {
         await api.patch(`/questions/${id}`, payload);
+        navigate("/staff/questions");
       } else {
-        await api.post("/questions", payload);
+        const { data: created } = await api.post("/questions", payload);
+        if (readinessSubjectId) {
+          await api.post(`/readiness/admin/subjects/${readinessSubjectId}/pool`, { questionIds: [created.id] }).catch(() => {});
+          navigate(`/staff/readiness-subjects?edit=${readinessSubjectId}`);
+        } else {
+          navigate("/staff/questions");
+        }
       }
-      navigate("/staff/questions");
     } catch (err) {
       if (!isEdit && err.response?.status === 409 && err.response?.data?.duplicate) {
         const existing = err.response.data.existing;

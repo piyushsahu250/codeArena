@@ -12,6 +12,23 @@ const GRADABLE_QUESTION_TYPES = ["MCQ", "MULTISELECT", "TRUE_FALSE", "CODING", "
 
 const INTERVIEW_ANTI_REPEAT_DAYS = 90; // same default as interview.js's pickQuestions, reused here
 
+// Resolves the eligible-question filter for a ReadinessSubject: once a staff member has curated
+// at least one ReadinessQuestionPool row for this subject, questions are sourced ONLY from that
+// explicit pool (id: { in: poolIds }) — the loose free-text `subject` match is dropped entirely,
+// since the whole point of curation is to stop relying on it. A subject with zero pool rows keeps
+// today's behavior unchanged (matches Question.subject against the subject's own name), so every
+// pre-existing subject keeps working exactly as before this table existed. Shared by
+// buildAssessmentBlueprint below and readiness.js's admin coverage-check route, so "what will
+// students actually get" and "what does the coverage report say is available" can never drift
+// apart from each other.
+async function subjectQuestionWhere(subject, extraWhere = {}) {
+  const poolRows = await prisma.readinessQuestionPool.findMany({ where: { subjectId: subject.id }, select: { questionId: true } });
+  if (poolRows.length > 0) {
+    return { ...extraWhere, id: { in: poolRows.map((r) => r.questionId) } };
+  }
+  return { ...extraWhere, subject: { equals: subject.name, mode: "insensitive" } };
+}
+
 function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
@@ -112,12 +129,11 @@ async function buildAssessmentBlueprint({ subject, assessmentMode, questionCount
   const statusWhere = includeDrafts
     ? {}
     : { questionStatus: { in: ["VERIFIED", "PUBLISHED"] } };
-  const baseWhere = {
+  const baseWhere = await subjectQuestionWhere(subject, {
     ...instituteWhere(studentInstituteId),
     ...statusWhere,
     questionType: { in: allowedTypes },
-    subject: { equals: subject.name, mode: "insensitive" },
-  };
+  });
 
   const items = [];
   const actual = {};
@@ -155,4 +171,4 @@ async function buildAssessmentBlueprint({ subject, assessmentMode, questionCount
   };
 }
 
-module.exports = { buildAssessmentBlueprint, resolveBtlTargets, GRADABLE_QUESTION_TYPES };
+module.exports = { buildAssessmentBlueprint, resolveBtlTargets, GRADABLE_QUESTION_TYPES, subjectQuestionWhere };

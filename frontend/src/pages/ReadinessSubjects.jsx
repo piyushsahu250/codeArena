@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
+import BulkQuestionImport from "../components/BulkQuestionImport";
+import SelectFromQuestionBank from "../components/SelectFromQuestionBank";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
+
+const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select", SQL: "SQL Query" };
 
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginTop: 14, marginBottom: 6 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14, fontFamily: "var(--font-body)" };
@@ -51,7 +56,16 @@ export default function ReadinessSubjects() {
   const toast = useToast();
   const confirmDialog = useConfirm();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState(null);
+  // The curated question pool for whichever subject is currently being edited — see
+  // readinessBlueprint.js's subjectQuestionWhere for how a non-empty pool changes assessment
+  // generation. null while loading, [] once loaded with zero entries (subject still falls back to
+  // the legacy subject-name text match until at least one question is added here).
+  const [pool, setPool] = useState(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const [editingId, setEditingId] = useState(null); // null = list only; "NEW" = create; else subject id
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -116,7 +130,32 @@ export default function ReadinessSubjects() {
     setPickerProgram("");
     setShowAdvanced(false);
     setViewOnly(false);
+    setPool(null);
     setEditingId("NEW");
+  }
+
+  function loadPool(subjectId) {
+    setPool(null);
+    api.get(`/readiness/admin/subjects/${subjectId}/pool`).then((res) => setPool(res.data)).catch(() => setPool([]));
+  }
+
+  async function addQuestionsToPool(questionIds) {
+    try {
+      const { data } = await api.post(`/readiness/admin/subjects/${editingId}/pool`, { questionIds });
+      loadPool(editingId);
+      toast.success(`${data.addedCount} question(s) added${data.skippedCount ? ` — ${data.skippedCount} skipped (not in your question bank)` : ""}.`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to add questions");
+    }
+  }
+
+  async function removeFromPool(questionId) {
+    try {
+      await api.delete(`/readiness/admin/subjects/${editingId}/pool/${questionId}`);
+      setPool((prev) => (prev || []).filter((p) => p.questionId !== questionId));
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to remove question");
+    }
   }
 
   function applySubjectToForm(s) {
@@ -143,6 +182,7 @@ export default function ReadinessSubjects() {
     setShowAdvanced(false);
     setViewOnly(!isOwner(s));
     setEditingId(s.id);
+    loadPool(s.id);
     try {
       const res = await api.get(`/readiness/admin/subjects/${s.id}`);
       applySubjectToForm(res.data);
@@ -151,6 +191,19 @@ export default function ReadinessSubjects() {
       applySubjectToForm(s);
     }
   }
+
+  // Deep-link from CreateQuestion.jsx's "back to readiness test" flow (?edit=<subjectId>) — opens
+  // straight into that subject's edit view once the list has loaded, and clears the param so a
+  // page refresh doesn't keep re-triggering it.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (editId && subjects) {
+      const match = subjects.find((s) => s.id === editId);
+      if (match) startEdit(match);
+      setSearchParams((prev) => { prev.delete("edit"); return prev; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects]);
 
   async function assignGroups() {
     if (!pickerGroupIds.length) return;
@@ -492,6 +545,83 @@ export default function ReadinessSubjects() {
               ))}
               <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addTopic}>+ Add Topic</button>
             </div>
+
+            <div className="card" style={{ padding: 14, marginTop: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Questions for this Test</div>
+              {editingId === "NEW" ? (
+                <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>Save the test once first — you can add questions right after.</p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                    {pool && pool.length > 0
+                      ? "Curated — students draw only from these questions (by BTL level) instead of everything matching this test's name."
+                      : "Not curated yet — students currently draw from every question in your bank tagged with this test's Subject name. Add questions below to switch to a curated set."}
+                  </p>
+                  {!viewOnly && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                      <button
+                        type="button" className="btn btn-primary" style={smallBtn}
+                        onClick={() => navigate(`/staff/questions/new?readinessSubjectId=${editingId}`)}
+                      >
+                        + Add Question
+                      </button>
+                      <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => setShowUpload((v) => !v)}>
+                        {showUpload ? "Hide Upload" : "Upload Questions"}
+                      </button>
+                      <button type="button" className="btn btn-ghost" style={smallBtn} onClick={() => setShowPicker(true)}>
+                        Select From My Question Bank
+                      </button>
+                    </div>
+                  )}
+
+                  {showUpload && !viewOnly && (
+                    <div className="card" style={{ padding: 14, marginTop: 10 }}>
+                      <BulkQuestionImport
+                        allowCoding
+                        onImported={(created) => {
+                          setShowUpload(false);
+                          if (created.length) addQuestionsToPool(created.map((c) => c.id));
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>
+                      Selected Questions: {pool === null ? "…" : pool.length}
+                    </div>
+                    {pool === null ? (
+                      <p style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Loading…</p>
+                    ) : pool.length === 0 ? (
+                      <p style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>No questions curated yet.</p>
+                    ) : (
+                      <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                        {pool.map((p) => (
+                          <div key={p.id} className="card" style={{ padding: "8px 10px", display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {p.question.title || p.question.description?.slice(0, 60) || "(untitled)"}
+                            </span>
+                            <span className="badge" style={{ fontSize: 10 }}>{TYPE_LABELS[p.question.questionType] || p.question.questionType}</span>
+                            {p.question.btlLevel && <span className="mono" style={{ fontSize: 10, color: "var(--ink-dim)" }}>BTL-{p.question.btlLevel}</span>}
+                            {!viewOnly && (
+                              <button type="button" className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => removeFromPool(p.questionId)}>Remove</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {showPicker && (
+              <SelectFromQuestionBank
+                excludeIds={(pool || []).map((p) => p.questionId)}
+                onAdd={addQuestionsToPool}
+                onClose={() => setShowPicker(false)}
+              />
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <div><label style={labelStyle}>Duration (min)</label><input style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>

@@ -3,8 +3,8 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
-const { instituteWhere } = require("../utils/questionVisibility");
-const { buildAssessmentBlueprint } = require("../utils/readinessBlueprint");
+const { instituteWhere, questionVisibilityWhere } = require("../utils/questionVisibility");
+const { buildAssessmentBlueprint, subjectQuestionWhere } = require("../utils/readinessBlueprint");
 const { gradeReadinessAnswer, buildReadinessReport, READINESS_LEVEL_RANK, computeAssessmentCoverage } = require("../utils/readinessScoring");
 const { issueCertificate } = require("../utils/certificates");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
@@ -613,12 +613,11 @@ router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "S
     }
 
     const allowedTypes = (Array.isArray(subject.questionTypesAllowed) ? subject.questionTypesAllowed : []).filter((t) => GRADABLE_QUESTION_TYPES.includes(t));
-    const baseWhere = {
+    const baseWhere = await subjectQuestionWhere(subject, {
       ...instituteWhere(req.requesterInstituteId),
       questionStatus: { in: ["VERIFIED", "PUBLISHED"] },
       questionType: { in: allowedTypes },
-      subject: { equals: subject.name, mode: "insensitive" },
-    };
+    });
 
     // One count query per BTL level (1-6), reused across every assessment mode below rather than
     // re-querying per mode — same batched-query discipline as talentPoolAutoSelect.js.
@@ -643,6 +642,90 @@ router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "S
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to compute subject coverage" });
+  }
+});
+
+// =========================== Admin/Staff: curated question pool ===========================
+// The explicit, staff-picked question set a subject draws from once curated (see
+// readinessBlueprint.js's subjectQuestionWhere) — reuses the existing Question Bank rather than a
+// parallel question system. Managed only by the subject's owner or an Admin, same isSubjectOwner
+// gate as PATCH/DELETE /admin/subjects/:id above.
+
+router.get("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+    if (!isSubjectOwner(req, subject)) {
+      return res.status(403).json({ error: "You can only manage the question pool for tests you created" });
+    }
+    const pool = await prisma.readinessQuestionPool.findMany({
+      where: { subjectId: subject.id },
+      include: { question: { select: { id: true, title: true, description: true, questionType: true, difficulty: true, btlLevel: true, topic: true, questionStatus: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(pool);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load question pool" });
+  }
+});
+
+// Adds one or more questions to a subject's pool. Every questionId is independently checked
+// against questionVisibilityWhere — a staff member can only pool a question they own, that's
+// legacy/shared, or that's in a folder explicitly shared with them; never another staff member's
+// untouched private question, even if they somehow know its id.
+router.post("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+    if (!isSubjectOwner(req, subject)) {
+      return res.status(403).json({ error: "You can only manage the question pool for tests you created" });
+    }
+    const questionIds = Array.isArray(req.body.questionIds) ? [...new Set(req.body.questionIds.filter(Boolean))] : [];
+    if (questionIds.length === 0) return res.status(400).json({ error: "No questions provided" });
+
+    const visible = await prisma.question.findMany({
+      where: { id: { in: questionIds }, ...questionVisibilityWhere(req) },
+      select: { id: true },
+    });
+    if (visible.length === 0) return res.status(403).json({ error: "None of the selected questions are in your question bank" });
+
+    await prisma.readinessQuestionPool.createMany({
+      data: visible.map((q) => ({ subjectId: subject.id, questionId: q.id, addedByUserId: req.user.id, addedByName: req.user.name })),
+      skipDuplicates: true,
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, pooledCount: visible.length },
+    });
+    res.json({ success: true, addedCount: visible.length, skippedCount: questionIds.length - visible.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add questions to pool" });
+  }
+});
+
+router.delete("/admin/subjects/:id/pool/:questionId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+    if (!isSubjectOwner(req, subject)) {
+      return res.status(403).json({ error: "You can only manage the question pool for tests you created" });
+    }
+    await prisma.readinessQuestionPool.deleteMany({ where: { subjectId: subject.id, questionId: req.params.questionId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to remove question from pool" });
   }
 });
 
