@@ -712,7 +712,9 @@ export default function QuestionBank() {
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginTop: 16 }}>
-                {activeSubject.units.map((u) => (
+                {/* Numeric-aware, not plain alphabetical (order alone can't be trusted — see
+                    SubjectUnitPicker.jsx's identical sort for why "Unit 2" must sort before "Unit 10"). */}
+                {[...activeSubject.units].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })).map((u) => (
                   <div key={u.id} className="card" style={{ padding: 16, cursor: "pointer" }} onClick={() => setActiveUnit(u)}>
                     <div style={{ fontWeight: 700 }}>{u.name}</div>
                     <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>

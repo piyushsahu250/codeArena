@@ -152,12 +152,44 @@ router.get("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
 router.post("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
+  // Explicit institute compare, on top of canStaffUseSubject's creator/assignment check below —
+  // matches the direct-compare convention used everywhere else authorization is enforced on this
+  // platform (readiness.js, questions.js, tests.js), rather than relying solely on the indirect
+  // guarantee that a cross-institute staff member would never legitimately hold a
+  // StaffSubjectAssignment for this subject in the first place.
+  if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+    return res.status(403).json({ error: "You aren't authorized for this subject" });
+  }
   if (!(await canStaffUseSubject(req, subject.id))) return res.status(403).json({ error: "You aren't authorized for this subject" });
   const name = String(req.body.name || "").trim();
   if (!name) return res.status(400).json({ error: "Unit name is required" });
+
+  // Case-insensitive pre-check — the DB's @@unique([subjectId, name]) constraint below is
+  // case-sensitive, so without this "Unit 1" and "unit 1" could both be created for the same
+  // Subject. Checked before insert so the error message is clean ("Unit 1 already exists for
+  // DSA") rather than the P2002 fallback further down (kept as a safety net for a race between
+  // two concurrent creates, not the primary path).
+  const existing = await prisma.unit.findFirst({ where: { subjectId: subject.id, name: { equals: name, mode: "insensitive" } } });
+  if (existing) return res.status(409).json({ error: `"${name}" already exists for ${subject.name}.` });
+
+  // order defaults to a leading number parsed from the name ("Unit 3" -> 3) so units display in
+  // the order staff actually intend (numeric, not alphabetical: "Unit 2" before "Unit 10") without
+  // requiring staff to manually set an order field. Falls back to appending after the current
+  // highest unit for this subject when the name has no leading number.
+  let order = Number(req.body.order) || 0;
+  if (!order) {
+    const leadingNumber = name.match(/\d+/);
+    if (leadingNumber) {
+      order = Number(leadingNumber[0]);
+    } else {
+      const maxOrder = await prisma.unit.aggregate({ where: { subjectId: subject.id }, _max: { order: true } });
+      order = (maxOrder._max.order || 0) + 1;
+    }
+  }
+
   try {
     const unit = await prisma.unit.create({
-      data: { subjectId: subject.id, name, order: Number(req.body.order) || 0 },
+      data: { subjectId: subject.id, name, order },
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.QUESTION_BANK_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
@@ -165,7 +197,7 @@ router.post("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachReq
     });
     res.json(unit);
   } catch (err) {
-    if (err.code === "P2002") return res.status(409).json({ error: "A unit with this name already exists under this subject" });
+    if (err.code === "P2002") return res.status(409).json({ error: `"${name}" already exists for ${subject.name}.` });
     console.error(err);
     res.status(500).json({ error: "Failed to create unit" });
   }

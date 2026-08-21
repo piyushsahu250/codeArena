@@ -81,6 +81,23 @@ export default function CreateTest() {
     api.get("/talent-pools").then((res) => setTalentPools(res.data)).catch(() => setTalentPools([]));
   }, []);
 
+  // Warns before an accidental tab close/refresh/back-navigation once staff have put real work
+  // into this form — title typed or questions picked is "substantial" per the spec, an empty new
+  // form isn't. Browser-native confirm only (no client-side draft storage — the DB-backed
+  // isPublished:false state from an actual Save already IS this platform's draft mechanism; a
+  // second, localStorage-based copy would just be a second source of truth to go stale).
+  useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (saving) return; // an in-flight save shouldn't also trigger "are you sure"
+      const hasSubstantialData = form.title.trim().length > 0 || selected.length > 0;
+      if (!hasSubstantialData) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [form.title, selected.length, saving]);
+
   useEffect(() => {
     api.get("/questions", { params: { ...(search ? { q: search } : {}), pageSize: 100 } }).then((res) => setQuestions(res.data.rows));
   }, [search]);
