@@ -9,13 +9,25 @@ const { decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
 
-// ADMIN/STAFF: list all institutes. Cached — this list changes rarely (an admin adding/editing
-// an institute is a rare event, not a per-request one) but gets read on nearly every admin page
-// load for the institute-picker dropdown. Invalidated explicitly on create/update/delete below
-// rather than relying on the 2-minute TTL to catch up.
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
-  const institutes = await cached("institutes:list", 2 * 60 * 1000, () =>
+// ADMIN/STAFF: list institutes. Cached — this list changes rarely (an admin adding/editing an
+// institute is a rare event, not a per-request one) but gets read on nearly every admin page load
+// for the institute-picker dropdown. Invalidated explicitly on create/update/delete below rather
+// than relying on the 2-minute TTL to catch up.
+//
+// Institute-scoped by requester, same as every other list endpoint on this platform — previously
+// returned every institute's name (plus class/user counts) to any authenticated STAFF or ADMIN
+// regardless of their own institute, relying on individual pages to "harmlessly" ignore an
+// institute filter param downstream rather than on this endpoint not handing out the list in the
+// first place ("do not rely only on frontend filtering" applies to this endpoint itself, not just
+// to what a caller does with its response). A truly platform-level account (no instituteId — see
+// attachRequesterInstitute) still gets the full list, since that's the legitimate multi-institute
+// management case (InstituteManagement.jsx); an institute-scoped STAFF or ADMIN now only ever
+// gets their own institute, as a single-item array so every existing `institutes.map(...)`
+// dropdown caller keeps working unchanged.
+router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const institutes = await cached(`institutes:list:${req.requesterInstituteId || "all"}`, 2 * 60 * 1000, () =>
     prisma.institute.findMany({
+      where: req.requesterInstituteId ? { id: req.requesterInstituteId } : {},
       orderBy: { name: "asc" },
       include: { _count: { select: { classes: true, users: true } } },
     })

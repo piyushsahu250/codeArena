@@ -120,7 +120,11 @@ export default function ReadinessSubjects() {
   }
   useEffect(load, [filterBatch, filterDepartmentId, filterSection, filterInstituteId]);
   useEffect(() => { api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => {}); }, []);
-  useEffect(() => { api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {}); }, []);
+  // Skipped entirely for an institute-scoped caller — the filter that would use this is hidden
+  // for them (see the Institute <select> below), so there's no reason to fetch it.
+  useEffect(() => {
+    if (!user?.instituteId) api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
+  }, [user?.instituteId]);
 
   function startCreate() {
     setForm(emptyForm());
@@ -373,13 +377,20 @@ export default function ReadinessSubjects() {
         {editingId === null && (
           <div style={{ marginTop: 20 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-              <div style={{ flex: "1 1 160px" }}>
-                <label style={{ ...labelStyle, marginTop: 0 }}>Institute</label>
-                <select style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
-                  <option value="">All institutes</option>
-                  {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                </select>
-              </div>
+              {/* Only a genuine platform-level account (no instituteId) manages more than one
+                  institute — GET /institutes itself is now scoped server-side to the caller's own
+                  institute, so this would only ever render "All institutes" plus one option for
+                  anyone else anyway; hidden entirely rather than left as a pointless single-choice
+                  filter that also has no business existing for a STAFF/institute-scoped Admin. */}
+              {!user?.instituteId && (
+                <div style={{ flex: "1 1 160px" }}>
+                  <label style={{ ...labelStyle, marginTop: 0 }}>Institute</label>
+                  <select style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
+                    <option value="">All institutes</option>
+                    {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div style={{ flex: "1 1 140px" }}>
                 <label style={{ ...labelStyle, marginTop: 0 }}>Batch</label>
                 <select style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}>
