@@ -8,7 +8,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 
 // Unified system for the Certificate model — LEARNING_MODULE, CODING_ASSESSMENT, and MANUAL
 // (workshops/FDP/bootcamps/placement-prep/institute certifications, which have no underlying

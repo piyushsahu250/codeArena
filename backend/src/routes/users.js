@@ -28,7 +28,7 @@ const EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 
@@ -1421,11 +1421,15 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
       // assessment history, and AttendanceRecord.student is onDelete: Cascade at the schema level
       // (so it would have vanished with zero warning, not even an error). Any of these existing
       // blocks permanent deletion; the admin is expected to deactivate the account instead.
-      const [certCount, interviewCertCount, testAttemptCount, attendanceRecordCount] = await Promise.all([
+      // ResultEntry.student is also onDelete: Cascade at the schema level, same gap as
+      // AttendanceRecord above — ResultEntry is a verified, official exam marksheet row (see the
+      // model's own schema comment), so it must not silently vanish either.
+      const [certCount, interviewCertCount, testAttemptCount, attendanceRecordCount, resultEntryCount] = await Promise.all([
         prisma.certificate.count({ where: { studentId: req.params.id } }),
         prisma.interviewCertificate.count({ where: { studentId: req.params.id } }),
         prisma.testAttempt.count({ where: { studentId: req.params.id } }),
         prisma.attendanceRecord.count({ where: { studentId: req.params.id } }),
+        prisma.resultEntry.count({ where: { studentId: req.params.id } }),
       ]);
       if (certCount > 0 || interviewCertCount > 0) {
         const total = certCount + interviewCertCount;
@@ -1441,6 +1445,11 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
       if (attendanceRecordCount > 0) {
         return res.status(409).json({
           error: `This account has ${attendanceRecordCount} attendance record${attendanceRecordCount === 1 ? "" : "s"} on record. This action cannot be undone, and academic records like this are best preserved — it is recommended to deactivate the account instead.`,
+        });
+      }
+      if (resultEntryCount > 0) {
+        return res.status(409).json({
+          error: `This account has ${resultEntryCount} official result${resultEntryCount === 1 ? "" : "s"} on record. This action cannot be undone, and academic records like this are best preserved — it is recommended to deactivate the account instead.`,
         });
       }
       await prisma.user.delete({ where: { id: req.params.id } });

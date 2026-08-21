@@ -1,6 +1,6 @@
 const { sendMailLogged, wrapBranded } = require("./mailer");
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 
 // Best-effort, non-throwing — same posture as logAudit() (a side-channel write must never fail
 // the request it's describing). Writes the persisted in-app Notification row; the email half is

@@ -14,7 +14,7 @@ const { decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function hashToken(token) {

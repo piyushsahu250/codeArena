@@ -70,6 +70,10 @@ const COMPILE_TIMEOUT_MS = Number(process.env.JUDGE_COMPILE_TIMEOUT_MS || 45000)
 // unaffected by this gap either way; it's enforced via a separate kernel mechanism root doesn't
 // bypass.
 const MAX_PROCESSES = Number(process.env.JUDGE_MAX_PROCESSES || 64);
+// Caps total accumulated stdout+stderr per run — without this, a fast infinite print loop can
+// buffer unbounded output in this Node process's memory well within the wall-clock time limit
+// (see the kill logic in spawnWithTimeout). 2MB is generous for any legitimate test-case output.
+const MAX_OUTPUT_BYTES = Number(process.env.JUDGE_MAX_OUTPUT_BYTES || 2 * 1024 * 1024);
 
 // Fixed uid/gid for the unprivileged `sandbox` system user created in the Dockerfile —
 // keep these two numbers in sync with the Dockerfile's `useradd --uid ... --gid ...`.
@@ -352,6 +356,7 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let outputExceeded = false;
     const startedAt = Date.now();
 
     const killTimer = setTimeout(() => {
@@ -364,8 +369,24 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
       child.stdin.end();
     }
 
-    child.stdout.on("data", (d) => (stdout += d.toString()));
-    child.stderr.on("data", (d) => (stderr += d.toString()));
+    // Wall-clock timeout alone doesn't bound how much a submission can print — a fast infinite
+    // print loop (`while(true) System.out.println(...)`) can emit gigabytes well within the time
+    // limit, buffering it all in this process's memory (stdout/stderr are plain JS strings) before
+    // the killTimer ever fires. Cap accumulated size the same way the timeout caps wall time: once
+    // either stream crosses MAX_OUTPUT_BYTES, kill the whole process group immediately rather than
+    // waiting for the timeout, and report it distinctly (like timedOut) instead of a generic error.
+    function trackOutput(chunk, current) {
+      if (outputExceeded) return current;
+      const next = current + chunk.toString();
+      if (next.length > MAX_OUTPUT_BYTES) {
+        outputExceeded = true;
+        try { process.kill(-child.pid, "SIGKILL"); } catch { /* already exited */ }
+        return next.slice(0, MAX_OUTPUT_BYTES);
+      }
+      return next;
+    }
+    child.stdout.on("data", (d) => { stdout = trackOutput(d, stdout); });
+    child.stderr.on("data", (d) => { stderr = trackOutput(d, stderr); });
 
     function readStatsAndCleanup() {
       let memoryKb = null;
@@ -383,6 +404,7 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
       const timeMs = Date.now() - startedAt;
       const memoryKb = readStatsAndCleanup();
       if (timedOut) return resolve({ ok: false, timedOut: true, timeMs, memoryKb });
+      if (outputExceeded) return resolve({ ok: false, error: "Output limit exceeded", outputExceeded: true, timeMs, memoryKb });
       if (codeExit !== 0) {
         const memoryExceeded = memoryKb != null && memoryKb >= memoryLimitKb * 0.97;
         const oom = memoryExceeded || OOM_PATTERNS.test(stderr);

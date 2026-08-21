@@ -521,9 +521,17 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
   // previously sent to students unconditionally — real, avoidable DB/JSON work on every request,
   // which compounds badly when many students load this list around the same time (e.g. checking
   // whether a scheduled test has opened yet).
+  // Safety-net cap, not real pagination — this route's response is a plain array consumed by
+  // several callers (StaffDashboard.jsx, StudentDashboard.jsx, CompanyTests.jsx) that expect
+  // res.data to already be the full list, so changing the shape to a paginated envelope would
+  // break every one of them. `where` already scopes this to one institute (or one staff member's
+  // own+shared tests) in the overwhelming majority of requests; this only guards the pathological
+  // case of an unscoped platform-level Super Admin or one institute with an extreme test count.
+  const TESTS_LIST_CAP = 2000;
   const tests = await prisma.test.findMany({
     where,
     orderBy: { startTime: "asc" },
+    take: TESTS_LIST_CAP,
     ...(isStaff
       ? {
           include: {

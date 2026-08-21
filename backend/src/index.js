@@ -75,7 +75,7 @@ app.use(compression());
 // and FRONTEND_URL itself points at the new canonical domain.
 const extraAllowedOrigins = (process.env.EXTRA_ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean);
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://codearena-app.vercel.app",
+  process.env.FRONTEND_URL || "https://codearena.site",
   ...extraAllowedOrigins,
   "http://localhost:5173",
   "http://127.0.0.1:5173",

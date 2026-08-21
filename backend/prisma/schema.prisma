@@ -123,6 +123,7 @@ model Institute {
   resultExaminations ResultExamination[]
   tests            Test[]
   readinessSubjects ReadinessSubject[]
+  interviewQuestions InterviewQuestion[]
 }
 
 model Class {
@@ -201,6 +202,7 @@ model User {
   submissions  Submission[]
   createdQuestions Question[] @relation("QuestionCreatedBy")
   updatedQuestions Question[] @relation("QuestionUpdatedBy")
+  createdInterviewQuestions InterviewQuestion[] @relation("InterviewQuestionCreatedBy")
   createdQuestionFolders QuestionFolder[]
   sharedQuestionFolders QuestionFolderShare[] @relation("QuestionFolderSharedWith") // folders explicitly shared with this staff member by someone else
   createdSubjects  Subject[]
@@ -908,6 +910,9 @@ model TestAttempt {
 
   @@unique([testId, studentId])
   @@index([testId])
+  // Composite unique above leads with testId, so it can't serve a studentId-only lookup (used by
+  // dashboard.js's "my attempts" query and users.js's per-student attempt count) — dedicated index.
+  @@index([studentId])
 }
 
 model Submission {
@@ -2161,6 +2166,16 @@ model InterviewQuestion {
 
   answers InterviewAnswer[]
 
+  // KI-001 fix: every InterviewQuestion created before this field existed keeps instituteId/
+  // createdById: null, which interviewQuestionVisibilityWhere() (interview.js) treats as "shared
+  // legacy pool, visible/editable by every institute's staff" — same "null = legacy/shared"
+  // convention already used by Question.instituteId/createdById above. Only questions created
+  // going forward get scoped to their creator's institute and become genuinely private to it.
+  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+  instituteId String?
+  createdBy   User? @relation("InterviewQuestionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
   @@index([category])
   @@index([subject])
   @@index([company])
@@ -2168,6 +2183,8 @@ model InterviewQuestion {
   @@index([frequencyTag])
   @@index([packageBand])
   @@index([experienceLevel])
+  @@index([instituteId])
+  @@index([createdById])
 }
 
 // AI-generated candidate question, held here — structurally separate from InterviewQuestion —

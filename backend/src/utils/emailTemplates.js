@@ -8,7 +8,7 @@
 // details card, CTA button, instructions box) is distinct enough from the generic wrapBranded()
 // layout that reusing it would mean fighting its assumptions. Callers should pass the return value
 // of these functions directly as `html`, not wrap it again.
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 
 function escapeHtml(str) {
   return String(str ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

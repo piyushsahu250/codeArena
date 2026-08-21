@@ -3,7 +3,7 @@ const { computeExaminationStats } = require("./resultRank");
 const { computeStudentOverallAttendancePercent } = require("./attendanceStats");
 const { generateMarksheetCode } = require("./resultCode");
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 
 // Single source of truth for a marksheet's full payload — used identically by the PDF route, the
 // on-screen JSON preview route, and the QR-image route, so none of them can ever disagree about

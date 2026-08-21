@@ -31,7 +31,7 @@ const FROM = RAW_MAIL_FROM
       ? `${process.env.MAIL_FROM_NAME} <${RAW_MAIL_FROM}>`
       : RAW_MAIL_FROM)
   : "CodeArena <no-reply@codearena.local>";
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const LOGO_URL = `${FRONTEND_URL}/branding/logo.png`;
 
 // Built once at module load, reused across every send — nodemailer transports are meant to be

@@ -859,7 +859,7 @@ router.get("/courses/:slug/certificate/download", authenticate, requireRole("STU
       certificateCode: cert.certificateCode,
       issuedAt: cert.issuedAt,
       status: cert.status,
-      verifyUrl: `${process.env.FRONTEND_URL || "https://codearena-app.vercel.app"}/certificate/verify/${cert.certificateCode}`,
+      verifyUrl: `${process.env.FRONTEND_URL || "https://codearena.site"}/certificate/verify/${cert.certificateCode}`,
       instituteName: student.institute?.name,
       instituteLogoUrl: student.institute?.logoUrl,
     }, res);

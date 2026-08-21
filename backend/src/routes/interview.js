@@ -5,6 +5,7 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { interviewQuestionVisibilityWhere, ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { resolveCodingFields } = require("../utils/functionHarness");
@@ -34,7 +35,7 @@ const aiInsightsLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator:
 // learning.js, challenges.js) already has this exact per-student throttle on code execution —
 // Interview was the one surface missing it.
 const execLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id });
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena-app.vercel.app";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const CERT_THRESHOLD = 80;
 
 const SESSION_QUESTION_COUNT = { HR: 6, TECHNICAL: 6, APTITUDE: 10, CODING: 3, SYSTEM_DESIGN: 3, BEHAVIORAL: 6, MANAGERIAL: 5 };
@@ -1230,8 +1231,8 @@ router.get("/certificate/verify/:code", async (req, res) => {
 
 // =========================== Admin/Staff: question bank CMS ===========================
 
-router.get("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
-  const where = { generatedForStudentId: null };
+router.get("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const where = { generatedForStudentId: null, ...interviewQuestionVisibilityWhere(req) };
   if (req.query.category) where.category = req.query.category;
   if (req.query.subject) where.subject = req.query.subject;
   const page = Math.max(1, Number(req.query.page) || 1);
@@ -1243,7 +1244,7 @@ router.get("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), asyn
   res.json({ rows: questions, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
-router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       category, subject, company, aptitudeCategory, difficulty, title, prompt, expectedKeywords, modelAnswer, options, correctAnswer, explanation, starterCode, testCases, language, tags, followUpQuestionId,
@@ -1281,6 +1282,8 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), asy
         editorial: editorial ?? undefined, similarQuestions: similarQuestions ?? undefined,
         followUpQuestionId: followUpQuestionId || null,
         evaluationType: resolved.evaluationType, functionSignature: resolved.functionSignature, starterCodeByLanguage: resolved.starterCodeByLanguage,
+        instituteId: req.requesterInstituteId || null,
+        createdById: req.user.id,
       },
     });
     res.json(q);
@@ -1290,10 +1293,11 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), asy
   }
 });
 
-router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.interviewQuestion.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Question not found" });
+    if (!ownsInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
     const effectiveCategory = req.body.category !== undefined ? req.body.category : existing.category;
     if (effectiveCategory === "CODING" && Array.isArray(req.body.testCases)) {
       if (req.body.testCases.filter((tc) => !tc.isHidden).length < 2) {
@@ -1341,8 +1345,11 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
-router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existing = await prisma.interviewQuestion.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: "Question not found" });
+    if (!ownsInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
     await prisma.interviewQuestion.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
@@ -1537,7 +1544,7 @@ router.get("/admin/questions/export", authenticate, requireRole("ADMIN", "STAFF"
 
 // ADMIN/STAFF: bulk-import questions from a .csv/.xlsx file. expectedKeywords/options are
 // pipe-separated ("java|jvm|bytecode"); testCases is a JSON array string.
-router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF"), upload.single("file"), async (req, res) => {
+router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     let workbook;
@@ -1625,6 +1632,8 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF
             explanation: row.explanation || null, starterCode: row.starterCode || null,
             testCases: parsedTestCases ?? undefined,
             language: row.language || null,
+            instituteId: req.requesterInstituteId || null,
+            createdById: req.user.id,
           },
         });
         created++;

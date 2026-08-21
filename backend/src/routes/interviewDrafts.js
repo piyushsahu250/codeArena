@@ -2,6 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
+const { attachRequesterInstitute } = require("../middleware/institute");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateQuestionDrafts, generateCompanyPatternNote } = require("../utils/interviewDraftGenerator");
 const { COMPANIES } = require("../utils/companies");
@@ -74,7 +75,7 @@ router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "
 // CODING 2-visible/10-hidden validation and resolveCodingFields() server-side resolution that
 // /admin/questions's own create/update routes enforce — a draft's own generation prompt only
 // requests that same minimum, but this is the real backstop, not the prompt.
-router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
     if (!draft) return res.status(404).json({ error: "Draft not found" });
@@ -111,6 +112,8 @@ router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("AD
           // an AI-suggested "TRENDING" label can never reach a live question without a human
           // explicitly re-affirming it in this same request.
           frequencyTag: frequencyTag || null, packageBand: packageBand || null, experienceLevel: experienceLevel || null,
+          instituteId: req.requesterInstituteId || null,
+          createdById: req.user.id,
         },
       });
       await tx.interviewQuestionDraft.update({
