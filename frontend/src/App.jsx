@@ -5,6 +5,7 @@ import { GamificationProvider } from "./context/GamificationContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider, useToast } from "./context/ToastContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
+import { UnsavedChangesProvider } from "./context/UnsavedChangesContext";
 import { SidebarUIProvider } from "./context/SidebarContext";
 import LoadingScreen from "./components/LoadingScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -173,6 +174,7 @@ export default function App() {
     <ThemeProvider>
     <ToastProvider>
     <ConfirmProvider>
+    <UnsavedChangesProvider>
     <SidebarUIProvider>
     <AuthProvider>
       <GamificationProvider>
@@ -357,6 +359,7 @@ export default function App() {
       </GamificationProvider>
     </AuthProvider>
     </SidebarUIProvider>
+    </UnsavedChangesProvider>
     </ConfirmProvider>
     </ToastProvider>
     </ThemeProvider>

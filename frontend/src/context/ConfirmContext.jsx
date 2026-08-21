@@ -7,11 +7,11 @@ const ConfirmContext = createContext(null);
 // the app aren't retrofitted in this pass (flagged separately) but this is a drop-in upgrade path
 // for them later since the call shape (await a boolean) is the same shape confirm() already has.
 export function ConfirmProvider({ children }) {
-  const [state, setState] = useState(null); // { title, message, confirmLabel, danger, resolve }
+  const [state, setState] = useState(null); // { title, message, confirmLabel, cancelLabel, danger, resolve }
 
-  const confirm = useCallback(({ title = "Are you sure?", message = "", confirmLabel = "Confirm", danger = false } = {}) => {
+  const confirm = useCallback(({ title = "Are you sure?", message = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false } = {}) => {
     return new Promise((resolve) => {
-      setState({ title, message, confirmLabel, danger, resolve });
+      setState({ title, message, confirmLabel, cancelLabel, danger, resolve });
     });
   }, []);
 
@@ -29,7 +29,7 @@ export function ConfirmProvider({ children }) {
             <h3 style={{ margin: 0 }}>{state.title}</h3>
             {state.message && <p style={{ marginTop: 10, fontSize: 14, color: "var(--ink-dim)", lineHeight: 1.5 }}>{state.message}</p>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
-              <button className="btn btn-ghost" onClick={() => handle(false)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={() => handle(false)}>{state.cancelLabel}</button>
               <button
                 className="btn btn-primary"
                 style={state.danger ? { background: "var(--rust)", color: "#fff" } : undefined}

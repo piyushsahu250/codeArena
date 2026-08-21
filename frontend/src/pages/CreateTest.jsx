@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ClipboardList, FolderOpen, Folder, Upload } from "lucide-react";
 import api from "../api";
@@ -11,6 +11,7 @@ import StaffPicker from "../components/StaffPicker";
 import BulkQuestionImport from "../components/BulkQuestionImport";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
@@ -75,28 +76,55 @@ export default function CreateTest() {
   const [shares, setShares] = useState([]); // [{ staffId, staff: { id, name } }]
   const [subjectId, setSubjectId] = useState(null);
   const [unitId, setUnitId] = useState(null);
+  const { setGuard } = useUnsavedChangesGuard() || {};
 
   useEffect(() => {
     api.get("/academic-groups").then((res) => setAcademicGroups(res.data));
     api.get("/talent-pools").then((res) => setTalentPools(res.data)).catch(() => setTalentPools([]));
   }, []);
 
-  // Warns before an accidental tab close/refresh/back-navigation once staff have put real work
-  // into this form — title typed or questions picked is "substantial" per the spec, an empty new
-  // form isn't. Browser-native confirm only (no client-side draft storage — the DB-backed
-  // isPublished:false state from an actual Save already IS this platform's draft mechanism; a
-  // second, localStorage-based copy would just be a second source of truth to go stale).
+  // Dirty-state tracking: a full snapshot of every piece of test configuration (not just
+  // title/questions) taken once the form is at its "last known saved" state — on mount for a new
+  // test (starts empty), or once the edit-mode fetch below finishes populating everything. Any
+  // difference from that snapshot means real unsaved work exists, covering the full list this was
+  // asked to track (title, instructions, subject/unit, questions added/removed, marks, duration,
+  // difficulty distribution, and every other field bundled in here) without hand-maintaining a
+  // separate boolean per field.
+  const savedSnapshotRef = useRef(null);
+  const currentSnapshot = useMemo(
+    () => JSON.stringify({ form, selected, subjectId, unitId, academicGroupIds, talentPoolIds, groupType, instituteId }),
+    [form, selected, subjectId, unitId, academicGroupIds, talentPoolIds, groupType, instituteId]
+  );
+  const isDirty = savedSnapshotRef.current !== null && currentSnapshot !== savedSnapshotRef.current;
+
+  useEffect(() => {
+    if (!loading) savedSnapshotRef.current = currentSnapshot;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  // Two protections, same dirty signal:
+  // 1. beforeunload — browser refresh / tab close / typed-URL navigation (native browser dialog,
+  //    text isn't customizable by design of the API).
+  // 2. UnsavedChangesContext guard — in-app Sidebar navigation (Link clicks), where a real "Stay /
+  //    Leave" confirm dialog IS possible — see Sidebar.jsx's handleNavClick and
+  //    UnsavedChangesContext.jsx for why this is a Link-click intercept rather than
+  //    react-router-dom's useBlocker (this app uses <BrowserRouter>, not a data router — see that
+  //    file's comment for the full reasoning). Cleared on unmount so it can never leak into
+  //    whatever page staff land on next, regardless of which route got them there.
   useEffect(() => {
     function handleBeforeUnload(e) {
-      if (saving) return; // an in-flight save shouldn't also trigger "are you sure"
-      const hasSubstantialData = form.title.trim().length > 0 || selected.length > 0;
-      if (!hasSubstantialData) return;
+      if (saving || !isDirty) return; // an in-flight save shouldn't also trigger "are you sure"
       e.preventDefault();
       e.returnValue = "";
     }
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [form.title, selected.length, saving]);
+  }, [isDirty, saving]);
+
+  useEffect(() => {
+    setGuard?.(!saving && isDirty, "Your test contains unsaved information. Do you want to leave this page?");
+  }, [isDirty, saving, setGuard]);
+  useEffect(() => () => setGuard?.(false), [setGuard]);
 
   useEffect(() => {
     api.get("/questions", { params: { ...(search ? { q: search } : {}), pageSize: 100 } }).then((res) => setQuestions(res.data.rows));
@@ -264,6 +292,8 @@ export default function CreateTest() {
         ...toUnassign.map((pid) => api.delete(`/talent-pools/${pid}/tests/${testId}`)),
       ]);
 
+      savedSnapshotRef.current = currentSnapshot; // reset dirty state on a successful save
+      setGuard?.(false);
       navigate("/staff");
     } catch (err) {
       // Create-only duplicate warning (never fires on edit, or once already confirmed) — mirrors

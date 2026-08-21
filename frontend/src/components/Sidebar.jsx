@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
@@ -7,6 +7,8 @@ import {
   CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target, StickyNote,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
+import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 // Every entry links to a real, already-shipped route (confirmed against App.jsx's route table) —
 // nothing here points at a "Contests" or standalone "Coding Practice" section since neither
@@ -121,8 +123,34 @@ const MENU = {
 
 export default function Sidebar({ role, profileGateActive = false }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { mobileOpen, closeMobile } = useSidebarUI();
+  const { checkGuard, setGuard } = useUnsavedChangesGuard() || {};
+  const confirmDialog = useConfirm();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("caSidebarCollapsed") === "1");
+
+  // Blocks in-app navigation away from a page with unsaved changes (currently: CreateTest.jsx) —
+  // see UnsavedChangesContext.jsx for why this is a Link-click intercept rather than
+  // react-router-dom's useBlocker (this app uses <BrowserRouter>, not a data router; useBlocker
+  // requires one). No guard registered -> completely normal <Link> navigation, unchanged from
+  // before this existed.
+  async function handleNavClick(e, to) {
+    const guard = checkGuard?.();
+    if (!guard) { closeMobile(); return; }
+    e.preventDefault();
+    const leave = await confirmDialog({
+      title: "You have unsaved changes",
+      message: guard.message,
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay and Continue Editing",
+      danger: true,
+    });
+    if (leave) {
+      setGuard?.(false);
+      closeMobile();
+      navigate(to);
+    }
+  }
 
   useEffect(() => {
     document.body.classList.add("has-sidebar");
@@ -163,7 +191,7 @@ export default function Sidebar({ role, profileGateActive = false }) {
                     to={item.to}
                     className={`ca-sidebar-link ${active ? "active" : ""}`}
                     title={collapsed ? item.label : undefined}
-                    onClick={closeMobile}
+                    onClick={(e) => handleNavClick(e, item.to)}
                   >
                     <Icon />
                     {!collapsed && <span>{item.label}</span>}

@@ -136,10 +136,16 @@ export default function QuestionBank() {
     if (!newUnitName.trim() || !activeSubject) return;
     setCreatingUnitInSubject(true);
     try {
-      await api.post(`/subjects/${activeSubject.id}/units`, { name: newUnitName.trim() });
+      const { data } = await api.post(`/subjects/${activeSubject.id}/units`, { name: newUnitName.trim() });
       setNewUnitName("");
-      const fresh = await loadSubjects();
-      setActiveSubject(fresh.find((s) => s.id === activeSubject.id) || activeSubject);
+      // Patch local state directly instead of refetching the whole Subject+Unit tree (GET
+      // /subjects) for a one-row change — a freshly created unit always has 0 questions/topics, so
+      // its _count can be filled in here rather than round-tripping to ask the server for numbers
+      // that can only be zero. Updates both `subjects` (so the subject list/counts stay correct if
+      // staff navigates back to it) and `activeSubject` (so this view reflects it immediately).
+      const withCount = { ...data, _count: { questions: 0, topics: 0 } };
+      setSubjects((prev) => (prev || []).map((s) => (s.id === activeSubject.id ? { ...s, units: [...s.units, withCount] } : s)));
+      setActiveSubject((prev) => (prev ? { ...prev, units: [...prev.units, withCount] } : prev));
     } catch (err) {
       alert(err.response?.data?.error || "Failed to create unit");
     } finally {
