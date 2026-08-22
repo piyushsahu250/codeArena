@@ -8,6 +8,7 @@ import {
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useFeatures } from "../context/FeatureContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
@@ -520,16 +521,23 @@ function SkeletonLines({ count }) {
 // else, replacing what used to be 7 pill buttons of identical visual weight — a student had no
 // way to tell at a glance which action mattered most.
 function QuickActions({ learningResumeId, style }) {
+  const { isFeatureEnabled } = useFeatures();
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", ...style }}>
-      <Link to={learningResumeId ? `/learning/java/lesson/${learningResumeId}` : "/learning"} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <PlayCircle size={15} /> Continue Learning
-      </Link>
-      <Link to="/learning" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Code2 size={15} /> Practice Coding</Link>
+      {isFeatureEnabled("lms") && (
+        <Link to={learningResumeId ? `/learning/java/lesson/${learningResumeId}` : "/learning"} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <PlayCircle size={15} /> Continue Learning
+        </Link>
+      )}
+      {isFeatureEnabled("lms") && (
+        <Link to="/learning" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Code2 size={15} /> Practice Coding</Link>
+      )}
       <Link to="/dashboard/performance" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><LineChart size={15} /> My Performance</Link>
       <Link to="/achievements" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Trophy size={15} /> Achievements</Link>
       <Link to="/resume" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><FileText size={15} /> Resume Builder</Link>
-      <Link to="/interview" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Mic size={15} /> AI Mock Interview</Link>
+      {isFeatureEnabled("ai_mock_interview") && (
+        <Link to="/interview" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Mic size={15} /> AI Mock Interview</Link>
+      )}
       <Link to="/profile" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><UserCircle size={15} /> Profile</Link>
     </div>
   );

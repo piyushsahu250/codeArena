@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { issueCertificate, revokeCertificate } = require("../utils/certificates");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
@@ -34,7 +35,7 @@ function serializeCert(cert, extra = {}) {
 }
 
 // STUDENT: every certificate this student holds, across both certificate systems, newest first.
-router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("certificates"), async (req, res) => {
   try {
     const [certs, interviewCert] = await Promise.all([
       prisma.certificate.findMany({ where: { studentId: req.user.id }, orderBy: { issuedAt: "desc" } }),
@@ -67,7 +68,7 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
 
 // STUDENT: download one of their own Certificate-model certificates as a PDF. (Interview
 // certificates keep using their own existing download route.)
-router.get("/:id/download", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/:id/download", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("certificates"), async (req, res) => {
   try {
     const cert = await prisma.certificate.findUnique({
       where: { id: req.params.id },

@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GamificationProvider } from "./context/GamificationContext";
+import { FeatureProvider } from "./context/FeatureContext";
+import FeatureProtected from "./components/FeatureProtected";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider, useToast } from "./context/ToastContext";
 import { ConfirmProvider } from "./context/ConfirmContext";
@@ -57,6 +59,7 @@ import BulkUpload from "./pages/BulkUpload";
 import AcademicGroups from "./pages/AcademicGroups";
 import CourseAssignments from "./pages/CourseAssignments";
 import InstituteManagement from "./pages/InstituteManagement";
+import FeatureManagement from "./pages/FeatureManagement";
 import AttendanceStructure from "./pages/AttendanceStructure";
 import AttendanceHome from "./pages/AttendanceHome";
 import AttendanceAssignmentDetail from "./pages/AttendanceAssignmentDetail";
@@ -178,6 +181,7 @@ export default function App() {
     <UnsavedChangesProvider>
     <SidebarUIProvider>
     <AuthProvider>
+      <FeatureProvider>
       <GamificationProvider>
       <BrowserRouter>
         <Routes>
@@ -208,9 +212,9 @@ export default function App() {
           <Route path="/certificate/verify/:code" element={<CertificateVerify />} />
           <Route path="/results/verify/:code" element={<MarksheetVerify />} />
           <Route path="/account" element={<Protected><AccountSettings /></Protected>} />
-          <Route path="/certificates" element={<Protected roles={["STUDENT"]}><MyCertificates /></Protected>} />
-          <Route path="/attendance" element={<Protected roles={["STUDENT"]}><MyAttendance /></Protected>} />
-          <Route path="/talent-pools" element={<Protected roles={["STUDENT"]}><MyTalentPools /></Protected>} />
+          <Route path="/certificates" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="certificates"><MyCertificates /></FeatureProtected></Protected>} />
+          <Route path="/attendance" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="attendance"><MyAttendance /></FeatureProtected></Protected>} />
+          <Route path="/talent-pools" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="talent_pool"><MyTalentPools /></FeatureProtected></Protected>} />
           <Route path="/results" element={<Protected roles={["STUDENT"]}><MyResults /></Protected>} />
           <Route path="/results/:entryId" element={<Protected roles={["STUDENT"]}><MarksheetView /></Protected>} />
 
@@ -230,11 +234,11 @@ export default function App() {
           <Route path="/test/:id/result" element={<Protected roles={["STUDENT"]}><StudentTestResult /></Protected>} />
           <Route path="/dashboard/performance" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance /></Suspense></Protected>} />
           <Route path="/achievements" element={<Protected roles={["STUDENT"]}><Achievements /></Protected>} />
-          <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><DailyChallenge /></Protected>} />
-          <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><WeeklyChallenge /></Protected>} />
+          <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><DailyChallenge /></FeatureProtected></Protected>} />
+          <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><WeeklyChallenge /></FeatureProtected></Protected>} />
           <Route path="/company-tests" element={<Protected roles={["STUDENT"]}><CompanyTests /></Protected>} />
           <Route path="/resume" element={<Protected roles={["STUDENT"]}><ResumeBuilder /></Protected>} />
-          <Route path="/readiness" element={<Protected roles={["STUDENT"]}><ReadinessHub /></Protected>} />
+          <Route path="/readiness" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="readiness_test"><ReadinessHub /></FeatureProtected></Protected>} />
           <Route
             path="/readiness/take/:assessmentId"
             element={
@@ -246,7 +250,7 @@ export default function App() {
             }
           />
           <Route path="/readiness/report/:assessmentId" element={<Protected roles={["STUDENT"]}><ReadinessReport /></Protected>} />
-          <Route path="/interview" element={<Protected roles={["STUDENT"]}><InterviewHub /></Protected>} />
+          <Route path="/interview" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="ai_mock_interview"><InterviewHub /></FeatureProtected></Protected>} />
           <Route path="/interview/companies" element={<Protected roles={["STUDENT"]}><InterviewCompanies /></Protected>} />
           <Route
             path="/interview/session/:id"
@@ -267,15 +271,17 @@ export default function App() {
           <Route path="/interview/certificate" element={<Protected roles={["STUDENT"]}><InterviewCertificate /></Protected>} />
 
           {/* Learning module — browsable by Student, Admin, and Staff (admin/staff preview content they manage) */}
-          <Route path="/learning" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><LearningHub /></Protected>} />
-          <Route path="/learning/:slug" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><CourseOverview /></Protected>} />
+          <Route path="/learning" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><LearningHub /></FeatureProtected></Protected>} />
+          <Route path="/learning/:slug" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><CourseOverview /></FeatureProtected></Protected>} />
           <Route
             path="/learning/:slug/lesson/:lessonId"
             element={
               <Protected roles={["STUDENT", "ADMIN", "STAFF"]}>
-                <Suspense fallback={<LoadingScreen label="Loading lesson…" />}>
-                  <LessonView />
-                </Suspense>
+                <FeatureProtected featureKey="lms">
+                  <Suspense fallback={<LoadingScreen label="Loading lesson…" />}>
+                    <LessonView />
+                  </Suspense>
+                </FeatureProtected>
               </Protected>
             }
           />
@@ -298,7 +304,7 @@ export default function App() {
           <Route path="/staff/gamification" element={<Protected roles={["ADMIN", "STAFF"]}><GamificationManagement /></Protected>} />
           <Route path="/staff/resumes" element={<Protected roles={["ADMIN", "STAFF"]}><ResumeAdmin /></Protected>} />
           <Route path="/staff/interviews" element={<Protected roles={["ADMIN", "STAFF"]}><InterviewAdmin /></Protected>} />
-          <Route path="/staff/interview-drafts" element={<Protected roles={["ADMIN", "STAFF"]}><InterviewDraftReview /></Protected>} />
+          <Route path="/staff/interview-drafts" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="ai_draftview"><InterviewDraftReview /></FeatureProtected></Protected>} />
           <Route path="/staff/challenges" element={<Protected roles={["ADMIN", "STAFF"]}><ChallengeAdmin /></Protected>} />
           <Route path="/staff/interview-reports" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><InterviewReports /></Suspense></Protected>} />
           <Route path="/staff/readiness-analytics" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><ReadinessAnalytics /></Suspense></Protected>} />
@@ -316,11 +322,11 @@ export default function App() {
           <Route path="/staff/password-reset-history" element={<Protected roles={["ADMIN", "STAFF"]}><PasswordResetHistory basePath="/staff" /></Protected>} />
           <Route path="/staff/audit-log" element={<Protected roles={["ADMIN", "STAFF"]}><AuditLogPage basePath="/staff" /></Protected>} />
           <Route path="/staff/certificates" element={<Protected roles={["ADMIN", "STAFF"]}><CertificateAdmin basePath="/staff" /></Protected>} />
-          <Route path="/staff/exports" element={<Protected roles={["ADMIN", "STAFF"]}><ExportCenter basePath="/staff" /></Protected>} />
-          <Route path="/staff/attendance" element={<Protected roles={["ADMIN", "STAFF"]}><AttendanceHome /></Protected>} />
-          <Route path="/staff/attendance/reports" element={<Protected roles={["ADMIN", "STAFF"]}><AttendanceReports /></Protected>} />
-          <Route path="/staff/attendance/:assignmentId" element={<Protected roles={["ADMIN", "STAFF"]}><AttendanceAssignmentDetail /></Protected>} />
-          <Route path="/staff/attendance/:assignmentId/execute/:planId" element={<Protected roles={["ADMIN", "STAFF"]}><ExecuteAttendance /></Protected>} />
+          <Route path="/staff/exports" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="export_center"><ExportCenter basePath="/staff" /></FeatureProtected></Protected>} />
+          <Route path="/staff/attendance" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="attendance"><AttendanceHome /></FeatureProtected></Protected>} />
+          <Route path="/staff/attendance/reports" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="attendance"><AttendanceReports /></FeatureProtected></Protected>} />
+          <Route path="/staff/attendance/:assignmentId" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="attendance"><AttendanceAssignmentDetail /></FeatureProtected></Protected>} />
+          <Route path="/staff/attendance/:assignmentId/execute/:planId" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="attendance"><ExecuteAttendance /></FeatureProtected></Protected>} />
 
           {/* Admin only: account management */}
           <Route path="/admin" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><AdminDashboard /></Suspense></Protected>} />
@@ -328,6 +334,7 @@ export default function App() {
           <Route path="/admin/academic-groups" element={<Protected roles={["ADMIN"]}><AcademicGroups /></Protected>} />
           <Route path="/admin/course-assignments" element={<Protected roles={["ADMIN"]}><CourseAssignments /></Protected>} />
           <Route path="/admin/institutes" element={<Protected roles={["ADMIN"]}><InstituteManagement /></Protected>} />
+          <Route path="/admin/feature-management" element={<Protected roles={["ADMIN"]}><FeatureManagement /></Protected>} />
           <Route path="/admin/attendance-structure" element={<Protected roles={["ADMIN"]}><AttendanceStructure /></Protected>} />
           <Route path="/admin/talent-pools" element={<Protected roles={["ADMIN", "STAFF"]}><TalentPools /></Protected>} />
           <Route path="/admin/results" element={<Protected roles={["ADMIN", "STAFF"]}><ResultManagement /></Protected>} />
@@ -337,7 +344,7 @@ export default function App() {
           <Route path="/admin/audit-log" element={<Protected roles={["ADMIN"]}><AuditLogPage basePath="/admin" /></Protected>} />
           <Route path="/admin/certificates" element={<Protected roles={["ADMIN"]}><CertificateAdmin basePath="/admin" /></Protected>} />
           <Route path="/admin/backups" element={<Protected roles={["ADMIN"]}><Backups /></Protected>} />
-          <Route path="/admin/exports" element={<Protected roles={["ADMIN"]}><ExportCenter basePath="/admin" /></Protected>} />
+          <Route path="/admin/exports" element={<Protected roles={["ADMIN"]}><FeatureProtected featureKey="export_center"><ExportCenter basePath="/admin" /></FeatureProtected></Protected>} />
           <Route path="/admin/monitoring" element={<Protected roles={["ADMIN"]}><SystemMonitoring /></Protected>} />
           <Route path="/admin/students" element={<Protected roles={["ADMIN"]}><StudentSearch basePath="/admin" /></Protected>} />
           <Route path="/admin/students/:id" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/admin" /></Suspense></Protected>} />
@@ -353,12 +360,13 @@ export default function App() {
           <Route path="/clerk/companies" element={<Protected roles={["CLERK"]}><CompanyMaster /></Protected>} />
           <Route path="/clerk/results" element={<Protected roles={["CLERK"]}><ResultManagement /></Protected>} />
           <Route path="/clerk/audit-log" element={<Protected roles={["CLERK"]}><AuditLogPage basePath="/clerk" /></Protected>} />
-          <Route path="/clerk/exports" element={<Protected roles={["CLERK"]}><ExportCenter basePath="/clerk" /></Protected>} />
+          <Route path="/clerk/exports" element={<Protected roles={["CLERK"]}><FeatureProtected featureKey="export_center"><ExportCenter basePath="/clerk" /></FeatureProtected></Protected>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
       </GamificationProvider>
+      </FeatureProvider>
     </AuthProvider>
     </SidebarUIProvider>
     </UnsavedChangesProvider>

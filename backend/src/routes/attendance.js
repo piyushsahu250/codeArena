@@ -4,6 +4,7 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { notifyPermissionUpdated } = require("../utils/notifications");
 const { sendExport } = require("../utils/exportFile");
@@ -796,7 +797,7 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
   }
 });
 
-router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("attendance"), async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -1042,7 +1043,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachReques
 
 // Always self-scoped by construction (studentId: req.user.id, no caller-supplied id accepted) —
 // there is no query parameter that could widen this to another student's records.
-router.get("/my-records", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/my-records", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("attendance"), async (req, res) => {
   try {
     // Sequential, not Promise.all — same pool-contention reasoning as auth.js's login route: many
     // students can load this page in the same burst, and stacking parallel queries multiplies

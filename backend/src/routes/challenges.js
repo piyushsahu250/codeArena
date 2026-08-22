@@ -3,6 +3,7 @@ const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { processGamification } = require("../utils/gamification");
@@ -188,7 +189,7 @@ async function computeChallengeAnalytics(submissionModel, foreignKey, challengeI
 // gamification pipeline (processGamification -> StudentStreak/XpEvent, same tables every other
 // streak-earning activity writes to) but never previously displayed on the Daily/Weekly Challenge
 // pages themselves. Pure reads, no new computation.
-router.get("/stats", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/stats", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), async (req, res) => {
   try {
     const [streak, xpAgg] = await Promise.all([
       prisma.studentStreak.findUnique({ where: { studentId: req.user.id } }),
@@ -207,7 +208,7 @@ router.get("/stats", authenticate, requireRole("STUDENT"), async (req, res) => {
 
 // =============================== STUDENT: Daily Challenge ===============================
 
-router.get("/daily/today", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/daily/today", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), async (req, res) => {
   try {
     const scope = await loadStudentScope(req.user.id);
     const dcRow = await resolveMostSpecificChallenge(prisma.dailyChallenge, "date", dayStart(new Date()), scope);
@@ -269,7 +270,7 @@ router.get("/daily/history", authenticate, requireRole("STUDENT"), async (req, r
   }
 });
 
-router.post("/daily/:id/run", authenticate, requireRole("STUDENT"), runLimiter, async (req, res) => {
+router.post("/daily/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), runLimiter, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!dc) return res.status(404).json({ error: "Challenge not found" });
@@ -285,7 +286,7 @@ router.post("/daily/:id/run", authenticate, requireRole("STUDENT"), runLimiter, 
   }
 });
 
-router.post("/daily/:id/submit", authenticate, requireRole("STUDENT"), runLimiter, async (req, res) => {
+router.post("/daily/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), runLimiter, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!dc) return res.status(404).json({ error: "Challenge not found" });
@@ -365,7 +366,7 @@ router.get("/daily/:id/draft", authenticate, requireRole("STUDENT"), async (req,
 
 // =============================== STUDENT: Weekly Challenge ===============================
 
-router.get("/weekly/current", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/weekly/current", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), async (req, res) => {
   try {
     const scope = await loadStudentScope(req.user.id);
     const wcRow = await resolveMostSpecificChallenge(prisma.weeklyChallenge, "weekStart", isoWeekStart(new Date()), scope);
@@ -389,7 +390,7 @@ router.get("/weekly/current", authenticate, requireRole("STUDENT"), async (req, 
   }
 });
 
-router.post("/weekly/:id/run", authenticate, requireRole("STUDENT"), runLimiter, async (req, res) => {
+router.post("/weekly/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), runLimiter, async (req, res) => {
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!wc) return res.status(404).json({ error: "Challenge not found" });
@@ -405,7 +406,7 @@ router.post("/weekly/:id/run", authenticate, requireRole("STUDENT"), runLimiter,
   }
 });
 
-router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), runLimiter, async (req, res) => {
+router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), runLimiter, async (req, res) => {
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!wc) return res.status(404).json({ error: "Challenge not found" });

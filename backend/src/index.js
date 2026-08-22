@@ -43,6 +43,7 @@ const notificationRoutes = require("./routes/notifications");
 const resultManagementRoutes = require("./routes/resultManagement");
 const staffClerkRoutes = require("./routes/staffClerk");
 const readinessRoutes = require("./routes/readiness");
+const featureRoutes = require("./routes/features");
 const subjectRoutes = require("./routes/subjects");
 
 const app = express();
@@ -183,6 +184,7 @@ app.use("/api/results", resultManagementRoutes);
 app.use("/api/staff-clerk", staffClerkRoutes);
 app.use("/api/readiness", readinessRoutes);
 app.use("/api/subjects", subjectRoutes);
+app.use("/api/features", featureRoutes);
 
 // Global 4-arg error handler — must be mounted after every route above so any error a route
 // hands to next(err) (or an unhandled synchronous throw) lands here instead of Express's default

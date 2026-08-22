@@ -5,6 +5,7 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { interviewQuestionVisibilityWhere, ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
@@ -229,7 +230,7 @@ async function pickQuestions(category, config, count, options = {}) {
 
 // =========================== Student: dashboard summary ===========================
 
-router.get("/summary", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/summary", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("ai_mock_interview"), async (req, res) => {
   try {
     const sessions = await prisma.interviewSession.findMany({
       where: { studentId: req.user.id, status: { in: ["COMPLETED", "TERMINATED"] } },
@@ -272,7 +273,7 @@ router.get("/summary", authenticate, requireRole("STUDENT"), async (req, res) =>
 // =========================== Student: sessions ===========================
 
 // STUDENT: start (or resume, if one's already in progress with the same shape) a session.
-router.post("/sessions", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("ai_mock_interview"), async (req, res) => {
   try {
     const { category, isMock, isResumeBased, isCompanyRound, talentPoolConfigId, config } = req.body;
     if (!isMock && !isResumeBased && !isCompanyRound && !talentPoolConfigId && !VALID_CATEGORIES.includes(category)) {

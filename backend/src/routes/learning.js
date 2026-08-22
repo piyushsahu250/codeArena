@@ -12,6 +12,7 @@ const { processGamification } = require("../utils/gamification");
 const { askClaude } = require("../utils/aiClient");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
@@ -334,7 +335,7 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
 
 // STUDENT: mark a lesson's status and/or bookmark. Upserts so the first call (even before
 // GET /lessons/:id auto-creates an IN_PROGRESS row) still works.
-router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
@@ -397,7 +398,7 @@ router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), async
 // Response includes the full per-question review (selected answer, correct/incorrect, the
 // correct answer, and its explanation) — deliberately answer-revealing, since that's the whole
 // point of a learning-module practice test, unlike the exam submission flow.
-router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
@@ -476,7 +477,7 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), as
 // Same cached() key as GET /dashboard/student's recommendations block — a student loading both
 // the dashboard and the Learning Hub within the same 5-minute window costs one real computation.
 
-router.get("/recommendations", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/recommendations", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
     const recommendations = await cached(`recommendations:${req.user.id}`, 5 * 60 * 1000, () =>
       computeLearningRecommendations(prisma, req.user.id)
@@ -632,7 +633,7 @@ function splitPracticeCases(testCases) {
 // free, unlimited, side-effect-free self-check. Does not log an attempt or award XP; use
 // /submit for that. Full pass/fail detail on these sample cases is returned since nothing here
 // is hidden from the student anyway.
-router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), runLimiter, async (req, res) => {
+router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), runLimiter, async (req, res) => {
   try {
     const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
     if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
@@ -651,7 +652,7 @@ router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), runLimite
 // test cases (falling back to the full case set for legacy questions with none marked hidden,
 // same policy used for Coding Tests and Module Coding Tests). This is the action that's logged
 // to PracticeRunLog (the streak/badge signal) and that awards tiered XP on first solve.
-router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), runLimiter, async (req, res) => {
+router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), runLimiter, async (req, res) => {
   try {
     const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
     if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });

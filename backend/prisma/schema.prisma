@@ -124,6 +124,29 @@ model Institute {
   tests            Test[]
   readinessSubjects ReadinessSubject[]
   interviewQuestions InterviewQuestion[]
+  featureSettings FeatureSetting[]
+}
+
+// Institute-wise ON/OFF control for platform features (e.g. AI Mock Interview, Talent Pool).
+// One row per (institute, featureKey) rather than flat booleans on Institute directly (the
+// pattern used by singleSessionOnly/aiHintsEnabled/etc. above) because the feature catalog is
+// expected to grow, and Admin Feature Management needs to list/bulk-edit/copy across many keys
+// without a schema migration per new feature. A missing row for a given (institute, featureKey)
+// pair means "not yet configured" and is treated as enabled=true by featureAccess.js — this is
+// what keeps a newly-added catalog feature (or a newly-created institute before any admin visits
+// Feature Management) from unexpectedly hiding functionality that was already available.
+model FeatureSetting {
+  id          String   @id @default(uuid())
+  institute   Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String
+  featureKey  String // stable internal key, e.g. "ai_mock_interview" — see utils/featureCatalog.js
+  enabled     Boolean  @default(true)
+  updatedBy   String? // User.id of the admin who last changed this row; null for the implicit default row
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([instituteId, featureKey])
+  @@index([instituteId])
 }
 
 model Class {

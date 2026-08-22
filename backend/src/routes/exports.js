@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { sendExport } = require("../utils/exportFile");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { questionVisibilityWhere } = require("../utils/questionVisibility");
@@ -211,7 +212,7 @@ const ENTITIES = {
 // CLERK is scoped further still — Placement Cell access is "download student records" only, not
 // staff/results/reports/certificates/questions, so it's restricted to the "students" entity below
 // rather than opening this whole generic multi-entity route to the role.
-router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, requireFeature("export_center"), async (req, res) => {
   const builder = ENTITIES[req.params.entity];
   if (!builder) return res.status(404).json({ error: `Unknown export entity "${req.params.entity}"` });
   if (req.user.role === "CLERK" && req.params.entity !== "students") {

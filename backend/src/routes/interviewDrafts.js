@@ -3,6 +3,7 @@ const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateQuestionDrafts, generateCompanyPatternNote } = require("../utils/interviewDraftGenerator");
 const { COMPANIES } = require("../utils/companies");
@@ -23,7 +24,7 @@ const VALID_CATEGORIES = ["HR", "TECHNICAL", "CODING", "APTITUDE", "SYSTEM_DESIG
 // inconsistent here — Interview Prep's existing /admin/questions routes allow STAFF to create/edit
 // too, so this mirrors that, not the ADMIN-only pattern used for challenges.js.
 
-router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN", "STAFF"), draftGenLimiter, async (req, res) => {
+router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), draftGenLimiter, async (req, res) => {
   try {
     const { category, company, count, difficulty, packageBand, experienceLevel, topicHint } = req.body;
     if (!VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: "Invalid category" });
@@ -161,7 +162,7 @@ router.delete("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", 
 
 // =========================== Admin/Staff: company pattern drafts ===========================
 
-router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN", "STAFF"), draftGenLimiter, async (req, res) => {
+router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), draftGenLimiter, async (req, res) => {
   try {
     const { company, category } = req.body;
     if (!company || !String(company).trim()) return res.status(400).json({ error: "company is required" });

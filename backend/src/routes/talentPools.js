@@ -4,6 +4,7 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { cached, invalidate } = require("../utils/cache");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
@@ -99,7 +100,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
 // Registered BEFORE the generic GET /:id below — Express matches routes in registration order,
 // and single-segment paths like "/my-pools" or "/analytics" would otherwise be swallowed by
 // "/:id" (with id="my-pools"/"analytics").
-router.get("/my-pools", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/my-pools", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("talent_pool"), async (req, res) => {
   const memberships = await prisma.talentPoolMember.findMany({
     where: { studentId: req.user.id },
     include: {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
-import { Building2, Upload, PlusCircle, Users as UsersIcon, BarChart3, FileText, Mic, Settings, Trophy, Mail } from "lucide-react";
+import { Building2, Upload, PlusCircle, Users as UsersIcon, BarChart3, FileText, Mic, Settings, Trophy, Mail, ToggleLeft } from "lucide-react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
@@ -230,6 +230,7 @@ export default function AdminDashboard() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link to="/admin/institutes" className="btn btn-ghost"><Building2 size={15} /> Create Institute</Link>
+            <Link to="/admin/feature-management" className="btn btn-ghost"><ToggleLeft size={15} /> Feature Management</Link>
             <Link to="/admin/bulk-upload" className="btn btn-primary"><Upload size={15} /> Bulk Student Upload</Link>
             <Link to="/staff/tests/new" className="btn btn-ghost"><PlusCircle size={15} /> Create Test</Link>
             <Link to="/admin/students" className="btn btn-ghost"><UsersIcon size={15} /> Student Performance</Link>

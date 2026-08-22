@@ -3,6 +3,7 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { instituteWhere, questionVisibilityWhere } = require("../utils/questionVisibility");
 const { buildAssessmentBlueprint, subjectQuestionWhere } = require("../utils/readinessBlueprint");
 const { gradeReadinessAnswer, buildReadinessReport, READINESS_LEVEL_RANK, computeAssessmentCoverage } = require("../utils/readinessScoring");
@@ -336,7 +337,7 @@ router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMI
 
 // =========================== Student: browse subjects ===========================
 
-router.get("/subjects", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/subjects", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("readiness_test"), async (req, res) => {
   try {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true, program: true } });
     const subjects = await prisma.readinessSubject.findMany({
@@ -354,7 +355,7 @@ router.get("/subjects", authenticate, requireRole("STUDENT"), async (req, res) =
 
 // STUDENT: start (or resume, if one's already in progress for the same subject+mode) an
 // assessment — same resume convention as the Mock Interview module's POST /sessions.
-router.post("/assessments", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("readiness_test"), async (req, res) => {
   try {
     const { subjectId, assessmentMode, questionCount } = req.body;
     if (!subjectId || !assessmentMode) return res.status(400).json({ error: "subjectId and assessmentMode are required" });
