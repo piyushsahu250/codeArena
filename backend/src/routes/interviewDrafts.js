@@ -8,6 +8,7 @@ const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateQuestionDrafts, generateCompanyPatternNote } = require("../utils/interviewDraftGenerator");
 const { COMPANIES } = require("../utils/companies");
 const { safeErrorMessage } = require("../utils/errors");
+const { ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
 
 const router = express.Router();
 
@@ -253,8 +254,13 @@ router.delete("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "
 // platform" signal — no denormalized counter to drift out of sync, no AI involved anywhere in
 // this response.
 
-router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const questionId = req.params.id;
+  // Previously had no institute/ownership check at all beyond role -- any Staff/Admin could pull
+  // usage analytics for any InterviewQuestion id, including another institute's private question.
+  const existing = await prisma.interviewQuestion.findUnique({ where: { id: questionId }, select: { instituteId: true, createdById: true } });
+  if (!existing) return res.status(404).json({ error: "Question not found" });
+  if (!ownsInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
   const [timesServed, answered, skipped] = await Promise.all([
     prisma.interviewAnswer.count({ where: { questionId } }),
     prisma.interviewAnswer.aggregate({ where: { questionId, skipped: false }, _avg: { score: true }, _count: { _all: true } }),

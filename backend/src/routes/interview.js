@@ -321,11 +321,26 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
       // fall through to create a fresh session below instead of leaving the student stuck.
       const companyMismatch = isCompanyRound && config?.company && existing.config?.company
         && String(existing.config.company).trim().toLowerCase() !== String(config.company).trim().toLowerCase();
-      if (existing.answers.length === 0 || companyMismatch) {
-        await prisma.interviewSession.update({ where: { id: existing.id }, data: { status: "ABANDONED" } });
+      // A third way a matched "existing" session isn't actually resumable: its deadline already
+      // passed while it sat abandoned (tab closed, crash, etc.). Silently handing it back as
+      // resumed used to be the actual "interview starts then immediately exits" bug -- the
+      // frontend computes secondsLeft from this session's original (long-past) startedAt, sees
+      // 0 the instant it reaches the active phase, and auto-finalizes right there with no warning
+      // shown at all. Properly closing it out here (same finalizeSession() a real timeout uses)
+      // and falling through to create a genuinely fresh session fixes that at the root, instead of
+      // handing back a session that was always going to immediately expire the moment it rendered.
+      const alreadyExpired = deadlineOf(existing) !== Infinity && Date.now() > deadlineOf(existing);
+      if (existing.answers.length === 0 || companyMismatch || alreadyExpired) {
+        if (alreadyExpired && existing.answers.length > 0 && !companyMismatch) {
+          await finalizeSession(existing, { terminationReason: "TIME_EXPIRED" }, req).catch((err) => {
+            console.error("[interview.sessions] failed to auto-finalize expired stale session:", err);
+          });
+        } else {
+          await prisma.interviewSession.update({ where: { id: existing.id }, data: { status: "ABANDONED" } });
+        }
         logger.info("INTERVIEW_ABANDONED", {
           sessionId: existing.id, studentId: req.user.id,
-          reason: existing.answers.length === 0 ? "EMPTY_SESSION" : "COMPANY_MISMATCH",
+          reason: existing.answers.length === 0 ? "EMPTY_SESSION" : companyMismatch ? "COMPANY_MISMATCH" : "EXPIRED_WHILE_ABANDONED",
         });
       } else {
         const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: existing.answers.map((a) => a.questionId) } } });

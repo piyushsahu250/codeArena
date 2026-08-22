@@ -8,19 +8,21 @@
 // FeatureSetting.featureKey and any historical AuditLog.details). `dependsOn` is enforced one level
 // deep by featureAccess.js/routes/features.js (Section 23 of the spec: disabling a dependency warns
 // the admin and the dependent feature is treated as unavailable even if its own row says enabled).
-// NOTE on "Compiler": the spec's example mentions a standalone "Compiler" feature that
-// "Coding Challenge" depends on. It is deliberately NOT included as its own gateable key here —
-// the only place a compiler toggle could act is the shared judge.js execution path, which also
-// serves regular graded Tests and Module Coding Tests. Gating that path institute-wide risks
-// stranding a student mid-scored-attempt if a feature toggle is flipped, which is a much larger
-// blast radius than this feature-visibility pass is scoped to take on safely. Coding Challenge is
-// gated on its own here, with no compiler dependency; see the final report for this as an
-// explicit, documented scope decision rather than an oversight.
+// NOTE on "Compiler": added as its own gateable key, but scoped deliberately narrowly. The shared
+// judge.js execution path also serves regular graded Tests (submissions.js) -- that surface is
+// NEVER gated by this flag, at any point, to guarantee an admin toggle can never interrupt a
+// student mid-scored-attempt. Everywhere this flag IS enforced, it only gates the creation of a
+// brand-new attempt/session (Module Coding Test's start route) or an ad-hoc, no-fixed-session
+// action (Practice, Daily/Weekly Challenge run/submit) -- never a call operating on an
+// already-existing attemptId. That is what makes "disable for new sessions, existing sessions
+// continue" true by construction rather than by a separate session-status flag: an attempt that
+// already exists was, by definition, started before any such gate could apply to it again.
 const FEATURE_CATALOG = [
   { key: "lms", label: "LMS", category: "Learning" },
   { key: "attendance", label: "Attendance", category: "Attendance" },
   { key: "question_bank", label: "Question Bank", category: "Assessment" },
-  { key: "coding_challenge", label: "Coding Challenge", category: "Coding" },
+  { key: "compiler", label: "Compiler", category: "Coding" },
+  { key: "coding_challenge", label: "Coding Challenge", category: "Coding", dependsOn: "compiler" },
   { key: "talent_pool", label: "Talent Pool", category: "Assessment" },
   { key: "readiness_test", label: "Readiness Test", category: "Assessment" },
   { key: "ai_mock_interview", label: "AI Mock Interview", category: "AI" },

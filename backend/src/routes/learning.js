@@ -633,7 +633,7 @@ function splitPracticeCases(testCases) {
 // free, unlimited, side-effect-free self-check. Does not log an attempt or award XP; use
 // /submit for that. Full pass/fail detail on these sample cases is returned since nothing here
 // is hidden from the student anyway.
-router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), runLimiter, async (req, res) => {
+router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), runLimiter, async (req, res) => {
   try {
     const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
     if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
@@ -652,7 +652,7 @@ router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachReq
 // test cases (falling back to the full case set for legacy questions with none marked hidden,
 // same policy used for Coding Tests and Module Coding Tests). This is the action that's logged
 // to PracticeRunLog (the streak/badge signal) and that awards tiered XP on first solve.
-router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), runLimiter, async (req, res) => {
+router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), runLimiter, async (req, res) => {
   try {
     const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
     if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });

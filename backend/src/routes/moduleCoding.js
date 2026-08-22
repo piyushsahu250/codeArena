@@ -11,6 +11,7 @@ const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { safeErrorMessage } = require("../utils/errors");
@@ -175,7 +176,13 @@ router.get("/module/:moduleId", authenticate, requireRole("STUDENT"), async (req
 });
 
 // STUDENT: start a new attempt, or resume the existing IN_PROGRESS one (allowResume permitting).
-router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), async (req, res) => {
+// requireFeature gates only the CREATION of a new attempt -- every other route below
+// (/attempts/:attemptId/run|autosave|submit-code|violation|finalize) is deliberately left
+// ungated, so an attempt already in progress when compiler/lms is disabled can always be
+// completed. This is what makes "disable for new sessions, existing sessions continue" true by
+// construction: an attempt that already exists was necessarily started before this gate could
+// apply to it again.
+router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), async (req, res) => {
   try {
     const mod = await prisma.courseModule.findUnique({ where: { id: req.params.moduleId }, include: { codingTest: true } });
     if (!mod) return res.status(404).json({ error: "Module not found" });

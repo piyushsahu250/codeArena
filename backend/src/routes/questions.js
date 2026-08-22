@@ -4,6 +4,7 @@ const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
+const { requireFeature } = require("../middleware/featureGate");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
 const { spreadsheetFileFilter, spreadsheetOrTextFileFilter } = require("../utils/uploadFilters");
 const { parseNotepadMcqText, parseNotepadCodingText } = require("../utils/bulkQuestionParser");
@@ -249,7 +250,7 @@ function buildWhere(query, req) {
 // ADMIN/STAFF: live preview of the starter code a signature would generate, while authoring a
 // Function-based question — same generator resolveCodingFields uses at save time, so what's
 // previewed here is guaranteed to match what actually gets saved and judged.
-router.post("/preview-starter-code", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+router.post("/preview-starter-code", authenticate, requireRole("ADMIN", "STAFF"), requireFeature("question_bank"), (req, res) => {
   try {
     const { functionSignature } = req.body;
     validateSignature(functionSignature);
@@ -268,7 +269,7 @@ router.post("/preview-starter-code", authenticate, requireRole("ADMIN", "STAFF")
 // correct (a structural check like questionValidation.js's can't catch a wrong expected value, an
 // infinite loop, or a test case that doesn't match the function signature). One language at a time,
 // mirroring how starter code is authored/previewed per-language.
-router.post("/validate-test-cases", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/validate-test-cases", authenticate, requireRole("ADMIN", "STAFF"), requireFeature("question_bank"), async (req, res) => {
   try {
     const { language, code, testCases, evaluationType, functionSignature, sqlSchema, timeLimitMs, memoryLimitKb } = req.body;
     if (!language || !code || !code.trim()) {
@@ -381,7 +382,7 @@ async function computeQuestionAnalytics(req) {
 }
 
 // ADMIN/STAFF: see the computeQuestionAnalytics() comment above for scope and methodology.
-router.get("/analytics/summary", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics/summary", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const instituteKey = req.requesterInstituteId || "all";
     const data = await cached(`questionAnalytics:${instituteKey}:${req.user.role}:${req.user.id}`, 60 * 1000, () => computeQuestionAnalytics(req));
@@ -392,7 +393,7 @@ router.get("/analytics/summary", authenticate, requireRole("ADMIN", "STAFF"), at
 });
 
 // Create a question (any type)
-router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const {
       title, description, subject, topic, questionType, difficulty, points, explanation,
@@ -553,7 +554,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
 
 // Question Bank: list with search + filters. Paginated — an institute's bank can run into the
 // thousands of questions, and rendering/transferring the whole thing on every load doesn't scale.
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const where = buildWhere(req.query, req);
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 100));
@@ -578,7 +579,7 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
 
 // Distinct subjects/topics/creators — powers the filter dropdowns. Scoped the same way the list
 // is, so the dropdowns never surface a value that only exists in another institute's bank.
-router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   // Same moduleCodingTestId exclusion as buildWhere() above — without it, Module Coding Test
   // questions (no folder/subject/unit of their own) inflate "Needs Subject Assignment" and the
   // review-queue counts with rows that were never meant to be classified in this Question Bank.
@@ -622,7 +623,7 @@ router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // Folders nest via parentId (e.g. "Fox Solutions" > "Aptitude" > "Percentages") — the frontend
 // builds the tree client-side from this flat list plus each row's parentId.
 
-router.get("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const folders = await prisma.questionFolder.findMany({
     where: questionVisibilityWhere(req),
     include: { _count: { select: { questions: true, children: true } } },
@@ -631,7 +632,7 @@ router.get("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachReques
   res.json(folders);
 });
 
-router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const name = String(req.body.name || "").trim();
   if (!name) return res.status(400).json({ error: "Folder name is required" });
   const { category, description, parentId } = req.body;
@@ -653,7 +654,7 @@ router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachReque
   }
 });
 
-router.patch("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({
     where: { id: req.params.id },
     include: { shares: { select: { staffId: true } } },
@@ -700,7 +701,7 @@ async function collectDescendantFolders(rootId) {
 // Powers the folder-delete confirmation dialog's exact-counts requirement — walks the whole
 // sub-tree and reports how many questions/sub-banks actually exist, plus how many of those
 // questions are attached to a Test and therefore can't be deleted (see DELETE below).
-router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({
     where: { id: req.params.id },
     include: { shares: { select: { staffId: true } } },
@@ -734,7 +735,7 @@ router.get("/folders/:id/delete-preview", authenticate, requireRole("ADMIN", "ST
 // ancestor above it — instead of being silently cascade-deleted out from under that question
 // (QuestionFolder.parent is onDelete: Cascade at the DB level, which this per-row approach
 // deliberately avoids triggering on any folder that still holds real content).
-router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({
     where: { id: req.params.id },
     include: { shares: { select: { staffId: true } } },
@@ -812,7 +813,7 @@ router.delete("/folders/:id", authenticate, requireRole("ADMIN", "STAFF"), attac
 // Explicit Question Bank (folder) sharing — grants named STAFF accounts full view/manage access
 // to a folder (and every question filed in it) without opening it to the whole institute. Only
 // the folder's own creator or an Admin may grant/revoke — mirrors tests.js's /:id/shares exactly.
-router.get("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id }, select: { id: true, createdById: true, instituteId: true } });
   if (!folder) return res.status(404).json({ error: "Question bank not found" });
   if (req.requesterInstituteId && folder.instituteId && folder.instituteId !== req.requesterInstituteId) {
@@ -829,7 +830,7 @@ router.get("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), a
   res.json(shares);
 });
 
-router.post("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const { staffIds = [] } = req.body;
     const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id }, select: { id: true, name: true, createdById: true, instituteId: true } });
@@ -866,7 +867,7 @@ router.post("/folders/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), 
   }
 });
 
-router.delete("/folders/:id/shares/:staffId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/folders/:id/shares/:staffId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id }, select: { id: true, name: true, createdById: true, instituteId: true } });
     if (!folder) return res.status(404).json({ error: "Question bank not found" });
@@ -887,7 +888,7 @@ router.delete("/folders/:id/shares/:staffId", authenticate, requireRole("ADMIN",
 // Merge :id (source) into targetId — reassigns all of source's questions and direct child
 // folders to the target, then deletes source. Used to consolidate near-duplicate banks
 // (e.g. two folders both named roughly "Java Basics" created by different staff).
-router.post("/folders/:id/merge", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/folders/:id/merge", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const sourceId = req.params.id;
   const targetId = req.body.targetId;
   if (!targetId || targetId === sourceId) return res.status(400).json({ error: "Choose a different target folder to merge into" });
@@ -923,7 +924,7 @@ router.post("/folders/:id/merge", authenticate, requireRole("ADMIN", "STAFF"), a
 
 // Bulk-move: file multiple existing questions into a folder (or clear to Uncategorized) in one
 // call — the running-list counterpart to per-question folderId edits via PATCH /questions/:id.
-router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
   if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
   const folderId = req.body.folderId || null;
@@ -944,7 +945,7 @@ router.post("/bulk-move", authenticate, requireRole("ADMIN", "STAFF"), attachReq
 // classification" backlog (spec section 15) without opening each question's edit form. Same
 // ownership-filter-then-updateMany pattern as bulk-move, plus the same
 // resolveSubjectUnitTopic validation/authorization every other Subject/Unit write goes through.
-router.post("/bulk-assign-subject", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-assign-subject", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
   if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
   const resolved = await resolveSubjectUnitTopic(req, {
@@ -970,7 +971,7 @@ router.post("/bulk-assign-subject", authenticate, requireRole("ADMIN", "STAFF"),
 // Review, select a batch, Verify or Archive in one action) instead of opening each question's
 // edit form individually. Same ownership-filter-then-updateMany pattern as bulk-move; no FK
 // constraints on questionStatus so a plain updateMany is safe here (unlike bulk-delete).
-router.post("/bulk-status", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-status", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
   const questionStatus = req.body.questionStatus;
   if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
@@ -1017,7 +1018,7 @@ router.post("/bulk-status", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // (not deleteMany) so a mixed selection — some questions attached to a Test, some not —
 // partially succeeds instead of the whole batch failing on the first FK-restrict question
 // (same per-row P2003/P2014 handling as the single DELETE /:id route below).
-router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
   if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
   const owned = await prisma.question.findMany({ where: { id: { in: questionIds } } });
@@ -1055,7 +1056,7 @@ router.post("/bulk-delete", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // exists specifically to duplicate into another bank, so a question already in the target
 // folder is skipped rather than cloned into itself (which would just create the exact
 // duplicates the new duplicate-detection elsewhere in this file is trying to prevent).
-router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const questionIds = Array.isArray(req.body.questionIds) ? req.body.questionIds : [];
   const folderId = req.body.folderId || null;
   if (questionIds.length === 0) return res.status(400).json({ error: "No questions selected" });
@@ -1090,7 +1091,7 @@ router.post("/bulk-copy", authenticate, requireRole("ADMIN", "STAFF"), attachReq
 // existing folder-detail view's own scoping, where the question list/Select All only ever
 // shows direct children). Same per-row FK-restrict handling as bulk-delete; the folder itself
 // is left untouched.
-router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const folder = await prisma.questionFolder.findUnique({ where: { id: req.params.id } });
   if (!folder || !ownsQuestionRow(req, folder)) return res.status(404).json({ error: "Question bank not found" });
 
@@ -1269,7 +1270,7 @@ OUTPUT: 5
 
 // Download a sample template for bulk question import — quiz types by default, or coding
 // questions via ?type=coding; .xlsx by default, or Notepad/.txt via ?format=txt.
-router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), requireFeature("question_bank"), (req, res) => {
   const isCoding = req.query.type === "coding";
 
   if (req.query.format === "txt") {
@@ -1335,7 +1336,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, 
 // Export the current (optionally filtered) question bank to .xlsx
 // An explicit `questionIds` param (comma-separated or repeated) overrides the filter-based
 // selection entirely — powers "Export selected" from the bulk action bar without a new endpoint.
-router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const questions = req.query.questionIds
     ? await prisma.question.findMany({
         where: {
@@ -1591,7 +1592,7 @@ async function resolveFolderForBulkImport(req, folderId) {
 // UI uses /bulk-import/preview + /bulk-import/confirm below instead, per the platform's
 // Preview -> Validate -> Confirm requirement, so a staff member always sees what will be created
 // before anything is actually written.
-router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
@@ -1613,7 +1614,7 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // never writes to the database. Returns the same counts/errors/skipped summary plus `validRows`
 // (the original row data for everything that passed) for the frontend to show a Preview screen
 // and then re-post to /bulk-import/confirm once the staff member confirms.
-router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
@@ -1635,7 +1636,7 @@ router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "STAFF"),
 // actually creates them — re-running every validation/duplicate check fresh against current DB
 // state rather than trusting the preview's snapshot, since something else may have changed in the
 // meantime. This is the only place either preview or confirm ever calls prisma.question.create.
-router.post("/bulk-import/confirm", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-import/confirm", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
     if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
@@ -1929,7 +1930,7 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
 // Bulk-import CODING questions from .xlsx/.csv/.txt, writing directly — kept for backward
 // compatibility, same as /bulk-import above. The in-app upload UI uses
 // /bulk-import-coding/preview + /bulk-import-coding/confirm instead.
-router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
@@ -1947,7 +1948,7 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "STAFF"), 
   }
 });
 
-router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
@@ -1965,7 +1966,7 @@ router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "S
   }
 });
 
-router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
     if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
@@ -1989,7 +1990,7 @@ router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "S
 // missing entirely — an admin's only way to get a near-copy was Export then re-import (quiz types
 // only; coding questions have no import path at all — see bulk-import's rejection above) or
 // retyping the whole question by hand.
-router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const original = await prisma.question.findUnique({ where: { id: req.params.id }, include: { testCases: true } });
     if (!original || !ownsQuestionRow(req, original)) return res.status(404).json({ error: "Question not found" });
@@ -2022,7 +2023,7 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attac
   }
 });
 
-router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   const question = await prisma.question.findUnique({
     where: { id: req.params.id },
     include: { testCases: true, folder: { include: { shares: { select: { staffId: true } } } } },
@@ -2034,7 +2035,7 @@ router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterI
 });
 
 // Edit a question (any type)
-router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const existing = await prisma.question.findUnique({
       where: { id: req.params.id },
@@ -2210,7 +2211,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
   }
 });
 
-router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
   try {
     const existing = await prisma.question.findUnique({
       where: { id: req.params.id },

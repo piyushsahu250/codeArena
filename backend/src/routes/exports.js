@@ -175,6 +175,16 @@ const ENTITIES = {
   // sense in that context (there's no "all Talent Pool members across the institute" report).
   talentPools: async (instituteId, query = {}) => {
     if (!query.poolId) return [];
+    // A pool can span multiple institutes (TalentPoolInstitute join) or be genuinely platform-wide
+    // (no institutes configured) -- mirrors talentPools.js's own loadPoolScoped() exactly. Without
+    // this check, any authorized exporter could pull another institute's full member roster
+    // (email, PRN, skills) just by supplying a poolId that isn't theirs -- instituteId above was
+    // otherwise never actually applied to the query below.
+    const pool = await prisma.talentPool.findUnique({ where: { id: query.poolId }, include: { institutes: { select: { instituteId: true } } } });
+    if (!pool) return [];
+    const poolInstituteIds = pool.institutes.map((i) => i.instituteId);
+    if (instituteId && poolInstituteIds.length && !poolInstituteIds.includes(instituteId)) return [];
+
     const members = await prisma.talentPoolMember.findMany({
       where: { poolId: query.poolId },
       include: {
