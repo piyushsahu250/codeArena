@@ -308,8 +308,16 @@ model User {
   // identifier — global (not per-institute), NULL-tolerant (staff/admin rows, where it's always
   // null, never conflict with anything under standard Postgres unique-constraint semantics).
   // Roll Number (classroom number, used for attendance/display/sort ordering) is deliberately
-  // NOT unique — duplicates across departments/institutes are expected and allowed by design, so
-  // it carries a plain index (for WHERE/LIKE filtering) instead of a uniqueness constraint.
+  // NOT unique at the DB level — duplicates across departments/institutes are expected and
+  // allowed by design, so it carries a plain index (for WHERE/LIKE filtering) instead of a
+  // uniqueness constraint. A same-group collision is instead enforced in application code
+  // (users.js's findRollNumberClash/fetchTakenRollNumbers) — a DB-level
+  // @@unique([academicGroupId, rollNumber]) was considered here, but backfillGarbledRollNumbers.js
+  // (which runs on every boot) explicitly documents that genuine same-group conflicts already
+  // exist in some institutes' historical data and are deliberately left for manual admin review
+  // rather than auto-resolved. Adding that constraint before those reported conflicts are cleared
+  // would make `prisma db push` fail outright on deploy (a live production outage), so it is
+  // intentionally NOT added here — see the final report's remaining-limitations section.
   @@unique([registrationNumber])
   // Same NULL-tolerant semantics as rollNumber above, for Staff/Clerk employee IDs.
   @@unique([instituteId, employeeId])

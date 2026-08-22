@@ -485,15 +485,11 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
       emailError = mailResult.error || null;
     }
 
-    const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
-    await prisma.auditLog.create({
-      data: {
-        action: "ACCOUNT_CREATED",
-        adminId: req.user.id,
-        adminName: admin?.name || req.user.email,
-        details: { studentId: user.id, studentName: user.name, role, email: user.email, emailSent, emailError },
-      },
-    }).catch(() => {});
+    await logAudit({
+      req, action: AUDIT_ACTIONS.ACCOUNT_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      studentId: role === "STUDENT" ? user.id : null, instituteId,
+      details: { method: "single", userId: user.id, studentName: user.name, role, email: user.email, emailSent, emailError },
+    });
 
     res.json({ ...user, generatedPassword, emailSent, emailError });
   } catch (err) {
@@ -707,160 +703,205 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
   res.send(buffer);
 });
 
-// ADMIN: bulk-create student accounts from an uploaded .xlsx/.csv file.
-// Each row must name an existing Institute and a Batch/Year — Department and Section are optional
-// (falling back to "Unassigned"/"Section A"). Every (Institute, Batch, Department, Section)
-// combination is found-or-created automatically as an AcademicGroup; there's no separate "Class"
-// to create ahead of time anymore. Each row gets its own unique, randomly generated password (not
-// shared with any other row), and the account is flagged to force a password change on first login.
-router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+// Shared by both /bulk-upload/preview and /bulk-upload/confirm — parses the uploaded workbook into
+// plain row objects using the same header-alias mapping, so a file validates identically at both
+// steps regardless of which endpoint reads it.
+function parseBulkFile(buffer) {
+  let workbook;
+  try {
+    workbook = XLSX.read(buffer, { type: "buffer" });
+  } catch {
+    return { error: "Could not read this file. Please upload a valid .xlsx or .csv file." };
+  }
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rawRows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
+  if (rawRows.length === 0) return { error: "The uploaded file has no data rows." };
+
+  const headerMap = buildHeaderMap(Object.keys(rawRows[0]));
+  if (!headerMap.name || !headerMap.registrationNumber || !headerMap.email) {
+    return { error: "Missing required columns. The file must include Student Name, Registration Number (PRN), and Official Email ID. Roll Number is not a file column — it's auto-generated from the last 3 characters of the Registration Number." };
+  }
+  if (!headerMap.instituteName || !headerMap.batchYear) {
+    return { error: "Missing required columns. The file must include Institute and Batch/Year." };
+  }
+
+  const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
+  const rows = [];
+  for (let i = 0; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    const name = field(row, "name");
+    const registrationNumber = field(row, "registrationNumber");
+    const email = field(row, "email").toLowerCase();
+    if (!name && !registrationNumber && !email) continue; // blank row, silently skipped (not counted at all)
+    const statusRaw = field(row, "status").toLowerCase();
+    rows.push({
+      rowNum: i + 2, // +1 for header row, +1 for 1-indexing
+      name, registrationNumber, email,
+      mobile: field(row, "mobile"),
+      department: field(row, "department"),
+      program: field(row, "program"),
+      batchYear: field(row, "batchYear"),
+      section: field(row, "section"),
+      instituteName: field(row, "instituteName"),
+      gender: field(row, "gender"),
+      // Optional column — defaults to Active (matches every other creation path's implicit
+      // default); any value other than a recognizable "inactive" synonym is treated as Active
+      // rather than silently rejecting the row over a typo in an optional field.
+      isActive: !["inactive", "disabled", "no"].includes(statusRaw),
+    });
+  }
+  return { rows };
+}
+
+// Scoped to only the emails/registration numbers actually present in these rows, instead of
+// loading every user on the entire platform for a dedup check — that unscoped query grows
+// unbounded as institutes accumulate users over years, for a check that only ever needs to know
+// about the handful-to-few-thousand rows in front of it right now. Re-run fresh at BOTH preview
+// and confirm time (never cached/reused between the two requests) so confirm always sees the
+// latest DB state — closing the staleness gap of "someone else created that PRN in the minute
+// between preview and confirm" rather than trusting a snapshot from the earlier preview call.
+async function loadBulkContext(rows) {
+  const emailsInFile = [...new Set(rows.map((r) => r.email).filter(Boolean))];
+  const regNumbersInFile = [...new Set(rows.map((r) => r.registrationNumber).filter(Boolean))];
+  const [existingUsers, institutes] = await Promise.all([
+    (emailsInFile.length || regNumbersInFile.length)
+      ? prisma.user.findMany({
+          where: { OR: [...(emailsInFile.length ? [{ email: { in: emailsInFile, mode: "insensitive" } }] : []), ...(regNumbersInFile.length ? [{ registrationNumber: { in: regNumbersInFile, mode: "insensitive" } }] : [])] },
+          select: { email: true, registrationNumber: true },
+        })
+      : [],
+    prisma.institute.findMany(),
+  ]);
+  return {
+    existingEmails: new Set(existingUsers.map((u) => u.email.toLowerCase())),
+    // Registration Number (PRN) is unique PLATFORM-WIDE (mirrors @@unique([registrationNumber])) —
+    // no institute scoping in the dedup key. Roll Number is deliberately not deduped at all here
+    // (duplicates across groups are expected by design).
+    existingRegNumbers: new Set(existingUsers.filter((u) => u.registrationNumber).map((u) => u.registrationNumber.toLowerCase())),
+    instituteByName: new Map(institutes.map((i) => [i.name.toLowerCase(), i])),
+  };
+}
+
+// The single source of truth for "is this bulk row acceptable" — used IDENTICALLY by preview
+// (dry-run only) and confirm (right before actually creating the row), so a row can never pass
+// one step under different rules than the other. `seenEmails`/`seenRegNumbers` are mutated in
+// place to catch a duplicate PRN/email appearing twice WITHIN the same file, in file order.
+function validateBulkRow(row, { instituteByName, requesterInstituteId, existingEmails, existingRegNumbers, seenEmails, seenRegNumbers }) {
+  const { name, registrationNumber, email, mobile, batchYear, instituteName } = row;
+  // Never read Roll Number from the file — always derived from the Registration Number's last 3
+  // characters, matching the single-create path. This is provisional only: the real, same-group
+  // collision-resolved value is computed at confirm time once every row actually being imported
+  // (and the order they're processed in) is known.
+  const rollNumberPreview = initRollNumberFromRegistration(registrationNumber) || "";
+
+  if (!name || !registrationNumber || !email || !instituteName || !batchYear || !mobile) {
+    return { status: "error", reason: "Missing required field (name, registration number, email, mobile, institute, or batch/year)", rollNumberPreview };
+  }
+  if (!isValidEmail(email)) return { status: "error", reason: "Invalid email format", rollNumberPreview };
+  if (!REGISTRATION_NUMBER_RE.test(registrationNumber)) return { status: "error", reason: "Registration Number (PRN) must be 9-12 alphanumeric characters", rollNumberPreview };
+  if (!MOBILE_RE.test(mobile)) return { status: "error", reason: "Invalid mobile number", rollNumberPreview };
+
+  const institute = instituteByName.get(instituteName.toLowerCase());
+  if (!institute) return { status: "error", reason: `Institute "${instituteName}" was not found. Create it first in Institute Management.`, rollNumberPreview };
+  // Mirrors the same guard on POST / — an institute-scoped ADMIN can only import students into
+  // their own institute, regardless of what the uploaded file's Institute column says.
+  if (requesterInstituteId && institute.id !== requesterInstituteId) {
+    return { status: "error", reason: "You can only upload students to your own institute", rollNumberPreview };
+  }
+
+  const regKey = registrationNumber.toLowerCase();
+  if (existingEmails.has(email) || seenEmails.has(email)) return { status: "duplicate", reason: "Email already exists", rollNumberPreview };
+  if (existingRegNumbers.has(regKey) || seenRegNumbers.has(regKey)) return { status: "duplicate", reason: "Duplicate PRN in uploaded file or already registered", rollNumberPreview };
+
+  seenEmails.add(email);
+  seenRegNumbers.add(regKey);
+  return { status: "valid", rollNumberPreview, institute };
+}
+
+// ADMIN: Step 1 of bulk import — parse + fully validate the uploaded file (duplicate checks,
+// format checks, institute/scope checks) WITHOUT creating anything. Section 11 of the account-
+// creation spec: never insert thousands of rows straight off an upload — this exists precisely so
+// the admin sees "185 valid / 10 invalid / 5 duplicate" and can review row-level errors before a
+// single account is created.
+router.post("/bulk-upload/preview", authenticate, requireRole("ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const parsed = parseBulkFile(req.file.buffer);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    if (parsed.rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
 
-    let workbook;
-    try {
-      workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    } catch {
-      return res.status(400).json({ error: "Could not read this file. Please upload a valid .xlsx or .csv file." });
-    }
-
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
-    if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
-
-    const headerMap = buildHeaderMap(Object.keys(rows[0]));
-    if (!headerMap.name || !headerMap.registrationNumber || !headerMap.email) {
-      return res.status(400).json({
-        error: "Missing required columns. The file must include Student Name, Registration Number (PRN), and Official Email ID. Roll Number is not a file column — it's auto-generated from the last 3 characters of the Registration Number.",
-      });
-    }
-    if (!headerMap.instituteName || !headerMap.batchYear) {
-      return res.status(400).json({
-        error: "Missing required columns. The file must include Institute and Batch/Year.",
-      });
-    }
-
-    const sendCredentials = req.body.sendCredentials === "true";
-
-    const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
-
-    // Scoped to only the emails/registration numbers actually present in this file, instead of
-    // loading every user on the entire platform for a dedup check — that unscoped query grows
-    // unbounded as institutes accumulate users over years, for a check that only ever needs to
-    // know about the handful-to-few-thousand rows in front of it right now.
-    const emailsInFile = [...new Set(rows.map((row) => field(row, "email")).filter(Boolean))];
-    const regNumbersInFile = [...new Set(rows.map((row) => field(row, "registrationNumber")).filter(Boolean))];
-
-    const [existingUsers, institutes] = await Promise.all([
-      (emailsInFile.length || regNumbersInFile.length)
-        ? prisma.user.findMany({
-            where: { OR: [...(emailsInFile.length ? [{ email: { in: emailsInFile, mode: "insensitive" } }] : []), ...(regNumbersInFile.length ? [{ registrationNumber: { in: regNumbersInFile, mode: "insensitive" } }] : [])] },
-            select: { email: true, registrationNumber: true },
-          })
-        : [],
-      prisma.institute.findMany(),
-    ]);
-    const existingEmails = new Set(existingUsers.map((u) => u.email.toLowerCase()));
-    // Registration Number (PRN) is unique PLATFORM-WIDE (mirrors the @@unique([registrationNumber])
-    // DB constraint) — no institute scoping in the dedup key, unlike the old rollNumber-keyed dedup
-    // this replaced. Roll Number is deliberately not deduped at all (duplicates are expected).
-    const existingRegNumbers = new Set(existingUsers.filter((u) => u.registrationNumber).map((u) => u.registrationNumber.toLowerCase()));
+    const ctx = await loadBulkContext(parsed.rows);
     const seenEmails = new Set();
     const seenRegNumbers = new Set();
-    const instituteByName = new Map(institutes.map((i) => [i.name.toLowerCase(), i]));
-    const groupCache = new Map(); // reused across rows sharing the same (institute, batch, department, section)
+    const previewRows = parsed.rows.map((row) => {
+      const result = validateBulkRow(row, { ...ctx, requesterInstituteId: req.requesterInstituteId, seenEmails, seenRegNumbers });
+      return { row: row.rowNum, ...row, rollNumberPreview: result.rollNumberPreview, status: result.status, reason: result.reason || null };
+    });
+
+    res.json({
+      totalRows: previewRows.length,
+      validCount: previewRows.filter((r) => r.status === "valid").length,
+      invalidCount: previewRows.filter((r) => r.status === "error").length,
+      duplicateCount: previewRows.filter((r) => r.status === "duplicate").length,
+      rows: previewRows,
+    });
+  } catch (err) {
+    console.error("[users.bulk-upload.preview] failed:", err);
+    res.status(500).json({ error: "Failed to validate file" });
+  }
+});
+
+// ADMIN: Step 2 — creates accounts ONLY for the rows the admin confirmed from the preview
+// (`rows`, same shape /preview returned; a row the admin unchecked simply isn't included). Every
+// row is re-validated here against fresh DB state (never trusts the preview's now-possibly-stale
+// snapshot) — closing the race where another admin creates a colliding PRN/email in the gap
+// between preview and confirm. Each row gets its own unique, randomly generated password, and the
+// account is flagged to force a password change on first login.
+router.post("/bulk-upload/confirm", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
+    if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
+    if (rows.length > 5000) return res.status(400).json({ error: "Too many rows in one confirm request" });
+    const sendCredentials = !!req.body.sendCredentials;
+
+    const ctx = await loadBulkContext(rows);
+    const seenEmails = new Set();
+    const seenRegNumbers = new Set();
+    const groupCache = new Map();
     const groupRollNumberCache = new Map(); // academicGroupId -> Set of Roll Numbers already used in that group (DB + rows already created this run)
 
     const created = [];
     const duplicates = [];
     const errors = [];
 
-    for (let i = 0; i < rows.length; i++) {
-      const rowNum = i + 2; // +1 for header row, +1 for 1-indexing
-      const row = rows[i];
-      const name = field(row, "name");
-      const registrationNumber = field(row, "registrationNumber");
-      // Never read from a "Roll Number" file column — always derived from the Registration
-      // Number's last 3 characters, matching the single-create and admin-edit paths' auto-reset
-      // behavior. This is only a preview for error/duplicate row reporting below — the actual
-      // saved value is resolved for same-group collisions once the row's Academic Group is known
-      // (see the try block further down).
-      const rollNumber = initRollNumberFromRegistration(registrationNumber) || "";
-      const email = field(row, "email").toLowerCase();
-      const mobile = field(row, "mobile");
-      const department = field(row, "department");
-      const program = field(row, "program");
-      const batchYear = field(row, "batchYear");
-      const section = field(row, "section");
-      const instituteName = field(row, "instituteName");
-      const gender = field(row, "gender");
-      const statusRaw = field(row, "status").toLowerCase();
-      // Optional column — defaults to Active (matches every other creation path's implicit
-      // default); any value other than a recognizable "inactive" synonym is treated as Active
-      // rather than silently rejecting the row over a typo in an optional field.
-      const isActive = !["inactive", "disabled", "no"].includes(statusRaw);
+    for (const row of rows) {
+      const result = validateBulkRow(row, { ...ctx, requesterInstituteId: req.requesterInstituteId, seenEmails, seenRegNumbers });
+      if (result.status === "error") { errors.push({ row: row.rowNum, name: row.name, email: row.email, registrationNumber: row.registrationNumber, rollNumber: result.rollNumberPreview, reason: result.reason }); continue; }
+      if (result.status === "duplicate") { duplicates.push({ row: row.rowNum, name: row.name, email: row.email, registrationNumber: row.registrationNumber, rollNumber: result.rollNumberPreview, reason: result.reason }); continue; }
 
-      if (!name && !registrationNumber && !email) continue; // blank row
-
-      if (!name || !registrationNumber || !email || !instituteName || !batchYear) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Missing required field (name, registration number, email, institute, or batch/year)" });
-        continue;
-      }
-      if (!isValidEmail(email)) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Invalid email format" });
-        continue;
-      }
-      if (!REGISTRATION_NUMBER_RE.test(registrationNumber)) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Registration Number (PRN) must be 9-12 alphanumeric characters" });
-        continue;
-      }
-      const institute = instituteByName.get(instituteName.toLowerCase());
-      if (!institute) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: `Institute "${instituteName}" was not found. Create it first in Institute Management.` });
-        continue;
-      }
-      // Mirrors the same guard on POST / — an institute-scoped ADMIN can only import students
-      // into their own institute, regardless of what the uploaded file's Institute column says.
-      if (req.requesterInstituteId && institute.id !== req.requesterInstituteId) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: `You can only upload students to your own institute` });
-        continue;
-      }
-
-      const regKey = registrationNumber.toLowerCase();
-      if (existingEmails.has(email) || seenEmails.has(email)) {
-        duplicates.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Email already exists" });
-        continue;
-      }
-      if (existingRegNumbers.has(regKey) || seenRegNumbers.has(regKey)) {
-        duplicates.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Registration Number (PRN) already exists" });
-        continue;
-      }
-
-      seenEmails.add(email);
-      seenRegNumbers.add(regKey);
-
+      const { institute } = result;
       const generatedPassword = generateTempPassword();
       const passwordHash = await bcrypt.hash(generatedPassword, 10);
 
       try {
-        const group = await resolveAcademicGroup({ instituteId: institute.id, batchYear, departmentName: department, section }, groupCache);
+        const group = await resolveAcademicGroup({ instituteId: institute.id, batchYear: row.batchYear, departmentName: row.department, section: row.section }, groupCache);
         if (!groupRollNumberCache.has(group.id)) {
           groupRollNumberCache.set(group.id, await fetchTakenRollNumbers(group.id, null));
         }
         const takenInGroup = groupRollNumberCache.get(group.id);
-        const finalRollNumber = resolveRollNumberAvoidingCollisions(registrationNumber, takenInGroup);
+        const finalRollNumber = resolveRollNumberAvoidingCollisions(row.registrationNumber, takenInGroup);
         if (finalRollNumber) takenInGroup.add(finalRollNumber);
         const user = await prisma.user.create({
           data: {
-            name, email, registrationNumber, rollNumber: finalRollNumber || null, passwordHash, role: "STUDENT",
-            mobile: mobile || null,
-            department: department || null,
-            program: program || null,
-            batchYear: batchYear || null,
-            section: section || null,
-            gender: gender || null,
-            isActive,
-            accountStatus: isActive ? "ACTIVE" : "INACTIVE",
+            name: row.name, email: row.email, registrationNumber: row.registrationNumber, rollNumber: finalRollNumber || null, passwordHash, role: "STUDENT",
+            mobile: row.mobile || null,
+            department: row.department || null,
+            program: row.program || null,
+            batchYear: row.batchYear || null,
+            section: row.section || null,
+            gender: row.gender || null,
+            isActive: row.isActive,
+            accountStatus: row.isActive ? "ACTIVE" : "INACTIVE",
             instituteId: institute.id,
             academicGroupId: group.id,
             mustChangePassword: true,
@@ -868,7 +909,9 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
         });
         created.push({ ...user, generatedPassword });
       } catch (err) {
-        errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Failed to create account" });
+        // P2002 here means a genuine last-instant race (e.g. two concurrent confirms) slipped
+        // past the fresh-context check above — reported as a duplicate, never a raw 500.
+        errors.push({ row: row.rowNum, name: row.name, email: row.email, registrationNumber: row.registrationNumber, rollNumber: null, reason: err.code === "P2002" ? "Duplicate detected during creation" : "Failed to create account" });
       }
     }
 
@@ -879,6 +922,12 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
     // GET /admin/email-logs/batch/:batchId/summary for live sent/failed counts.
     const batchId = sendCredentials && created.length > 0 ? crypto.randomUUID() : null;
     const emailsQueued = batchId ? created.length : 0;
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.ACCOUNT_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId || (created[0]?.instituteId ?? null),
+      details: { method: "bulk", createdCount: created.length, duplicateCount: duplicates.length, errorCount: errors.length, totalRows: rows.length },
+    });
 
     res.json({
       total: rows.length,
@@ -908,11 +957,11 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
           subject: "Your CodeArena Account Has Been Created",
           html: accountCredentialsTemplate({ name: u.name, email: u.email, password: u.generatedPassword, registrationNumber: u.registrationNumber }),
         }).catch((e) => ({ ok: false, error: e.message }))
-      ).catch((err) => console.error("[users.bulk-upload] background email batch failed:", err));
+      ).catch((err) => console.error("[users.bulk-upload.confirm] background email batch failed:", err));
     }
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Bulk upload failed" });
+    console.error("[users.bulk-upload.confirm] failed:", err);
+    res.status(500).json({ error: "Bulk import failed" });
   }
 });
 
