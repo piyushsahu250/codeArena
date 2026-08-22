@@ -66,7 +66,7 @@ function wrapBranded(bodyHtml) {
   `;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { isValidEmail } = require("./emailValidation");
 
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_WEB_APP_URL || null;
 const APPS_SCRIPT_SECRET = process.env.APPS_SCRIPT_SHARED_SECRET || null;
@@ -117,7 +117,7 @@ async function sendViaAppsScript({ to, subject, html }) {
 async function sendMail({ to, subject, html }) {
   console.log(`[mailer] Sending "${subject}" to ${to}…`);
 
-  if (!to || !EMAIL_RE.test(String(to).trim())) {
+  if (!to || !isValidEmail(String(to).trim())) {
     console.error(`[mailer] Invalid recipient email: "${to}"`);
     return { ok: false, error: "Invalid recipient email address" };
   }

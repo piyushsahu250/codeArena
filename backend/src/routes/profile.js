@@ -3,7 +3,8 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
-const { computeMandatoryCompletion, MOBILE_RE, EMAIL_RE, PINCODE_RE } = require("../utils/studentProfileCompletion");
+const { computeMandatoryCompletion, MOBILE_RE, PINCODE_RE } = require("../utils/studentProfileCompletion");
+const { isValidEmail } = require("../utils/emailValidation");
 const { ROLL_NUMBER_MAX_LENGTH, isValidRollNumber } = require("../utils/studentIdentifiers");
 const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
 const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption");
@@ -124,7 +125,8 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     for (const key of STUDENT_PROFILE_FIELDS) {
       if (rest[key] !== undefined) profileData[key] = rest[key] || null;
     }
-    if (profileData.personalEmail && profileData.personalEmail !== existingProfileForCompare?.personalEmail && !EMAIL_RE.test(profileData.personalEmail)) {
+    if (profileData.personalEmail) profileData.personalEmail = profileData.personalEmail.trim();
+    if (profileData.personalEmail && profileData.personalEmail !== existingProfileForCompare?.personalEmail && !isValidEmail(profileData.personalEmail)) {
       return res.status(400).json({ error: "Enter a valid personal email address" });
     }
     if (profileData.pincode && profileData.pincode !== existingProfileForCompare?.pincode && !PINCODE_RE.test(profileData.pincode)) {

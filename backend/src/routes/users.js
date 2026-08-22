@@ -17,7 +17,15 @@ const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, isValidRollNumber, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
 const { mapWithConcurrency } = require("../utils/queue");
+const { isValidEmail, normalizeEmail } = require("../utils/emailValidation");
+const { dbRateLimit } = require("../utils/dbRateLimit");
 const crypto = require("crypto");
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h -- longer than the 1h password-reset
+// token since a new/changed personal email may not be checked as promptly as an active recovery flow.
 
 // Bounded-concurrency cap for background bulk credential-email sends (bulk-upload,
 // bulk-regenerate-password) — small enough not to open dozens of simultaneous SMTP connections
@@ -29,13 +37,13 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 
 const SELECT_FIELDS = {
   id: true, name: true, email: true, role: true, rollNumber: true, registrationNumber: true, department: true,
   mobile: true, gender: true, program: true, batchYear: true, section: true, isActive: true, profilePhotoUrl: true, createdAt: true,
   mustChangePassword: true, accountStatus: true, employeeId: true, designation: true, lastLoginAt: true,
+  emailVerified: true, pendingEmail: true,
   institute: { select: { id: true, name: true } },
   class: { select: { id: true, name: true, batchYear: true } },
   academicGroup: { select: { id: true, batch: true, section: true, department: { select: { id: true, name: true } } } },
@@ -156,14 +164,29 @@ function buildHeaderMap(headers) {
 // the Registration Number (PRN)'s last 3 characters after import.
 const TEMPLATE_HEADERS = ["Student Name", "Registration Number (PRN)", "Official Email ID", "Institute", "Batch/Year", "Mobile Number", "Department", "Program", "Section", "Gender", "Status"];
 
-// Any authenticated user: change their own email and/or password
-router.patch("/me", authenticate, async (req, res) => {
+// Rate-limits how often a signed-in user can (re)request a new sign-in email — the token is sent
+// to the NEW address, so the abuse shape here is spamming an arbitrary inbox with verification
+// mail, not credential guessing. Same 3/15min shape as auth.js's forgotPasswordLimiter/resend
+// conventions. Keyed by the account, not the IP, since this route requires a valid session already.
+const emailChangeLimiter = dbRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => `email-change:${req.user.id}`,
+  message: { error: "Too many email change requests. Please try again later." },
+});
+
+// Any authenticated user: change their own email and/or password. A new email is never written
+// to the live `email` column directly — see the pendingEmail fields' schema comment. The account
+// keeps signing in with its current, already-verified address until the new one is confirmed via
+// the link sent to it, so a typo here can never lock the owner out or silently misdirect future
+// account mail.
+router.patch("/me", authenticate, emailChangeLimiter, async (req, res) => {
   try {
-    const { currentPassword, newEmail, newPassword } = req.body;
+    const { currentPassword, newEmail: rawNewEmail, newPassword } = req.body;
     if (!currentPassword) {
       return res.status(400).json({ error: "currentPassword is required" });
     }
-    if (!newEmail && !newPassword) {
+    if (!rawNewEmail && !newPassword) {
       return res.status(400).json({ error: "Provide newEmail and/or newPassword" });
     }
 
@@ -172,10 +195,21 @@ router.patch("/me", authenticate, async (req, res) => {
     if (!valid) return res.status(401).json({ error: "Current password is incorrect" });
 
     const data = {};
-    if (newEmail && newEmail !== user.email) {
-      const existing = await prisma.user.findUnique({ where: { email: newEmail } });
-      if (existing) return res.status(409).json({ error: "Email already in use" });
-      data.email = newEmail;
+    let verificationEmailSent = null; // null = no email change requested; true/false once one is
+    let newEmailNormalized = null;
+    let pendingVerifyToken = null;
+    if (rawNewEmail) {
+      newEmailNormalized = normalizeEmail(rawNewEmail);
+      if (!isValidEmail(newEmailNormalized)) return res.status(400).json({ error: "Please enter a valid email address" });
+      if (newEmailNormalized !== user.email) {
+        const existing = await prisma.user.findUnique({ where: { email: newEmailNormalized } });
+        if (existing) return res.status(409).json({ error: "This email address is already associated with an account" });
+        pendingVerifyToken = crypto.randomBytes(32).toString("hex");
+        data.pendingEmail = newEmailNormalized;
+        data.pendingEmailTokenHash = hashToken(pendingVerifyToken);
+        data.pendingEmailTokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
+        // Actually sent below, after the DB write succeeds.
+      }
     }
     const institute = user.instituteId ? await prisma.institute.findUnique({ where: { id: user.instituteId } }) : null;
     let newPasswordHash = null;
@@ -200,8 +234,12 @@ router.patch("/me", authenticate, async (req, res) => {
         updated = await tx.user.update({ where: { id: user.id }, data, select: SELECT_FIELDS });
         await recordPasswordChange(tx, user.id, newPasswordHash, institute?.passwordHistoryDepth);
       });
-    } else {
+    } else if (Object.keys(data).length > 0) {
       updated = await prisma.user.update({ where: { id: user.id }, data, select: SELECT_FIELDS });
+    } else {
+      // Nothing actually changed (e.g. newEmail matched the current email already) -- re-select
+      // in the same shape the update branches return, rather than hand-assembling a shorter object.
+      updated = await prisma.user.findUnique({ where: { id: user.id }, select: SELECT_FIELDS });
     }
     if (newPasswordHash) {
       sendMailLogged(prisma, {
@@ -211,14 +249,62 @@ router.patch("/me", authenticate, async (req, res) => {
         html: wrapBranded(`<p>Hi ${updated.name},</p><p>Your password was just changed from your account settings. If this wasn't you, contact your administrator immediately.</p>`),
       }).catch((err) => console.error("[users] password-change alert email failed:", err.message));
     }
+    if (pendingVerifyToken) {
+      const verifyLink = `${FRONTEND_URL}/verify-email?token=${pendingVerifyToken}`;
+      const mailResult = await sendMailLogged(prisma, {
+        to: newEmailNormalized, name: updated.name, emailType: "EMAIL_VERIFICATION",
+        studentId: updated.role === "STUDENT" ? updated.id : null,
+        subject: "Confirm your new CodeArena email address",
+        html: wrapBranded(`<p>Hi ${updated.name},</p><p>Click the link below to confirm this is your new sign-in email address. This link expires in 24 hours.</p><p><a href="${verifyLink}">${verifyLink}</a></p><p>Your current sign-in email stays active until you confirm this one. If you didn't request this change, you can ignore this email.</p>`),
+      }).catch((e) => ({ ok: false, error: e.message }));
+      verificationEmailSent = !!mailResult.ok;
+    }
 
     const token = await createSession({ user: updated, req, singleSessionOnly: false });
-    await logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_CHANGED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.role === "STUDENT" ? user.id : null, instituteId: user.instituteId, details: { self: true, emailChanged: !!data.email, passwordChanged: !!newPasswordHash } });
+    await logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_CHANGED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.role === "STUDENT" ? user.id : null, instituteId: user.instituteId, details: { self: true, emailChangeRequested: !!pendingVerifyToken, verificationEmailSent, passwordChanged: !!newPasswordHash } });
 
-    res.json({ token, user: updated });
+    let message = null;
+    if (pendingVerifyToken) {
+      message = verificationEmailSent
+        ? `Verification email sent to ${newEmailNormalized}. Your sign-in email stays as ${user.email} until you confirm the new one.`
+        : `Account updated, but the verification email to ${newEmailNormalized} failed to send. Please try again.`;
+    }
+    res.json({ token, user: updated, message, verificationEmailSent });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update account" });
+  }
+});
+
+// Any authenticated user with a pending (unverified) email change: re-send the verification link
+// to that same pendingEmail, with a fresh token/expiry. Shares emailChangeLimiter with PATCH /me
+// itself (3/15min combined) rather than a separate budget -- both routes send mail to the same
+// address for the same reason, so splitting the limits would just double the achievable send rate.
+router.post("/me/resend-verification", authenticate, emailChangeLimiter, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user.pendingEmail) return res.status(400).json({ error: "No email change is pending" });
+
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { pendingEmailTokenHash: hashToken(verifyToken), pendingEmailTokenExpiry: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS) },
+    });
+    const verifyLink = `${FRONTEND_URL}/verify-email?token=${verifyToken}`;
+    const mailResult = await sendMailLogged(prisma, {
+      to: user.pendingEmail, name: user.name, emailType: "EMAIL_VERIFICATION",
+      studentId: user.role === "STUDENT" ? user.id : null,
+      subject: "Confirm your new CodeArena email address",
+      html: wrapBranded(`<p>Hi ${user.name},</p><p>Click the link below to confirm this is your new sign-in email address. This link expires in 24 hours.</p><p><a href="${verifyLink}">${verifyLink}</a></p><p>Your current sign-in email stays active until you confirm this one.</p>`),
+    }).catch((e) => ({ ok: false, error: e.message }));
+
+    res.json({
+      message: mailResult.ok ? `Verification email re-sent to ${user.pendingEmail}.` : `Failed to send verification email to ${user.pendingEmail}. Please try again.`,
+      verificationEmailSent: !!mailResult.ok,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to resend verification email" });
   }
 });
 
@@ -279,13 +365,14 @@ router.get("/", authenticate, requireRole("ADMIN"), async (req, res) => {
 router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
-      name, email, role, rollNumber, registrationNumber, department, mobile, gender, program,
+      name, email: rawEmail, role, rollNumber, registrationNumber, department, mobile, gender, program,
       batchYear, section, instituteId, employeeId, designation,
     } = req.body;
-    if (!name || !email || !role) {
+    if (!name || !rawEmail || !role) {
       return res.status(400).json({ error: "name, email, and role are required" });
     }
-    if (!EMAIL_RE.test(String(email).trim())) return res.status(400).json({ error: "Invalid email address" });
+    const email = normalizeEmail(rawEmail);
+    if (!isValidEmail(email)) return res.status(400).json({ error: "Please enter a valid email address" });
     if (!["STUDENT", "STAFF", "ADMIN", "CLERK"].includes(role)) {
       return res.status(400).json({ error: "role must be STUDENT, STAFF, ADMIN, or CLERK" });
     }
@@ -445,11 +532,15 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
     }
 
     if (data.email !== undefined) {
-      const email = String(data.email).trim();
-      if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "Invalid email address" });
+      const email = normalizeEmail(data.email);
+      if (!isValidEmail(email)) return res.status(400).json({ error: "Please enter a valid email address" });
       if (email !== existing.email) {
         const dup = await prisma.user.findUnique({ where: { email } });
-        if (dup) return res.status(409).json({ error: "Email already registered to another account" });
+        if (dup) return res.status(409).json({ error: "This email address is already associated with an account" });
+        // A changed address hasn't been proven to belong to this person just because an admin
+        // typed it in -- don't let a stale `true` from the old address carry over silently.
+        data.emailVerified = false;
+        data.emailVerifiedAt = null;
       }
       data.email = email;
     }
@@ -715,7 +806,7 @@ router.post("/bulk-upload", authenticate, requireRole("ADMIN"), attachRequesterI
         errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Missing required field (name, registration number, email, institute, or batch/year)" });
         continue;
       }
-      if (!EMAIL_RE.test(email)) {
+      if (!isValidEmail(email)) {
         errors.push({ row: rowNum, name, email, registrationNumber, rollNumber, reason: "Invalid email format" });
         continue;
       }

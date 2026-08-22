@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
+import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 const REGISTRATION_NUMBER_RE = /^[A-Za-z0-9]{9,12}$/;
 
@@ -47,7 +47,7 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
   async function handleSave(e) {
     e.preventDefault();
     setError("");
-    if (!EMAIL_RE.test(form.email.trim())) return setError("Please enter a valid email address");
+    if (!isValidEmail(normalizeEmail(form.email))) return setError("Please enter a valid email address");
     if (form.mobile.trim() && !MOBILE_RE.test(form.mobile.trim())) return setError("Please enter a valid mobile number");
     if (form.registrationNumber.trim() && !REGISTRATION_NUMBER_RE.test(form.registrationNumber.trim())) return setError("Registration Number (PRN) must be 9-12 alphanumeric characters");
     if (form.rollNumber.trim().length > 3) return setError("Roll Number cannot exceed 3 characters");

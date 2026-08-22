@@ -3,6 +3,7 @@ Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /verify-email
 Disallow: /change-password
 Disallow: /account
 Disallow: /profile

@@ -196,6 +196,22 @@ model User {
   resetTokenHash   String?
   resetTokenExpiry DateTime?
 
+  // Email ownership verification — separate from resetTokenHash/resetTokenExpiry above (a token
+  // consumed here must never invalidate an in-flight password reset, or vice versa). emailVerified
+  // defaults false for every account, existing and new — this is informational/used to gate the
+  // self-service email-change flow below, NOT a login gate: this platform's accounts are all
+  // admin/bulk-created (no self-registration), so an admin already vouched for the address at
+  // creation time, and blocking login on a new boolean field would risk locking out students en
+  // masse the moment this ships. pendingEmail/pendingEmailTokenHash/pendingEmailTokenExpiry hold a
+  // NEW address a user has requested but not yet proven ownership of — the live `email` column is
+  // only overwritten once that token is redeemed, so a self-service email change can never destroy
+  // a working, verified address for one that turns out to be a typo.
+  emailVerified               Boolean   @default(false)
+  emailVerifiedAt             DateTime?
+  pendingEmail                String?
+  pendingEmailTokenHash       String?
+  pendingEmailTokenExpiry     DateTime?
+
   createdTests Test[]         @relation("TestCreator")
   sharedTests  TestShare[]    @relation("TestSharedWith") // tests explicitly shared with this staff member by someone else
   attempts     TestAttempt[]

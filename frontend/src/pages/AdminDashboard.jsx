@@ -8,6 +8,7 @@ import { useConfirm } from "../context/ConfirmContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid, SkeletonCard } from "../components/Skeleton";
+import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
 const ROLES = ["STUDENT", "STAFF", "ADMIN", "CLERK"];
 const emptyForm = {
@@ -99,11 +100,13 @@ export default function AdminDashboard() {
     setCreatedCredential(null);
     setCopied(false);
     if (!form.instituteId) return setError("Please choose an institute");
+    const normalizedEmail = normalizeEmail(form.email);
+    if (!isValidEmail(normalizedEmail)) return setError("Please enter a valid email address");
     if (form.role === "STUDENT" && !form.mobile.trim()) return setError("Mobile number is required for students");
     if (form.role === "STUDENT" && !form.batchYear.trim()) return setError("Batch is required for students");
     setSaving(true);
     try {
-      const { data } = await api.post("/users", form);
+      const { data } = await api.post("/users", { ...form, email: normalizedEmail });
       setCreatedCredential({ id: data.id, name: data.name, email: data.email, password: data.generatedPassword, emailSent: data.emailSent, emailError: data.emailError });
       setForm({ ...emptyForm, instituteId: form.instituteId, role: form.role });
       load();
@@ -401,7 +404,18 @@ export default function AdminDashboard() {
                 <input style={inputStyle} required value={form.name} onChange={updateField("name")} />
 
                 <label style={labelStyle}>Email</label>
-                <input style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
+                <input
+                  style={inputStyle}
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={updateField("email")}
+                  onBlur={() => {
+                    const trimmed = normalizeEmail(form.email);
+                    if (trimmed && !isValidEmail(trimmed)) setError("Please enter a valid email address");
+                    else if (error === "Please enter a valid email address") setError("");
+                  }}
+                />
 
                 <label style={labelStyle}>Role</label>
                 <select style={inputStyle} value={form.role} onChange={updateField("role")}>

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { Laptop, Smartphone, Tablet, LogOut } from "lucide-react";
+import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
 const DEVICE_ICON = { Mobile: Smartphone, Tablet: Tablet, Desktop: Laptop };
 
@@ -19,6 +20,22 @@ export default function AccountSettings() {
 
   const [sessions, setSessions] = useState(null);
   const [revokingId, setRevokingId] = useState(null);
+  const [pendingEmail, setPendingEmail] = useState(user.pendingEmail || null);
+  const [resending, setResending] = useState(false);
+
+  async function resendVerification() {
+    setResending(true);
+    setError("");
+    setSuccess("");
+    try {
+      const { data } = await api.post("/users/me/resend-verification");
+      setSuccess(data.message);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to resend verification email");
+    } finally {
+      setResending(false);
+    }
+  }
 
   function loadSessions() {
     api.get("/users/me/sessions").then((res) => setSessions(res.data)).catch(() => setSessions([]));
@@ -46,8 +63,12 @@ export default function AccountSettings() {
       return setError("New password and confirmation don't match");
     }
 
+    const normalizedEmail = normalizeEmail(newEmail);
     const payload = { currentPassword };
-    if (newEmail && newEmail !== user.email) payload.newEmail = newEmail;
+    if (normalizedEmail && normalizedEmail !== user.email) {
+      if (!isValidEmail(normalizedEmail)) return setError("Please enter a valid email address");
+      payload.newEmail = normalizedEmail;
+    }
     if (newPassword) payload.newPassword = newPassword;
 
     if (!payload.newEmail && !payload.newPassword) {
@@ -58,10 +79,17 @@ export default function AccountSettings() {
     try {
       const { data } = await api.patch("/users/me", payload);
       login(data.token, data.user);
-      setSuccess("Account updated.");
+      // The backend never overwrites the live sign-in email immediately -- data.message explains
+      // whether a verification link was sent to the new address (and that the old one stays
+      // active until it's confirmed), so surface that instead of a generic "Account updated."
+      setSuccess(data.message || "Account updated.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      // Always reflect the account's actual (still-current) email, not whatever was just typed --
+      // a requested change stays pending/unverified, so the field shouldn't imply it's already live.
+      setNewEmail(data.user.email);
+      if (payload.newEmail) setPendingEmail(data.user.pendingEmail ?? payload.newEmail);
       loadSessions();
     } catch (err) {
       setError(err.response?.data?.error || "Update failed");
@@ -80,9 +108,29 @@ export default function AccountSettings() {
           Change your sign-in email and/or password. Your current password is required to confirm the change.
         </p>
 
+        {pendingEmail && (
+          <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: "var(--sand, #FFF8E1)", border: "1px solid #FCE8A8", fontSize: 13, color: "#7A5B00" }}>
+            <strong>{pendingEmail}</strong> is awaiting confirmation — check that inbox for a verification link. Your current email keeps working until then.{" "}
+            <button type="button" onClick={resendVerification} disabled={resending} style={{ border: "none", background: "none", color: "#7A5B00", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}>
+              {resending ? "Sending…" : "Resend link"}
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
           <label style={labelStyle}>Email</label>
-          <input style={inputStyle} type="email" required value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+          <input
+            style={inputStyle}
+            type="email"
+            required
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            onBlur={() => {
+              const trimmed = normalizeEmail(newEmail);
+              if (trimmed && !isValidEmail(trimmed)) setError("Please enter a valid email address");
+              else if (error === "Please enter a valid email address") setError("");
+            }}
+          />
 
           <label style={labelStyle}>New password (optional)</label>
           <input style={inputStyle} type="password" minLength={8} placeholder="Leave blank to keep current password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />

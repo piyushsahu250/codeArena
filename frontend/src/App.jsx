@@ -73,6 +73,7 @@ import MarksheetView from "./pages/MarksheetView";
 import MarksheetVerify from "./pages/MarksheetVerify";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import ForceChangePassword from "./pages/ForceChangePassword";
 import StudentSearch from "./pages/StudentSearch";
 import LearningHub from "./pages/LearningHub";
@@ -200,6 +201,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/change-password" element={<ForceChangePassword />} />
           <Route path="/interview/verify/:code" element={<InterviewVerify />} />
           <Route path="/learning/certificate/verify/:code" element={<CourseCertificateVerify />} />

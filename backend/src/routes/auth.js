@@ -177,7 +177,7 @@ router.post("/login", loginLimiter, async (req, res) => {
       profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume, documents).unlocked;
     }
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete, emailVerified: user.emailVerified, pendingEmail: user.pendingEmail } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Login failed" });
@@ -293,6 +293,59 @@ router.post("/reset-password", resetPasswordLimiter, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+// Same defense-in-depth reasoning as resetPasswordLimiter above -- the token itself (256 random
+// bits) isn't practically brute-forceable, this just caps automated probing/replay.
+const verifyEmailLimiter = dbRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `verify-email:${getClientIp(req)}`,
+  message: { error: "Too many verification attempts. Please try again later." },
+});
+
+// Public, token-based (mirrors reset-password) -- redeems a pendingEmail verification link sent
+// by PATCH /users/me. Deliberately does not require the requester to be logged in as the account
+// in question: the link may be opened on a different device than the one the change was requested
+// from (e.g. checking a personal inbox on a phone).
+router.post("/verify-email", verifyEmailLimiter, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "token is required" });
+
+    const user = await prisma.user.findFirst({ where: { pendingEmailTokenHash: hashToken(token) } });
+    if (!user || !user.pendingEmailTokenExpiry || user.pendingEmailTokenExpiry < new Date() || !user.pendingEmail) {
+      return res.status(400).json({ error: "This verification link is invalid or has expired" });
+    }
+
+    // Someone else may have registered the pending address in the time since the link was sent --
+    // re-check uniqueness at redemption, not just at request time, and clear the stale pending
+    // state either way so the link can never be replayed.
+    const conflict = await prisma.user.findUnique({ where: { email: user.pendingEmail } });
+    if (conflict && conflict.id !== user.id) {
+      await prisma.user.update({ where: { id: user.id }, data: { pendingEmail: null, pendingEmailTokenHash: null, pendingEmailTokenExpiry: null } });
+      return res.status(409).json({ error: "This email address was registered to another account in the meantime. Please request the change again with a different address." });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: user.pendingEmail,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        pendingEmail: null,
+        pendingEmailTokenHash: null,
+        pendingEmailTokenExpiry: null,
+      },
+    });
+
+    logAudit({ req, action: AUDIT_ACTIONS.EMAIL_VERIFIED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.role === "STUDENT" ? user.id : null, instituteId: user.instituteId, details: { newEmail: user.pendingEmail } });
+
+    res.json({ message: "Email address confirmed. You can now sign in with your new email." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to verify email" });
   }
 });
 

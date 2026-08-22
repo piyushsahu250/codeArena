@@ -13,7 +13,7 @@
 // only resume-specific content (Education). The frontend uses this tag to route "complete this"
 // guidance to the correct page instead of a generic warning.
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { isValidEmail } = require("./emailValidation");
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 const PINCODE_RE = /^[0-9]{4,10}$/;
 
@@ -28,7 +28,7 @@ const MANDATORY_FIELD_CHECKS = [
   { key: "mobile", label: "Mobile number", section: "PROFILE", check: (u) => !!u.mobile && MOBILE_RE.test(u.mobile) },
   { key: "gender", label: "Gender", section: "PROFILE", check: (u) => !!u.gender },
   { key: "profilePhotoUrl", label: "Profile picture", section: "PROFILE", check: (u) => !!u.profilePhotoUrl },
-  { key: "personalEmail", label: "Personal email", section: "PROFILE", check: (u, p) => !!p?.personalEmail && EMAIL_RE.test(p.personalEmail) },
+  { key: "personalEmail", label: "Personal email", section: "PROFILE", check: (u, p) => !!p?.personalEmail && isValidEmail(p.personalEmail) },
   { key: "dob", label: "Date of birth", section: "PROFILE", check: (u, p) => !!p?.dob && new Date(p.dob).getTime() < Date.now() },
   { key: "address", label: "Address", section: "PROFILE", check: (u, p) => !!p?.address },
   { key: "state", label: "State", section: "PROFILE", check: (u, p) => !!p?.state },
@@ -56,4 +56,4 @@ function computeMandatoryCompletion(user, studentProfile, resume, documents) {
   return { complete, unlocked, percent, missingFields, totalFields, status };
 }
 
-module.exports = { computeMandatoryCompletion, MANDATORY_FIELD_CHECKS, EMAIL_RE, MOBILE_RE, PINCODE_RE, UNLOCK_THRESHOLD_PERCENT };
+module.exports = { computeMandatoryCompletion, MANDATORY_FIELD_CHECKS, MOBILE_RE, PINCODE_RE, UNLOCK_THRESHOLD_PERCENT };
