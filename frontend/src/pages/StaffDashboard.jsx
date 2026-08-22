@@ -59,8 +59,13 @@ export default function StaffDashboard() {
   }
 
   async function togglePublish(test) {
-    await api.patch(`/tests/${test.id}/publish`, { isPublished: !test.isPublished });
-    refresh();
+    try {
+      await api.patch(`/tests/${test.id}/publish`, { isPublished: !test.isPublished });
+      refresh();
+    } catch (err) {
+      const problems = err.response?.data?.problems;
+      alert(problems?.length ? `Cannot publish:\n\n${problems.map((p) => `• ${p}`).join("\n")}` : err.response?.data?.error || "Failed to update publish status");
+    }
   }
 
   async function deleteTest(test) {

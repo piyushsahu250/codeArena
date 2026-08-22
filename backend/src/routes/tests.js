@@ -445,7 +445,10 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), attach
   try {
     // Previously had no authorization check at all beyond role — any Staff member anywhere could
     // publish/unpublish any test by id. Now matches every other staff-reachable route's gate.
-    const existing = await prisma.test.findUnique({ where: { id: req.params.id }, include: { shares: { select: { staffId: true } } } });
+    const existing = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      include: { shares: { select: { staffId: true } }, questions: { select: { id: true } } },
+    });
     if (!existing) return res.status(404).json({ error: "Test not found" });
     if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only manage tests under your own institute" });
@@ -453,6 +456,27 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), attach
     if (!canStaffAccessTest(req, existing)) {
       return res.status(403).json({ error: "You can only publish tests you created or that were shared with you" });
     }
+
+    // Going live (false -> true, or re-confirming an already-published test) must never succeed
+    // silently on a broken configuration — previously a 0-question test, a zero/negative duration,
+    // or an inverted schedule could be published with no error at all. Unpublishing always
+    // succeeds unconditionally: taking a test down is never something to block on validation.
+    if (req.body.isPublished) {
+      const problems = [];
+      // RANDOM mode still requires questions[] populated (see Test.questionSelectionMode's schema
+      // comment — it's the bank random subsets are drawn from, not shown to students directly), so
+      // this check applies the same way regardless of mode.
+      if (existing.questions.length === 0) problems.push("Add at least one question before publishing.");
+      if (!(existing.durationMin > 0)) problems.push("Set a test duration greater than 0 minutes.");
+      if (existing.startTime && existing.endTime && new Date(existing.startTime) >= new Date(existing.endTime)) {
+        problems.push("End time must be after start time.");
+      }
+      if (existing.questionSelectionMode === "RANDOM" && !(existing.randomQuestionsPerStudent > 0)) {
+        problems.push("Set how many random questions each student should receive.");
+      }
+      if (problems.length) return res.status(400).json({ error: "Cannot publish — please fix the following:", problems });
+    }
+
     const test = await prisma.test.update({
       where: { id: req.params.id },
       data: { isPublished: !!req.body.isPublished },
