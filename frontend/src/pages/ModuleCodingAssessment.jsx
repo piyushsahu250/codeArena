@@ -41,7 +41,7 @@ export default function ModuleCodingAssessment() {
 
   const [status, setStatus] = useState(null); // GET /module-coding/module/:moduleId response
   const [error, setError] = useState("");
-  const [phase, setPhase] = useState("loading"); // loading | preflight | starting | active | result
+  const [phase, setPhase] = useState("loading"); // loading | preflight | starting | active | result | finalize-failed
   const [readinessReady, setReadinessReady] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -60,6 +60,7 @@ export default function ModuleCodingAssessment() {
   const [violationWarning, setViolationWarning] = useState(null);
   const [violationCount, setViolationCount] = useState(0);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [saveFailed, setSaveFailed] = useState(false); // surfaced honestly instead of the indicator silently staying stale on a failed autosave
   // Independent autosaved code per (question, language) — { [questionId]: { [language]: code } }.
   // Without this, switching languages would always reload a starter template and silently
   // discard whatever was already written in the language being switched away from.
@@ -75,8 +76,10 @@ export default function ModuleCodingAssessment() {
   const deadlineRef = useRef(null);
   const clockOffsetRef = useRef(0); // serverTime - Date.now() at start/resume; corrects a skewed device clock
   const finalizingRef = useRef(false); // in-flight guard for the auto-submit tick, distinct from finalizedRef
+  const submittingCodeRef = useRef(false); // in-flight guard for handleSubmitCode, immune to disabled-button re-render lag
   const attemptIdRef = useRef(null);
   const finalizedRef = useRef(false);
+  const lastFinalizeReasonRef = useRef(null); // so the manual retry (after a failed finalize) resubmits with the same reason
   // Mirrors the active question's id — Run/Submit are async, and a student can switch questions
   // before a slow response comes back. Guards the ephemeral runResult/submitResultMsg setters so
   // a late response never renders under whatever question happens to be active by then.
@@ -235,11 +238,16 @@ export default function ModuleCodingAssessment() {
       const key = `${a.language}:${a.code}`;
       if (lastSavedCodeRef.current[qid] === key) return;
       try {
-        await api.post(`/module-coding/attempts/${attemptIdRef.current}/autosave`, { questionId: qid, language: a.language, code: a.code });
+        // seq: Date.now() at the moment of this flush -- see Submission.codeSavedSeq's schema
+        // comment (moduleCoding.js's autosave route applies the same conditional-write guard).
+        await api.post(`/module-coding/attempts/${attemptIdRef.current}/autosave`, { questionId: qid, language: a.language, code: a.code, seq: Date.now() });
         lastSavedCodeRef.current[qid] = key;
         setLastSavedAt(new Date());
+        setSaveFailed(false);
       } catch {
-        // best-effort — retried on the next interval tick, and unconditionally again at finalize()
+        // Retried on the next interval tick, and unconditionally again at finalize() -- but the
+        // student should see that a save didn't go through, not a timestamp silently going stale.
+        setSaveFailed(true);
       }
     }));
   }
@@ -402,8 +410,10 @@ export default function ModuleCodingAssessment() {
   // fullscreen before it can render, which was the actual cause of "fullscreen exits when I
   // click Submit". submitResultMsg (an on-page banner) replaces it and never touches fullscreen.
   async function handleSubmitCode() {
+    if (submittingCodeRef.current) return;
     if (!current || !answer || !attemptId) return;
     const questionId = current.id;
+    submittingCodeRef.current = true;
     setSubmittingCode(true);
     try {
       const { data } = await api.post(`/module-coding/attempts/${attemptId}/submit-code`, { questionId, language: answer.language, code: answer.code });
@@ -416,6 +426,7 @@ export default function ModuleCodingAssessment() {
     } catch (err) {
       if (activeQuestionIdRef.current === questionId) setSubmitResultMsg({ ok: false, text: err.response?.data?.error || "Submission failed" });
     } finally {
+      submittingCodeRef.current = false;
       setSubmittingCode(false);
     }
   }
@@ -427,33 +438,53 @@ export default function ModuleCodingAssessment() {
   async function finalize(reason) {
     if (finalizedRef.current || finalizingRef.current) return;
     if (!reason && !confirm("Submit this assessment? You won't be able to change your answers afterward.")) return;
+    lastFinalizeReasonRef.current = reason;
     await flushAutosave();
     finalizingRef.current = true;
     setFinalizing(true);
-    try {
-      const { data } = await api.post(`/module-coding/attempts/${attemptId}/finalize`, { reason });
-      // The server disagreed that time is actually up (this candidate's device clock ran ahead of
-      // the server's) — resync the offset and let the countdown keep running instead of locking the
-      // assessment screen; do NOT set finalizedRef, exit fullscreen, or stop media.
-      if (data.premature) {
-        if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
-        return;
+
+    // Up to 3 tries with backoff before giving up -- must never report success (a "result" phase
+    // with a real score) unless the server actually confirmed it. Previously ANY failure here set
+    // finalizedRef + phase "result", which then rendered with `result` still null/undefined --
+    // score/passed would read as falsy/0%, a confusing false result rather than an honest failure.
+    let data = null;
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3 && !data; attempt++) {
+      try {
+        const res = await api.post(`/module-coding/attempts/${attemptId}/finalize`, { reason });
+        data = res.data;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2000));
       }
-      finalizedRef.current = true;
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-      proctor.stopMedia();
-      setResult(data);
-      notify(data.gamification);
-    } catch {
-      // best-effort — still show whatever we can
-      finalizedRef.current = true;
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-      proctor.stopMedia();
-    } finally {
+    }
+
+    if (!data) {
       finalizingRef.current = false;
       setFinalizing(false);
-      if (finalizedRef.current) setPhase("result");
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      console.error("[finalize] failed after 3 attempts:", lastErr);
+      setPhase("finalize-failed");
+      return;
     }
+
+    // The server disagreed that time is actually up (this candidate's device clock ran ahead of
+    // the server's) — resync the offset and let the countdown keep running instead of locking the
+    // assessment screen; do NOT set finalizedRef, exit fullscreen, or stop media.
+    if (data.premature) {
+      if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
+      finalizingRef.current = false;
+      setFinalizing(false);
+      return;
+    }
+    finalizedRef.current = true;
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    proctor.stopMedia();
+    setResult(data);
+    notify(data.gamification);
+    finalizingRef.current = false;
+    setFinalizing(false);
+    setPhase("result");
   }
 
   if (error && phase !== "active") {
@@ -479,6 +510,22 @@ export default function ModuleCodingAssessment() {
         <div style={{ maxWidth: 700, margin: "0 auto", padding: 48 }}>
           <p>No coding assessment is configured for this module.</p>
           <Link to={`/learning/${slug}`} className="btn btn-ghost" style={{ marginTop: 12, display: "inline-block" }}>← Back to course</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "finalize-failed") {
+    return (
+      <div>
+        <Navbar />
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: 48, textAlign: "center" }}>
+          <p style={{ fontSize: 16, color: "var(--rust)" }}>
+            We couldn't confirm your submission was received — this attempt has <strong>not</strong> been marked as submitted. Please check your internet connection and try again. Do not close this page.
+          </p>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={finalizing} onClick={() => finalize(lastFinalizeReasonRef.current)}>
+            {finalizing ? "Retrying…" : "Retry submission"}
+          </button>
         </div>
       </div>
     );
@@ -640,7 +687,9 @@ export default function ModuleCodingAssessment() {
             ⚠ Violations: {violationCount}/{status.test.maxViolations}
           </span>
           {!isMobile && (
-            <span className="mono" style={{ fontSize: 11, opacity: 0.7 }}>{lastSavedAt ? `● Saved ${lastSavedAt.toLocaleTimeString()}` : "● Auto-save every 10s"}</span>
+            <span className="mono" style={{ fontSize: 11, opacity: saveFailed ? 1 : 0.7, color: saveFailed ? "var(--rust)" : undefined }}>
+              {saveFailed ? "⚠ Not saved — retrying…" : lastSavedAt ? `● Saved ${lastSavedAt.toLocaleTimeString()}` : "● Auto-save every 10s"}
+            </span>
           )}
           <div className="mono" style={{ fontSize: isMobile ? 16 : 20, color: secondsLeft < 120 ? "var(--rust)" : "var(--amber)" }}>{timeLabel}</div>
         </div>

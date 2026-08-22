@@ -569,12 +569,20 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
   }
   const prepared = await prepare(language, sourceCode);
   if (!prepared.ok) {
+    // Sanitized the same way errorSummary below already is -- this `details[].error` field is
+    // exactly what a "Run" caller (submissions.js's /run and its equivalents on every other
+    // execution surface) sends straight to the student with no further stripping, unlike Submit
+    // responses which drop `details` entirely. The raw compiler stderr this platform's runners
+    // produce embeds the real server temp-directory path (see prepare()'s mkdtempSync), so
+    // leaving it unsanitized here was a real path-disclosure leak on every Run call, not just a
+    // cosmetic one.
+    const cleanedError = summarizeError(language, prepared.error, studentCodeOffset).message;
     const details = testCases.map((tc) => ({
       input: tc.input,
       expected: tc.expected,
       actual: null,
       verdict: "RUNTIME_ERROR",
-      error: prepared.error,
+      error: cleanedError,
     }));
     return {
       passedCases: 0,
@@ -594,12 +602,15 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
     details = await mapWithConcurrency(testCases, CASE_CONCURRENCY, async (tc) => {
       const result = await prepared.execute(tc.input, timeLimitMs, memoryLimitKb);
       if (!result.ok) {
+        // Same path-disclosure concern as the compile-error branch above -- a runtime crash's
+        // stderr (segfault message, uncaught exception, etc.) can also embed the real temp-dir
+        // source path; clean it the same way before it's ever attached to a per-case result.
         return {
           input: tc.input,
           expected: tc.expected,
           actual: null,
           verdict: result.timedOut ? "TLE" : result.oom ? "MLE" : "RUNTIME_ERROR",
-          error: result.error,
+          error: summarizeError(language, result.error).message,
           timeMs: result.timeMs ?? null,
           memoryKb: result.memoryKb ?? null,
         };

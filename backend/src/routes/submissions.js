@@ -117,7 +117,11 @@ router.post("/run", authenticate, requireRole("STUDENT"), execLimiter, async (re
 // wins" principle as quiz auto-save, just without running the compiler on every keystroke.
 router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const { attemptId, questionId, language, code } = req.body;
+    const { attemptId, questionId, language, code, seq: rawSeq } = req.body;
+    // Client-supplied monotonic counter (see Submission.codeSavedSeq's schema comment) -- defaults
+    // to Date.now() so callers that predate this field (or omit it) still get a real, increasing
+    // value rather than always losing the staleness race against 0.
+    const seq = Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now();
 
     const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, include: { test: { select: { durationMin: true } } } });
     if (!attempt || attempt.studentId !== req.user.id) {
@@ -153,11 +157,27 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
     // explicitly submitted is unaffected: its row is already sitting at the PENDING/0 defaults (set
     // by `create` below, or by a prior autosave), so simply not re-writing those fields here is a
     // no-op for it and changes nothing about the existing "graded once at finalize" behavior.
-    await prisma.submission.upsert({
-      where: { attemptId_questionId: { attemptId, questionId } },
-      update: { language: savedLanguage || "", code: code || "" },
-      create: { attemptId, questionId, studentId: req.user.id, language: savedLanguage || "", code: code || "", verdict: "PENDING" },
+    // Conditional update (only applies if this request's seq is not older than what's already
+    // stored) instead of a plain upsert -- a plain upsert's update branch always wins regardless
+    // of arrival order, which is exactly the "reordered network request clobbers newer code with
+    // older code" gap this seq guard exists to close. Prisma's upsert doesn't support an extra
+    // condition on the update branch, so this is done as updateMany (conditional) then a
+    // create-if-missing fallback, mirroring the same atomic-claim pattern already used by
+    // /finalize below for its own race-safety.
+    const updateResult = await prisma.submission.updateMany({
+      where: { attemptId, questionId, codeSavedSeq: { lte: seq } },
+      data: { language: savedLanguage || "", code: code || "", codeSavedSeq: seq },
     });
+    if (updateResult.count === 0) {
+      // Either no row exists yet for this question, or one exists with a newer seq already (a
+      // genuinely stale/reordered request) -- try create, and let its own unique-constraint
+      // failure (P2002, the row already exists) tell us which case this was.
+      await prisma.submission.create({
+        data: { attemptId, questionId, studentId: req.user.id, language: savedLanguage || "", code: code || "", verdict: "PENDING", codeSavedSeq: seq },
+      }).catch((err) => {
+        if (err.code !== "P2002") throw err; // row already existed with a newer seq -- this write is stale, correctly dropped
+      });
+    }
 
     res.json({ status: "SAVED" });
   } catch (err) {

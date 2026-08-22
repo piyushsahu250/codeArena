@@ -89,12 +89,18 @@ export default function TestTaking() {
   const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [timeExpired, setTimeExpired] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  // Set only when finalize has been retried and still failed -- surfaces an honest "couldn't
+  // confirm" state with a manual retry, instead of silently treating a network failure as a
+  // successful submission (see finalizeAndExit's retry loop).
+  const [finalizeFailed, setFinalizeFailed] = useState(false);
   const timerRef = useRef(null);
   const deadlineRef = useRef(null); // absolute ms timestamp this candidate's answers lock at
   const clockOffsetRef = useRef(0); // serverTime - Date.now() at test start; corrects a skewed device clock
   const finalizingRef = useRef(false); // in-flight guard for the auto-submit tick, distinct from finalizedRef
+  const submittingCodeRef = useRef(false); // in-flight guard for handleSubmitCode, immune to disabled-button re-render lag
   const attemptIdRef = useRef(null);
   const finalizedRef = useRef(false);
+  const lastFinalizeReasonRef = useRef(null); // so the manual "Retry submission" button (after a failed finalize) resubmits with the same reason/auto-ness as the attempt that failed
   // Mirrors `current?.id`, kept live via an effect below — Run/Submit are async, and a student
   // can switch questions before a slow response (e.g. under judge queue load) comes back. Without
   // this guard the late response would render its result under whatever question is active by
@@ -122,6 +128,9 @@ export default function TestTaking() {
   // machinery below, keyed by which pending-save ref is populated.
   const [savingAnswer, setSavingAnswer] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  // Autosave previously failed completely silently (indicator just went blank) -- this surfaces
+  // it honestly instead. Cleared the moment any autosave (MCQ or code) next succeeds.
+  const [saveFailed, setSaveFailed] = useState(false);
   const autoSaveTimeoutRef = useRef(null);
   const pendingAutoSaveRef = useRef(null); // MCQ: { questionId, selected }
   const codeAutoSaveTimeoutRef = useRef(null);
@@ -776,8 +785,10 @@ export default function TestTaking() {
       await api.post("/submissions/submit", { attemptId, questionId: pending.questionId, selectedOptions: pending.selected });
       flashSaved();
     } catch {
-      // Best-effort — the selection stays in local state and gets retried on the next change,
-      // or flushed again right before the final Submit Test.
+      // The selection stays in local state and gets retried on the next change, or flushed again
+      // right before the final Submit Test -- but the student should know a save didn't go
+      // through in the meantime, not see a blank indicator that looks identical to "nothing to save".
+      setSaveFailed(true);
     } finally {
       setSavingAnswer(false);
     }
@@ -786,7 +797,10 @@ export default function TestTaking() {
   // Debounced background save for coding drafts — longer debounce than MCQ since typing is
   // far more frequent than clicking an option; no judge invocation here, just a DB write.
   function scheduleCodeAutoSave(questionId, language, code) {
-    pendingCodeAutoSaveRef.current = { questionId, language, code };
+    // seq captured NOW (when the student actually typed this), not when the debounced flush
+    // eventually fires or when the HTTP request happens to complete -- see Submission.codeSavedSeq's
+    // schema comment for why arrival order alone isn't a safe proxy for edit order.
+    pendingCodeAutoSaveRef.current = { questionId, language, code, seq: Date.now() };
     clearTimeout(codeAutoSaveTimeoutRef.current);
     codeAutoSaveTimeoutRef.current = setTimeout(flushCodeAutoSave, 1000);
   }
@@ -798,10 +812,12 @@ export default function TestTaking() {
     pendingCodeAutoSaveRef.current = null;
     setSavingAnswer(true);
     try {
-      await api.post("/submissions/autosave", { attemptId, questionId: pending.questionId, language: pending.language, code: pending.code });
+      await api.post("/submissions/autosave", { attemptId, questionId: pending.questionId, language: pending.language, code: pending.code, seq: pending.seq });
       flashSaved();
     } catch {
-      // Best-effort — same retry story as MCQ auto-save above.
+      // Same "tell the student, don't just go silent" reasoning as MCQ auto-save above. Code
+      // stays in local state either way and the next debounce tick (or beforeunload) retries it.
+      setSaveFailed(true);
     } finally {
       setSavingAnswer(false);
     }
@@ -809,6 +825,7 @@ export default function TestTaking() {
 
   function flashSaved() {
     setJustSaved(true);
+    setSaveFailed(false);
     clearTimeout(justSavedTimeoutRef.current);
     justSavedTimeoutRef.current = setTimeout(() => setJustSaved(false), 1500);
   }
@@ -843,7 +860,7 @@ export default function TestTaking() {
         keepaliveSave("/submissions/submit", { attemptId, questionId: pendingAutoSaveRef.current.questionId, selectedOptions: pendingAutoSaveRef.current.selected });
       }
       if (pendingCodeAutoSaveRef.current) {
-        keepaliveSave("/submissions/autosave", { attemptId, questionId: pendingCodeAutoSaveRef.current.questionId, language: pendingCodeAutoSaveRef.current.language, code: pendingCodeAutoSaveRef.current.code });
+        keepaliveSave("/submissions/autosave", { attemptId, questionId: pendingCodeAutoSaveRef.current.questionId, language: pendingCodeAutoSaveRef.current.language, code: pendingCodeAutoSaveRef.current.code, seq: pendingCodeAutoSaveRef.current.seq });
       }
     }
     window.addEventListener("beforeunload", flushOnUnload);
@@ -917,10 +934,16 @@ export default function TestTaking() {
   // which was the actual cause of "fullscreen exits when I click Submit". An on-page banner
   // (submitResultMsg) replaces it and never touches fullscreen.
   async function handleSubmitCode() {
+    // Explicit in-flight guard, not just the disabled-button attribute -- the button's `disabled`
+    // only takes effect after a re-render, so two clicks landing within the same event-loop tick
+    // (or two independent callers, e.g. a keyboard-shortcut path added later) weren't actually
+    // prevented from both firing, only incidentally slowed by React's own render timing.
+    if (submittingCodeRef.current) return;
     if (!answer || isQuiz || !attemptId) return;
     const questionId = current.id;
     clearTimeout(codeAutoSaveTimeoutRef.current);
     pendingCodeAutoSaveRef.current = null;
+    submittingCodeRef.current = true;
     setSubmittingCode(true);
     try {
       const { data } = await api.post("/submissions/submit-code", { attemptId, questionId, language: answer.language, code: answer.code });
@@ -932,6 +955,7 @@ export default function TestTaking() {
     } catch (err) {
       if (activeQuestionIdRef.current === questionId) setSubmitResultMsg({ ok: false, text: err.response?.data?.error || "Submission failed" });
     } finally {
+      submittingCodeRef.current = false;
       setSubmittingCode(false);
     }
   }
@@ -939,35 +963,61 @@ export default function TestTaking() {
   async function finalizeAndExit(auto = false, reason = null) {
     if (!attemptId || finalizedRef.current || finalizingRef.current) return;
     if (!auto && !confirm("Are you sure you want to submit your test? After submission, you will not be able to modify your answers.")) return;
+    lastFinalizeReasonRef.current = reason;
     // Flush any answer still waiting on an auto-save debounce so the very last change isn't
     // lost to a race between submitting and the pending save timer.
     if (pendingAutoSaveRef.current) await flushAutoSave();
     if (pendingCodeAutoSaveRef.current) await flushCodeAutoSave();
     finalizingRef.current = true;
     setFinalizing(true);
-    try {
-      const { data } = await api.post(`/submissions/finalize/${attemptId}`, { reason });
-      // The server disagreed that time is actually up (this candidate's device clock ran ahead of
-      // the server's) — resync the offset and let the countdown keep running instead of locking the
-      // exam screen; do NOT set finalizedRef, exit fullscreen, or stop the media stream, since the
-      // test genuinely isn't over yet.
-      if (data.premature) {
-        if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
-        return;
+    setFinalizeFailed(false);
+
+    // Up to 3 tries with a short backoff before giving up -- most "the finalize call failed"
+    // cases in practice are a transient blip, not a genuinely dead connection, and a real success
+    // must never be reported unless the server actually confirmed it (previously this function
+    // set finalizedRef + navigated away on ANY failure, which silently told the student "your
+    // test has been submitted" even when the server never received it at all).
+    let data = null;
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3 && !data; attempt++) {
+      try {
+        const res = await api.post(`/submissions/finalize/${attemptId}`, { reason });
+        data = res.data;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2000));
       }
-      finalizedRef.current = true;
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-      notify(data.gamification);
-    } catch {
-      // Best-effort — don't trap the candidate on the exam screen even if this call fails.
-      finalizedRef.current = true;
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-    } finally {
+    }
+
+    if (!data) {
+      // Genuinely could not confirm the server received this -- say so plainly instead of
+      // pretending it worked. finalizedRef stays false so the student (or the next auto-submit
+      // tick, for the time-up case) can retry; fullscreen/camera are released regardless since
+      // the exam UI is now showing an error, not the live exam.
       finalizingRef.current = false;
       setFinalizing(false);
+      setFinalizeFailed(true);
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      console.error("[finalize] failed after 3 attempts:", lastErr);
+      return;
     }
+
+    // The server disagreed that time is actually up (this candidate's device clock ran ahead of
+    // the server's) — resync the offset and let the countdown keep running instead of locking the
+    // exam screen; do NOT set finalizedRef, exit fullscreen, or stop the media stream, since the
+    // test genuinely isn't over yet.
+    if (data.premature) {
+      if (typeof data.serverNow === "number") clockOffsetRef.current = data.serverNow - Date.now();
+      finalizingRef.current = false;
+      setFinalizing(false);
+      return;
+    }
+    finalizedRef.current = true;
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    notify(data.gamification);
+    finalizingRef.current = false;
+    setFinalizing(false);
     if (reason === "time") {
       setTimeExpired(true);
       return;
@@ -1004,6 +1054,21 @@ export default function TestTaking() {
           <p style={{ fontSize: 16 }}>{loadError}</p>
           <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => navigate("/dashboard")}>
             Back to dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (finalizeFailed) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
+        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
+          <p style={{ fontSize: 16, color: "var(--rust)" }}>
+            We couldn't confirm your submission was received — your test has <strong>not</strong> been marked as submitted. Please check your internet connection and try again. Do not close this page.
+          </p>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={finalizing} onClick={() => finalizeAndExit(true, lastFinalizeReasonRef.current)}>
+            {finalizing ? "Retrying…" : "Retry submission"}
           </button>
         </div>
       </div>
@@ -1325,8 +1390,8 @@ export default function TestTaking() {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <span className="mono" style={{ fontSize: 12, color: savingAnswer ? "var(--amber-dark)" : "var(--mint)", minWidth: 90, textAlign: "right" }}>
-                    {savingAnswer ? "Saving…" : justSaved ? "✓ Saved" : ""}
+                  <span className="mono" style={{ fontSize: 12, color: savingAnswer ? "var(--amber-dark)" : saveFailed ? "var(--rust)" : "var(--mint)", minWidth: 90, textAlign: "right" }}>
+                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : justSaved ? "✓ Saved" : ""}
                   </span>
                   <button
                     className="btn btn-ghost"
@@ -1377,8 +1442,8 @@ export default function TestTaking() {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <span className="mono" style={{ fontSize: 12, color: savingAnswer ? "var(--amber-dark)" : "var(--mint)", minWidth: 90, textAlign: "right" }}>
-                    {savingAnswer ? "Saving…" : justSaved ? "✓ Saved" : ""}
+                  <span className="mono" style={{ fontSize: 12, color: savingAnswer ? "var(--amber-dark)" : saveFailed ? "var(--rust)" : "var(--mint)", minWidth: 90, textAlign: "right" }}>
+                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : justSaved ? "✓ Saved" : ""}
                   </span>
                   <button
                     className="btn btn-ghost"

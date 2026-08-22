@@ -943,10 +943,19 @@ model Submission {
   score        Int         @default(0)
   passedCases  Int         @default(0)
   totalCases   Int         @default(0)
-  verdict      String      @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
+  verdict      String      @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
   timeMs       Int? // max execution time across judged test cases (coding only)
   memoryKb     Int? // max memory usage across judged test cases (coding only)
   createdAt    DateTime    @default(now())
+
+  // Client-supplied monotonic counter (Date.now() at the moment the student's edit that triggered
+  // this autosave happened), NOT a server timestamp — the concern this guards against is request
+  // *arrival* reordering (a keystroke's autosave call completing after a newer one due to network
+  // jitter), which a server-side `updatedAt` can't detect since both requests would get a fresh
+  // server time regardless of which one was typed first. The autosave route only applies an
+  // incoming write when its seq is >= the currently stored one, so a late-arriving older draft can
+  // never clobber newer code.
+  codeSavedSeq Int         @default(0)
 
   // One row per attempt+question — enforced at the DB level so autosave's upsert can never
   // race into two rows for the same question (which previously risked the grader picking the
@@ -1609,9 +1618,10 @@ model ModuleCodingSubmission {
   score       Int      @default(0)
   passedCases Int      @default(0)
   totalCases  Int      @default(0)
-  verdict     String   @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
+  verdict     String   @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
   timeMs      Int? // max execution time across judged test cases
   memoryKb    Int? // max memory usage across judged test cases
+  codeSavedSeq Int     @default(0) // see Submission.codeSavedSeq's comment -- same client-monotonic-counter guard against autosave request reordering
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

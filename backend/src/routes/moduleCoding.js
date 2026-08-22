@@ -320,7 +320,8 @@ router.post("/attempts/:attemptId/autosave", authenticate, requireRole("STUDENT"
     if (!attempt) return;
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this assessment" });
 
-    const { questionId, language, code } = req.body;
+    const { questionId, language, code, seq: rawSeq } = req.body;
+    const seq = Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now();
     // Atomic upsert on the (attemptId, questionId) unique constraint — see submissions.js's
     // /autosave for why a findFirst-then-create/update pattern here is a real race hazard.
     //
@@ -332,11 +333,21 @@ router.post("/attempts/:attemptId/autosave", authenticate, requireRole("STUDENT"
     // earned. A question that was never explicitly submitted is unaffected — its row already sits
     // at the PENDING/0 defaults (from `create` below or a prior autosave), so not re-writing those
     // fields here changes nothing for it.
-    await prisma.moduleCodingSubmission.upsert({
-      where: { attemptId_questionId: { attemptId: attempt.id, questionId } },
-      update: { language: language || "", code: code || "" },
-      create: { attemptId: attempt.id, questionId, studentId: req.user.id, language: language || "", code: code || "", verdict: "PENDING" },
+    //
+    // Conditional on codeSavedSeq (see Submission.codeSavedSeq's schema comment for the full
+    // reasoning) instead of a plain upsert, so a reordered/delayed older autosave request can never
+    // clobber newer code that already saved.
+    const updateResult = await prisma.moduleCodingSubmission.updateMany({
+      where: { attemptId: attempt.id, questionId, codeSavedSeq: { lte: seq } },
+      data: { language: language || "", code: code || "", codeSavedSeq: seq },
     });
+    if (updateResult.count === 0) {
+      await prisma.moduleCodingSubmission.create({
+        data: { attemptId: attempt.id, questionId, studentId: req.user.id, language: language || "", code: code || "", verdict: "PENDING", codeSavedSeq: seq },
+      }).catch((err) => {
+        if (err.code !== "P2002") throw err; // row already existed with a newer seq -- stale write, correctly dropped
+      });
+    }
     res.json({ status: "SAVED" });
   } catch (err) {
     console.error(err);
