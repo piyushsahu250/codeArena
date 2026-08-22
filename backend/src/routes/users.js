@@ -346,15 +346,20 @@ router.delete("/me/sessions/:sessionId", authenticate, async (req, res) => {
   }
 });
 
-// ADMIN: list all users. Paginated — this is the whole User table with no institute scoping
-// (platform Super Admin view), which at scale is exactly the "load everything, render everything"
-// pattern that doesn't hold up past a few hundred rows.
-router.get("/", authenticate, requireRole("ADMIN"), async (req, res) => {
+// ADMIN: list users. Paginated. Platform-level (unscoped) Admin sees everyone, matching every
+// other admin route's convention — but an institute-scoped Admin previously saw the exact same
+// unfiltered platform-wide list (confirmed live: this route had no institute check of any kind,
+// unlike literally every other admin-facing route in this file), meaning that admin's own institute
+// scope was pure UI convention (AdminDashboard.jsx's client-side `.filter()`), not a real backend
+// boundary -- any institute-scoped admin's browser DevTools/Network tab exposed every other
+// institute's full user list (name, email, mobile, PRN, department, batch) with zero extra effort.
+router.get("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 200));
+  const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
   const [users, total] = await Promise.all([
-    prisma.user.findMany({ select: SELECT_FIELDS, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
-    prisma.user.count(),
+    prisma.user.findMany({ where, select: SELECT_FIELDS, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
+    prisma.user.count({ where }),
   ]);
   res.json({ rows: users, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
