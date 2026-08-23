@@ -1139,10 +1139,14 @@ router.get("/companies", authenticate, async (req, res) => {
   res.json(result);
 });
 
-// Student-facing browse — unlike GET /companies above (which only lists companies that already
-// have questions, for the session-config dropdown), this always returns all COMPANIES so the
-// browse grid can show a company before any content has been seeded for it yet.
-router.get("/companies/browse", authenticate, requireRole("STUDENT"), async (req, res) => {
+// Unlike GET /companies above (which only lists companies that already have questions, for the
+// session-config dropdown), this always returns all COMPANIES so a browse/admin grid can show a
+// company before any content has been seeded for it yet. Originally student-only (the browse
+// grid), but CompanyProfilesPanel.jsx (Interview Admin) needs this exact "every named company,
+// even with zero questions" shape too, to let an admin start a profile for a brand-new company —
+// nothing in this response is student-specific or sensitive (public company names, aggregate
+// counts, a boolean), so it's safe to open to ADMIN/STAFF rather than duplicate the query.
+router.get("/companies/browse", authenticate, requireRole("STUDENT", "ADMIN", "STAFF"), async (req, res) => {
   const result = await cached("interview:companies:browse", 120 * 1000, async () => {
     const [counts, patternCompanies] = await Promise.all([
       prisma.interviewQuestion.groupBy({ by: ["company"], where: { isActive: true, company: { not: null } }, _count: { _all: true } }),
