@@ -45,7 +45,7 @@ function emptyForm() {
     defaultBtlDistribution: { ...DEFAULT_DISTRIBUTION },
     assessmentModes: DEFAULT_MODES.map((m) => ({ ...m })),
     employabilityIndicators: "",
-    defaultDurationMin: 45, passingPercent: 50,
+    defaultDurationMin: 45, passingPercent: 50, maxAttempts: "",
     readinessThresholds: DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
     isActive: true,
     certificateEnabled: false, certificateMinLevel: "JOB_READY",
@@ -171,7 +171,7 @@ export default function ReadinessSubjects() {
       defaultBtlDistribution: { ...DEFAULT_DISTRIBUTION, ...s.defaultBtlDistribution },
       assessmentModes: s.assessmentModes?.length ? s.assessmentModes : DEFAULT_MODES.map((m) => ({ ...m })),
       employabilityIndicators: Array.isArray(s.employabilityIndicators) ? s.employabilityIndicators.join(", ") : "",
-      defaultDurationMin: s.defaultDurationMin, passingPercent: s.passingPercent,
+      defaultDurationMin: s.defaultDurationMin, passingPercent: s.passingPercent, maxAttempts: s.maxAttempts ?? "",
       readinessThresholds: s.readinessThresholds?.length ? s.readinessThresholds : DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
       isActive: s.isActive,
       certificateEnabled: !!s.certificateEnabled, certificateMinLevel: s.certificateMinLevel || "JOB_READY",
@@ -285,6 +285,7 @@ export default function ReadinessSubjects() {
         assessmentModes: form.assessmentModes.filter((m) => m.key.trim() && m.label.trim()).map((m) => ({ key: m.key.trim(), label: m.label.trim(), btlMin: Number(m.btlMin), btlMax: Number(m.btlMax) })),
         employabilityIndicators: form.employabilityIndicators.split(",").map((s) => s.trim()).filter(Boolean),
         defaultDurationMin: Number(form.defaultDurationMin) || 45, passingPercent: Number(form.passingPercent) || 50,
+        maxAttempts: form.maxAttempts === "" ? null : Math.max(1, Number(form.maxAttempts) || 1),
         readinessThresholds: form.readinessThresholds.filter((t) => t.label.trim()).map((t) => ({ label: t.label.trim(), min: Number(t.min) })),
         isActive: form.isActive,
         certificateEnabled: form.certificateEnabled, certificateMinLevel: form.certificateEnabled ? form.certificateMinLevel : null,
@@ -634,9 +635,10 @@ export default function ReadinessSubjects() {
               />
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
               <div><label style={labelStyle}>Duration (min)</label><input style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
               <div><label style={labelStyle}>Passing %</label><input style={inputStyle} type="number" value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
+              <div><label style={labelStyle}>Max attempts (blank = unlimited)</label><input style={inputStyle} type="number" min={1} placeholder="Unlimited" value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
             </div>
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>

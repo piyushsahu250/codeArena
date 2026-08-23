@@ -179,7 +179,7 @@ function validateSubjectPayload(body) {
   return null;
 }
 
-const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive", "certificateEnabled", "certificateMinLevel"];
+const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive", "certificateEnabled", "certificateMinLevel", "maxAttempts"];
 
 router.post("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
@@ -375,6 +375,19 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
       const ordered = existing.answers.map((a) => questions.find((q) => q.id === a.questionId)).filter(Boolean);
       logger.info("READINESS_ASSESSMENT_RESUMED", { assessmentId: existing.id, studentId: req.user.id, subjectId, questionCount: ordered.length });
       return res.json({ assessment: existing, questions: ordered.map(sanitizeQuestionForStudent), resumed: true });
+    }
+
+    // Server-side attempt cap — a resumed in-progress attempt (handled above) never counts against
+    // this, only genuinely COMPLETED ones do, so a student can always finish an attempt already in
+    // progress even after hitting the limit. Counted fresh from the DB on every call, never trusted
+    // from any client-supplied attempt number.
+    if (subject.maxAttempts != null) {
+      const completedCount = await prisma.readinessAssessment.count({
+        where: { studentId: req.user.id, subjectId, assessmentMode, status: "COMPLETED" },
+      });
+      if (completedCount >= subject.maxAttempts) {
+        return res.status(403).json({ error: `You've used all ${subject.maxAttempts} attempt${subject.maxAttempts === 1 ? "" : "s"} for this assessment.`, maxAttemptsReached: true, maxAttempts: subject.maxAttempts, attemptsUsed: completedCount });
+      }
     }
 
     const count = Math.min(MAX_QUESTION_COUNT, Math.max(1, Number(questionCount) || DEFAULT_QUESTION_COUNT));

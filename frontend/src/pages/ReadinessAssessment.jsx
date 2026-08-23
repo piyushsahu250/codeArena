@@ -196,6 +196,12 @@ export default function ReadinessAssessment() {
           </div>
         </div>
 
+        {assessment.config?.shortfallLevels?.length > 0 && (
+          <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 8, background: "var(--amber-10, #FFF7E6)", border: "1px solid var(--amber-dark, #B8860B)", fontSize: 12.5, color: "var(--amber-dark, #8a6400)" }}>
+            ⚠ The question bank didn't have enough verified questions at {assessment.config.shortfallLevels.map((l) => `BTL ${l}`).join(", ")} to fully match this assessment's intended difficulty mix — your report will reflect exactly what was actually asked, not the full intended blueprint.
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 16 }}>
           {questions.map((q, i) => {
             const a = answers[q.id] || {};
