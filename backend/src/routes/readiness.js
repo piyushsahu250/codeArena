@@ -1,6 +1,7 @@
 const express = require("express");
 const XLSX = require("xlsx");
 const prisma = require("../prisma");
+const { Prisma } = require("@prisma/client");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
@@ -398,12 +399,48 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
       return res.status(400).json({ error: "No verified questions are available for this subject/mode yet — ask an admin to add and verify some." });
     }
 
-    const assessment = await prisma.readinessAssessment.create({
-      data: {
-        studentId: req.user.id, subjectId, assessmentMode, blueprint, durationMin: subject.defaultDurationMin,
-        config: { usedFallback, shortfallLevels },
-      },
-    });
+    // Re-verify the cap inside a Serializable transaction right before the actual insert, retried
+    // once on a serialization conflict — closes the race where two near-simultaneous requests both
+    // pass the plain count-check above (READ COMMITTED, the DB's default) and both create an
+    // attempt past the cap. Kept as a second, narrow check rather than moving the whole route
+    // in-transaction, since buildAssessmentBlueprint() above does its own multi-query question
+    // selection that has no need to hold a Serializable lock.
+    const createAssessment = () => prisma.$transaction(async (tx) => {
+      if (subject.maxAttempts != null) {
+        const recount = await tx.readinessAssessment.count({
+          where: { studentId: req.user.id, subjectId, assessmentMode, status: "COMPLETED" },
+        });
+        if (recount >= subject.maxAttempts) {
+          const err = new Error("Attempt cap reached");
+          err.maxAttemptsReached = true;
+          throw err;
+        }
+      }
+      return tx.readinessAssessment.create({
+        data: {
+          studentId: req.user.id, subjectId, assessmentMode, blueprint, durationMin: subject.defaultDurationMin,
+          config: { usedFallback, shortfallLevels },
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    let assessment;
+    // Up to 2 attempts total: the original try, plus one retry if it fails purely on a
+    // serialization conflict (P2034 -- another concurrent request to this route touched the same
+    // rows first). A maxAttemptsReached error is handled identically in either the first try or
+    // the retry, so a cap discovered only on retry still returns the correct 403, not a generic 500.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        assessment = await createAssessment();
+        break;
+      } catch (err) {
+        if (err.maxAttemptsReached) {
+          return res.status(403).json({ error: `You've used all ${subject.maxAttempts} attempt${subject.maxAttempts === 1 ? "" : "s"} for this assessment.`, maxAttemptsReached: true, maxAttempts: subject.maxAttempts });
+        }
+        if (err.code === "P2034" && attempt < 2) continue;
+        throw err;
+      }
+    }
     await prisma.readinessAnswer.createMany({ data: items.map((q) => ({ assessmentId: assessment.id, questionId: q.id, skipped: true })) });
 
     logger.info("READINESS_ASSESSMENT_CREATED", { assessmentId: assessment.id, studentId: req.user.id, subjectId, assessmentMode, questionCount: items.length, usedFallback });
