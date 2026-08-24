@@ -1088,6 +1088,14 @@ model EmailLog {
   id              String      @id @default(uuid())
   student         User?       @relation(fields: [studentId], references: [id], onDelete: SetNull)
   studentId       String?
+  // Stored directly rather than derived only through `student` — a row with no studentId (e.g.
+  // POST /admin/email-logs/test, sent to an arbitrary admin-supplied address) previously had NO
+  // way to be attributed to an institute at all, which also meant institute-scoped admins could
+  // never see those rows even via the list endpoint's `student.instituteId` relation filter,
+  // since that filter can't match a null relation. Same nullable-institute convention as the rest
+  // of this schema (see Question.instituteId, Subject.instituteId, etc.).
+  institute       Institute?  @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+  instituteId     String?
   recipientName   String
   recipientEmail  String
   emailType       String // free text — see AUDIT of call sites for the current taxonomy
@@ -1104,6 +1112,7 @@ model EmailLog {
 
   @@index([status])
   @@index([studentId])
+  @@index([instituteId])
   @@index([createdAt])
   @@index([batchId])
 }

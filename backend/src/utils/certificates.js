@@ -1,4 +1,5 @@
 const prisma = require("../prisma");
+const { notifyCertificateIssued } = require("./notifications");
 
 function slugCode(str, maxLen) {
   return String(str || "").toUpperCase().replace(/[^A-Z0-9]+/g, "").slice(0, maxLen);
@@ -28,7 +29,7 @@ async function generateCertificateCode({ instituteCode, programCode }) {
 // legitimately receive several distinct manual certificates).
 async function issueCertificate({ type, studentId, courseId, moduleCodingTestId, readinessSubjectId, readinessLevel, title, programName, issuedByName, instituteCode, programCode }) {
   const certificateCode = await generateCertificateCode({ instituteCode, programCode });
-  return prisma.certificate.create({
+  const certificate = await prisma.certificate.create({
     data: {
       certificateCode,
       type,
@@ -42,6 +43,14 @@ async function issueCertificate({ type, studentId, courseId, moduleCodingTestId,
       issuedByName: issuedByName || null,
     },
   });
+  // Best-effort, never blocks/fails issuance itself — same posture as every other notify call in
+  // this codebase (see notifications.js's own file comment). Runs for every issuance path (manual
+  // and the three auto-issue paths), not just one route, since it lives here rather than in each
+  // individual caller.
+  prisma.user.findUnique({ where: { id: studentId }, select: { id: true, name: true, email: true } })
+    .then((student) => { if (student) return notifyCertificateIssued(prisma, student, certificate); })
+    .catch((err) => console.error("[issueCertificate] notification failed:", err));
+  return certificate;
 }
 
 async function revokeCertificate(id, { revokedByName, reason }) {

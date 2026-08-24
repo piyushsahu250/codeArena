@@ -10,6 +10,7 @@ const { safeErrorMessage } = require("../utils/errors");
 const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwnership");
 const { resolveSubjectUnitTopic, canStaffUseSubject } = require("../utils/subjectAccess");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { notifyTestAssigned } = require("../utils/notifications");
 
 const router = express.Router();
 
@@ -486,6 +487,17 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), attach
         req, action: AUDIT_ACTIONS.TEST_PUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
         instituteId: req.requesterInstituteId, details: { testId: test.id, title: test.title },
       });
+      // Fire-and-forget, same posture as every other notify call in this codebase — this is the
+      // moment the test actually becomes visible to students (false -> true), not the earlier
+      // PATCH / group-assignment edit, which may happen well before a test is ready to publish.
+      prisma.testAcademicGroup.findMany({ where: { testId: test.id }, select: { academicGroupId: true } })
+        .then((groups) => {
+          const academicGroupIds = groups.map((g) => g.academicGroupId);
+          if (academicGroupIds.length === 0) return [];
+          return prisma.user.findMany({ where: { role: "STUDENT", academicGroupId: { in: academicGroupIds } }, select: { id: true, name: true, email: true } });
+        })
+        .then((students) => notifyTestAssigned(prisma, students, test))
+        .catch((err) => console.error("[tests.publish] notification failed:", err));
     }
     res.json(test);
   } catch (err) {

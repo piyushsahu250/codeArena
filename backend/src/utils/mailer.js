@@ -158,9 +158,20 @@ async function sendMail({ to, subject, html }) {
 // Same as sendMail(), but writes an EmailLog row so admins can see real delivery status/history
 // per student instead of a fire-and-forget send. `prisma` is passed in rather than required at
 // module load, since utils/mailer.js has no other dependency on the Prisma client.
-async function sendMailLogged(prisma, { to, name, subject, html, emailType, studentId, batchId }) {
+async function sendMailLogged(prisma, { to, name, subject, html, emailType, studentId, instituteId, batchId }) {
+  // Callers that already know the institute (bulk operations, anything running under
+  // attachRequesterInstitute) can pass instituteId explicitly. Everyone else gets it derived
+  // from the student for free here — one extra indexed lookup, not a burden every call site
+  // needs to duplicate — so a row is never left un-attributable to an institute just because a
+  // caller forgot to look it up. Only genuinely institute-less sends (a platform-wide admin's
+  // test email with no target student) end up with instituteId: null, which is correct, not a gap.
+  let resolvedInstituteId = instituteId || null;
+  if (!resolvedInstituteId && studentId) {
+    const student = await prisma.user.findUnique({ where: { id: studentId }, select: { instituteId: true } }).catch(() => null);
+    resolvedInstituteId = student?.instituteId || null;
+  }
   const log = await prisma.emailLog.create({
-    data: { studentId: studentId || null, recipientName: name || "", recipientEmail: to || "", emailType, status: "PENDING", batchId: batchId || null },
+    data: { studentId: studentId || null, instituteId: resolvedInstituteId, recipientName: name || "", recipientEmail: to || "", emailType, status: "PENDING", batchId: batchId || null },
   });
   const result = await sendMail({ to, subject, html });
   await prisma.emailLog.update({

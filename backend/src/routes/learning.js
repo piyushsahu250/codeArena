@@ -11,6 +11,7 @@ const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
 const { askClaude } = require("../utils/aiClient");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { notifyCourseAssigned } = require("../utils/notifications");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
 const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
@@ -1146,6 +1147,17 @@ router.post("/courses/:id/assignments", authenticate, requireRole("ADMIN"), atta
       details: { entity: "course_assignment", operation: "assign", courseId: course.id, courseName: course.name, instituteIds, academicGroupIds },
     });
     res.json({ success: true });
+    // Fire-and-forget, after the response — same posture as every other notify call in this
+    // codebase. assertPublishedAndScoped above already guarantees this course is PUBLISHED, so
+    // unlike tests (which have a separate publish step), assignment itself is the right moment.
+    if (instituteIds.length || academicGroupIds.length) {
+      prisma.user.findMany({
+        where: { role: "STUDENT", OR: [{ instituteId: { in: instituteIds } }, { academicGroupId: { in: academicGroupIds } }] },
+        select: { id: true, name: true, email: true },
+      })
+        .then((students) => notifyCourseAssigned(prisma, students, course))
+        .catch((err) => console.error("[learning.courses.assignments] notification failed:", err));
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to assign course" });
@@ -1199,6 +1211,17 @@ router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN"), att
       details: { entity: "course_assignment", operation: "bulk_assign", courseIds, instituteIds, academicGroupIds },
     });
     res.json({ success: true });
+    // Fire-and-forget, after the response — one notifyCourseAssigned per course (not per
+    // student-course pair collapsed into one email) so each email is specific about which course
+    // it's for, matching notifyTestAssigned/notifyCourseAssigned's existing single-entity shape.
+    if (instituteIds.length || academicGroupIds.length) {
+      prisma.user.findMany({
+        where: { role: "STUDENT", OR: [{ instituteId: { in: instituteIds } }, { academicGroupId: { in: academicGroupIds } }] },
+        select: { id: true, name: true, email: true },
+      })
+        .then((students) => Promise.all(courses.map((course) => notifyCourseAssigned(prisma, students, course))))
+        .catch((err) => console.error("[learning.courses.assignments.bulk] notification failed:", err));
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to bulk-assign courses" });

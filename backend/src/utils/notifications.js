@@ -189,7 +189,69 @@ async function notifyDocumentVerification(prisma, student, { document, status, v
   ]);
 }
 
+// Fired when a Test's academic-group assignment changes (routes/tests.js PATCH /:id) — same
+// "many students, one event" shape as notifyAssessmentAssigned above, for the ordinary
+// (non-Talent-Pool) Test Creation flow, which previously sent no notification of any kind.
+// Callers should only invoke this for a PUBLISHED test — an unpublished one isn't visible to
+// students yet regardless of assignment, so notifying about it would be confusing/premature.
+async function notifyTestAssigned(prisma, students, test) {
+  if (!students || students.length === 0) return;
+  const link = "/tests";
+  await Promise.all([
+    notifyMany(prisma, students.map((s) => s.id), {
+      type: "TEST_ASSIGNED",
+      message: `New test "${test.title}" has been assigned to you`,
+      link,
+    }),
+    ...students.map((s) =>
+      emailStudent(
+        prisma, s, `New test assigned: "${test.title}"`,
+        `<p>Hi ${s.name},</p><p>A new test, <strong>${test.title}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Tests</a></p>`,
+        "TEST_ASSIGNED"
+      )
+    ),
+  ]);
+}
+
+// Fired when a Course's institute/academic-group assignment changes (routes/learning.js
+// POST /courses/:id/assignments and /courses/assignments/bulk) — previously silent.
+async function notifyCourseAssigned(prisma, students, course) {
+  if (!students || students.length === 0) return;
+  const link = "/learning";
+  await Promise.all([
+    notifyMany(prisma, students.map((s) => s.id), {
+      type: "COURSE_ASSIGNED",
+      message: `New course "${course.name}" has been assigned to you`,
+      link,
+    }),
+    ...students.map((s) =>
+      emailStudent(
+        prisma, s, `New course assigned: "${course.name}"`,
+        `<p>Hi ${s.name},</p><p>A new course, <strong>${course.name}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Courses</a></p>`,
+        "COURSE_ASSIGNED"
+      )
+    ),
+  ]);
+}
+
+// Fired from utils/certificates.js's issueCertificate() itself (not from each individual route
+// that calls it) so every issuance path — manual (certificates.js), and the three auto-issue
+// paths (learning.js course completion, gradeModuleCodingAttempt.js, readiness.js) — notifies
+// the student for free, without needing every call site to remember to wire this in separately.
+async function notifyCertificateIssued(prisma, student, certificate) {
+  const link = "/certificates";
+  await Promise.all([
+    notify(prisma, { recipientId: student.id, type: "CERTIFICATE_ISSUED", message: `Certificate issued: "${certificate.title}"`, link }),
+    emailStudent(
+      prisma, student, `Certificate issued: "${certificate.title}"`,
+      `<p>Hi ${student.name},</p><p>Congratulations! You've been issued a certificate: <strong>${certificate.title}</strong>.</p><p>Certificate ID: ${certificate.certificateCode}</p><p><a href="${FRONTEND_URL}${link}">View your Certificates</a></p>`,
+      "CERTIFICATE_ISSUED"
+    ),
+  ]);
+}
+
 module.exports = {
   notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished,
   notifyResultPublished, notifyAccountStatusChanged, notifyPermissionUpdated, notifyPasswordResetByAdmin, notifyDocumentVerification,
+  notifyTestAssigned, notifyCourseAssigned, notifyCertificateIssued,
 };

@@ -149,10 +149,13 @@ function buildEmailLogWhere({ status, type, q, from, to, batchId }) {
 router.get("/email-logs", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = buildEmailLogWhere(req.query);
-    // Without this, any institute-scoped ADMIN could list (and, via the retry route below, act
-    // on) every other institute's outbound account/password-reset emails — see reset-password's
-    // identical requesterInstituteId check in users.js for the established pattern this mirrors.
-    if (req.requesterInstituteId) where.student = { instituteId: req.requesterInstituteId };
+    // Scoped on EmailLog's own instituteId column (not the student relation) so rows with no
+    // studentId — e.g. POST /email-logs/test — are still correctly attributed and visible to the
+    // institute that sent them, not just to a platform-wide admin. Without this scoping at all,
+    // any institute-scoped ADMIN could list (and, via the retry route below, act on) every other
+    // institute's outbound account/password-reset emails — see reset-password's identical
+    // requesterInstituteId check in users.js for the established pattern this mirrors.
+    if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
     const [logs, total] = await Promise.all([
@@ -182,7 +185,7 @@ router.get("/email-logs", authenticate, requireRole("ADMIN"), attachRequesterIns
 router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = { batchId: req.params.batchId };
-    if (req.requesterInstituteId) where.student = { instituteId: req.requesterInstituteId };
+    if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
     const counts = await prisma.emailLog.groupBy({
       by: ["status"],
       where,
@@ -228,7 +231,7 @@ router.get("/email-logs/status", authenticate, requireRole("ADMIN"), async (req,
 // ADMIN: sends a real test email to a given address to confirm the configured mailbox actually
 // works, without needing to trigger an unrelated account-creation/reset flow first. Logged like
 // any other email so it's visible (and debuggable) in the list above.
-router.post("/email-logs/test", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/email-logs/test", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const to = String(req.body.to || "").trim();
     const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
@@ -236,6 +239,7 @@ router.post("/email-logs/test", authenticate, requireRole("ADMIN"), async (req, 
       to,
       name: "Test recipient",
       emailType: "OTHER_SYSTEM_EMAIL",
+      instituteId: req.requesterInstituteId || null,
       subject: "CodeArena Test Email",
       html: wrapBranded(`<p>This is a test email sent from the CodeArena admin panel by ${admin?.name || req.user.email} to confirm the mail system is working.</p>`),
     });
