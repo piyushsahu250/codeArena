@@ -30,7 +30,17 @@ export default function Login() {
       const homeByRole = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
       navigate(homeByRole[data.user.role] || "/login");
     } catch (err) {
-      setError(err.response?.data?.error || "Login failed");
+      // err.response only exists if the server actually answered (even with an error status) --
+      // no response at all means the request never reached the backend (network failure, DNS
+      // failure, connection refused, timeout). That's a platform-down situation, not a login
+      // mistake, so it gets an honest maintenance message instead of the generic fallback, which
+      // previously read as "Login failed" and looked exactly like a wrong password to a student
+      // with perfectly correct credentials.
+      if (!err.response) {
+        setError("CodeArena is temporarily unavailable. We're working on it — please try again in a few minutes.");
+      } else {
+        setError(err.response.data?.error || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
