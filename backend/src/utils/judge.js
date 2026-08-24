@@ -306,8 +306,8 @@ function classifyRuntimeError(language, rawMessage) {
 // exceeds it gets allocation failures, not just a number we report after the fact) and under
 // `/usr/bin/time -v`, which writes real peak-RSS to a separate file (statsFile) so its report
 // never gets mixed into the submitted program's own stderr.
-async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforceMemory = true, memoryLimitKb = MEMORY_LIMIT_KB } = {}) {
-  const networkDenied = enforceMemory && await checkNetworkDenialAvailable(); // only for actual execution, not compilation
+async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforceLimits = true, enforceMemory = true, memoryLimitKb = MEMORY_LIMIT_KB } = {}) {
+  const networkDenied = enforceLimits && await checkNetworkDenialAvailable(); // only for actual execution, not compilation
   return new Promise((resolve) => {
     const statsFile = path.join(os.tmpdir(), `judge-time-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
     // The memory/process/CPU ulimits only apply to actually running submitted code, not to
@@ -326,10 +326,17 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     // if one were reachable; --no-new-privs closes that gap.
     const cpuSeconds = cpuTimeLimitSeconds(timeLimitMs);
     const execTail = DROP_PRIVILEGES ? `exec setpriv --no-new-privs "$0" "$@"` : `exec "$0" "$@"`;
-    const innerCmd = enforceMemory
-      ? `ulimit -v ${memoryLimitKb}; ulimit -u ${MAX_PROCESSES}; ulimit -t ${cpuSeconds}; ${execTail}`
+    // enforceMemory and enforceLimits are deliberately separate: Java skips only the `ulimit -v`
+    // virtual-memory cap (the JVM's own startup footprint — metaspace, thread stacks, JIT cache —
+    // exceeds any reasonable budget before the student's code runs at all, see the -Xmx comment
+    // below), but still needs the process-count and CPU-time ulimits and the network-denial attempt
+    // below — a Java fork bomb or CPU-bound infinite loop is exactly as real as in any other
+    // language, and skipping those too (as a side effect of the old single `enforceMemory` flag
+    // gating all three) was never actually justified by the memory-headroom problem it was added for.
+    const innerCmd = enforceLimits
+      ? `${enforceMemory ? `ulimit -v ${memoryLimitKb}; ` : ""}ulimit -u ${MAX_PROCESSES}; ulimit -t ${cpuSeconds}; ${execTail}`
       : execTail;
-    const wrappedArgs = enforceMemory || DROP_PRIVILEGES
+    const wrappedArgs = enforceLimits || DROP_PRIVILEGES
       ? ["-v", "-o", statsFile, "sh", "-c", innerCmd, cmd, ...args]
       : ["-v", "-o", statsFile, cmd, ...args];
     const timeArgs = networkDenied ? ["-n", "/usr/bin/time", ...wrappedArgs] : wrappedArgs;
@@ -451,7 +458,7 @@ async function prepare(language, code) {
     const { cmd, args } = runner.compile(file, tmpDir);
     // Compilation gets a generous fixed budget, separate from the per-test-case run limit, and
     // is exempt from the execution memory ulimit (see spawnWithTimeout's enforceMemory comment).
-    const compileResult = await spawnWithTimeout(cmd, args, { cwd: tmpDir }, undefined, COMPILE_TIMEOUT_MS, { enforceMemory: false });
+    const compileResult = await spawnWithTimeout(cmd, args, { cwd: tmpDir }, undefined, COMPILE_TIMEOUT_MS, { enforceLimits: false });
     // Logged unconditionally (not just on timeout) so real compile-time data accumulates in Render's
     // logs — without this, "Compilation timed out" reports have no way to distinguish "consistently
     // near the budget under load" from "one freak spike," which is exactly the ambiguity that made
@@ -495,7 +502,7 @@ async function prepare(language, code) {
       // start up, regardless of the student's code, which made every single Java run fail with a
       // generic "Runtime Error" — the -Xmx flag on the java command above is Java's real memory
       // guard instead, enforced by the JVM itself rather than the OS.
-      const result = await spawnWithTimeout(cmd, args, { cwd: tmpDir, timeout: timeLimitMs }, input, timeLimitMs, { enforceMemory: language !== "java", memoryLimitKb });
+      const result = await spawnWithTimeout(cmd, args, { cwd: tmpDir, timeout: timeLimitMs }, input, timeLimitMs, { enforceLimits: true, enforceMemory: language !== "java", memoryLimitKb });
       if (!result.ok) return result;
       return { ok: true, stdout: result.stdout.trim(), timeMs: result.timeMs, memoryKb: result.memoryKb };
     },

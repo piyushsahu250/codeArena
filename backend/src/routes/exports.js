@@ -196,6 +196,7 @@ const ENTITIES = {
         },
       },
       orderBy: { addedAt: "desc" },
+      take: MAX_ROWS,
     });
     const studentIds = members.map((m) => m.studentId);
     const [profiles, resumes] = await Promise.all([

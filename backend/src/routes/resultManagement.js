@@ -848,7 +848,7 @@ function buildEntryWhere(req) {
 const ENTRY_INCLUDE = { student: { select: STUDENT_SELECT }, examination: { select: { id: true, title: true, status: true, batch: true, institute: { select: { name: true } } } } };
 
 async function loadFilteredEntries(req) {
-  return prisma.resultEntry.findMany({ where: buildEntryWhere(req), include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" } });
+  return prisma.resultEntry.findMany({ where: buildEntryWhere(req), include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" }, take: EXPORT_ROW_CAP });
 }
 
 router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
