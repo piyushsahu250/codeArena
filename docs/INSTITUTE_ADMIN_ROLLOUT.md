@@ -30,15 +30,32 @@ full coverage.
 | `GET /users/search` | Now also accepts `SUPER_ADMIN`, `INSTITUTE_ADMIN`, and the `?role=` filter now accepts those two values too. |
 | `POST /users/:id/reset-password` | Now also accepts `SUPER_ADMIN`, `INSTITUTE_ADMIN` — already institute-scoped. |
 
+## Routes updated (round 2 — `questions.js`, `tests.js`, `challenges.js`)
+
+All three files checked for uniformity first (every `requireRole("ADMIN"...)` call site already
+paired with `attachRequesterInstitute`, and the actual scoping logic — `questionVisibilityWhere`/
+`ownsQuestionRow` in `questions.js`, plain `req.requesterInstituteId` checks in `tests.js`,
+`instituteScopedWhere`/`ownsChallengeRow` in `challenges.js` — is written role-agnostically
+(`role !== "STAFF"` rather than `role === "ADMIN"`, or plain instituteId comparison), so it
+already treats any institute-scoped account correctly regardless of role name. Confirmed this
+before bulk-editing each file, not assumed.
+
+- `questions.js`: all 33 `requireRole("ADMIN", "STAFF")` call sites (Question Bank CRUD, folders,
+  bulk import/export/move/copy/delete, sharing) now also accept `SUPER_ADMIN`, `INSTITUTE_ADMIN`.
+- `tests.js`: all 9 `requireRole("ADMIN", "STAFF")` sites plus the one `requireRole("ADMIN")`-only
+  `DELETE /:id` (deliberately staff-excluded already; now also accepts the two new roles).
+- `challenges.js`: all 16 `/admin/daily|weekly` routes — 6 read/preview/analytics routes
+  (`ADMIN`+`STAFF`) and 10 write routes (`ADMIN`-only, staff deliberately excluded) — now also
+  accept `SUPER_ADMIN`, `INSTITUTE_ADMIN`.
+
 ## Not yet audited (NOT TESTED — do not assume covered)
 
 Every other route file with `requireRole("ADMIN"...)` calls: `admin.js`, `academicGroups.js`,
-`attendance.js`, `certificates.js`, `challenges.js`, `classes.js`, `exports.js`, `features.js`,
-`institutes.js`, `learning.js`, `moduleCoding.js`, `questions.js`, `readiness.js`,
-`resultManagement.js`, `subjects.js`, `talentPools.js`, `tests.js`, and the rest. `INSTITUTE_ADMIN`
-and `SUPER_ADMIN` do **not** currently work on any of these — an Institute Admin account today can
-only use the `users.js` endpoints listed above. Extending coverage to the rest is ongoing work,
-file by file, each verified the same way (confirm `attachRequesterInstitute` + real
+`attendance.js`, `certificates.js`, `classes.js`, `exports.js`, `features.js`,
+`institutes.js`, `learning.js`, `moduleCoding.js`, `readiness.js`,
+`resultManagement.js`, `subjects.js`, `talentPools.js`, and the rest. `INSTITUTE_ADMIN`
+and `SUPER_ADMIN` do **not** currently work on any of these. Extending coverage to the rest is
+ongoing work, file by file, each verified the same way (confirm `attachRequesterInstitute` + real
 institute-scoping already exists before adding the role; if it doesn't, that route needs the
 scoping added first, which is separate work from adding the role name).
 

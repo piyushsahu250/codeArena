@@ -148,7 +148,7 @@ async function assertGroupsBelongToInstitute(academicGroupIds, requesterInstitut
   }
 }
 
-router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       title, code, description, instructions, durationMin, passingMarks, showResults,
@@ -250,7 +250,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
 });
 
 // --- ADMIN/STAFF: edit an existing test (replaces questions + class assignment) ---
-router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.test.findUnique({
       where: { id: req.params.id },
@@ -374,7 +374,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
 });
 
 // --- ADMIN/STAFF: duplicate a test (questions + class assignment cloned, always starts unpublished) ---
-router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const original = await prisma.test.findUnique({
       where: { id: req.params.id },
@@ -424,7 +424,7 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "STAFF"), attac
 });
 
 // --- ADMIN: permanently delete a test (and its attempts/submissions) ---
-router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     // Previously missing entirely — an institute-scoped Admin could delete another institute's
     // test by id. Staff-delete stays disallowed altogether (unchanged); this only tightens Admin.
@@ -442,7 +442,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitu
 });
 
 // --- ADMIN/STAFF: publish/unpublish ---
-router.patch("/:id/publish", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     // Previously had no authorization check at all beyond role — any Staff member anywhere could
     // publish/unpublish any test by id. Now matches every other staff-reachable route's gate.
@@ -643,7 +643,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
 // param route. No existing route serves this for STAFF — the only other staff-listing route
 // (staffClerk.js's GET /) is ADMIN-only. Deliberately minimal fields — this is a picker source,
 // not a directory. ---
-router.get("/staff-directory", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/staff-directory", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const staff = await prisma.user.findMany({
       where: {
@@ -926,7 +926,7 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
 // --- ADMIN: grant an individual student a reattempt on a test they've already completed.
 // Deletes their existing attempt (submissions cascade with it), so their next POST /:id/start
 // creates a fresh one — scoped to this one student only, nothing else about the test changes. ---
-router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { testId, studentId } = req.params;
     const [test, student, attempt] = await Promise.all([
@@ -975,7 +975,7 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
 });
 
 // --- ADMIN/STAFF: leaderboard / results for a test ---
-router.get("/:id/results", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/results", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const test = await prisma.test.findUnique({
     where: { id: req.params.id },
     select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } },
@@ -1036,7 +1036,7 @@ router.get("/:id/my-result", authenticate, requireRole("STUDENT"), async (req, r
 // Mirrors learning.js's POST/DELETE /courses/:id/assignments (createMany+skipDuplicates /
 // deleteMany). Deliberately NOT reachable by a staff member the test is merely shared with — only
 // the owner or an Admin can grant/revoke, so access can't be chained/re-shared onward. ---
-router.post("/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/shares", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { staffIds = [] } = req.body;
     const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { id: true, createdById: true, instituteId: true } });
@@ -1070,7 +1070,7 @@ router.post("/:id/shares", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   }
 });
 
-router.delete("/:id/shares/:staffId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/shares/:staffId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const test = await prisma.test.findUnique({ where: { id: req.params.id }, select: { id: true, createdById: true, instituteId: true } });
     if (!test) return res.status(404).json({ error: "Test not found" });

@@ -562,7 +562,7 @@ router.get("/weekly/:id/draft", authenticate, requireRole("STUDENT"), async (req
 // instituteId row is a genuinely platform-wide challenge, visible to every institute in list
 // views, but only a platform-level admin (no instituteId on their own account) can write to it.
 
-router.get("/admin/daily", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/daily", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { q, subjectId, topicId, difficulty, status } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -590,7 +590,7 @@ router.get("/admin/daily", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   }
 });
 
-router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
     if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -608,7 +608,7 @@ router.patch("/admin/daily/:id", authenticate, requireRole("ADMIN"), attachReque
   }
 });
 
-router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true, instituteId: true } });
     if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -621,7 +621,7 @@ router.patch("/admin/daily/:id/toggle", authenticate, requireRole("ADMIN"), atta
   }
 });
 
-router.post("/admin/daily", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/daily", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { date, questionId, academicGroupId } = req.body;
     // An institute-scoped ADMIN can only ever schedule against their own institute, regardless of
@@ -657,7 +657,7 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN"), attachRequesterI
 // (same "block destructive delete when dependent data exists" pattern already shipped for
 // Chapter/Module/Lesson) — an admin who genuinely wants it gone can still deactivate it via
 // the toggle route above; only an empty slot can be hard-deleted.
-router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
     if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -677,7 +677,7 @@ router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN"), attachRequ
 
 // Reuses the file's own sanitizeQuestion — admin preview is guaranteed identical to what a
 // student sees (hidden cases still stripped) because it's the same function, not a re-implementation.
-router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!dc || !ownsChallengeRow(req, dc)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -691,7 +691,7 @@ router.get("/admin/daily/:id/preview", authenticate, requireRole("ADMIN", "STAFF
 // Short TTL cache — this is a per-row admin panel view, not a page-load-critical stat, so a small
 // amount of staleness after a fresh submission is an acceptable tradeoff against re-aggregating
 // every submission on every open of the panel.
-router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const exists = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true, instituteId: true } });
     if (!exists || !ownsChallengeRow(req, exists)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -705,7 +705,7 @@ router.get("/admin/daily/:id/analytics", authenticate, requireRole("ADMIN", "STA
   }
 });
 
-router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!dc || !ownsChallengeRow(req, dc)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -718,7 +718,7 @@ router.post("/admin/daily/:id/duplicate", authenticate, requireRole("ADMIN"), at
   }
 });
 
-router.get("/admin/weekly", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/weekly", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { q, subjectId, topicId, difficulty, status } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -746,7 +746,7 @@ router.get("/admin/weekly", authenticate, requireRole("ADMIN", "STAFF"), attachR
   }
 });
 
-router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
     if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -764,7 +764,7 @@ router.patch("/admin/weekly/:id", authenticate, requireRole("ADMIN"), attachRequ
   }
 });
 
-router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { isActive: true, instituteId: true } });
     if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -777,7 +777,7 @@ router.patch("/admin/weekly/:id/toggle", authenticate, requireRole("ADMIN"), att
   }
 });
 
-router.post("/admin/weekly", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/weekly", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { weekStart, questionId, academicGroupId } = req.body;
     // Same institute-lockdown as POST /admin/daily above — see its comment.
@@ -805,7 +805,7 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN"), attachRequester
   }
 });
 
-router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
     if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -823,7 +823,7 @@ router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN"), attachReq
   }
 });
 
-router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!wc || !ownsChallengeRow(req, wc)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -834,7 +834,7 @@ router.get("/admin/weekly/:id/preview", authenticate, requireRole("ADMIN", "STAF
   }
 });
 
-router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const exists = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { id: true, instituteId: true } });
     if (!exists || !ownsChallengeRow(req, exists)) return res.status(404).json({ error: "Scheduled challenge not found" });
@@ -848,7 +848,7 @@ router.get("/admin/weekly/:id/analytics", authenticate, requireRole("ADMIN", "ST
   }
 });
 
-router.post("/admin/weekly/:id/duplicate", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/weekly/:id/duplicate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
     if (!wc || !ownsChallengeRow(req, wc)) return res.status(404).json({ error: "Scheduled challenge not found" });
