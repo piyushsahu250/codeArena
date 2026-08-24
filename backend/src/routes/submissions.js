@@ -2,6 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
+const { attachRequesterInstitute } = require("../middleware/institute");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued, getQueueStatus } = require("../utils/queue");
 const { gradePendingCodingSubmissions, gradeCodingSubmission, recomputeAttemptScore } = require("../utils/gradeAttempt");
@@ -86,8 +87,14 @@ function gradeQuizAnswer(question, selectedOptions) {
   };
 }
 
-// STUDENT: run code against sample (non-hidden) test cases only — for self-check, doesn't save score
-router.post("/run", authenticate, requireRole("STUDENT"), execLimiter, async (req, res) => {
+// STUDENT: run code against sample (non-hidden) test cases only — for self-check, doesn't save score.
+// Deliberately takes no attemptId (the frontend never sends one, see TestTaking.jsx's handleRun) —
+// this is a general "check my code against the samples" utility, not scoped to one attempt. It
+// still must not cross institute boundaries, though: a question is only runnable if it's shared/
+// legacy (instituteId null, same convention as questionVisibility.js and challenges.js) or belongs
+// to the requesting student's own institute — previously unchecked, letting any student invoke the
+// judge against any coding question platform-wide, including other institutes' banks.
+router.post("/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, execLimiter, async (req, res) => {
   try {
     const { questionId, language, code } = req.body;
     const question = await prisma.question.findUnique({
@@ -97,6 +104,9 @@ router.post("/run", authenticate, requireRole("STUDENT"), execLimiter, async (re
     if (!question) return res.status(404).json({ error: "Question not found" });
     if (question.questionType !== "CODING" && question.questionType !== "SQL") {
       return res.status(400).json({ error: "Run is only available for coding questions" });
+    }
+    if (question.instituteId && question.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only run questions under your own institute" });
     }
 
     const runLanguage = question.questionType === "SQL" ? "sql" : language;
