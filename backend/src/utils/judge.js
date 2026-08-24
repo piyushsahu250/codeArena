@@ -428,6 +428,24 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
   });
 }
 
+// Removes a submission's tmpDir. Once DROP_PRIVILEGES hands tmpDir's ownership to `sandbox`
+// (see prepare() below), this process — the main API process, running as a genuinely unprivileged
+// `app` uid, not root — no longer has any permission bits on that directory at all under a plain
+// fs.rm(), and force:true only suppresses "path doesn't exist" errors, not permission errors, so
+// removal would otherwise silently no-op and leak a tmpDir on every submission. Chowning it back
+// to this process's own uid/gid first (via the same CAP_CHOWN the Dockerfile grants for the
+// opposite handover) restores owner access, and since this directory is always flat (no
+// subdirectories — see RUNNERS, nothing here ever mkdirs inside tmpDir), owning the directory
+// itself is sufficient to unlink every file inside it regardless of those individual files' own
+// ownership. A no-op under DROP_PRIVILEGES=false, where tmpDir was never chowned away to begin
+// with.
+function cleanupTmpDir(tmpDir) {
+  if (DROP_PRIVILEGES) {
+    try { fs.chownSync(tmpDir, process.getuid(), process.getgid()); } catch { /* already gone, or never handed over */ }
+  }
+  fs.rm(tmpDir, { recursive: true, force: true }, () => {});
+}
+
 // Writes the source and compiles it (once) if the language needs it.
 // Returns { ok: true, execute(input, timeLimitMs) } or { ok: false, error }.
 async function prepare(language, code) {
@@ -435,15 +453,13 @@ async function prepare(language, code) {
   if (!runner) return { ok: false, error: "Unsupported language" };
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "judge-"));
-  if (DROP_PRIVILEGES) {
-    // tmpDir is created by this (still-root) process, but compilation and execution now
-    // both run as `sandbox` (see spawnWithTimeout) — it needs to enter (x) and write (w)
-    // here, since it compiles its own output into this same directory. 0770: owner
-    // (sandbox) full access, no access for anyone else — root retains access for
-    // cleanup() regardless of the chmod, since root bypasses permission checks entirely.
-    fs.chownSync(tmpDir, SANDBOX_UID, SANDBOX_GID);
-    fs.chmodSync(tmpDir, 0o770);
-  }
+  // Source is written FIRST, while tmpDir is still owned by this (app) process — the handover to
+  // `sandbox` right below must come after, not before: once tmpDir's ownership moves to sandbox,
+  // this process has no write access left to create anything inside it. (This ordering used to be
+  // reversed and it still "worked," but only because the main process ran as root at the time,
+  // which bypasses permission checks entirely — running as a genuinely unprivileged `app` uid
+  // exposed this as a real bug, caught by testing the non-root Dockerfile change before deploying
+  // it, not by inspection.)
   const file = path.join(tmpDir, runner.srcName);
   fs.writeFileSync(file, code);
   if (DROP_PRIVILEGES) {
@@ -452,6 +468,18 @@ async function prepare(language, code) {
     // file mid-execution for no legitimate reason.
     fs.chownSync(file, SANDBOX_UID, SANDBOX_GID);
     fs.chmodSync(file, 0o440);
+    // tmpDir itself hands over last, after everything this process needs to put in it already
+    // exists — it needs to enter (x) and write (w) here, since it compiles its own output into
+    // this same directory. 0771, not 0770: spawnWithTimeout below passes `cwd: tmpDir` on the
+    // same spawn() call that also passes {uid, gid} — and Node/libuv chdir()s into `cwd` in the
+    // child BEFORE dropping to the target uid/gid, not after, so it's still running as this
+    // (app) process at that instant. Without the "other" execute bit, that chdir itself fails
+    // with EACCES (confirmed by testing: 0770 fails every compile with "spawn ... EACCES" before
+    // the target binary ever runs; 0771 fixes it) — execute-only still denies `app` any read or
+    // write access to the directory's contents, it only permits passing through it. See
+    // cleanupTmpDir() above for how this process still removes it later despite not owning it.
+    fs.chownSync(tmpDir, SANDBOX_UID, SANDBOX_GID);
+    fs.chmodSync(tmpDir, 0o771);
   }
 
   if (runner.compile) {
@@ -467,7 +495,7 @@ async function prepare(language, code) {
       console.warn(`judge: ${language} compile took ${compileResult.timeMs}ms (budget ${COMPILE_TIMEOUT_MS}ms)${compileResult.timedOut ? " — TIMED OUT" : ""}`);
     }
     if (!compileResult.ok) {
-      fs.rm(tmpDir, { recursive: true, force: true }, () => {});
+      cleanupTmpDir(tmpDir);
       return {
         ok: false,
         error: compileResult.timedOut ? "Compilation timed out" : compileResult.error || "Compilation failed",
@@ -484,7 +512,7 @@ async function prepare(language, code) {
     // compile failures use. Harmless/never triggers in FUNCTION mode, since the generated driver
     // (functionHarness.js's javaDriver()) always declares `public class Main` itself.
     if (language === "java" && !fs.existsSync(path.join(tmpDir, "Main.class"))) {
-      fs.rm(tmpDir, { recursive: true, force: true }, () => {});
+      cleanupTmpDir(tmpDir);
       return {
         ok: false,
         error: "No 'public class Main' with 'public static void main' was found. If you wrote a LeetCode-style " +
@@ -507,7 +535,7 @@ async function prepare(language, code) {
       return { ok: true, stdout: result.stdout.trim(), timeMs: result.timeMs, memoryKb: result.memoryKb };
     },
     cleanup() {
-      fs.rm(tmpDir, { recursive: true, force: true }, () => {});
+      cleanupTmpDir(tmpDir);
     },
   };
 }
