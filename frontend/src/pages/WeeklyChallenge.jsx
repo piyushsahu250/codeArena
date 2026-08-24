@@ -7,6 +7,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import ProblemStatement from "../components/ProblemStatement";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import CodeResultBlock from "../components/CodeResultBlock";
+import ChallengeLeaderboard from "../components/ChallengeLeaderboard";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import useIsMobile from "../hooks/useIsMobile";
 
@@ -27,6 +28,7 @@ export default function WeeklyChallenge() {
   const [running, setRunning] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const langDraftsRef = useRef({});
   const autosaveTimerRef = useRef(null);
@@ -46,6 +48,7 @@ export default function WeeklyChallenge() {
           const lang = sub?.language || "java";
           setLanguage(lang);
           setCode(sub?.code || res.data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+          if (sub?.solvedAt) loadLeaderboard(res.data.challenge.id);
           try {
             const { data: draft } = await api.get(`/challenges/weekly/${res.data.challenge.id}/draft`);
             if (draft) { setCode(draft.code); setLanguage(draft.language); }
@@ -113,11 +116,16 @@ export default function WeeklyChallenge() {
       setSubmitResult(res);
       notify(res.gamification);
       api.get("/challenges/stats").then((r) => setStats(r.data)).catch(() => {});
+      if (res.verdict === "ACCEPTED") loadLeaderboard(data.challenge.id);
     } catch (err) {
       setSubmitResult({ error: err.response?.data?.error || "Submission failed" });
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function loadLeaderboard(challengeId) {
+    api.get(`/challenges/weekly/${challengeId}/leaderboard`).then((res) => setLeaderboardData(res.data)).catch(() => {});
   }
 
   return (
@@ -180,6 +188,15 @@ export default function WeeklyChallenge() {
               <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0" }}>
                 <CodeResultBlock title="Submission result" result={submitResult} />
               </div>
+            )}
+
+            {leaderboardData && (
+              <details open style={{ marginTop: 16 }}>
+                <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>
+                  THIS WEEK'S LEADERBOARD — your institute
+                </summary>
+                <ChallengeLeaderboard leaderboard={leaderboardData.leaderboard} yourRank={leaderboardData.yourRank} />
+              </details>
             )}
           </div>
         )}

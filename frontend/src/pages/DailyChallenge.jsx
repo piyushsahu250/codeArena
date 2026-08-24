@@ -7,6 +7,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import ProblemStatement from "../components/ProblemStatement";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import CodeResultBlock from "../components/CodeResultBlock";
+import ChallengeLeaderboard from "../components/ChallengeLeaderboard";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import useIsMobile from "../hooks/useIsMobile";
 
@@ -47,6 +48,7 @@ export default function DailyChallenge() {
   const [running, setRunning] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const langDraftsRef = useRef({});
   const autosaveTimerRef = useRef(null);
@@ -66,6 +68,9 @@ export default function DailyChallenge() {
           const lang = sub?.language || "java";
           setLanguage(lang);
           setCode(sub?.code || res.data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+          // Already solved before this page load (returning visitor) — show the leaderboard right
+          // away rather than only after a fresh Submit.
+          if (sub?.solvedAt) loadLeaderboard(res.data.challenge.id);
           // A saved draft (from an in-progress edit that never got Submit-ed) reflects more recent
           // work than the last graded submission's snapshot, so it wins when present.
           try {
@@ -139,11 +144,16 @@ export default function DailyChallenge() {
       notify(res.gamification);
       api.get("/challenges/daily/history").then((r) => setHistory(r.data)).catch(() => {});
       api.get("/challenges/stats").then((r) => setStats(r.data)).catch(() => {});
+      if (res.verdict === "ACCEPTED") loadLeaderboard(data.challenge.id);
     } catch (err) {
       setSubmitResult({ error: err.response?.data?.error || "Submission failed" });
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function loadLeaderboard(challengeId) {
+    api.get(`/challenges/daily/${challengeId}/leaderboard`).then((res) => setLeaderboardData(res.data)).catch(() => {});
   }
 
   return (
@@ -207,6 +217,15 @@ export default function DailyChallenge() {
               <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0" }}>
                 <CodeResultBlock title="Submission result" result={submitResult} />
               </div>
+            )}
+
+            {leaderboardData && (
+              <details open style={{ marginTop: 16 }}>
+                <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>
+                  TODAY'S LEADERBOARD — your institute
+                </summary>
+                <ChallengeLeaderboard leaderboard={leaderboardData.leaderboard} yourRank={leaderboardData.yourRank} />
+              </details>
             )}
           </div>
         )}

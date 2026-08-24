@@ -270,6 +270,36 @@ router.get("/daily/history", authenticate, requireRole("STUDENT"), async (req, r
   }
 });
 
+// Only ever ranks today's challenge — same "current" resolution as /run and /submit, so a stale
+// or wrong-scope :id can't be probed for a leaderboard either. No numeric score exists on
+// DailyChallengeSubmission (grading is pass/fail against hidden cases, not partial credit), so
+// ranking is solve order (earliest solvedAt first, matching every LeetCode-style daily-challenge
+// convention) with fastest runtime as the tiebreak — both server-recorded, never client-supplied.
+// Scoped to the requester's own institute even when the challenge itself is Global: a Global
+// challenge can have submissions from students across every institute, and showing those names
+// across institute boundaries would be exactly the leak section 4/35 warn against.
+router.get("/daily/:id/leaderboard", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), async (req, res) => {
+  try {
+    if (!(await assertChallengeIsCurrent(prisma.dailyChallenge, "date", dayStart(new Date()), req.user.id, req.params.id))) {
+      return res.status(404).json({ error: "Challenge not found" });
+    }
+    const submissions = await prisma.dailyChallengeSubmission.findMany({
+      where: { dailyChallengeId: req.params.id, verdict: "ACCEPTED", student: { instituteId: req.requesterInstituteId } },
+      select: { studentId: true, solvedAt: true, timeMs: true, student: { select: { name: true } } },
+      orderBy: [{ solvedAt: "asc" }, { timeMs: "asc" }],
+      take: 100,
+    });
+    const leaderboard = submissions.map((s, i) => ({
+      rank: i + 1, studentId: s.studentId, name: s.student.name, isYou: s.studentId === req.user.id,
+      solvedAt: s.solvedAt, timeMs: s.timeMs,
+    }));
+    res.json({ leaderboard, yourRank: leaderboard.find((r) => r.isYou)?.rank || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load leaderboard" });
+  }
+});
+
 router.post("/daily/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), runLimiter, async (req, res) => {
   try {
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, include: { question: { include: { testCases: true } } } });
@@ -387,6 +417,30 @@ router.get("/weekly/current", authenticate, requireRole("STUDENT"), attachReques
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load this week's challenge" });
+  }
+});
+
+// Weekly counterpart to /daily/:id/leaderboard — same rules (current-week only, solve-order
+// ranking, own-institute scoping only). See that route's comment for the full reasoning.
+router.get("/weekly/:id/leaderboard", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("coding_challenge"), async (req, res) => {
+  try {
+    if (!(await assertChallengeIsCurrent(prisma.weeklyChallenge, "weekStart", isoWeekStart(new Date()), req.user.id, req.params.id))) {
+      return res.status(404).json({ error: "Challenge not found" });
+    }
+    const submissions = await prisma.weeklyChallengeSubmission.findMany({
+      where: { weeklyChallengeId: req.params.id, verdict: "ACCEPTED", student: { instituteId: req.requesterInstituteId } },
+      select: { studentId: true, solvedAt: true, timeMs: true, student: { select: { name: true } } },
+      orderBy: [{ solvedAt: "asc" }, { timeMs: "asc" }],
+      take: 100,
+    });
+    const leaderboard = submissions.map((s, i) => ({
+      rank: i + 1, studentId: s.studentId, name: s.student.name, isYou: s.studentId === req.user.id,
+      solvedAt: s.solvedAt, timeMs: s.timeMs,
+    }));
+    res.json({ leaderboard, yourRank: leaderboard.find((r) => r.isYou)?.rank || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load leaderboard" });
   }
 });
 
