@@ -353,7 +353,7 @@ router.delete("/me/sessions/:sessionId", authenticate, async (req, res) => {
 // scope was pure UI convention (AdminDashboard.jsx's client-side `.filter()`), not a real backend
 // boundary -- any institute-scoped admin's browser DevTools/Network tab exposed every other
 // institute's full user list (name, email, mobile, PRN, department, batch) with zero extra effort.
-router.get("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 200));
   const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
@@ -364,10 +364,11 @@ router.get("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, as
   res.json({ rows: users, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
-// ADMIN: create a Staff, Admin, or Student account directly (no self-registration needed).
-// Password is a unique, randomly generated temporary one — the admin never types one — and the
-// account is flagged to force a password change on first login.
-router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+// ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN: create a Staff, Admin, Institute Admin, or Student account
+// directly (no self-registration needed). Password is a unique, randomly generated temporary
+// one — the admin never types one — and the account is flagged to force a password change on
+// first login.
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       name, email: rawEmail, role, rollNumber, registrationNumber, department, mobile, gender, program,
@@ -378,8 +379,21 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
     }
     const email = normalizeEmail(rawEmail);
     if (!isValidEmail(email)) return res.status(400).json({ error: "Please enter a valid email address" });
-    if (!["STUDENT", "STAFF", "ADMIN", "CLERK"].includes(role)) {
-      return res.status(400).json({ error: "role must be STUDENT, STAFF, ADMIN, or CLERK" });
+    // SUPER_ADMIN can never be granted here (or anywhere else user-facing) — the only SUPER_ADMIN
+    // account is set once by scripts/migrateSuperAdmin.js, and a database-level partial unique
+    // index (scripts/enforceSingleSuperAdmin.js) makes a second one impossible even if this check
+    // were ever bypassed. An institute-scoped creator (req.requesterInstituteId set — an
+    // institute-scoped ADMIN or an INSTITUTE_ADMIN) additionally can't grant ADMIN/INSTITUTE_ADMIN
+    // — only a platform-level SUPER_ADMIN (or legacy platform-level ADMIN) can create another
+    // admin-tier account, and per spec that's an Institute Admin, never a second Super Admin.
+    const allowedRoles = req.requesterInstituteId
+      ? ["STUDENT", "STAFF", "CLERK"]
+      : ["STUDENT", "STAFF", "ADMIN", "CLERK", "INSTITUTE_ADMIN"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: `role must be one of: ${allowedRoles.join(", ")}` });
+    }
+    if (role === "INSTITUTE_ADMIN" && !instituteId) {
+      return res.status(400).json({ error: "An institute is required to create an Institute Admin" });
     }
     if (!instituteId) return res.status(400).json({ error: "An institute is required" });
     // An institute-scoped ADMIN must not be able to plant accounts under a different institute by
@@ -516,7 +530,7 @@ const EDITABLE_FIELDS = [
   "name", "email", "mobile", "gender", "rollNumber", "registrationNumber", "department", "program",
   "batchYear", "section", "instituteId", "isActive", "profilePhotoUrl", "employeeId", "designation",
 ];
-router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "User not found" });
@@ -1014,13 +1028,13 @@ router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequester
 // this is the one cross-role search surface for Admin User Search & Delete, reusing the same
 // { rows, page, pageSize, total, totalPages } shape questions.js's GET / and staffClerk.js's
 // GET / already return.
-router.get("/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/search", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const q = String(req.query.q || "").trim();
     if (!q) return res.json({ rows: [], page: 1, pageSize: 20, total: 0, totalPages: 0 });
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
-    const role = ["STUDENT", "STAFF", "CLERK", "ADMIN"].includes(req.query.role) ? req.query.role : undefined;
+    const role = ["STUDENT", "STAFF", "CLERK", "ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(req.query.role) ? req.query.role : undefined;
     const { documentType, documentVerificationStatus } = req.query;
 
     const where = {
@@ -1390,7 +1404,7 @@ router.get("/:id/performance/report.pdf", authenticate, requireRole("ADMIN", "ST
 // documented default before the real owner's first login. Staff is institute-scoped: they can
 // only reset students under their own institute, matching the same access rule as /search and
 // the performance dashboard. The account is flagged to force a password change on next login.
-router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ error: "User not found" });

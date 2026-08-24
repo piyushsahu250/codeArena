@@ -18,6 +18,19 @@ enum Role {
   // Management or Test Management access — those routes stay ADMIN/ADMIN+STAFF and simply don't
   // list CLERK, so it's excluded by default rather than needing an explicit block.
   CLERK
+  // Platform-wide, unscoped (instituteId must stay null) — see the partial unique index added by
+  // scripts/enforceSingleSuperAdmin.js, which makes "at most one row can ever have this role" a
+  // database-level guarantee, not just an application check. Exactly one account
+  // (sahupiyush250@gmail.com) is migrated to this role by scripts/migrateSuperAdmin.js; nothing
+  // in the app can create a second one — see users.js/admin.js's role-whitelist comments.
+  SUPER_ADMIN
+  // Always institute-scoped (User.instituteId required, same as CLERK) — everything an
+  // institute-scoped ADMIN already does today (attachRequesterInstitute already treats
+  // instituteId-bearing accounts as scoped to just that institute; this role formalizes that as
+  // its own name rather than reusing ADMIN for both the platform-wide and institute-scoped
+  // cases). See docs/INSTITUTE_ADMIN_ROLLOUT.md for which routes currently recognize this role
+  // and which still need auditing — this is being rolled out route-by-route, not all at once.
+  INSTITUTE_ADMIN
 }
 
 // Orthogonal to `Role` — an account's disciplinary/access state, kept in sync with the older
