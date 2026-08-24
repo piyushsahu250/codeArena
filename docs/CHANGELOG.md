@@ -200,3 +200,8 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 - API endpoint count: 480 -> 481 (review API_DOCUMENTATION.md)
 - This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
 - Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
+
+## 2026-08-24 (auto-detected drift)
+- API endpoint count: 481 -> 483 (review API_DOCUMENTATION.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
