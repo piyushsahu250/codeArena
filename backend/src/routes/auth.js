@@ -16,6 +16,7 @@ const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const RESET_REQUEST_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 1 request per rolling 24h per account
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -195,10 +196,19 @@ router.post("/logout", authenticate, async (req, res) => {
   }
 });
 
-// Request a password reset — always responds the same way whether or not the
-// email exists, so this endpoint itself doesn't leak account existence (the
-// login endpoint already does, per product requirement, but no need to widen
-// that surface here too).
+// Request a password reset — always responds the same way whether the email exists, was just
+// rate-limited by the 24h cooldown below, or genuinely succeeded, so this endpoint never leaks
+// account existence (the login endpoint already does, per product requirement, but no need to
+// widen that surface here too). This is a deliberate choice, not an oversight: a distinguishable
+// 429/"try again in Xh" response would let anyone probe which emails have a CodeArena account by
+// requesting twice and checking which ones come back 429 vs 200 — exactly the enumeration channel
+// this route exists to avoid. The 24h cooldown is enforced silently.
+//
+// Cooldown is a plain column on User (lastPasswordResetRequestedAt), not a new reset-history
+// table — this platform already tracks the reset token itself directly on User
+// (resetTokenHash/resetTokenExpiry), and that field gets cleared on every redemption/reissue,
+// so it can't double as "when was the account's last request" across a completed reset. This
+// column is deliberately never cleared by anything (see POST /reset-password below).
 router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   try {
     const { email } = req.body;
@@ -206,21 +216,55 @@ router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (user) {
-      const token = crypto.randomBytes(32).toString("hex");
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { resetTokenHash: hashToken(token), resetTokenExpiry: new Date(Date.now() + RESET_TOKEN_TTL_MS) },
+      const now = new Date();
+      const cooldownCutoff = new Date(now.getTime() - RESET_REQUEST_COOLDOWN_MS);
+
+      // Atomic claim: the WHERE clause is re-checked by Postgres against the row's current
+      // (possibly just-updated-by-a-concurrent-request) state at write time, not against the
+      // stale value read above — so of N simultaneous requests for the same account, exactly one
+      // can ever match and claim the cooldown, regardless of how many arrive in the same instant.
+      // A plain "SELECT, check in JS, then UPDATE" would have a race window here; this doesn't.
+      const claim = await prisma.user.updateMany({
+        where: {
+          id: user.id,
+          OR: [{ lastPasswordResetRequestedAt: null }, { lastPasswordResetRequestedAt: { lt: cooldownCutoff } }],
+        },
+        data: { lastPasswordResetRequestedAt: now },
       });
 
-      const resetLink = `${FRONTEND_URL}/reset-password?token=${token}`;
-      await sendMailLogged(prisma, {
-        to: user.email,
-        name: user.name,
-        studentId: user.id,
-        emailType: "PASSWORD_RESET",
-        subject: "Reset your CodeArena password",
-        html: wrapBranded(`<p>Hi ${user.name},</p><p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you didn't request this, you can ignore this email.</p>`),
-      });
+      if (claim.count > 0) {
+        const token = crypto.randomBytes(32).toString("hex");
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { resetTokenHash: hashToken(token), resetTokenExpiry: new Date(now.getTime() + RESET_TOKEN_TTL_MS) },
+          });
+
+          const resetLink = `${FRONTEND_URL}/reset-password?token=${token}`;
+          await sendMailLogged(prisma, {
+            to: user.email,
+            name: user.name,
+            studentId: user.id,
+            emailType: "PASSWORD_RESET",
+            subject: "Reset your CodeArena password",
+            html: wrapBranded(`<p>Hi ${user.name},</p><p>Click the link below to reset your password. This link expires in 1 hour.</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you didn't request this, you can ignore this email.</p>`),
+          });
+          // sendMailLogged never throws on a delivery failure (SMTP/provider errors land in the
+          // EmailLog row's status, not an exception) — reaching here means the request was
+          // genuinely queued, so the cooldown claim above stands even if delivery later failed.
+          // Only a crash BEFORE that point (caught below) means nothing was actually queued.
+          logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_RESET_REQUESTED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: {} });
+        } catch (sendErr) {
+          // Nothing was queued — release the claim so this doesn't cost the user their one
+          // request for the next 24h over a pure infrastructure hiccup (e.g. the EmailLog write
+          // itself failing). Reverting to null is safe: it's only ever more permissive than
+          // whatever the account's real prior state was.
+          console.error("[auth] forgot-password: failed before email was queued, releasing cooldown claim:", sendErr.message);
+          await prisma.user.update({ where: { id: user.id }, data: { lastPasswordResetRequestedAt: null } }).catch(() => {});
+        }
+      } else {
+        logAudit({ req, action: AUDIT_ACTIONS.PASSWORD_RESET_BLOCKED, actorId: user.id, actorName: user.name, actorRole: user.role, studentId: user.id, instituteId: user.instituteId, details: { reason: "24h_cooldown" } });
+      }
     }
 
     res.json({ message: "If that email is registered, a reset link has been sent." });

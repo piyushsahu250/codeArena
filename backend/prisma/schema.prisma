@@ -220,6 +220,14 @@ model User {
   resetTokenHash   String?
   resetTokenExpiry DateTime?
 
+  // Rolling 24-hour self-service Forgot Password cooldown — deliberately separate from
+  // resetTokenHash/resetTokenExpiry above (those get cleared on every redemption/reissue; this
+  // must NOT, since the cooldown has to survive a successful reset — see routes/auth.js's
+  // POST /forgot-password). Set only when a request actually gets far enough to attempt sending
+  // (sendMailLogged is called, i.e. an EmailLog row was created) — a bad email, a validation
+  // failure, or a genuine server error before that point never touches this field.
+  lastPasswordResetRequestedAt DateTime?
+
   // Email ownership verification — separate from resetTokenHash/resetTokenExpiry above (a token
   // consumed here must never invalidate an in-flight password reset, or vice versa). emailVerified
   // defaults false for every account, existing and new — this is informational/used to gate the
