@@ -125,6 +125,7 @@ model Institute {
   readinessSubjects ReadinessSubject[]
   interviewQuestions InterviewQuestion[]
   featureSettings FeatureSetting[]
+  emailLogs       EmailLog[]
 }
 
 // Institute-wise ON/OFF control for platform features (e.g. AI Mock Interview, Talent Pool).
