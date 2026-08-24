@@ -83,7 +83,7 @@ function sanitizeQuestion(q) {
 async function loadOwnedAttempt(req, res, { requireInProgress = true } = {}) {
   const attempt = await prisma.moduleCodingAttempt.findUnique({
     where: { id: req.params.attemptId },
-    include: { moduleCodingTest: true },
+    include: { moduleCodingTest: true, questions: { select: { questionId: true } } },
   });
   if (!attempt || attempt.studentId !== req.user.id) {
     res.status(403).json({ error: "Invalid attempt" });
@@ -94,6 +94,16 @@ async function loadOwnedAttempt(req, res, { requireInProgress = true } = {}) {
     return null;
   }
   return attempt;
+}
+
+// Must be one of the questions actually drawn for this attempt (ModuleCodingAttemptQuestion —
+// snapshotted once at start, see schema comment), not just any coding question in the DB. Final
+// grading (gradeModuleCodingAttempt.js) already only iterates attempt.questions, so this can't
+// inflate a score — but without this check, run/autosave/submit-code would happily invoke the
+// judge and reveal hidden-case pass/fail for an arbitrary question, including ones from other
+// institutes' banks. Same fix as submissions.js's assigned-question check, applied here too.
+function isAssignedQuestion(attempt, questionId) {
+  return attempt.questions.some((q) => q.questionId === questionId);
 }
 
 function deadlineOf(attempt) {
@@ -309,6 +319,7 @@ router.post("/attempts/:attemptId/run", authenticate, requireRole("STUDENT"), ex
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this assessment" });
 
     const { questionId, language, code } = req.body;
+    if (!isAssignedQuestion(attempt, questionId)) return res.status(403).json({ error: "This question is not part of your assessment" });
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: { where: { isHidden: false } } } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 
@@ -328,6 +339,7 @@ router.post("/attempts/:attemptId/autosave", authenticate, requireRole("STUDENT"
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this assessment" });
 
     const { questionId, language, code, seq: rawSeq } = req.body;
+    if (!isAssignedQuestion(attempt, questionId)) return res.status(403).json({ error: "This question is not part of your assessment" });
     const seq = Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now();
     // Atomic upsert on the (attemptId, questionId) unique constraint — see submissions.js's
     // /autosave for why a findFirst-then-create/update pattern here is a real race hazard.
@@ -374,6 +386,7 @@ router.post("/attempts/:attemptId/submit-code", authenticate, requireRole("STUDE
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this assessment" });
 
     const { questionId, language, code } = req.body;
+    if (!isAssignedQuestion(attempt, questionId)) return res.status(403).json({ error: "This question is not part of your assessment" });
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 

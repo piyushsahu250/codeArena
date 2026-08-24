@@ -123,7 +123,10 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
     // value rather than always losing the staleness race against 0.
     const seq = Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now();
 
-    const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, include: { test: { select: { durationMin: true } } } });
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      include: { test: { select: { durationMin: true, questions: { select: { questionId: true } } } } },
+    });
     if (!attempt || attempt.studentId !== req.user.id) {
       return res.status(403).json({ error: "Invalid attempt" });
     }
@@ -131,6 +134,17 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
       return res.status(403).json({ error: "This test attempt is already finalized" });
     }
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this test" });
+
+    // Same assigned-question check as /submit-code below, and just as important here: per the
+    // comment on the upsert below, coding is graded once at finalize time from whatever's saved
+    // via autosave, so this is actually the primary path a stray Submission row for an unassigned
+    // question would be created through and later scored — not just /submit-code.
+    const assignedQuestionIds = Array.isArray(attempt.questionOrder) && attempt.questionOrder.length > 0
+      ? attempt.questionOrder
+      : attempt.test.questions.map((tq) => tq.questionId);
+    if (!assignedQuestionIds.includes(questionId)) {
+      return res.status(403).json({ error: "This question is not part of your test" });
+    }
 
     const question = await prisma.question.findUnique({ where: { id: questionId } });
     if (!question) return res.status(404).json({ error: "Question not found" });
@@ -196,7 +210,10 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
   try {
     const { attemptId, questionId, language, code } = req.body;
 
-    const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, include: { test: { select: { durationMin: true } } } });
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      include: { test: { select: { durationMin: true, questions: { select: { questionId: true } } } } },
+    });
     if (!attempt || attempt.studentId !== req.user.id) {
       return res.status(403).json({ error: "Invalid attempt" });
     }
@@ -204,6 +221,21 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
       return res.status(403).json({ error: "This test attempt is already finalized" });
     }
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this test" });
+
+    // Must be one of THIS attempt's locked-in questions (attempt.questionOrder — see TestAttempt
+    // schema comment and tests.js POST /:id/start), not just any CODING/SQL question in the DB.
+    // Previously unchecked: recomputeAttemptScore() sums every Submission row tied to attemptId
+    // with no cross-check against the assigned set, so submitting for an arbitrary questionId
+    // (any coding/SQL question a student could see anywhere on the platform) would add its full
+    // points straight onto totalScore — a real score-inflation path, not just a theoretical one.
+    // Falls back to the test's current question set only for legacy attempts predating
+    // questionOrder, same pattern as studentPerformance.js's max-score calculation.
+    const assignedQuestionIds = Array.isArray(attempt.questionOrder) && attempt.questionOrder.length > 0
+      ? attempt.questionOrder
+      : attempt.test.questions.map((tq) => tq.questionId);
+    if (!assignedQuestionIds.includes(questionId)) {
+      return res.status(403).json({ error: "This question is not part of your test" });
+    }
 
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
