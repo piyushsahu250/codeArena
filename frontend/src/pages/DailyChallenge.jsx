@@ -13,6 +13,41 @@ import useIsMobile from "../hooks/useIsMobile";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 
+// Real submission history — same data GET /challenges/daily/history already returns for the
+// calendar strip below, just rendering the `attempt` details it now carries instead of only the
+// solved/unsolved boolean. Most recent attempted day first; days never attempted are omitted here
+// (they're already visible as unfilled squares in the calendar).
+function SubmissionHistory({ history }) {
+  const attempted = (history || []).filter((d) => d.attempt).slice().reverse();
+  if (attempted.length === 0) {
+    return <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>No submissions in the last 30 days yet.</p>;
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+      {attempted.map((d) => (
+        <div
+          key={d.date}
+          className="mono"
+          style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6,
+            padding: "8px 10px", borderRadius: 6, fontSize: 12,
+            background: d.attempt.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0",
+          }}
+        >
+          <span>
+            {new Date(d.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            {" — "}{d.questionTitle || "Untitled question"}
+          </span>
+          <span style={{ color: "var(--ink-dim)" }}>
+            {d.attempt.verdict} · {d.attempt.passedCases}/{d.attempt.totalCases} · {d.attempt.language}
+            {d.attempt.timeMs != null ? ` · ${d.attempt.timeMs}ms` : ""}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CalendarStrip({ history }) {
   if (!history) return null;
   return (
@@ -173,6 +208,15 @@ export default function DailyChallenge() {
           </div>
         )}
         <CalendarStrip history={history} />
+
+        {history && history.some((d) => d.attempt) && (
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>
+              RECENT SUBMISSIONS
+            </summary>
+            <SubmissionHistory history={history} />
+          </details>
+        )}
 
         {error && <p style={{ color: "var(--rust)", marginTop: 20 }}>{error}</p>}
 

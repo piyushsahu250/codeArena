@@ -250,7 +250,18 @@ router.get("/daily/history", authenticate, requireRole("STUDENT"), async (req, r
         ],
       },
       orderBy: { date: "asc" },
-      include: { submissions: { where: { studentId: req.user.id }, select: { solvedAt: true } } },
+      include: {
+        question: { select: { title: true } },
+        // Section: submission history — same DailyChallengeSubmission row the calendar strip's
+        // `solved` boolean already reads, just selecting the rest of its columns too. Still one
+        // row per (dailyChallengeId, studentId) — this is "the student's final state on that
+        // day's challenge," not a click-by-click submit log (matches the platform's existing
+        // "one row per attempt, best/latest wins" convention, same as Formal Test Submission).
+        submissions: {
+          where: { studentId: req.user.id },
+          select: { verdict: true, passedCases: true, totalCases: true, timeMs: true, language: true, solvedAt: true, updatedAt: true },
+        },
+      },
     });
     // Most-specific-per-date, same resolution rule as resolveMostSpecificChallenge — a date can
     // have up to 3 candidate rows (global/institute/academicGroup) in range at once.
@@ -263,7 +274,18 @@ router.get("/daily/history", authenticate, requireRole("STUDENT"), async (req, r
       if (specificity > existingSpecificity) byDate.set(key, c);
     }
     const ordered = [...byDate.values()].sort((a, b) => a.date - b.date);
-    res.json(ordered.map((c) => ({ date: c.date, solved: c.submissions.some((s) => s.solvedAt) })));
+    res.json(ordered.map((c) => {
+      const sub = c.submissions[0] || null;
+      return {
+        date: c.date,
+        solved: !!sub?.solvedAt,
+        questionTitle: c.question?.title || null,
+        // Only present once the student has actually attempted this day's challenge — a day
+        // with no submission row at all stays exactly {date, solved:false, questionTitle} as
+        // before, so this is purely additive for CalendarStrip's existing consumers.
+        attempt: sub ? { verdict: sub.verdict, passedCases: sub.passedCases, totalCases: sub.totalCases, timeMs: sub.timeMs, language: sub.language, lastAttemptAt: sub.updatedAt } : null,
+      };
+    }));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load challenge history" });
