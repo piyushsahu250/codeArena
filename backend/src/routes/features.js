@@ -27,10 +27,17 @@ function dependentsOf(featureKey) {
 }
 
 // ADMIN: full catalog + this institute's current state, for the Feature Management page.
-router.get("/", authenticate, requireRole("ADMIN"), async (req, res) => {
+// requesterInstituteId is null only for a genuine platform-level admin (no institute of their
+// own) — an institute-scoped ADMIN must match the instituteId they're asking about, or every
+// other institute's feature configuration (and, via PATCH/bulk/copy below, its write access)
+// would be reachable just by supplying a different id in the query string/body.
+router.get("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId } = req.query;
     if (!instituteId) return res.status(400).json({ error: "instituteId is required" });
+    if (req.requesterInstituteId && instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only view feature configuration for your own institute" });
+    }
 
     const institute = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true, name: true } });
     if (!institute) return res.status(404).json({ error: "Institute not found" });
@@ -65,13 +72,16 @@ router.get("/", authenticate, requireRole("ADMIN"), async (req, res) => {
 });
 
 // ADMIN: toggle a single feature for a single institute.
-router.patch("/", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId, featureKey, enabled } = req.body;
     if (!instituteId || !featureKey || typeof enabled !== "boolean") {
       return res.status(400).json({ error: "instituteId, featureKey and enabled (boolean) are required" });
     }
     if (!isValidFeatureKey(featureKey)) return res.status(400).json({ error: "Unknown feature key" });
+    if (req.requesterInstituteId && instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only change feature configuration for your own institute" });
+    }
 
     const institute = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true } });
     if (!institute) return res.status(404).json({ error: "Institute not found" });
@@ -124,13 +134,19 @@ router.patch("/", authenticate, requireRole("ADMIN"), async (req, res) => {
 // ADMIN: bulk-toggle one feature across an explicit, admin-chosen list of institutes. Never
 // resolves an implicit "all institutes" — the caller must enumerate exactly which ones, so a
 // frontend bug or confirmation-skip can't silently touch the whole platform (Section 16).
-router.post("/bulk", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/bulk", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteIds, featureKey, enabled } = req.body;
     if (!Array.isArray(instituteIds) || instituteIds.length === 0) return res.status(400).json({ error: "instituteIds must be a non-empty array" });
     if (instituteIds.length > 500) return res.status(400).json({ error: "Too many institutes in one bulk request" });
     if (!featureKey || typeof enabled !== "boolean") return res.status(400).json({ error: "featureKey and enabled (boolean) are required" });
     if (!isValidFeatureKey(featureKey)) return res.status(400).json({ error: "Unknown feature key" });
+    // Cross-institute bulk toggling is a platform-admin-only capability (requesterInstituteId
+    // null) — an institute-scoped ADMIN calling this with any id other than their own would
+    // otherwise be able to flip features for institutes they don't manage.
+    if (req.requesterInstituteId && instituteIds.some((id) => id !== req.requesterInstituteId)) {
+      return res.status(403).json({ error: "You can only change feature configuration for your own institute" });
+    }
 
     const found = await prisma.institute.findMany({ where: { id: { in: instituteIds } }, select: { id: true } });
     const validIds = found.map((i) => i.id);
@@ -159,11 +175,16 @@ router.post("/bulk", authenticate, requireRole("ADMIN"), async (req, res) => {
 });
 
 // ADMIN: preview what "Copy Configuration" would change, before the admin confirms it.
-router.get("/copy-preview", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/copy-preview", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { fromInstituteId, toInstituteId } = req.query;
     if (!fromInstituteId || !toInstituteId) return res.status(400).json({ error: "fromInstituteId and toInstituteId are required" });
     if (fromInstituteId === toInstituteId) return res.status(400).json({ error: "Source and target institutes must differ" });
+    // Copying configuration between institutes is a platform-admin-only capability — same
+    // reasoning as /bulk above.
+    if (req.requesterInstituteId && (fromInstituteId !== req.requesterInstituteId || toInstituteId !== req.requesterInstituteId)) {
+      return res.status(403).json({ error: "You can only view configuration for your own institute" });
+    }
 
     const [fromMap, toMap] = await Promise.all([
       getInstituteFeatureMap(fromInstituteId),
@@ -182,11 +203,14 @@ router.get("/copy-preview", authenticate, requireRole("ADMIN"), async (req, res)
 // ADMIN: apply the copy. Overwrites every catalog key on the target with the source's value —
 // intentionally all-or-nothing per key (not a partial merge) since a partial copy would be
 // surprising; the preview above is what lets the admin decide whether that's what they want.
-router.post("/copy", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/copy", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { fromInstituteId, toInstituteId } = req.body;
     if (!fromInstituteId || !toInstituteId) return res.status(400).json({ error: "fromInstituteId and toInstituteId are required" });
     if (fromInstituteId === toInstituteId) return res.status(400).json({ error: "Source and target institutes must differ" });
+    if (req.requesterInstituteId && (fromInstituteId !== req.requesterInstituteId || toInstituteId !== req.requesterInstituteId)) {
+      return res.status(403).json({ error: "You can only change configuration for your own institute" });
+    }
 
     const [source, target] = await Promise.all([
       prisma.institute.findUnique({ where: { id: fromInstituteId }, select: { id: true } }),
@@ -223,10 +247,13 @@ router.post("/copy", authenticate, requireRole("ADMIN"), async (req, res) => {
 
 // ADMIN: configuration-change history for one institute's feature settings — a scoped view over
 // the platform's general audit log (Section 18), not a separate logging system.
-router.get("/audit", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/audit", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId } = req.query;
     if (!instituteId) return res.status(400).json({ error: "instituteId is required" });
+    if (req.requesterInstituteId && instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only view configuration history for your own institute" });
+    }
     const logs = await prisma.auditLog.findMany({
       where: { instituteId, action: { in: [AUDIT_ACTIONS.FEATURE_TOGGLED, AUDIT_ACTIONS.FEATURE_BULK_TOGGLED, AUDIT_ACTIONS.FEATURE_CONFIG_COPIED] } },
       orderBy: { createdAt: "desc" },

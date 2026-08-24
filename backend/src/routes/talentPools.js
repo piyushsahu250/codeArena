@@ -849,7 +849,12 @@ router.patch("/:id/interview-configs/:configId", authenticate, requireRole("ADMI
   try {
     const data = {};
     for (const key of ["label", "isActive", "config"]) if (req.body[key] !== undefined) data[key] = req.body[key];
-    const updated = await prisma.talentPoolInterviewConfig.update({ where: { id: req.params.configId }, data });
+    // Scoped by poolId (not just the config's own id) — matching the DELETE route right below —
+    // so a configId belonging to a DIFFERENT pool (possibly another institute's) can't be
+    // updated just because the caller legitimately owns the pool named in the URL.
+    const result = await prisma.talentPoolInterviewConfig.updateMany({ where: { id: req.params.configId, poolId: pool.id }, data });
+    if (result.count === 0) return res.status(404).json({ error: "Interview config not found" });
+    const updated = await prisma.talentPoolInterviewConfig.findUnique({ where: { id: req.params.configId } });
     res.json(updated);
   } catch (err) {
     console.error(err);

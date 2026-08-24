@@ -266,6 +266,9 @@ router.post("/units/:id/topics", authenticate, requireRole("ADMIN", "STAFF"), at
 router.get("/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
+  if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+    return res.status(404).json({ error: "Subject not found" });
+  }
   const assignments = await prisma.staffSubjectAssignment.findMany({
     where: { subjectId: subject.id },
     include: { staff: { select: { id: true, name: true, email: true } } },
@@ -277,6 +280,9 @@ router.get("/:id/assignments", authenticate, requireRole("ADMIN"), attachRequest
 router.post("/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
+  if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+    return res.status(404).json({ error: "Subject not found" });
+  }
   const staffId = req.body.staffId;
   if (!staffId) return res.status(400).json({ error: "A staff member is required" });
   const staff = await prisma.user.findUnique({ where: { id: staffId } });
@@ -300,6 +306,9 @@ router.post("/:id/assignments", authenticate, requireRole("ADMIN"), attachReques
 router.delete("/:id/assignments/:staffId", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
+  if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+    return res.status(404).json({ error: "Subject not found" });
+  }
   const staff = await prisma.user.findUnique({ where: { id: req.params.staffId } });
   await prisma.staffSubjectAssignment.deleteMany({ where: { subjectId: subject.id, staffId: req.params.staffId } });
   await logAudit({

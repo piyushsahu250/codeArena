@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
+const { attachRequesterInstitute } = require("../middleware/institute");
 const { getSnapshot } = require("../utils/metrics");
 const { getQueueStatus } = require("../utils/queue");
 const { cached } = require("../utils/cache");
@@ -145,9 +146,13 @@ function buildEmailLogWhere({ status, type, q, from, to, batchId }) {
 // provider-confirmed status (never inferred). Filterable by status/type/date-range/batch, plus a
 // free-text search across recipient name/email/registration number, page/pageSize paginated
 // (previously a hard 300-row cap with no way to see older entries).
-router.get("/email-logs", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/email-logs", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = buildEmailLogWhere(req.query);
+    // Without this, any institute-scoped ADMIN could list (and, via the retry route below, act
+    // on) every other institute's outbound account/password-reset emails — see reset-password's
+    // identical requesterInstituteId check in users.js for the established pattern this mirrors.
+    if (req.requesterInstituteId) where.student = { instituteId: req.requesterInstituteId };
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
     const [logs, total] = await Promise.all([
@@ -174,11 +179,13 @@ router.get("/email-logs", authenticate, requireRole("ADMIN"), async (req, res) =
 // the batchId those routes return immediately in their response — since credential emails for a
 // batch now send in the background after that response, the frontend polls this cheap groupBy
 // to show a live sent/failed summary instead of a number that was only ever true at request time.
-router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const where = { batchId: req.params.batchId };
+    if (req.requesterInstituteId) where.student = { instituteId: req.requesterInstituteId };
     const counts = await prisma.emailLog.groupBy({
       by: ["status"],
-      where: { batchId: req.params.batchId },
+      where,
       _count: { status: true },
     });
     const byStatus = Object.fromEntries(counts.map((c) => [c.status, c._count.status]));
@@ -250,7 +257,7 @@ router.post("/email-logs/test", authenticate, requireRole("ADMIN"), async (req, 
 // necessarily issues a fresh password for the student — there is no original message body to
 // literally resend — but unlike the old workaround (which created a brand-new EmailLog row every
 // time), this updates the SAME row's retryCount/status and enforces MAX_EMAIL_RETRIES.
-router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const log = await prisma.emailLog.findUnique({ where: { id: req.params.id } });
     if (!log) return res.status(404).json({ error: "Email log entry not found" });
@@ -261,6 +268,13 @@ router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF")
 
     const student = await prisma.user.findUnique({ where: { id: log.studentId } });
     if (!student) return res.status(400).json({ error: "Can't retry — this student's account no longer exists." });
+    // Without this, any institute-scoped ADMIN/STAFF could retry another institute's email-log
+    // row — which, since a "retry" here issues a BRAND NEW password (see the comment above),
+    // amounts to a full account takeover of another institute's student. Same check as
+    // users.js's /:id/reset-password.
+    if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only retry emails for students under your own institute" });
+    }
 
     const newPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(newPassword, 10);
