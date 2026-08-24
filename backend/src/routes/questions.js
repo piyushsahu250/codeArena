@@ -8,7 +8,7 @@ const { requireFeature } = require("../middleware/featureGate");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
 const { spreadsheetFileFilter, spreadsheetOrTextFileFilter } = require("../utils/uploadFilters");
 const { parseNotepadMcqText, parseNotepadCodingText } = require("../utils/bulkQuestionParser");
-const { questionVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
+const { questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const { validateQuestionForVerification } = require("../utils/questionValidation");
@@ -624,12 +624,17 @@ router.get("/meta/filters", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // builds the tree client-side from this flat list plus each row's parentId.
 
 router.get("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
-  const folders = await prisma.questionFolder.findMany({
-    where: questionVisibilityWhere(req),
-    include: { _count: { select: { questions: true, children: true } } },
-    orderBy: { name: "asc" },
-  });
-  res.json(folders);
+  try {
+    const folders = await prisma.questionFolder.findMany({
+      where: questionFolderVisibilityWhere(req),
+      include: { _count: { select: { questions: true, children: true } } },
+      orderBy: { name: "asc" },
+    });
+    res.json(folders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load folders" });
+  }
 });
 
 router.post("/folders", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
@@ -1727,7 +1732,7 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
     const key = name.toLowerCase();
     if (folderIdByName.has(key)) return folderIdByName.get(key);
     let folder = await prisma.questionFolder.findFirst({
-      where: { name: { equals: name, mode: "insensitive" }, ...questionVisibilityWhere(req) },
+      where: { name: { equals: name, mode: "insensitive" }, ...questionFolderVisibilityWhere(req) },
     });
     if (!folder && commit) {
       folder = await prisma.questionFolder.create({

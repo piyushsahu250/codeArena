@@ -30,6 +30,15 @@ function questionVisibilityWhere(req) {
   return { AND: [institute, { OR: [{ createdById: null }, { createdById: req.user.id }, { folder: { shares: { some: { staffId: req.user.id } } } }] }] };
 }
 
+// Same rule as questionVisibilityWhere, but for querying QuestionFolder rows directly rather than
+// Question rows filed inside a folder — QuestionFolder has its own `shares` relation (see schema),
+// not a `folder.shares` path, so it can't reuse questionVisibilityWhere's fragment as-is.
+function questionFolderVisibilityWhere(req) {
+  const institute = instituteWhere(req.requesterInstituteId);
+  if (req.user?.role !== "STAFF") return institute;
+  return { AND: [institute, { OR: [{ createdById: null }, { createdById: req.user.id }, { shares: { some: { staffId: req.user.id } } }] }] };
+}
+
 // Boolean ownership check for a single already-loaded Question or QuestionFolder row. Shared-
 // folder access additionally requires the row to have been fetched with the relevant relation —
 // `folder: { include: { shares: { select: { staffId: true } } } }` for a Question row, or
@@ -45,4 +54,4 @@ function ownsQuestionRow(req, row) {
   return Array.isArray(shares) && shares.some((s) => s.staffId === req.user.id);
 }
 
-module.exports = { instituteWhere, questionVisibilityWhere, ownsQuestionRow };
+module.exports = { instituteWhere, questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow };
