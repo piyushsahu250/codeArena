@@ -10,6 +10,12 @@ name: Keep Backend Warm
 # session, this pings the health endpoint every 10 minutes, always — comfortably under the
 # 15-minute spin-down window, so the backend never actually goes cold. This is the automated,
 # permanent version of that one-off fix.
+#
+# TEMPORARY: pointed at the AWS EC2 standby backend (api-aws.codearena.site) instead of Render,
+# because Neon's monthly network-transfer quota is exhausted (resets 2026-09-01), which blocks
+# every DB connection and takes the whole Render backend down. EC2 doesn't spin down, so this
+# ping is just an uptime canary for now, not a cold-start fix. Point this back at Render once
+# Neon is usable again and the frontend is switched back.
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -21,7 +27,7 @@ jobs:
     steps:
       - name: Ping /api/health
         run: |
-          code=$(curl -s -o /tmp/health.json -w "%{http_code}" https://sanjivani-codearena-backend-docker.onrender.com/api/health)
+          code=$(curl -s -o /tmp/health.json -w "%{http_code}" https://api-aws.codearena.site/api/health)
           echo "HTTP $code"
           cat /tmp/health.json
           echo
