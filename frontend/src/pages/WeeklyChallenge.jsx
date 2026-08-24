@@ -8,6 +8,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import CodeResultBlock from "../components/CodeResultBlock";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import useIsMobile from "../hooks/useIsMobile";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 
@@ -15,6 +16,7 @@ const AUTOSAVE_DEBOUNCE_MS = 2000;
 // comment) but keyed by ISO week instead of calendar day, higher XP reward, no daily calendar
 // strip since there's only ever one "current" week.
 export default function WeeklyChallenge() {
+  const isMobile = useIsMobile();
   const { notify } = useGamification();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -121,7 +123,7 @@ export default function WeeklyChallenge() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 14px" : "48px 24px" }}>
         <h1>Weekly Challenge</h1>
         <ChalkUnderline />
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>
@@ -144,7 +146,7 @@ export default function WeeklyChallenge() {
         )}
 
         {data?.challenge && (
-          <div className="card" style={{ padding: 20, marginTop: 24 }}>
+          <div className="card" style={{ padding: isMobile ? 14 : 20, marginTop: 24 }}>
             <ProblemStatement question={data.question} />
 
             {data.submission?.solvedAt && (
@@ -153,7 +155,7 @@ export default function WeeklyChallenge() {
               </p>
             )}
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 10 }}>
               <select value={language} onChange={(e) => handleLanguageChange(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line)" }}>
                 {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
@@ -161,7 +163,7 @@ export default function WeeklyChallenge() {
             </div>
             <div style={{ marginTop: 10, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
               <Editor
-                height="320px"
+                height={isMobile ? "260px" : "320px"}
                 language={LANGUAGES.find((l) => l.id === language)?.monaco}
                 value={code}
                 onChange={(v) => setCode(v || "")}
