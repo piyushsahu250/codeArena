@@ -120,7 +120,11 @@ function sanitizeQuestion(q) {
 // stay "hard" filters, applied unconditionally when present, unchanged from before. difficulty
 // moved here because it used to be a hard filter with no fallback — a single under-seeded
 // difficulty tier could 400 an otherwise-valid session start with no recourse.
-const SOFT_FILTER_FIELDS = ["company", "packageBand", "experienceLevel", "difficulty"];
+// "role" added for the Company-Specific Interview Question Intelligence System — experienceLevel
+// was already here (a company-question draft's target level reuses this exact field, see
+// InterviewQuestionDraft's schema comment), so only "role" was genuinely new; everything else
+// (the soft-filter/fallback machinery below) already generalizes to it with no further change.
+const SOFT_FILTER_FIELDS = ["company", "role", "packageBand", "experienceLevel", "difficulty"];
 
 // Weighted-without-replacement sample using a CompanyInterviewProfile.categoryWeights entry:
 // { topicWeights: {"Arrays": 0.3, ...}, difficultyMix: {EASY:0.3,MEDIUM:0.5,HARD:0.2} }. A
@@ -174,9 +178,10 @@ async function pickQuestions(category, config, count, options = {}) {
   const softWhere = {};
   for (const field of SOFT_FILTER_FIELDS) {
     if (config[field]) {
-      // Company is free text entered by admins (see InterviewDraftReview.jsx) with no
-      // normalization anywhere — "TCS" vs "tcs " must still match the same seeded pool.
-      softWhere[field] = field === "company"
+      // Company/role are free text entered by admins (see InterviewDraftReview.jsx) with no
+      // normalization anywhere — "TCS" vs "tcs " (or "Software Engineer" vs "software engineer")
+      // must still match the same seeded pool.
+      softWhere[field] = field === "company" || field === "role"
         ? { equals: String(config[field]).trim(), mode: "insensitive" }
         : config[field];
     }
@@ -400,7 +405,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
         where: { company: { equals: config.company, mode: "insensitive" }, isActive: true },
       });
       const roundPlan = Array.isArray(companyProfile?.roundPlan) ? companyProfile.roundPlan : null;
-      const roundCfg = { company: config.company, difficulty: config?.difficulty, experienceLevel: config?.experienceLevel };
+      const roundCfg = { company: config.company, role: config?.role, difficulty: config?.difficulty, experienceLevel: config?.experienceLevel };
       const opts = { excludeStudentId: req.user.id, companyProfile };
 
       if (roundPlan && roundPlan.length > 0) {

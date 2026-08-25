@@ -46,6 +46,12 @@ router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "SUPER_
   if (req.query.status) where.status = req.query.status;
   if (req.query.company) where.company = req.query.company;
   if (req.query.category) where.category = req.query.category;
+  // companyId/role/experienceLevel — added for the Company-Specific Interview Question
+  // Intelligence System's review UI, so a company-scoped generation run's drafts can be filtered
+  // to just that company/role/level without touching the free-text `company` filter above.
+  if (req.query.companyId) where.companyId = req.query.companyId;
+  if (req.query.role) where.role = req.query.role;
+  if (req.query.experienceLevel) where.experienceLevel = req.query.experienceLevel;
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50));
   const [rows, total] = await Promise.all([
@@ -76,6 +82,72 @@ router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "
   }
 });
 
+// Shared by the single-approve route and bulk-approve below, so "ADD" and "ADD SELECTED" run the
+// exact same validation/promotion logic — no separate, potentially-diverging bulk code path.
+// Throws on validation failure (caller catches); returns the created InterviewQuestion on success.
+async function approveDraftQuestion(draft, { req, frequencyTag, packageBand, experienceLevel }) {
+  if (draft.status !== "PENDING") {
+    const err = new Error("Draft has already been reviewed");
+    err.status = 400;
+    throw err;
+  }
+
+  let resolved = { evaluationType: "STDIO", functionSignature: null, starterCodeByLanguage: undefined };
+  if (draft.category === "CODING") {
+    const cases = Array.isArray(draft.testCases) ? draft.testCases : [];
+    if (cases.filter((tc) => !tc.isHidden).length < 2) {
+      const err = new Error("Each coding question needs at least 2 visible sample test cases — edit the draft before approving");
+      err.status = 400;
+      throw err;
+    }
+    if (cases.filter((tc) => tc.isHidden).length < 10) {
+      const err = new Error("Each coding question needs at least 10 hidden test cases for final evaluation — edit the draft before approving");
+      err.status = 400;
+      throw err;
+    }
+    resolved = resolveCodingFields({ evaluationType: draft.evaluationType, functionSignature: draft.functionSignature, starterCodeByLanguage: draft.starterCodeByLanguage });
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const q = await tx.interviewQuestion.create({
+      data: {
+        category: draft.category, subject: draft.subject, company: draft.company, aptitudeCategory: draft.aptitudeCategory,
+        difficulty: draft.difficulty, title: draft.title, prompt: draft.prompt, expectedKeywords: draft.expectedKeywords ?? undefined,
+        modelAnswer: draft.modelAnswer, options: draft.options ?? undefined, correctAnswer: draft.correctAnswer ?? undefined,
+        explanation: draft.explanation, starterCode: draft.starterCode, testCases: draft.testCases ?? undefined,
+        language: draft.language, tags: draft.tags ?? undefined,
+        estimatedTimeMin: draft.estimatedTimeMin, realWorldScenario: draft.realWorldScenario, constraints: draft.constraints,
+        inputFormat: draft.inputFormat, outputFormat: draft.outputFormat, notes: draft.notes, edgeCases: draft.edgeCases,
+        problemExplanation: draft.problemExplanation,
+        evaluationType: resolved.evaluationType, functionSignature: resolved.functionSignature, starterCodeByLanguage: resolved.starterCodeByLanguage,
+        // frequencyTag/packageBand are set here, at approval, by the reviewing human — never
+        // carried over automatically from the draft's own generation request, so an AI-suggested
+        // "TRENDING" label can never reach a live question without a human explicitly
+        // re-affirming it in this same request. experienceLevel DOES default from the draft
+        // (still overridable) since for a company-question draft it's the target level the admin
+        // already picked before generating, not an AI-suggested label.
+        frequencyTag: frequencyTag || null, packageBand: packageBand || null,
+        experienceLevel: experienceLevel || draft.experienceLevel || null,
+        instituteId: req.requesterInstituteId || null,
+        createdById: req.user.id,
+        // Company-Specific Interview Question Intelligence System fields — copied through
+        // unchanged (source/confidence are facts about where the content came from, not
+        // something approval re-decides). lastVerifiedAt is set to now: a human admin reviewing
+        // and approving this draft IS itself a real verification action.
+        companyId: draft.companyId, role: draft.role,
+        sourceType: draft.sourceType, sourceUrl: draft.sourceUrl, sourceDate: draft.sourceDate,
+        confidenceLevel: draft.confidenceLevel, verificationCount: draft.verificationCount,
+        firstSeenAt: draft.firstSeenAt, lastSeenAt: draft.lastSeenAt, lastVerifiedAt: new Date(),
+      },
+    });
+    await tx.interviewQuestionDraft.update({
+      where: { id: draft.id },
+      data: { status: "APPROVED", reviewedByAdminId: req.user.id, reviewedAt: new Date(), approvedQuestionId: q.id },
+    });
+    return q;
+  });
+}
+
 // The ONLY funnel from a draft into a real, student-visible InterviewQuestion. Re-runs the exact
 // CODING 2-visible/10-hidden validation and resolveCodingFields() server-side resolution that
 // /admin/questions's own create/update routes enforce — a draft's own generation prompt only
@@ -84,55 +156,36 @@ router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("AD
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
     if (!draft) return res.status(404).json({ error: "Draft not found" });
-    if (draft.status !== "PENDING") return res.status(400).json({ error: "Draft has already been reviewed" });
-
-    let resolved = { evaluationType: "STDIO", functionSignature: null, starterCodeByLanguage: undefined };
-    if (draft.category === "CODING") {
-      const cases = Array.isArray(draft.testCases) ? draft.testCases : [];
-      if (cases.filter((tc) => !tc.isHidden).length < 2) {
-        return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases — edit the draft before approving" });
-      }
-      if (cases.filter((tc) => tc.isHidden).length < 10) {
-        return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation — edit the draft before approving" });
-      }
-      resolved = resolveCodingFields({ evaluationType: draft.evaluationType, functionSignature: draft.functionSignature, starterCodeByLanguage: draft.starterCodeByLanguage });
-    }
-
-    const { frequencyTag, packageBand, experienceLevel } = req.body;
-
-    const question = await prisma.$transaction(async (tx) => {
-      const q = await tx.interviewQuestion.create({
-        data: {
-          category: draft.category, subject: draft.subject, company: draft.company, aptitudeCategory: draft.aptitudeCategory,
-          difficulty: draft.difficulty, title: draft.title, prompt: draft.prompt, expectedKeywords: draft.expectedKeywords ?? undefined,
-          modelAnswer: draft.modelAnswer, options: draft.options ?? undefined, correctAnswer: draft.correctAnswer ?? undefined,
-          explanation: draft.explanation, starterCode: draft.starterCode, testCases: draft.testCases ?? undefined,
-          language: draft.language, tags: draft.tags ?? undefined,
-          estimatedTimeMin: draft.estimatedTimeMin, realWorldScenario: draft.realWorldScenario, constraints: draft.constraints,
-          inputFormat: draft.inputFormat, outputFormat: draft.outputFormat, notes: draft.notes, edgeCases: draft.edgeCases,
-          problemExplanation: draft.problemExplanation,
-          evaluationType: resolved.evaluationType, functionSignature: resolved.functionSignature, starterCodeByLanguage: resolved.starterCodeByLanguage,
-          // frequencyTag/packageBand/experienceLevel are set here, at approval, by the reviewing
-          // human — never carried over automatically from the draft's own generation request, so
-          // an AI-suggested "TRENDING" label can never reach a live question without a human
-          // explicitly re-affirming it in this same request.
-          frequencyTag: frequencyTag || null, packageBand: packageBand || null, experienceLevel: experienceLevel || null,
-          instituteId: req.requesterInstituteId || null,
-          createdById: req.user.id,
-        },
-      });
-      await tx.interviewQuestionDraft.update({
-        where: { id: draft.id },
-        data: { status: "APPROVED", reviewedByAdminId: req.user.id, reviewedAt: new Date(), approvedQuestionId: q.id },
-      });
-      return q;
-    });
-
+    const question = await approveDraftQuestion(draft, { req, ...req.body });
     res.json(question);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     console.error(err);
     res.status(400).json({ error: safeErrorMessage(err, "Failed to approve draft") });
   }
+});
+
+// "ADD SELECTED" — approves multiple drafts in one request. Each draft is validated/promoted
+// independently (one bad coding-question draft in the batch doesn't block the rest); the response
+// reports per-id success/failure so the admin can see exactly what landed and what still needs
+// fixing, rather than an opaque all-or-nothing result.
+router.post("/admin/drafts/questions/bulk-approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: "ids must be a non-empty array" });
+  if (ids.length > 50) return res.status(400).json({ error: "Cannot approve more than 50 drafts in one request" });
+
+  const results = [];
+  for (const id of ids) {
+    try {
+      const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id } });
+      if (!draft) { results.push({ id, success: false, error: "Draft not found" }); continue; }
+      const question = await approveDraftQuestion(draft, { req });
+      results.push({ id, success: true, questionId: question.id });
+    } catch (err) {
+      results.push({ id, success: false, error: err.status ? err.message : "Failed to approve" });
+    }
+  }
+  res.json({ approved: results.filter((r) => r.success).length, failed: results.filter((r) => !r.success).length, results });
 });
 
 router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
