@@ -286,7 +286,7 @@ router.post("/leaderboard/reset", authenticate, requireRole("ADMIN"), async (req
 
 // ADMIN/STAFF: aggregate achievement stats, institute-scoped the same way everything else on
 // this platform is (unscoped for platform-level accounts).
-router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
     const students = await prisma.user.findMany({ where, select: { id: true } });

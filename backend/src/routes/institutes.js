@@ -24,7 +24,7 @@ const router = express.Router();
 // management case (InstituteManagement.jsx); an institute-scoped STAFF or ADMIN now only ever
 // gets their own institute, as a single-item array so every existing `institutes.map(...)`
 // dropdown caller keeps working unchanged.
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const institutes = await cached(`institutes:list:${req.requesterInstituteId || "all"}`, 2 * 60 * 1000, () =>
     prisma.institute.findMany({
       where: req.requesterInstituteId ? { id: req.requesterInstituteId } : {},
@@ -36,7 +36,7 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
 });
 
 // ADMIN: create an institute
-router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { name, code, address, contact } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Institute name is required" });
@@ -58,7 +58,7 @@ router.post("/", authenticate, requireRole("ADMIN"), async (req, res) => {
 // ADMIN: edit details, or toggle active/inactive. Institute-scoped Admins may only edit their
 // own institute — same ownership check as GET /:id/profile-completion-stats below; an unscoped
 // Platform Admin (no instituteId) may edit any institute.
-router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     if (req.requesterInstituteId && req.requesterInstituteId !== req.params.id) {
       return res.status(403).json({ error: "You can only manage your own institute's settings" });
@@ -111,7 +111,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 
 // ADMIN: delete an institute — only if no dependent classes or users exist. Same ownership
 // scoping as PATCH /:id above — an institute-scoped Admin cannot delete a different institute.
-router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     if (req.requesterInstituteId && req.requesterInstituteId !== req.params.id) {
       return res.status(403).json({ error: "You can only manage your own institute's settings" });
@@ -151,7 +151,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitu
 // how many of its students are actively learning each one, certificates issued, and coding-
 // assessment performance. Course counts per institute are small, so per-course stats are computed
 // with a plain loop rather than a single aggregate query.
-router.get("/:id/course-analytics", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/course-analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.params.id;
     if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {

@@ -16,7 +16,7 @@ const router = express.Router();
 
 // ADMIN: dashboard summary stats — 16 counts on every admin dashboard load, cached briefly since
 // none of these need to be second-by-second accurate on a summary card.
-router.get("/stats", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const stats = await cached("admin:stats", 60 * 1000, async () => {
       const now = new Date();
@@ -92,7 +92,7 @@ function auditQuestion(q) {
 // PracticeQuestion, InterviewQuestion) — flags which mandatory fields each one is missing, so an
 // admin can find and fix incomplete questions instead of discovering them one at a time when a
 // student hits a confusing gap. Never writes anything.
-router.get("/question-audit", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/question-audit", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const [questions, practiceQuestions, interviewQuestions] = await Promise.all([
       prisma.question.findMany({ where: { questionType: "CODING" }, include: { testCases: true } }),
@@ -146,7 +146,7 @@ function buildEmailLogWhere({ status, type, q, from, to, batchId }) {
 // provider-confirmed status (never inferred). Filterable by status/type/date-range/batch, plus a
 // free-text search across recipient name/email/registration number, page/pageSize paginated
 // (previously a hard 300-row cap with no way to see older entries).
-router.get("/email-logs", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/email-logs", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = buildEmailLogWhere(req.query);
     // Scoped on EmailLog's own instituteId column (not the student relation) so rows with no
@@ -182,7 +182,7 @@ router.get("/email-logs", authenticate, requireRole("ADMIN"), attachRequesterIns
 // the batchId those routes return immediately in their response — since credential emails for a
 // batch now send in the background after that response, the frontend polls this cheap groupBy
 // to show a live sent/failed summary instead of a number that was only ever true at request time.
-router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = { batchId: req.params.batchId };
     if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
@@ -207,7 +207,7 @@ router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMI
 
 // ADMIN: whether the mail transport is actually configured, plus cheap delivery-health
 // aggregates — never echoes MAIL_PASSWORD or any secret, only presence/absence.
-router.get("/email-logs/status", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/email-logs/status", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const connected = !!(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD);
     const [lastSent, failedCount, queuedCount] = await Promise.all([
@@ -231,7 +231,7 @@ router.get("/email-logs/status", authenticate, requireRole("ADMIN"), async (req,
 // ADMIN: sends a real test email to a given address to confirm the configured mailbox actually
 // works, without needing to trigger an unrelated account-creation/reset flow first. Logged like
 // any other email so it's visible (and debuggable) in the list above.
-router.post("/email-logs/test", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/email-logs/test", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const to = String(req.body.to || "").trim();
     const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
@@ -261,7 +261,7 @@ router.post("/email-logs/test", authenticate, requireRole("ADMIN"), attachReques
 // necessarily issues a fresh password for the student — there is no original message body to
 // literally resend — but unlike the old workaround (which created a brand-new EmailLog row every
 // time), this updates the SAME row's retryCount/status and enforces MAX_EMAIL_RETRIES.
-router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const log = await prisma.emailLog.findUnique({ where: { id: req.params.id } });
     if (!log) return res.status(404).json({ error: "Email log entry not found" });
@@ -318,7 +318,7 @@ router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "STAFF")
 // it's labeled as exactly that below, not mislabeled as "CPU Usage"), and per-route error counts
 // for routes that catch and handle their own errors gracefully (only uncaught process-level
 // failures are tracked — see utils/metrics.js).
-router.get("/monitoring", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const os = require("os");
     const mem = process.memoryUsage();
