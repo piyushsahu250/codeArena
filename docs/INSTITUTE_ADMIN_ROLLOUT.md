@@ -71,10 +71,29 @@ Admin account was locked out of its own dashboard for part of a day. Both fixed 
 against the live account (see commit history around 2026-08-25). `institutes.js` deliberately
 still excludes `INSTITUTE_ADMIN` — creating/editing/deleting institutes stays Super-Admin-only.
 
+## Round 4 (`certificates.js`, `exports.js`)
+
+- `certificates.js`: 3 routes (issue manual certificate, revoke, admin list). No hardcoded role
+  checks at all — purely `attachRequesterInstitute`-scoped already, safe to extend as-is.
+- `exports.js`: 2 routes. `GET /:entity` (the actual export builders) take
+  `req.requesterInstituteId` directly as a parameter, never check role — safe as-is. `GET
+  /history/mine` had a **real trap**: `where.instituteId = ...` was gated on a literal `req.user.role
+  === "ADMIN"` check. Extending the route's `requireRole` list without also fixing this would have
+  silently mis-scoped SUPER_ADMIN/INSTITUTE_ADMIN down to "your own exports only" instead of their
+  institute's — technically not a security hole (more restrictive, not less), but wrong behavior
+  that would have shipped unnoticed if the check weren't read carefully first. Fixed by replacing
+  the literal check with `["ADMIN","SUPER_ADMIN","INSTITUTE_ADMIN"].includes(role)`.
+
+This is exactly the class of bug this rollout is watching for — a route can have perfect
+institute-boundary enforcement (`attachRequesterInstitute`) and still contain a *different*,
+narrower hardcoded role check elsewhere in its own logic that a blind `requireRole` extension
+would silently break. Every file in this rollout gets grepped for `role ===` patterns before being
+touched, not just for `attachRequesterInstitute` presence.
+
 ## Not yet audited (NOT TESTED — do not assume covered)
 
-`academicGroups.js`, `certificates.js`, `classes.js`, `exports.js`, `features.js`, `learning.js`,
-`moduleCoding.js`, `resultManagement.js`, `subjects.js`, `talentPools.js`, and the rest.
+`academicGroups.js`, `classes.js`, `features.js`, `learning.js`, `moduleCoding.js`,
+`resultManagement.js`, `subjects.js`, `talentPools.js`, and the rest.
 `INSTITUTE_ADMIN`/`SUPER_ADMIN` do **not** currently work on any of these. Extending coverage is
 ongoing work, file by file, each verified the same way (confirm `attachRequesterInstitute` + real
 institute-scoping already exists — and that no requester-role check is hardcoded to literal

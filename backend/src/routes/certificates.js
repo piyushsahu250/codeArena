@@ -128,7 +128,7 @@ router.get("/verify/:code", async (req, res) => {
 // ADMIN/STAFF: manually issue a MANUAL-type certificate for activities with no underlying data
 // model on this platform (workshops, FDP, bootcamps, placement-prep programs, institute
 // certifications). Staff may only issue to students within their own institute.
-router.post("/manual", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/manual", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { studentId, programName, title } = req.body;
     if (!studentId || !programName) return res.status(400).json({ error: "studentId and programName are required" });
@@ -161,7 +161,7 @@ router.post("/manual", authenticate, requireRole("ADMIN", "STAFF"), attachReques
 // the certificate stays verifiable (showing "revoked") rather than the QR code just breaking.
 // Institute-scoped the same way /manual and /admin are — an institute-scoped ADMIN may only
 // revoke certificates belonging to their own institute's students.
-router.post("/:id/revoke", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/revoke", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.certificate.findUnique({ where: { id: req.params.id }, include: { student: { select: { instituteId: true } } } });
     if (!existing) return res.status(404).json({ error: "Certificate not found" });
@@ -182,7 +182,7 @@ router.post("/:id/revoke", authenticate, requireRole("ADMIN"), attachRequesterIn
 // ADMIN/STAFF: browse all issued certificates (institute-scoped for Staff), for a management
 // view alongside the "Issue Certificate" flow. Paginated the same "cap, not archive" way as this
 // platform's other operational list views.
-router.get("/admin", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {};
     if (req.query.type) where.type = req.query.type;

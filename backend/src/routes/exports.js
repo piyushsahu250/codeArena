@@ -223,7 +223,7 @@ const ENTITIES = {
 // CLERK is scoped further still — Placement Cell access is "download student records" only, not
 // staff/results/reports/certificates/questions, so it's restricted to the "students" entity below
 // rather than opening this whole generic multi-entity route to the role.
-router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, requireFeature("export_center"), async (req, res) => {
+router.get("/:entity", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, requireFeature("export_center"), async (req, res) => {
   const builder = ENTITIES[req.params.entity];
   if (!builder) return res.status(404).json({ error: `Unknown export entity "${req.params.entity}"` });
   if (req.user.role === "CLERK" && req.params.entity !== "students") {
@@ -282,13 +282,18 @@ router.get("/:entity", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), att
 // their institute's other Staff/Clerk exports, same convention as the audit-log viewer; a
 // non-institute-scoped Staff/Clerk only ever sees their own). Paginated like every other list
 // route on this platform — this can grow without bound otherwise.
-router.get("/history/mine", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/history/mine", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 20));
-    const where = req.user.role === "ADMIN" && req.requesterInstituteId
+    // Admin-tier (ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN) sees their institute's other Staff/Clerk
+    // exports too, same as before this was 3 roles — a literal `role === "ADMIN"` check here
+    // would have silently mis-scoped SUPER_ADMIN/INSTITUTE_ADMIN to "own exports only" once the
+    // route gate below started admitting them.
+    const isAdminTier = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(req.user.role);
+    const where = isAdminTier && req.requesterInstituteId
       ? { instituteId: req.requesterInstituteId }
-      : req.user.role === "ADMIN" && !req.requesterInstituteId
+      : isAdminTier && !req.requesterInstituteId
         ? {}
         : { requestedById: req.user.id };
     const [rows, total] = await Promise.all([
