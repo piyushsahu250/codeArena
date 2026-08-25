@@ -13,6 +13,19 @@ const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 30000;
 const MAX_RETRIES = Number(process.env.GEMINI_MAX_RETRIES ?? 2);
 const RETRY_BASE_DELAY_MS = Number(process.env.GEMINI_RETRY_BASE_DELAY_MS) || 800;
+// 3.x-generation Gemini models "think" by default (a hidden reasoning pass that consumes part of
+// maxOutputTokens before any visible text) — confirmed empirically against the live API: with no
+// thinkingConfig at all, a 20-50 token budget came back completely empty (finishReason MAX_TOKENS
+// with zero visible text), because the whole budget was spent on the hidden reasoning trace.
+// "minimal" is the lowest level that still returns real output reliably; every feature on this
+// platform needs a direct answer, not deep reasoning, and free-tier tokens are exactly what this
+// would otherwise waste. Also confirmed empirically: the OLDER thinkingConfig.thinkingBudget field
+// (from the 2.5 generation) is REJECTED outright (400 INVALID_ARGUMENT) on this model — the two
+// fields are not interchangeable. If GEMINI_MODEL is ever changed to a different model family,
+// re-verify this field name/value against that model directly rather than assuming it still
+// applies — set GEMINI_THINKING_LEVEL to override, or blank it out in code if the target model
+// doesn't support thinkingConfig at all.
+const THINKING_LEVEL = process.env.GEMINI_THINKING_LEVEL || "minimal";
 
 function isConfigured() {
   return !!process.env.GEMINI_API_KEY;
@@ -46,6 +59,7 @@ async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, j
           maxOutputTokens: maxTokens,
           temperature,
           ...(jsonMode ? { responseMimeType: "application/json" } : {}),
+          ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}),
         },
       }),
     });
