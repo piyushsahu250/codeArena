@@ -7,6 +7,7 @@ import EditStaffClerkProfileModal from "../components/EditStaffClerkProfileModal
 import ResetStaffPasswordModal from "../components/ResetStaffPasswordModal";
 import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 const STATUS_LABEL = { ACTIVE: "Active", INACTIVE: "Inactive", LOCKED: "Locked", SUSPENDED: "Suspended" };
 const STATUS_COLOR = { ACTIVE: "var(--mint)", INACTIVE: "var(--ink-dim)", LOCKED: "var(--rust)", SUSPENDED: "var(--amber-dark)" };
@@ -35,6 +36,7 @@ export default function StaffClerkProfile() {
   const { id } = useParams();
   const confirmDialog = useConfirm();
   const toast = useToast();
+  const { user: viewer } = useAuth();
 
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState("overview");
@@ -145,13 +147,19 @@ export default function StaffClerkProfile() {
 
             <div className="card" style={{ padding: 16, marginTop: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Account Status</span>
-              <select style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }} value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)}>
-                <option value="">Change status…</option>
-                {(NEXT_STATUS_OPTIONS[user.accountStatus] || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <button className="btn btn-primary" style={{ fontSize: 13 }} disabled={!statusDraft || statusChanging} onClick={changeStatus}>
-                {statusChanging ? "Applying…" : "Apply"}
-              </button>
+              {user.role === "INSTITUTE_ADMIN" && viewer?.role !== "SUPER_ADMIN" ? (
+                <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>Only the Super Admin can change an Institute Admin's account status.</span>
+              ) : (
+                <>
+                  <select style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }} value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)}>
+                    <option value="">Change status…</option>
+                    {(NEXT_STATUS_OPTIONS[user.accountStatus] || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <button className="btn btn-primary" style={{ fontSize: 13 }} disabled={!statusDraft || statusChanging} onClick={changeStatus}>
+                    {statusChanging ? "Applying…" : "Apply"}
+                  </button>
+                </>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 20 }}>

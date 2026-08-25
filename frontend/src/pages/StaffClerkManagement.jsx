@@ -152,8 +152,9 @@ export default function StaffClerkManagement() {
             <div>
               <label style={labelStyle}>Role</label>
               <select style={{ ...inputStyle, width: "100%" }} value={filters.role} onChange={setFilter("role")}>
-                <option value="">All (Staff + Clerk)</option>
+                <option value="">All (Staff + Institute Admin + Clerk)</option>
                 <option value="STAFF">Staff</option>
+                <option value="INSTITUTE_ADMIN">Institute Admin</option>
                 <option value="CLERK">Clerk</option>
               </select>
             </div>

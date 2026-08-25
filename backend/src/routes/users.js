@@ -1191,7 +1191,7 @@ const CLERK_AUDIT_ACTIONS = [
 // CLERK_AUDIT_ACTIONS above for exactly which action types that covers. Same "capped
 // operational log, not a paginated archive" convention as the routes around it, at a slightly
 // higher cap since this view covers every action type.
-router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/audit-log", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { action, studentId, from, to, format } = req.query;
     const where = {
@@ -1236,7 +1236,7 @@ router.get("/audit-log", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), a
 // ADMIN/STAFF/CLERK: distinct action names currently in the log, for the filter dropdown on the
 // audit log page — read from real data rather than hardcoding AUDIT_ACTIONS, since legacy rows
 // (e.g. REATTEMPT_GRANTED, STUDENT_PROFILE_UPDATED) predate that catalogue.
-router.get("/audit-log/actions", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/audit-log/actions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const rows = await prisma.auditLog.findMany({
       where: req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {},

@@ -8,7 +8,14 @@ const cache = require("../utils/cache");
 
 const router = express.Router();
 
-const DIRECTORY_ROLES = ["STAFF", "CLERK"];
+// INSTITUTE_ADMIN added so it appears in the same management directory as Staff/Clerk (per spec:
+// "The UI should clearly show: Staff, Institute Admin, Clerk"), reusing this file's existing
+// activate/deactivate/session-management pipeline rather than building a parallel one. Mutating an
+// INSTITUTE_ADMIN target is additionally gated to SUPER_ADMIN-only actors below (see
+// requireSuperAdminForInstituteAdminTarget) — an Institute Admin viewing this directory can see a
+// peer Institute Admin in their own institute, but cannot deactivate/reactivate one; only Super
+// Admin can, matching "Only Super Admin should be able to create/change... Institute Admin."
+const DIRECTORY_ROLES = ["STAFF", "CLERK", "INSTITUTE_ADMIN"];
 
 const LIST_SELECT_FIELDS = {
   id: true, name: true, email: true, mobile: true, role: true, employeeId: true, designation: true,
@@ -169,6 +176,13 @@ router.patch("/:id/status", ...guard, async (req, res) => {
 
     const existing = await loadTarget(req, res);
     if (!existing) return;
+    // A peer (or the same institute's) INSTITUTE_ADMIN must never be able to deactivate/reactivate
+    // another INSTITUTE_ADMIN — role changes to that tier are Super-Admin-only by design (see
+    // DIRECTORY_ROLES's comment above and users.js's role-assignment whitelist, which already
+    // enforces the equivalent rule for creation).
+    if (existing.role === "INSTITUTE_ADMIN" && req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ error: "Only the Super Admin can change an Institute Admin's account status" });
+    }
 
     const meta = TRANSITION_META[status];
     const label = status === "ACTIVE" && existing.accountStatus === "LOCKED" ? "unlocked" : meta.label;
