@@ -21,22 +21,43 @@ export default function InterviewReport() {
   const [session, setSession] = useState(null);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  // aiInsightsPhase mirrors the backend's persisted GENERATING/READY/FAILED status so a page
+  // refresh mid-generation recovers into the right state instead of starting a second request —
+  // "idle" means nothing has ever been requested yet.
+  const [aiInsightsPhase, setAiInsightsPhase] = useState("idle");
   const [aiInsights, setAiInsights] = useState(null);
   const [aiInsightsError, setAiInsightsError] = useState("");
-  const [loadingInsights, setLoadingInsights] = useState(false);
 
-  async function getAiInsights() {
-    setLoadingInsights(true);
+  // POLL_MS matches how quickly a genuine generation typically finishes; the backend self-heals
+  // a stuck GENERATING row after 60s regardless, so polling never runs forever even if a response
+  // is somehow missed.
+  async function getAiInsights({ retry = false } = {}) {
+    setAiInsightsPhase("GENERATING");
     setAiInsightsError("");
     try {
-      const { data } = await api.get(`/interview/sessions/${id}/ai-insights`);
+      const { data } = await api.get(`/interview/sessions/${id}/ai-insights`, { params: retry ? { retry: 1 } : undefined });
+      if (data.status === "GENERATING") {
+        setTimeout(() => getAiInsights(), 2500);
+        return;
+      }
+      if (data.status === "FAILED") {
+        setAiInsightsPhase("FAILED");
+        setAiInsightsError(data.error || "AI analysis failed");
+        return;
+      }
       setAiInsights(data);
+      setAiInsightsPhase("READY");
     } catch (err) {
+      setAiInsightsPhase("FAILED");
       setAiInsightsError(err.response?.data?.error || "AI analysis failed");
-    } finally {
-      setLoadingInsights(false);
     }
   }
+
+  // Deliberately NOT auto-fetched on mount — this stays an explicit, billed action the student
+  // opts into (unchanged from before), never fired just from viewing the report. What changed:
+  // the backend now persists status, so clicking the button again after a refresh (whether a
+  // generation was still running or had already finished) resumes/returns the real cached result
+  // instead of firing a second Gemini call for the same request.
 
   useEffect(() => {
     api.get(`/interview/sessions/${id}`).then((res) => {
@@ -180,23 +201,66 @@ export default function InterviewReport() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>AI Performance Analysis</div>
             {aiAvailable === false ? (
               <span style={{ fontSize: 11, color: "var(--ink-dim)" }}>Coming soon</span>
+            ) : aiInsightsPhase === "FAILED" ? (
+              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => getAiInsights({ retry: true })}>
+                Retry
+              </button>
             ) : (
-              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={getAiInsights} disabled={loadingInsights || aiAvailable !== true}>
-                {loadingInsights ? "Analyzing…" : aiInsights ? "Regenerate" : "Get AI Analysis"}
+              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => getAiInsights()} disabled={aiInsightsPhase === "GENERATING" || aiAvailable !== true}>
+                {aiInsightsPhase === "GENERATING" ? "AI is analyzing your interview…" : aiInsightsPhase === "READY" ? "Regenerate" : "Get AI Analysis"}
               </button>
             )}
           </div>
           {aiAvailable === false && (
             <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI-powered analysis isn't available on this server yet.</p>
           )}
-          {aiInsightsError && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 8 }}>{aiInsightsError}</p>}
-          {aiInsights && (
+          {aiInsightsPhase === "GENERATING" && (
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>This usually takes a few seconds — checking for a result…</p>
+          )}
+          {aiInsightsPhase === "FAILED" && (
+            <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 8 }}>{aiInsightsError || "AI generation failed. Please try again."}</p>
+          )}
+          {aiInsightsPhase === "READY" && aiInsights && (
             <div style={{ marginTop: 10, fontSize: 13 }}>
-              <p>{aiInsights.narrative}</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginBottom: 12 }}>
+                {[
+                  ["Overall", aiInsights.overallScore], ["Communication", aiInsights.communicationScore],
+                  ["Technical", aiInsights.technicalScore], ["Confidence", aiInsights.confidenceScore],
+                  ["Relevance", aiInsights.relevanceScore],
+                ].filter(([, v]) => typeof v === "number").map(([label, value]) => (
+                  <div key={label} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 8, background: "var(--surface-2, rgba(0,0,0,0.04))" }}>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{value}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              {aiInsights.strengths?.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8 }}>Strengths</div>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{aiInsights.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </>
+              )}
+              {aiInsights.weaknesses?.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8 }}>Weaknesses</div>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{aiInsights.weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
+                </>
+              )}
               {aiInsights.recommendations?.length > 0 && (
-                <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-                  {aiInsights.recommendations.map((r, i) => <li key={i}>{r}</li>)}
-                </ul>
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8 }}>Recommendations</div>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{aiInsights.recommendations.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                </>
+              )}
+              {aiInsights.questionFeedback?.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8 }}>Per-question feedback</div>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                    {aiInsights.questionFeedback.map((qf, i) => (
+                      <li key={i}><strong>{qf.question}:</strong> {qf.feedback}</li>
+                    ))}
+                  </ul>
+                </>
               )}
             </div>
           )}

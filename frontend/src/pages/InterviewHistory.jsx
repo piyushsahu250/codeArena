@@ -7,11 +7,19 @@ import "./interviewPrep.css";
 
 export default function InterviewHistory() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState("");
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    api.get("/interview/sessions", { params: { page } }).then((res) => setData(res.data));
-  }, [page]);
+  function load() {
+    setError("");
+    // Previously had no .catch() at all — a failed request left `data` null forever, so the page
+    // showed "Loading…" indefinitely with no error and no way to recover short of a full reload.
+    api.get("/interview/sessions", { params: { page } })
+      .then((res) => setData(res.data))
+      .catch((err) => setError(err.response?.data?.error || "Failed to load interview history."));
+  }
+
+  useEffect(load, [page]);
 
   return (
     <div className="interview-prep">
@@ -22,7 +30,13 @@ export default function InterviewHistory() {
           <Link to="/interview" className="btn btn-ghost">← AI Mock Interview</Link>
         </div>
 
-        {!data && <p className="mono" style={{ marginTop: 24 }}>Loading…</p>}
+        {!data && !error && <p className="mono" style={{ marginTop: 24 }}>Loading…</p>}
+        {error && (
+          <div className="ip-glass" style={{ padding: 24, marginTop: 24, textAlign: "center" }}>
+            <p style={{ color: "var(--rust)" }}>{error}</p>
+            <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={load}>Retry</button>
+          </div>
+        )}
         {data && data.sessions.length === 0 && <div className="ip-glass" style={{ padding: 24, marginTop: 24, textAlign: "center" }}>No completed interviews yet.</div>}
 
         <div style={{ display: "grid", gap: 10, marginTop: 20 }}>
