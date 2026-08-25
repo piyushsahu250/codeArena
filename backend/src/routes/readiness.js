@@ -105,7 +105,7 @@ function sanitizeQuestionForStudent(q) {
 // STAFF visibility (scopeWhere below) is creator-based, not institute-wide: subjects they
 // created, legacy rows with no recorded creator, or any subject assigned to one of their own
 // StaffClassAssignment academic groups. ADMIN sees every subject in the institute.
-router.get("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/subjects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { batch, departmentId, section } = req.query;
     const hasDisplayFilter = !!(batch || departmentId || section);
@@ -134,7 +134,7 @@ router.get("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attac
   }
 });
 
-router.get("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/subjects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({
       where: { id: req.params.id },
@@ -182,7 +182,7 @@ function validateSubjectPayload(body) {
 
 const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive", "certificateEnabled", "certificateMinLevel", "maxAttempts"];
 
-router.post("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/subjects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const validation = validateSubjectPayload(req.body);
     if (validation && !validation.warning) return res.status(400).json({ error: validation });
@@ -215,7 +215,7 @@ router.post("/admin/subjects", authenticate, requireRole("ADMIN", "STAFF"), atta
   }
 });
 
-router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Subject not found" });
@@ -254,7 +254,7 @@ router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"),
   }
 });
 
-router.delete("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/subjects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Subject not found" });
@@ -282,7 +282,7 @@ router.delete("/admin/subjects/:id", authenticate, requireRole("ADMIN", "STAFF")
 // this assessment" gate that GET /subjects and POST /assessments enforce (see
 // utils/readinessEligibility.js). Mirrors courses.js's POST/DELETE /courses/:id/assignments
 // pattern exactly (createMany+skipDuplicates / deleteMany, not a full-replace).
-router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
@@ -312,7 +312,7 @@ router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN"
   }
 });
 
-router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
@@ -655,7 +655,7 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
 // spec's "validate before publishing" gate made visible rather than a hard block: a subject can
 // still be saved/activated with gaps (content grows incrementally), but the admin sees exactly
 // which BTL levels/modes have zero coverage before students hit them at assessment time.
-router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
@@ -702,7 +702,7 @@ router.get("/admin/subjects/:id/coverage", authenticate, requireRole("ADMIN", "S
 // parallel question system. Managed only by the subject's owner or an Admin, same isSubjectOwner
 // gate as PATCH/DELETE /admin/subjects/:id above.
 
-router.get("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
@@ -728,7 +728,7 @@ router.get("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "STAFF
 // against questionVisibilityWhere — a staff member can only pool a question they own, that's
 // legacy/shared, or that's in a folder explicitly shared with them; never another staff member's
 // untouched private question, even if they somehow know its id.
-router.post("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
@@ -762,7 +762,7 @@ router.post("/admin/subjects/:id/pool", authenticate, requireRole("ADMIN", "STAF
   }
 });
 
-router.delete("/admin/subjects/:id/pool/:questionId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/subjects/:id/pool/:questionId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
     if (!subject) return res.status(404).json({ error: "Subject not found" });
@@ -923,7 +923,7 @@ async function computeReadinessAnalyticsComparison(req, academicGroupIds) {
 // generic breakdown helper, wrapped in cached() with an institute+querystring cache key.
 // CLERK is deliberately excluded — this is academic/cognitive-performance data, outside the
 // placement/document workflow scope Clerk is otherwise limited to.
-router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const compareGroupIds = req.query.compareGroupIds ? String(req.query.compareGroupIds).split(",").map((s) => s.trim()).filter(Boolean) : [];
     const instituteKey = resolvedInstituteId(req) || "all";
@@ -942,7 +942,7 @@ router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), atta
 // an at-risk-students sheet, both sourced from computeReadinessAnalytics() so the export can
 // never disagree with what's on screen. Same XLSX.utils/aoa_to_sheet convention as every other
 // export on this platform (see routes/questions.js's /export).
-router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const analytics = await computeReadinessAnalytics(req);
 
@@ -1012,7 +1012,7 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "STAFF"
 // team needs: how many students are ready vs. need more preparation, and who they are — never the
 // per-topic/per-BTL breakdown. Same requireRole("ADMIN","STAFF","CLERK") convention already
 // established by this platform's other placement-facing analytics (placementOffers.js).
-router.get("/placement/overview", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/placement/overview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const analytics = await cached(
       `readinessPlacementOverview:${resolvedInstituteId(req) || "all"}:${JSON.stringify(req.query)}`,

@@ -48,16 +48,38 @@ before bulk-editing each file, not assumed.
   (`ADMIN`+`STAFF`) and 10 write routes (`ADMIN`-only, staff deliberately excluded) — now also
   accept `SUPER_ADMIN`, `INSTITUTE_ADMIN`.
 
+## Round 3 (`attendance.js`, `readiness.js`) — and an urgent unplanned round
+
+- `attendance.js`: all 23 `requireRole("ADMIN"...)` call sites (12 `ADMIN`-only management
+  routes — departments/rules/staff-assignments — plus 11 `ADMIN`+`STAFF` shared routes). Checked
+  first: every one already pairs with `attachRequesterInstitute`, and the file's own
+  requester-role checks are all `role === "STAFF"` (positive, to apply an *extra* restriction on
+  top of the institute boundary), never a hardcoded `=== "ADMIN"` — so any non-STAFF institute-
+  scoped account, including the two new roles, already falls through to the correct unrestricted
+  path.
+- `readiness.js`: all 14 call sites (13 `ADMIN`+`STAFF`, 1 `ADMIN`+`STAFF`+`CLERK` for
+  `/placement/overview`). Same check performed first — `staffAcademicGroupIds()`/
+  `isSubjectOwner()` both key off `role !== "STAFF"`, same safe convention as
+  `questionVisibility.js`.
+
+**Unplanned but done same-day:** a real production incident — `sahupiyush250@gmail.com` got
+migrated to `SUPER_ADMIN` on rollout day but the *frontend* didn't know that role existed yet
+(login redirect map, route guard, sidebar menu), and separately `admin.js`/`institutes.js`/
+`gamification.js`'s `/admin/stats`, `/institutes`, `/gamification/admin/stats` — everything
+`AdminDashboard.jsx` loads on mount — hadn't been extended yet either. Net effect: the real Super
+Admin account was locked out of its own dashboard for part of a day. Both fixed and verified
+against the live account (see commit history around 2026-08-25). `institutes.js` deliberately
+still excludes `INSTITUTE_ADMIN` — creating/editing/deleting institutes stays Super-Admin-only.
+
 ## Not yet audited (NOT TESTED — do not assume covered)
 
-Every other route file with `requireRole("ADMIN"...)` calls: `admin.js`, `academicGroups.js`,
-`attendance.js`, `certificates.js`, `classes.js`, `exports.js`, `features.js`,
-`institutes.js`, `learning.js`, `moduleCoding.js`, `readiness.js`,
-`resultManagement.js`, `subjects.js`, `talentPools.js`, and the rest. `INSTITUTE_ADMIN`
-and `SUPER_ADMIN` do **not** currently work on any of these. Extending coverage to the rest is
+`academicGroups.js`, `certificates.js`, `classes.js`, `exports.js`, `features.js`, `learning.js`,
+`moduleCoding.js`, `resultManagement.js`, `subjects.js`, `talentPools.js`, and the rest.
+`INSTITUTE_ADMIN`/`SUPER_ADMIN` do **not** currently work on any of these. Extending coverage is
 ongoing work, file by file, each verified the same way (confirm `attachRequesterInstitute` + real
-institute-scoping already exists before adding the role; if it doesn't, that route needs the
-scoping added first, which is separate work from adding the role name).
+institute-scoping already exists — and that no requester-role check is hardcoded to literal
+`"ADMIN"` — before adding the role; if either isn't true yet, that route needs fixing first,
+separate from adding the role name).
 
 ## Explicitly not built yet
 

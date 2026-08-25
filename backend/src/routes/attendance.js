@@ -210,7 +210,7 @@ async function syncTalentPoolPlans(assignment) {
 
 // ===================== Admin: Department CRUD =====================
 
-router.get("/admin/departments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/departments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const where = {};
   if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
   else if (req.query.instituteId) where.instituteId = req.query.instituteId;
@@ -222,7 +222,7 @@ router.get("/admin/departments", authenticate, requireRole("ADMIN"), attachReque
   res.json(departments);
 });
 
-router.post("/admin/departments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/departments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Department name is required" });
@@ -243,7 +243,7 @@ router.post("/admin/departments", authenticate, requireRole("ADMIN"), attachRequ
   }
 });
 
-router.patch("/admin/departments/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/departments/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.department.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Department not found" });
@@ -267,7 +267,7 @@ router.patch("/admin/departments/:id", authenticate, requireRole("ADMIN"), attac
   }
 });
 
-router.delete("/admin/departments/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/departments/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.department.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Department not found" });
@@ -300,7 +300,7 @@ router.delete("/admin/departments/:id", authenticate, requireRole("ADMIN"), atta
 
 // ===================== Admin: Attendance Rules (display-only minimum-percentage threshold) =====================
 
-router.get("/admin/rules", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/rules", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.requesterInstituteId || req.query.instituteId;
     if (!instituteId) return res.status(400).json({ error: "An institute is required" });
@@ -313,7 +313,7 @@ router.get("/admin/rules", authenticate, requireRole("ADMIN"), attachRequesterIn
   }
 });
 
-router.patch("/admin/rules", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/rules", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.requesterInstituteId || req.body.instituteId;
     if (!instituteId) return res.status(400).json({ error: "An institute is required" });
@@ -336,7 +336,7 @@ router.patch("/admin/rules", authenticate, requireRole("ADMIN"), attachRequester
 
 // ===================== Admin: Staff ↔ Division assignments (one staff per division) =====================
 
-router.get("/admin/staff", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/staff", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const where = { role: "STAFF", isActive: true };
   if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
   else if (req.query.instituteId) where.instituteId = req.query.instituteId;
@@ -348,7 +348,7 @@ router.get("/admin/staff", authenticate, requireRole("ADMIN"), attachRequesterIn
 // Institute -> Batch -> Department/Section picker across the platform. Academic groups are
 // auto-derived from registered students (Bulk Upload/Registration, or the one-time migration) —
 // there is no manual "create a batch" admin step.
-router.get("/admin/batches", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/batches", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const where = {};
   if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
   else if (req.query.instituteId) where.instituteId = req.query.instituteId;
@@ -360,7 +360,7 @@ router.get("/admin/batches", authenticate, requireRole("ADMIN"), attachRequester
 // Department+Section, auto-derived from registered students) for the given institute+batch, each
 // with its department, section, and every current staff assignment (one per subject) joined in a
 // single call.
-router.get("/admin/group-table", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/group-table", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.requesterInstituteId || req.query.instituteId;
     if (!instituteId) return res.status(400).json({ error: "An institute is required" });
@@ -397,7 +397,7 @@ router.get("/admin/group-table", authenticate, requireRole("ADMIN"), attachReque
 // This find-then-update-or-create logic (keyed by academicGroupId + subject, case-insensitive) is
 // backed by a real DB unique constraint (@@unique([academicGroupId, subject])) as of the subject
 // field's introduction — see schema.prisma's StaffClassAssignment comment.
-router.post("/admin/staff-assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/staff-assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { staffId, academicGroupId } = req.body;
     const semester = String(req.body.semester || "").trim();
@@ -442,7 +442,7 @@ router.post("/admin/staff-assignments", authenticate, requireRole("ADMIN"), atta
   }
 });
 
-router.patch("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.staffClassAssignment.findUnique({ where: { id: req.params.id }, include: { class: true, academicGroup: true } });
     if (!existing) return res.status(404).json({ error: "Assignment not found" });
@@ -475,7 +475,7 @@ router.patch("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN"),
   }
 });
 
-router.delete("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const assignment = await prisma.staffClassAssignment.findUnique({
       where: { id: req.params.id },
@@ -508,7 +508,7 @@ router.delete("/admin/staff-assignments/:id", authenticate, requireRole("ADMIN")
 
 // STAFF: only their own assignments (powers the "Attendance" landing page cards). ADMIN: every
 // assignment in their institute scope (so the same card-grid page works for both roles).
-router.get("/my-assignments", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/my-assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const include = {
       staff: { select: { id: true, name: true } },
@@ -541,7 +541,7 @@ router.get("/my-assignments", authenticate, requireRole("ADMIN", "STAFF"), attac
   }
 });
 
-router.get("/assignments/:assignmentId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/assignments/:assignmentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
   if (!assignment) return;
   res.json(assignment);
@@ -549,7 +549,7 @@ router.get("/assignments/:assignmentId", authenticate, requireRole("ADMIN", "STA
 
 // ===================== Lecture Plans =====================
 
-router.get("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -569,7 +569,7 @@ router.get("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN"
   }
 });
 
-router.post("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -598,7 +598,7 @@ router.post("/assignments/:assignmentId/plans", authenticate, requireRole("ADMIN
   }
 });
 
-router.get("/assignments/:assignmentId/plans/template", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/assignments/:assignmentId/plans/template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
   if (!assignment) return;
   const rows = [
@@ -612,7 +612,7 @@ router.get("/assignments/:assignmentId/plans/template", authenticate, requireRol
   sendExport(res, { rows, filenameBase: "lecture-plan-template", format: "xlsx" });
 });
 
-router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -690,7 +690,7 @@ router.post("/assignments/:assignmentId/plans/bulk-upload", authenticate, requir
   }
 });
 
-router.patch("/assignments/:assignmentId/plans/:planId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/assignments/:assignmentId/plans/:planId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -726,7 +726,7 @@ router.patch("/assignments/:assignmentId/plans/:planId", authenticate, requireRo
   }
 });
 
-router.delete("/assignments/:assignmentId/plans/:planId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/assignments/:assignmentId/plans/:planId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -742,7 +742,7 @@ router.delete("/assignments/:assignmentId/plans/:planId", authenticate, requireR
 
 // ===================== Execute / edit attendance for a plan =====================
 
-router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -797,7 +797,7 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
   }
 });
 
-router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("attendance"), async (req, res) => {
+router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("attendance"), async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
     if (!assignment) return;
@@ -881,7 +881,7 @@ router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate,
 
 // ===================== Reports (+ CSV/XLSX export) =====================
 
-router.get("/reports", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/reports", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       date, dateFrom, dateTo, academicYear, departmentId, section, academicGroupId,
