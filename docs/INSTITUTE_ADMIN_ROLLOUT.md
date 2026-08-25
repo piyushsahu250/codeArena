@@ -141,12 +141,47 @@ What's still NOT built, tracked from round 1 and still true: a dedicated Institu
 dashboard/sidebar/frontend route guards, and the dedicated Super-Admin "Manage Institute Admins"
 UI (the backend supports it via the existing `users.js` endpoints, no frontend screen yet).
 
+## Institute Admin dashboard (built, deployed, production-verified — 2026-08-25)
+
+- `Sidebar.jsx`: `MENU.INSTITUTE_ADMIN` is a real, separately-defined subset of `MENU.ADMIN`
+  (excludes Institutes/Monitoring/Backups/Question Audit — those stay Super-Admin-only per the
+  exceptions above). Every route it links to already carries an `ADMIN`-inclusive guard in
+  `App.jsx`, which the earlier `Protected`-component fix already satisfies for `INSTITUTE_ADMIN` —
+  no additional route-guard changes needed.
+- `AdminDashboard.jsx` is now role-aware: header text, the creatable-role list on the
+  create-user form (`INSTITUTE_ADMIN` can only grant `STUDENT`/`STAFF`/`CLERK`, mirroring
+  `users.js`'s existing whitelist exactly), the "Top Students" label, and the "Create Institute"
+  link (hidden entirely for `INSTITUTE_ADMIN`) all branch on `user.role`.
+- **Real bug found and fixed while wiring this up**: `admin.js`'s `GET /stats` had zero
+  institute-scoping on any of its 16 count queries — every caller got platform-wide numbers
+  unconditionally — AND used one fixed cache key (`"admin:stats"`) shared across every institute,
+  so two institutes' admins could briefly see each other's cached counts. Harmless while only
+  platform-level accounts could reach the route; would have been a real cross-institute data leak
+  the moment `INSTITUTE_ADMIN` got a dashboard. Fixed: `attachRequesterInstitute` added, every
+  institute-owned model's count now does `instituteId ? { instituteId } : {}` (relation-scoped for
+  `Certificate`/`InterviewCertificate` via `{ student: { instituteId } }`, verified against the
+  schema first), cache key is now `` `admin:stats:${instituteId || "all"}` ``. `Course` and
+  `PracticeQuestion` counts stay unscoped — genuinely global content, no `instituteId` column.
+- **Production-verified via real HTTP request**, not just code review: a genuine temp
+  `INSTITUTE_ADMIN` account was created scoped to "Testing Institute", given a real session via
+  `createSession()` (same mechanism a live login uses), and used to call `GET /api/admin/stats`
+  against the live container. Result: `totalStudents: 3`, `totalInstitutes: 1` — matching Testing
+  Institute's actual counts, not the platform total (1785 students platform-wide at the time of the
+  test). Confirms the fix, not just the code path. Temp user and its exact-`jti` session row were
+  deleted immediately after (script: `backend/scripts/verifyAdminStatsScoping.js`).
+  The `SUPER_ADMIN` (platform-wide) path was **not** re-verified with a live session for the real
+  account — that account's sessions were already accidentally wiped twice earlier in this rollout
+  (see Errors and fixes), so a third live-session test on it was deliberately avoided. Verified by
+  code review instead: `requesterInstituteId` is `null` for that account, and the fix's
+  `instituteId ? {...} : {}` branches fall through to the same unscoped queries every caller
+  received before this change — a narrower, lower-confidence claim than the production HTTP test
+  above, noted here explicitly rather than glossed over.
+
 ## Explicitly not built yet
 
 - Dedicated Super-Admin "Manage Institute Admins" UI (spec section 9) — the backend now supports
   creating/listing/editing/resetting/deactivating Institute Admin accounts via the existing
   `users.js` endpoints above (with `role=INSTITUTE_ADMIN`), but no dedicated frontend screen for it.
-- Institute Admin dashboard/sidebar (sections 7, 33, 34).
 - Frontend route guards for `/super-admin/*`, `/institute-admin/*` (section 23) — backend
   authorization is authoritative regardless, but the frontend doesn't yet redirect by role.
 - Super Admin impersonation (section 25 — explicitly marked optional in the spec).
