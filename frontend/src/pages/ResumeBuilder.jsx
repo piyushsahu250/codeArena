@@ -532,10 +532,10 @@ export default function ResumeBuilder() {
               )}
             </div>
 
-            {/* AI Review — a real Claude call reviewing the whole resume at once; augments the ATS
+            {/* AI Review — a real Gemini call reviewing the whole resume at once; augments the ATS
                 score above rather than replacing it. The per-field "Improve with AI" buttons
-                elsewhere on this page also call Claude now (falling back to a deterministic
-                rule-based rewrite only when the server has no ANTHROPIC_API_KEY configured). */}
+                elsewhere on this page also call Gemini now (falling back to a deterministic
+                rule-based rewrite only when the server has no GEMINI_API_KEY configured). */}
             <div className="card" style={{ padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>AI Resume Review</div>

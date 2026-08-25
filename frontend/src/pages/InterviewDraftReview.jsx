@@ -112,7 +112,7 @@ function QuestionDraftsTab() {
           {generating ? "Generating…" : "🤖 Generate drafts"}
         </button>
         {aiAvailable === false && (
-          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI generation isn't available on this server yet — set ANTHROPIC_API_KEY to enable it.</p>
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI generation isn't available on this server yet — set GEMINI_API_KEY to enable it.</p>
         )}
       </div>
 
@@ -175,24 +175,32 @@ function DraftQuestionCard({ draft, onChanged }) {
 
   async function reject() {
     const reason = prompt("Reason for rejecting (optional):") || "";
+    // Previously fired with no loading state at all — a slow network made this look completely
+    // unresponsive, and a fast double-click could fire two reject requests for the same draft.
+    setSaving(true);
     try {
       await api.post(`/interview/admin/drafts/questions/${draft.id}/reject`, { reason });
       toast.success("Rejected.");
       onChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to reject draft");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function remove() {
     const ok = await confirmDialog({ title: "Delete this draft?", message: "This permanently removes the draft record.", confirmLabel: "Delete", danger: true });
     if (!ok) return;
+    setSaving(true);
     try {
       await api.delete(`/interview/admin/drafts/questions/${draft.id}`);
       toast.success("Deleted.");
       onChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to delete draft");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -264,12 +272,12 @@ function DraftQuestionCard({ draft, onChanged }) {
             <option value="">No experience level</option>
             {EXPERIENCE_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
-          <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={saving} onClick={approve}>✓ Approve</button>
-          <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={reject}>✕ Reject</button>
+          <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={saving} onClick={approve}>{saving ? "Working…" : "✓ Approve"}</button>
+          <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} disabled={saving} onClick={reject}>{saving ? "Working…" : "✕ Reject"}</button>
         </div>
       )}
       {draft.status !== "APPROVED" && (
-        <button style={{ marginTop: 10, background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={remove}>Delete draft</button>
+        <button style={{ marginTop: 10, background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} disabled={saving} onClick={remove}>{saving ? "Working…" : "Delete draft"}</button>
       )}
       {draft.status === "REJECTED" && draft.rejectionReason && (
         <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>Reason: {draft.rejectionReason}</p>
@@ -326,7 +334,7 @@ function PatternDraftsTab() {
         </div>
         <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={generating || aiAvailable !== true} onClick={generate}>{generating ? "Generating…" : "🤖 Generate"}</button>
         {aiAvailable === false && (
-          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI generation isn't available on this server yet — set ANTHROPIC_API_KEY to enable it.</p>
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI generation isn't available on this server yet — set GEMINI_API_KEY to enable it.</p>
         )}
       </div>
 
@@ -368,35 +376,48 @@ function PatternNoteCard({ note, onChanged }) {
     }
   }
 
+  // approve/reject/remove previously had NO loading state at all — no disabled attribute, no
+  // label change — so a slow network made a click look completely unresponsive, and a fast
+  // double-click could fire two requests for the same note. All three now share `saving` with
+  // save() above, since only one action per card should ever be in flight at once.
   async function approve() {
+    setSaving(true);
     try {
       await api.post(`/interview/admin/drafts/patterns/${note.id}/approve`);
       toast.success("Approved.");
       onChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to approve");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function reject() {
+    setSaving(true);
     try {
       await api.post(`/interview/admin/drafts/patterns/${note.id}/reject`);
       toast.success("Rejected.");
       onChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to reject");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function remove() {
     const ok = await confirmDialog({ title: "Delete this pattern note?", confirmLabel: "Delete", danger: true });
     if (!ok) return;
+    setSaving(true);
     try {
       await api.delete(`/interview/admin/drafts/patterns/${note.id}`);
       toast.success("Deleted.");
       onChanged();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to delete");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -407,12 +428,12 @@ function PatternNoteCard({ note, onChanged }) {
       <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
         {note.status === "PENDING" && (
           <>
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} disabled={saving} onClick={save}>Save changes</button>
-            <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={approve}>✓ Approve</button>
-            <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={reject}>✕ Reject</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} disabled={saving} onClick={save}>{saving ? "Working…" : "Save changes"}</button>
+            <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={saving} onClick={approve}>{saving ? "Working…" : "✓ Approve"}</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} disabled={saving} onClick={reject}>{saving ? "Working…" : "✕ Reject"}</button>
           </>
         )}
-        {note.status !== "APPROVED" && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={remove}>Delete</button>}
+        {note.status !== "APPROVED" && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} disabled={saving} onClick={remove}>{saving ? "Working…" : "Delete"}</button>}
       </div>
     </div>
   );
