@@ -517,7 +517,7 @@ router.post("/attempts/:attemptId/finalize", authenticate, requireRole("STUDENT"
 // but every mutating route (create/edit/delete/bulk-import) below is ADMIN-only.
 
 // ADMIN/STAFF: this module's coding-test config (or null) + its full question pool.
-router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { moduleId: req.params.moduleId },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
@@ -527,7 +527,7 @@ router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "STAFF"
 
 // Generic single-test lookup by its own id — used by the Level detail UI, since a chapter-scoped
 // Level has no moduleId to look it up by (unlike the legacy route above).
-router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { id: req.params.id },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
@@ -539,7 +539,7 @@ router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "STAFF"), asyn
 // ADMIN/STAFF: flat list of every coding assessment (title + course/module/chapter label only —
 // no config, no questions) so Staff can search for one to reset attempts on without any course-
 // structure browsing access. This is the only "list assessments" surface Staff gets.
-router.get("/admin/tests", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const tests = await prisma.moduleCodingTest.findMany({
     select: {
       id: true, title: true, maxAttempts: true, isActive: true,
@@ -556,7 +556,7 @@ router.get("/admin/tests", authenticate, requireRole("ADMIN", "STAFF"), async (r
   })));
 });
 
-router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, instructions, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
     const test = await prisma.moduleCodingTest.create({
@@ -592,7 +592,7 @@ router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN"), async
 // which is capped at one by ModuleCodingTest.moduleId's @unique constraint). Every downstream
 // route (question CRUD, bulk-import, attempts, export) already operates purely on test.id, so
 // none of them need any change to support this.
-router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const levels = await prisma.moduleCodingTest.findMany({
     where: { chapterId: req.params.chapterId },
     orderBy: { order: "asc" },
@@ -601,7 +601,7 @@ router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"
   res.json(levels);
 });
 
-router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, instructions, order, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
     const chapter = await prisma.chapter.findUnique({ where: { id: req.params.chapterId } });
@@ -633,7 +633,7 @@ router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN
   }
 });
 
-router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const f = req.body;
     const data = {};
@@ -660,7 +660,7 @@ router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req,
   }
 });
 
-router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     await prisma.moduleCodingTest.delete({ where: { id: req.params.id } });
     res.json({ success: true });
@@ -670,7 +670,7 @@ router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN"), async (req
   }
 });
 
-router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const {
       title, description, difficulty, timeLimitMs, starterCode, starterCodeByLanguage, testCases,
@@ -726,7 +726,7 @@ router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN"), as
 // belong to at most one Module Coding Test's pool at a time), so moving the original instead of
 // cloning would silently pull it out of the shared Question Bank — and out of any Formal Test it's
 // already attached to via TestQuestion.
-router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
     if (!test) return res.status(404).json({ error: "Coding assessment not found" });
@@ -826,7 +826,7 @@ function parseModuleCodingHiddenTestCases(raw) {
 }
 
 // ADMIN/STAFF: download a sample .xlsx template for bulk-importing this test's questions.
-router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
+router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), (req, res) => {
   const sampleRows = [
     [
       "Sum of Two Integers", "Return the sum of two integers.", "Easy",
@@ -856,7 +856,7 @@ router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole
 // bulk-import (questions.js), scoped straight to this test instead of a Question Bank folder.
 // STDIO-only, matching the single "+ Add question" form this mirrors (which doesn't offer
 // FUNCTION-mode evaluationType/functionSignature fields either).
-router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN"), upload.single("file"), async (req, res) => {
+router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), upload.single("file"), async (req, res) => {
   try {
     const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
     if (!test) return res.status(404).json({ error: "Module coding test not found" });
@@ -977,7 +977,7 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
   }
 });
 
-router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const {
       title, description, difficulty, timeLimitMs, starterCode, starterCodeByLanguage, testCases,
@@ -1038,7 +1038,7 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (
 // questions that attempt was assigned would be wiped, and any ModuleCodingSubmission rows (code,
 // score, verdict) would be left pointing at a questionId that no longer exists — breaking that
 // student's attempt-review screen with no admin-visible error at delete time.
-router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const [hasSubmissions, hasAttemptSnapshots] = await Promise.all([
       prisma.moduleCodingSubmission.findFirst({ where: { questionId: req.params.id }, select: { id: true } }),
@@ -1062,7 +1062,7 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN"), async 
 // A Staff member tied to a specific institute (req.requesterInstituteId set) only ever sees
 // students from their own institute; an unscoped Platform Admin sees everyone — same convention
 // attachRequesterInstitute already enforces on 40+ other routes across the platform.
-router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const attempts = await prisma.moduleCodingAttempt.findMany({
     where: {
       moduleCodingTestId: req.params.id,
@@ -1076,7 +1076,7 @@ router.get("/admin/tests/:id/attempts", authenticate, requireRole("ADMIN", "STAF
 
 // ADMIN/STAFF: full detail on one attempt — submitted code per question, execution results,
 // and the proctoring violation log (event-level, not just a count).
-router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const attempt = await prisma.moduleCodingAttempt.findUnique({
     where: { id: req.params.attemptId },
     include: {
@@ -1100,7 +1100,7 @@ router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "STA
 // - Custom: restores a specific number of remaining attempts by deleting only the oldest
 //   finalized attempts needed to reach that count — no schema change, and recent attempts stay
 //   visible for audit/history. Both modes are audit-logged with before/after remaining counts.
-router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
     if (!test) return res.status(404).json({ error: "Assessment not found" });
@@ -1156,7 +1156,7 @@ router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, req
 // router is view + reset attempts, export is explicitly excluded from that grant.
 // attachRequesterInstitute still applies here: an institute-scoped ADMIN (as opposed to the
 // unscoped Platform Admin) must still only export their own institute's data.
-router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     // Capped like every sibling export route (interview.js's session export, exports.js's
     // MAX_ROWS, users.js's audit-log CSV) — this route previously had no take at all, so a test

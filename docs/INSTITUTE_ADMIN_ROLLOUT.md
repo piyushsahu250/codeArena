@@ -90,15 +90,35 @@ narrower hardcoded role check elsewhere in its own logic that a blind `requireRo
 would silently break. Every file in this rollout gets grepped for `role ===` patterns before being
 touched, not just for `attachRequesterInstitute` presence.
 
+## Round 5 (`learning.js`, `moduleCoding.js`) — a genuinely different case
+
+Unlike every prior round, most of these routes do NOT get `INSTITUTE_ADMIN`, on purpose.
+`Course` has no `instituteId` column at all — course/module/chapter/lesson content on this
+platform is genuinely global/shared, not institute-owned (confirmed by reading the schema before
+touching anything). Editing a Lesson isn't an institute-scoped operation — it changes what every
+institute using that course sees. So:
+
+- **Content authoring** (create/edit/delete courses, modules, chapters, lessons, lesson versions,
+  practice questions; and moduleCoding.js's equivalent test/question bank authoring) → `SUPER_ADMIN`
+  only, deliberately excluding `INSTITUTE_ADMIN`. 31 routes total (21 in `learning.js`, 10 in
+  `moduleCoding.js`).
+- **Content browsing** (read-only GETs already open to `STAFF`) and **assignment/attempt/export
+  routes** (which touch real per-institute student data via `attachRequesterInstitute`, correctly
+  scoped already — `assertAssignmentScope()` checked directly before extending) → both new roles.
+  16 routes total (8 in each file).
+
+This is the intended behavior per spec section 17 ("do not accidentally make global courses
+institute-specific") — not a gap, a deliberate boundary.
+
 ## Not yet audited (NOT TESTED — do not assume covered)
 
-`academicGroups.js`, `classes.js`, `features.js`, `learning.js`, `moduleCoding.js`,
-`resultManagement.js`, `subjects.js`, `talentPools.js`, and the rest.
-`INSTITUTE_ADMIN`/`SUPER_ADMIN` do **not** currently work on any of these. Extending coverage is
-ongoing work, file by file, each verified the same way (confirm `attachRequesterInstitute` + real
-institute-scoping already exists — and that no requester-role check is hardcoded to literal
-`"ADMIN"` — before adding the role; if either isn't true yet, that route needs fixing first,
-separate from adding the role name).
+`academicGroups.js`, `classes.js`, `features.js`, `resultManagement.js`, `subjects.js`,
+`talentPools.js`, and the rest. `INSTITUTE_ADMIN`/`SUPER_ADMIN` do **not** currently work on any of
+these. Extending coverage is ongoing work, file by file, each verified the same way (confirm
+`attachRequesterInstitute` + real institute-scoping already exists — and that no requester-role
+check is hardcoded to literal `"ADMIN"` — before adding the role; if either isn't true yet, that
+route needs fixing first, separate from adding the role name; and check whether the underlying
+data model is even institute-owned at all, per this round's lesson).
 
 ## Explicitly not built yet
 

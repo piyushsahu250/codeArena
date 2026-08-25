@@ -910,7 +910,7 @@ async function setCoursePrerequisites(courseId, prerequisiteCourseIds) {
   ]);
 }
 
-router.post("/courses", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/courses", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { slug, name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
     if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
@@ -936,7 +936,7 @@ router.post("/courses", authenticate, requireRole("ADMIN"), async (req, res) => 
   }
 });
 
-router.patch("/courses/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
 
@@ -973,7 +973,7 @@ router.patch("/courses/:id", authenticate, requireRole("ADMIN"), async (req, res
   }
 });
 
-router.delete("/courses/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return res.status(404).json({ error: "Course not found" });
@@ -1035,7 +1035,7 @@ async function assertAssignmentScope(req, res, instituteIds, academicGroupIds) {
   return true;
 }
 
-router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const [instituteRows, groupRows] = await Promise.all([
     prisma.courseInstituteAssignment.findMany({ where: { courseId: req.params.id }, include: { institute: { select: { id: true, name: true } } } }),
     prisma.courseAcademicGroupAssignment.findMany({ where: { courseId: req.params.id }, include: { academicGroup: { select: { id: true, batch: true, section: true, institute: { select: { name: true } }, department: { select: { name: true } } } } } }),
@@ -1051,7 +1051,7 @@ router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "STAFF
 // facing routes use — spec: admin/staff progress views must never independently re-derive
 // completion with different logic) plus the raw per-lesson LessonProgress rows behind it, so a
 // support request like "student X can't unlock Module 2" can be diagnosed without DB access.
-router.get("/admin/student-progress", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/student-progress", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const registrationNumber = String(req.query.registrationNumber || "").trim();
     if (!registrationNumber) return res.status(400).json({ error: "registrationNumber is required" });
@@ -1124,7 +1124,7 @@ router.get("/admin/student-progress", authenticate, requireRole("ADMIN", "STAFF"
   }
 });
 
-router.post("/courses/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteIds = [], academicGroupIds = [] } = req.body;
     const course = await assertPublishedAndScoped(req, res, req.params.id);
@@ -1164,7 +1164,7 @@ router.post("/courses/:id/assignments", authenticate, requireRole("ADMIN"), atta
   }
 });
 
-router.delete("/courses/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteIds = [], academicGroupIds = [] } = req.body;
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
@@ -1188,7 +1188,7 @@ router.delete("/courses/:id/assignments", authenticate, requireRole("ADMIN"), at
 });
 
 // Cross-course bulk assign: many courses x many institutes/groups in one call.
-router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { courseIds = [], instituteIds = [], academicGroupIds = [] } = req.body;
     if (!(await assertAssignmentScope(req, res, instituteIds, academicGroupIds))) return;
@@ -1228,7 +1228,7 @@ router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN"), att
   }
 });
 
-router.post("/courses/:id/modules", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, description, order } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
@@ -1247,7 +1247,7 @@ router.post("/courses/:id/modules", authenticate, requireRole("ADMIN"), async (r
   }
 });
 
-router.patch("/modules/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, description, order, isActive } = req.body;
     const mod = await prisma.courseModule.update({
@@ -1275,7 +1275,7 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN"), async (req, res
   }
 });
 
-router.delete("/modules/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const mod = await prisma.courseModule.findUnique({ where: { id: req.params.id } });
     if (!mod) return res.status(404).json({ error: "Module not found" });
@@ -1315,7 +1315,7 @@ router.delete("/modules/:id", authenticate, requireRole("ADMIN"), async (req, re
 // that gate progress past it. Every pre-Chapter module gets backfilled with one "General"
 // chapter (see scripts/backfillChapters.js) so this is purely additive on top of existing data.
 
-router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const chapters = await prisma.chapter.findMany({
       where: { moduleId: req.params.id },
@@ -1329,7 +1329,7 @@ router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "STAFF"),
   }
 });
 
-router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, description, order, isActive, countsTowardCertificate } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
@@ -1355,7 +1355,7 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN"), async (
 
 // Full topic list for one chapter (the chapter list route above only returns a count) — used by
 // the admin CMS's "Learn" tab.
-router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const lessons = await prisma.lesson.findMany({
       where: { chapterId: req.params.id },
@@ -1368,7 +1368,7 @@ router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "STAFF"),
   }
 });
 
-router.patch("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, description, order, isActive, countsTowardCertificate } = req.body;
     const chapter = await prisma.chapter.update({
@@ -1393,7 +1393,7 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, re
   }
 });
 
-router.delete("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
     if (!chapter) return res.status(404).json({ error: "Chapter not found" });
@@ -1424,7 +1424,7 @@ router.delete("/chapters/:id", authenticate, requireRole("ADMIN"), async (req, r
   }
 });
 
-router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
@@ -1453,7 +1453,7 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN"), async (r
 // chapterId set. moduleId is denormalized from the chapter's own module so every existing
 // moduleId-keyed query (isModuleNowComplete, LessonProgress counting, etc.) keeps working
 // unchanged for chapter-scoped topics too.
-router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
     if (!chapter) return res.status(404).json({ error: "Chapter not found" });
@@ -1480,7 +1480,7 @@ router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN"), async (
   }
 });
 
-router.patch("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     // content/blocks are deliberately NOT accepted here anymore — they now move exclusively
     // through the versions API below (POST /lessons/:id/versions -> .../publish), so a student
@@ -1522,7 +1522,7 @@ router.patch("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res
 // Version history, newest first. Lazily synthesizes "Version 1 / PUBLISHED" from the lesson's
 // current content/blocks on first read if no version rows exist yet — no bulk migration script
 // needed, and it's safe because it only ever creates a version that already matches what's live.
-router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
@@ -1546,7 +1546,7 @@ router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN"), async (r
 
 // Creates a new draft, or updates the lesson's existing open draft if one is already in progress
 // (upsert-by-latest-DRAFT — avoids spawning a new draft row on every autosave-style edit).
-router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
@@ -1583,7 +1583,7 @@ router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN"), async (
 });
 
 // Edits an existing draft in place, or moves it DRAFT -> IN_REVIEW.
-router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const version = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
     if (!version || version.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
@@ -1610,7 +1610,7 @@ router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMI
 // Publishes a DRAFT/IN_REVIEW version: copies content/blocks onto the live Lesson row (the only
 // place that ever happens), archives whatever was PUBLISHED before (never deleted), marks this
 // one PUBLISHED. This is the sole write path that changes what a student can read.
-router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const version = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
     if (!version || version.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
@@ -1638,7 +1638,7 @@ router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRol
 // Restores an old (ARCHIVED or PUBLISHED) version by creating a NEW version row copying its
 // content, then publishing that new row immediately. Never resurrects/renumbers the old version
 // — "Restore Version 2" produces Version 4, keeping full history intact.
-router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const source = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
     if (!source || source.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
@@ -1669,7 +1669,7 @@ router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRol
   }
 });
 
-router.delete("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
@@ -1694,7 +1694,7 @@ router.delete("/lessons/:id", authenticate, requireRole("ADMIN"), async (req, re
   }
 });
 
-router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const {
       type, prompt, options, correctAnswer, explanation, starterCode, testCases, language, order,
@@ -1747,7 +1747,7 @@ router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN"), async 
   }
 });
 
-router.patch("/practice/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const {
       type, prompt, options, correctAnswer, explanation, starterCode, testCases, language, order,
@@ -1825,7 +1825,7 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN"), async (req, re
   }
 });
 
-router.delete("/practice/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     await prisma.practiceQuestion.delete({ where: { id: req.params.id } });
     res.json({ success: true });
@@ -1837,7 +1837,7 @@ router.delete("/practice/:id", authenticate, requireRole("ADMIN"), async (req, r
 
 // ADMIN/STAFF: full question detail (with correctAnswer/explanation) for the CMS edit form —
 // distinct from the sanitized shape /lessons/:id returns to students.
-router.get("/practice/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
   if (!q) return res.status(404).json({ error: "Question not found" });
   res.json(q);
