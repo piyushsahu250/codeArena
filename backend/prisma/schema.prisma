@@ -287,6 +287,7 @@ model User {
   interviewSessions    InterviewSession[]
   interviewReports     InterviewReport[]
   interviewCertificate InterviewCertificate?
+  candidateQuestionReports CandidateQuestionReport[]
   emailLogs            EmailLog[]
 
   passwordHistory PasswordHistory[]
@@ -2033,6 +2034,19 @@ model Company {
   createdByName   String
   createdAt       DateTime @default(now())
 
+  // Added for the Company-Specific Interview Question Intelligence System — this Company row is
+  // now the one canonical company entity that InterviewQuestion/InterviewQuestionDraft/
+  // CompanyInterviewProfile/CandidateQuestionReport/QuestionGenerationJob all reference via
+  // companyId, instead of each carrying its own disconnected free-text company name.
+  industry  String?
+  updatedAt DateTime @updatedAt
+
+  interviewQuestions      InterviewQuestion[]
+  interviewQuestionDrafts InterviewQuestionDraft[]
+  interviewProfile        CompanyInterviewProfile?
+  candidateReports        CandidateQuestionReport[]
+  generationJobs          QuestionGenerationJob[]
+
   // No separate @@index([name]) — `name` is already @unique above, which creates its own index;
   // an explicit duplicate index here was pure write overhead with zero query benefit.
 }
@@ -2175,6 +2189,55 @@ enum PackageBand {
 enum ExperienceLevel {
   FRESHER
   EXPERIENCED
+  // Granular levels added for the Company-Specific Interview Question Intelligence System —
+  // FRESHER/EXPERIENCED above stay in place unchanged for existing rows (additive enum, nothing
+  // renamed or removed) and remain the two broad buckets used elsewhere on the platform; these are
+  // the finer-grained values that system's role/level filtering actually uses.
+  INTERN
+  ENTRY_LEVEL
+  JUNIOR
+  MID_LEVEL
+  SENIOR
+  LEAD
+  MANAGER
+}
+
+// Evidence classification for a company-specific interview question or profile fact — mandatory
+// per-question, never inferred by the AI itself (an AI-generated question is always
+// AI_GENERATED_VARIANT, set by the generator code, never something the model reports about
+// itself). See CandidateQuestionReport for how CANDIDATE_REPORTED rows get created, and
+// InterviewQuestion.sourceType's own comment for how these map to confidence.
+enum QuestionSourceType {
+  OFFICIAL_COMPANY       // admin-entered from a company's own published interview/careers guidance
+  CANDIDATE_REPORTED      // from a verified CandidateQuestionReport submission
+  PUBLIC_INTERVIEW_REPORT // admin-entered, citing a public source (blog, forum) via sourceUrl
+  CODEARENA_VERIFIED      // multiple independent CANDIDATE_REPORTED submissions corroborate it
+  AI_GENERATED_VARIANT    // drafted by aiService from reported patterns — never a real reported question
+}
+
+// HIGH/MEDIUM/LOW only — deliberately no numeric score stored, since a fake-precise number (e.g.
+// "87% confidence") would overstate exactly the kind of false certainty this system exists to
+// avoid (see spec §39: "There is NO honest way to guarantee... an exact question"). Assigned by
+// deterministic rules in companyQuestions.js (source type + verificationCount), never by the AI
+// self-reporting its own confidence.
+enum ConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum QuestionGenerationJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  PARTIAL
+  FAILED
 }
 
 // Unified question bank. Which fields apply depends on `category`:
@@ -2254,6 +2317,26 @@ model InterviewQuestion {
 
   answers InterviewAnswer[]
 
+  // Company-Specific Interview Question Intelligence System fields. companyId is ADDITIVE
+  // alongside the pre-existing `company` free-text field above — old rows keep only the string;
+  // new company-specific questions set both (companyId for real filtering/joins, company for
+  // display without an extra join and for backward compatibility with every existing `company`
+  // string-match query in this file). role is the job role ("Software Engineer", "Data Analyst"),
+  // distinct from `subject` (a technical topic like "DSA") and from `category` (which doubles as
+  // the interview round — HR/TECHNICAL/CODING/SYSTEM_DESIGN/BEHAVIORAL/MANAGERIAL map directly
+  // onto spec's "Interview Round" list, so no separate round field was added).
+  companyRef         Company?            @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId          String?
+  role               String?
+  sourceType         QuestionSourceType?
+  sourceUrl          String?
+  sourceDate         DateTime?
+  confidenceLevel    ConfidenceLevel?
+  verificationCount  Int                 @default(0)
+  firstSeenAt        DateTime?
+  lastSeenAt         DateTime?
+  lastVerifiedAt     DateTime?
+
   // KI-001 fix: every InterviewQuestion created before this field existed keeps instituteId/
   // createdById: null, which interviewQuestionVisibilityWhere() (interview.js) treats as "shared
   // legacy pool, visible/editable by every institute's staff" — same "null = legacy/shared"
@@ -2273,6 +2356,9 @@ model InterviewQuestion {
   @@index([experienceLevel])
   @@index([instituteId])
   @@index([createdById])
+  @@index([companyId])
+  @@index([role])
+  @@index([confidenceLevel])
 }
 
 // AI-generated candidate question, held here — structurally separate from InterviewQuestion —
@@ -2322,9 +2408,99 @@ model InterviewQuestionDraft {
   rejectionReason   String?
   approvedQuestionId String? // set once promoted — the resulting InterviewQuestion.id, for audit traceability
 
+  // Kept field-for-field in sync with InterviewQuestion's own block of the same name — see that
+  // model's comment. approve() copies these across unchanged when promoting a draft.
+  // experienceLevel reuses the SAME field name InterviewQuestion already has (rather than adding
+  // a second, confusingly-similar "level" concept) — on InterviewQuestion today it's set by a
+  // human at generic-draft approval time; here it's set at company-question generation time
+  // (the target level the admin picked before clicking "Update Questions"), and approve() carries
+  // it across as the default unless the admin overrides it in the same approval request.
+  companyRef        Company?            @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId         String?
+  role              String?
+  experienceLevel   ExperienceLevel?
+  sourceType        QuestionSourceType?
+  sourceUrl         String?
+  sourceDate        DateTime?
+  confidenceLevel   ConfidenceLevel?
+  verificationCount Int                 @default(0)
+  firstSeenAt       DateTime?
+  lastSeenAt        DateTime?
+  candidateReportId String? // set when this draft originated from a verified CandidateQuestionReport, not a fresh AI generation
+
   @@index([status])
   @@index([company])
   @@index([category])
+  @@index([companyId])
+  @@index([role])
+}
+
+// Student/staff-submitted "I was actually asked this" report — the ONE source of company-question
+// evidence this platform can honestly grow over time without scraping or a licensed data feed
+// (see docs on the Company-Specific Interview Question Intelligence System's sourcing decision).
+// PENDING until an admin verifies it; only a VERIFIED report can be converted into an
+// InterviewQuestionDraft (candidateReportId links back here) and only then counts toward another
+// question's verificationCount if it corroborates one already on file. Never directly reaches a
+// student — same "draft first, human approves" gate as every other AI/candidate-sourced content
+// on this platform.
+model CandidateQuestionReport {
+  id     String @id @default(uuid())
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  companyRef Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId  String
+  role            String
+  experienceLevel ExperienceLevel?
+  round           InterviewCategory
+  interviewDate   DateTime?
+  questionText    String
+  technology      String?
+  difficulty      Difficulty?
+
+  status            VerificationStatus @default(PENDING)
+  reviewedByAdminId String?
+  reviewedByName    String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  promotedDraftId   String? // set once an admin converts this into an InterviewQuestionDraft
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId])
+  @@index([companyId])
+  @@index([status])
+}
+
+// Audit/status record for one admin-triggered "Update Questions" run (company+role+level+round).
+// No real background job queue exists on this platform (confirmed during this feature's audit —
+// generation runs synchronously within the request, same as every other admin AI-generate route
+// here), so this is the durable record of what ran and what it found/produced, not a literal
+// queued worker task — status still moves QUEUED->PROCESSING->COMPLETED/PARTIAL/FAILED so the
+// admin UI has something concrete to show and a FAILED run can be identified and retried.
+model QuestionGenerationJob {
+  id String @id @default(uuid())
+
+  companyRef Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId  String
+  role            String?
+  experienceLevel ExperienceLevel?
+  round           InterviewCategory?
+  technology      String?
+
+  status       QuestionGenerationJobStatus @default(QUEUED)
+  resultSummary Json?   // {existingReviewed, staleFound, duplicatesFlagged, aiGenerated, errors}
+  errorMessage  String?
+
+  requestedByAdminId String
+  requestedByName    String
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime @default(now())
+
+  @@index([companyId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // AI-drafted "hiring pattern" checklist for a company+category (e.g. Amazon/CODING ->
@@ -2359,6 +2535,12 @@ model CompanyInterviewProfile {
   id       String  @id @default(uuid())
   company  String  @unique
   isActive Boolean @default(true)
+
+  // Additive — companyRef links this profile to the canonical Company row (see Company's own
+  // comment) without touching the pre-existing `company` string above, which every current
+  // read/write in interview.js still matches on unchanged.
+  companyRef Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId  String?  @unique
 
   // { CODING: { topicWeights: {"Arrays": 0.3, "Hashmap": 0.25, ...}, difficultyMix: {EASY:0.3,MEDIUM:0.5,HARD:0.2} }, HR: {...}, ... }
   categoryWeights Json?
