@@ -4,12 +4,12 @@
 // second provider (OpenAI/Groq/OpenRouter/etc, see aiService.js's PROVIDER_REGISTRY) never has to
 // touch this file or vice versa.
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-// gemini-2.5-flash: confirmed free-tier-eligible and not scheduled to sunset until well past this
-// deploy (2026-10-16, per Google's own model-deprecations info as of when this was written).
-// Google changes free-tier model availability without much notice — if this model ever 404s or
-// disappears from the free tier, set GEMINI_MODEL to whatever AI Studio (aistudio.google.com)
-// currently lists rather than editing this file.
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// gemini-3.6-flash: confirmed live against the platform's actual API key (gemini-2.5-flash 404s
+// with "no longer available to new users" — Google's own error response named this as the
+// replacement). Google changes free-tier model availability without much notice — if this model
+// ever 404s or disappears from the free tier, set GEMINI_MODEL to whatever AI Studio
+// (aistudio.google.com) currently lists rather than editing this file.
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 30000;
 const MAX_RETRIES = Number(process.env.GEMINI_MAX_RETRIES ?? 2);
 const RETRY_BASE_DELAY_MS = Number(process.env.GEMINI_RETRY_BASE_DELAY_MS) || 800;
