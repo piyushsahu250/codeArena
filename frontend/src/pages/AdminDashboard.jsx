@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { Building2, Upload, PlusCircle, Users as UsersIcon, BarChart3, FileText, Mic, Settings, Trophy, Mail, ToggleLeft } from "lucide-react";
 import api from "../api";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import Navbar from "../components/Navbar";
@@ -10,7 +11,13 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid, SkeletonCard } from "../components/Skeleton";
 import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
-const ROLES = ["STUDENT", "STAFF", "ADMIN", "CLERK"];
+const ALL_ROLES = ["STUDENT", "STAFF", "ADMIN", "CLERK"];
+// Mirrors users.js's POST / role whitelist exactly: an institute-scoped creator (which
+// INSTITUTE_ADMIN always is) can grant STUDENT/STAFF/CLERK but never ADMIN-tier roles — only a
+// platform-level account can create another admin-tier account, and per spec that's an Institute
+// Admin (via a Super-Admin-only flow), never through this generic form. Keeping this list in sync
+// with the frontend avoids the confusing UX of picking "ADMIN" here and getting a 400 back.
+const INSTITUTE_ADMIN_CREATABLE_ROLES = ["STUDENT", "STAFF", "CLERK"];
 const emptyForm = {
   name: "", email: "", role: "STUDENT", instituteId: "",
   rollNumber: "", registrationNumber: "", department: "", mobile: "", gender: "",
@@ -18,6 +25,10 @@ const emptyForm = {
 };
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  const isInstituteAdmin = user?.role === "INSTITUTE_ADMIN";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const ROLES = isInstituteAdmin ? INSTITUTE_ADMIN_CREATABLE_ROLES : ALL_ROLES;
   const toast = useToast();
   const confirmDialog = useConfirm();
   const [users, setUsers] = useState([]);
@@ -225,11 +236,17 @@ export default function AdminDashboard() {
       <div className="page-container" style={{ maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
           <div>
-            <h1>Admin control room</h1>
+            <h1>
+              {isSuperAdmin ? "Platform Administration"
+                : isInstituteAdmin ? `${institutes[0]?.name || "Your Institute"} Administration`
+                : "Admin control room"}
+            </h1>
             <ChalkUnderline />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link to="/admin/institutes" className="btn btn-ghost"><Building2 size={15} /> Create Institute</Link>
+            {/* Creating/editing/deleting institutes is Super-Admin-only — see institutes.js's
+                POST/PATCH/DELETE role gates — so an Institute Admin never gets this link. */}
+            {!isInstituteAdmin && <Link to="/admin/institutes" className="btn btn-ghost"><Building2 size={15} /> Create Institute</Link>}
             <Link to="/admin/feature-management" className="btn btn-ghost"><ToggleLeft size={15} /> Feature Management</Link>
             <Link to="/admin/bulk-upload" className="btn btn-primary"><Upload size={15} /> Bulk Student Upload</Link>
             <Link to="/staff/tests/new" className="btn btn-ghost"><PlusCircle size={15} /> Create Test</Link>
@@ -296,7 +313,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div>
-            <h3 style={{ fontSize: 16, marginBottom: 12 }}>Top Students Platform-wide (XP)</h3>
+            <h3 style={{ fontSize: 16, marginBottom: 12 }}>{isInstituteAdmin ? "Top Students in Your Institute (XP)" : "Top Students Platform-wide (XP)"}</h3>
             <div className="card" style={{ padding: 20, height: 220, overflowY: "auto" }}>
               {gamiStats === null ? (
                 <SkeletonCard height={220} />

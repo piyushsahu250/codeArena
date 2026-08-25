@@ -14,11 +14,22 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 
-// ADMIN: dashboard summary stats — 16 counts on every admin dashboard load, cached briefly since
-// none of these need to be second-by-second accurate on a summary card.
-router.get("/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+// ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN: dashboard summary stats — 16 counts on every admin dashboard
+// load, cached briefly since none of these need to be second-by-second accurate on a summary card.
+//
+// Institute-scoped for INSTITUTE_ADMIN (and any institute-scoped legacy ADMIN) — previously this
+// counted platform-wide unconditionally regardless of caller, which was harmless while only
+// platform-level accounts could reach this route, but became a real bug the moment an
+// institute-scoped role was let in: an Institute Admin would have seen every OTHER institute's
+// totals mixed into their own dashboard, violating the "dashboard must be calculated from that
+// institute's data" requirement. Course/PracticeQuestion counts stay unscoped on purpose — that
+// content has no instituteId at all (see docs/INSTITUTE_ADMIN_ROLLOUT.md), it's genuinely global,
+// same total for every caller. Cache key includes requesterInstituteId so two different
+// institutes' admins never share one institute's cached numbers.
+router.get("/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const stats = await cached("admin:stats", 60 * 1000, async () => {
+    const instituteId = req.requesterInstituteId;
+    const stats = await cached(`admin:stats:${instituteId || "all"}`, 60 * 1000, async () => {
       const now = new Date();
       const [
         totalInstitutes, totalClasses, totalUsers, totalStudents, totalStaff,
@@ -26,25 +37,25 @@ router.get("/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (r
         totalCourses, totalPracticeQuestions, certificatesIssued, interviewCertificatesIssued,
         totalAcademicGroups, studentsUnlinkedFromAcademicGroup,
       ] = await Promise.all([
-        prisma.institute.count(),
-        prisma.class.count(),
-        prisma.user.count(),
-        prisma.user.count({ where: { role: "STUDENT" } }),
-        prisma.user.count({ where: { role: "STAFF" } }),
-        prisma.test.count(),
-        prisma.question.count(),
-        prisma.test.count({ where: { isPublished: true, startTime: { lte: now }, endTime: { gte: now } } }),
-        prisma.test.count({ where: { isPublished: true, startTime: { gt: now } } }),
-        prisma.test.count({ where: { isPublished: true, endTime: { lt: now } } }),
+        instituteId ? Promise.resolve(1) : prisma.institute.count(),
+        prisma.class.count({ where: instituteId ? { instituteId } : {} }),
+        prisma.user.count({ where: instituteId ? { instituteId } : {} }),
+        prisma.user.count({ where: { role: "STUDENT", ...(instituteId ? { instituteId } : {}) } }),
+        prisma.user.count({ where: { role: "STAFF", ...(instituteId ? { instituteId } : {}) } }),
+        prisma.test.count({ where: instituteId ? { instituteId } : {} }),
+        prisma.question.count({ where: instituteId ? { instituteId } : {} }),
+        prisma.test.count({ where: { isPublished: true, startTime: { lte: now }, endTime: { gte: now }, ...(instituteId ? { instituteId } : {}) } }),
+        prisma.test.count({ where: { isPublished: true, startTime: { gt: now }, ...(instituteId ? { instituteId } : {}) } }),
+        prisma.test.count({ where: { isPublished: true, endTime: { lt: now }, ...(instituteId ? { instituteId } : {}) } }),
         prisma.course.count(),
         prisma.practiceQuestion.count(),
-        prisma.certificate.count(),
-        prisma.interviewCertificate.count(),
+        prisma.certificate.count({ where: instituteId ? { student: { instituteId } } : {} }),
+        prisma.interviewCertificate.count({ where: instituteId ? { student: { instituteId } } : {} }),
         // Institute->Batch->Department->Section migration visibility (see
         // backend/scripts/migrateAcademicGroups.js) — surfaced here so the zero-data-loss gate is
         // checkable at a glance from the dashboard that's already loaded, no separate API call needed.
-        prisma.academicGroup.count(),
-        prisma.user.count({ where: { role: "STUDENT", classId: { not: null }, academicGroupId: null } }),
+        prisma.academicGroup.count({ where: instituteId ? { instituteId } : {} }),
+        prisma.user.count({ where: { role: "STUDENT", classId: { not: null }, academicGroupId: null, ...(instituteId ? { instituteId } : {}) } }),
       ]);
 
       return {

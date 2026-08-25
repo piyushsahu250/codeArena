@@ -121,13 +121,55 @@ const MENU = {
     ] },
     { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
   ],
+  // INSTITUTE_ADMIN (added 2026-08-25) — a real, deliberately-scoped subset of MENU.ADMIN, not an
+  // alias. Excludes exactly the platform-wide-only surfaces the backend rollout also excluded
+  // this role from (see docs/INSTITUTE_ADMIN_ROLLOUT.md): Institutes (create/edit/delete other
+  // institutes), Monitoring (platform process/host metrics), Backups (full DB), Question Audit
+  // (scans every institute's question bank). Everything else here is backend-verified to already
+  // scope correctly to this account's own institute regardless of which role reaches it.
+  INSTITUTE_ADMIN: [
+    { group: "Main", items: [
+      { label: "Dashboard", to: "/admin", icon: LayoutDashboard },
+      { label: "Academic Groups", to: "/admin/academic-groups", icon: School },
+      { label: "Bulk Upload", to: "/admin/bulk-upload", icon: Upload },
+      { label: "Students", to: "/admin/students", icon: Users },
+      { label: "Staff & Clerk", to: "/admin/staff-clerk", icon: UserCog },
+      { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
+    ] },
+    { group: "Attendance", items: [
+      { label: "Attendance Setup", to: "/admin/attendance-structure", icon: Layers },
+      { label: "Mark Attendance", to: "/staff/attendance", icon: CheckSquare, featureKey: "attendance" },
+      { label: "Attendance Reports", to: "/staff/attendance/reports", icon: ClipboardList, featureKey: "attendance" },
+    ] },
+    { group: "Content", items: [
+      { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
+      { label: "Course Assignments", to: "/admin/course-assignments", icon: Share2 },
+      { label: "Question Bank", to: "/staff/questions", icon: FileQuestion },
+      { label: "Readiness Tests", to: "/staff/readiness-subjects", icon: Target },
+      { label: "Readiness Analytics", to: "/staff/readiness-analytics", icon: BarChart3 },
+      { label: "Gamification", to: "/staff/gamification", icon: Trophy },
+      { label: "Coding Challenges", to: "/staff/challenges", icon: CalendarDays, featureKey: "coding_challenge" },
+      { label: "Resumes", to: "/staff/resumes", icon: FileText },
+      { label: "Mock Interviews", to: "/staff/interviews", icon: Mic, featureKey: "ai_mock_interview" },
+      { label: "AI Draft Review", to: "/staff/interview-drafts", icon: Sparkles, featureKey: "ai_draftview" },
+      { label: "Interview Reports", to: "/staff/interview-reports", icon: ClipboardList, featureKey: "ai_mock_interview" },
+      { label: "Results", to: "/admin/results", icon: ClipboardList },
+    ] },
+    { group: "System", items: [
+      { label: "Email Logs", to: "/admin/email-logs", icon: Mail },
+      { label: "Password Reset History", to: "/admin/password-reset-history", icon: History },
+      { label: "Audit Log", to: "/admin/audit-log", icon: History },
+      { label: "Certificates", to: "/admin/certificates", icon: Award, featureKey: "certificates" },
+      { label: "Export Center", to: "/admin/exports", icon: Download, featureKey: "export_center" },
+      { label: "Feature Management", to: "/admin/feature-management", icon: Settings },
+    ] },
+    { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
+  ],
 };
 
 // SUPER_ADMIN (added 2026-08-24) is a rename of the same platform-level capability ADMIN already
-// had, not a new/reduced one — same menu. INSTITUTE_ADMIN intentionally does NOT alias to this:
-// it's institute-scoped and shouldn't see platform-wide items like Institutes/Backups/Feature
-// Management, so it still falls through to MENU[role] || [] (empty) below until a dedicated,
-// correctly-scoped menu is built for it (see docs/INSTITUTE_ADMIN_ROLLOUT.md).
+// had, not a new/reduced one — same menu, unlike INSTITUTE_ADMIN above (a real, separately-defined
+// subset, not an alias).
 MENU.SUPER_ADMIN = MENU.ADMIN;
 
 export default function Sidebar({ role, profileGateActive = false }) {
