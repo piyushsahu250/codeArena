@@ -72,10 +72,13 @@ async function saveVersion(resumeId, resumeSnapshot) {
 // completion status and any admin feedback notes left on it.
 router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    let resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
-    if (!resume) {
-      resume = await prisma.resume.create({ data: { studentId: req.user.id } });
-    }
+    // upsert, not findUnique-then-create: the two-step check-then-act version raced under real
+    // concurrent load (confirmed live 2026-08-25 — 20 concurrent first-view requests for a
+    // student with no resume yet produced 17 real 500s, each a unique-constraint violation from
+    // multiple requests all seeing "no row" and all calling create() before the first one
+    // committed). upsert's INSERT ... ON CONFLICT is atomic at the DB level — concurrent identical
+    // upserts resolve to one real create plus N harmless no-op updates instead of racing.
+    const resume = await prisma.resume.upsert({ where: { studentId: req.user.id }, update: {}, create: { studentId: req.user.id } });
     const config = await getFieldConfig();
     const feedback = await prisma.resumeFeedback.findMany({ where: { studentId: req.user.id }, orderBy: { createdAt: "desc" }, take: 20 });
     res.json({ resume, completion: computeCompletion(resume, config.mandatorySections), feedback });
