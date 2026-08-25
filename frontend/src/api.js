@@ -8,8 +8,18 @@ import axios from "axios";
 // doesn't expose) don't each duplicate this same fallback expression.
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
+// No default timeout previously existed here — a hung request (a stalled connection, a backend
+// that never responds) left the calling page's own "Starting…"/"Generating…" button spinning
+// forever with no way out short of a manual reload, which read exactly like "the interview got
+// stuck." AI-generation calls are the slowest legitimate requests on this platform (Gemini can
+// take 10-30s); 45s gives real generation room to finish while still guaranteeing every request
+// eventually resolves into an error a page's own .catch() can show. Routes that need a tighter
+// bound (the code judge) already pass their own shorter `timeout` per-call, which overrides this.
+const DEFAULT_TIMEOUT_MS = 45000;
+
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: DEFAULT_TIMEOUT_MS,
 });
 
 api.interceptors.request.use((config) => {
