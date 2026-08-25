@@ -128,14 +128,15 @@ found and fixed before extending, one in each direction:
   checking `role !== "STAFF"` instead (matches the STAFF-ownership check already handled just
   above it).
 
-## Rollout status: complete
+## Rollout status after round 6 (superseded — see round 7 below)
 
-Every backend route file with a `requireRole("ADMIN"...)` call site has now been individually
-audited and (where appropriate) extended. `SUPER_ADMIN` and `INSTITUTE_ADMIN` now work correctly
-across the entire platform, with two deliberate, documented exceptions: `institutes.js` (creating/
-editing/deleting institutes stays Super-Admin-only) and the global-content-authoring routes in
-`learning.js`/`moduleCoding.js` (courses/modules/chapters/lessons/module-coding-test authoring
-stays Super-Admin-only, since that content has no `instituteId` at all).
+This is what round 6 believed at the time: every backend route file touched across rounds 1–6
+individually audited and extended, with two deliberate exceptions (`institutes.js` CRUD,
+`learning.js`/`moduleCoding.js` content authoring — both correctly Super-Admin-only). That claim
+turned out to be true only for the ~20 files rounds 1–6 actually looked at, not for every route
+file in the repo — round 7 below found 10 more files (including `institutes.js`'s own read-only
+GETs) that had never been audited at all. Left here for the historical record rather than deleted,
+since round 7 explains exactly how the gap was found.
 
 What's still NOT built, tracked from round 1 and still true: a dedicated Institute Admin
 dashboard/sidebar/frontend route guards, and the dedicated Super-Admin "Manage Institute Admins"
@@ -176,6 +177,59 @@ UI (the backend supports it via the existing `users.js` endpoints, no frontend s
   `instituteId ? {...} : {}` branches fall through to the same unscoped queries every caller
   received before this change — a narrower, lower-confidence claim than the production HTTP test
   above, noted here explicitly rather than glossed over.
+
+## Round 7 (unplanned) — 10 files the original 6 rounds never touched
+
+The dashboard build surfaced a real bug: `staffClerk.js`'s Staff & Clerk Management page never
+resolved its stat-card skeletons for a real `INSTITUTE_ADMIN` login. Root cause: every route in
+that file shared one `guard` array gated on `requireRole("ADMIN")` alone — the file was simply
+never part of any of the original 6 rounds. Grepping the entire `routes/` directory for
+`requireRole("ADMIN"` (not just re-checking the files already covered) turned up 9 more files in
+the same situation: `interview.js`, `interviewDrafts.js`, `profile.js`, `studentDocuments.js`,
+`aiQuestions.js`, `companies.js`, `placementOffers.js`, `resume.js`, `backup.js`. None of these
+were in the "rollout complete" claim two sections up — that claim was wrong; this file only ever
+tracked the 6 rounds it actually ran, not a real sweep of every route file in the repo.
+
+Also caught the same day: `institutes.js`'s `GET /` (list institutes) and its two read-only GETs
+(`course-analytics`, `profile-completion-stats`) had been left off `INSTITUTE_ADMIN` — unlike the
+deliberate exclusion for actual institute CRUD (POST/PATCH/DELETE, correctly still Super-Admin-
+only), these three are read-only and already institute-scope themselves via
+`attachRequesterInstitute`, so leaving them off was a gap, not a decision. Symptom: the dashboard
+header showed a generic "Your Institute Administration" instead of the real institute name, and
+the create-account form said "Add an institute first" instead of rendering.
+
+Each of the 10 files was audited individually before editing, same methodology as every round
+before it: confirm `attachRequesterInstitute` (or an equivalent ownership check) is actually
+applied per-route, and separately grep for hardcoded `role ===`/`role !==` checks that could trap
+the new roles. Two genuinely global-content cases were kept Super-Admin-only for writes —
+`Company` and `CompanyInterviewProfile` have no `instituteId` column, same precedent as
+`Course`-authoring in `learning.js` (round 5) — and `backup.js`'s full-database dump stays
+Super-Admin-only, matching its own existing runtime check
+(`if (req.requesterInstituteId) return 403`). Everything else institute-scopes correctly and got
+both new roles.
+
+**A real, pre-existing cross-institute leak was found and fixed along the way**, unrelated to the
+new roles: `interview.js`'s `GET /admin/questions/export` had no `attachRequesterInstitute` and no
+institute filter at all, unlike the otherwise-identical `GET /admin/questions` (which correctly
+uses `interviewQuestionVisibilityWhere()`). Any institute-scoped `ADMIN`/`STAFF` account could
+already export every institute's entire mock-interview question bank via CSV before this fix —
+this predates the `SUPER_ADMIN`/`INSTITUTE_ADMIN` work entirely. Fixed by applying the same
+visibility filter the list route already uses.
+
+**Also fixed**: `AdminDashboard.jsx`'s create-account Role dropdown never included
+`INSTITUTE_ADMIN` as an option for a `SUPER_ADMIN`/legacy platform `ADMIN` caller, even though
+`users.js`'s `POST /` whitelist already fully supported granting it (with the institute-required
+check already in place) — this was purely a missing frontend option, not a backend gap. The real
+Super Admin found this live while trying to create an Institute Admin account through the existing
+form.
+
+**Production-verified via real HTTP requests**, not just code review: a temp `INSTITUTE_ADMIN`
+account scoped to Testing Institute was given a real session and used to call a representative
+sample of the newly-extended routes directly against the live container —
+`GET /institutes`, `GET /staff-clerk/overview`, `GET /staff-clerk`, `GET /companies`,
+`GET /interview/admin/questions`, `GET /resume/admin/stats`, `GET /placement/analytics/registration`
+— all returned `200` (previously `403`). Script: `backend/scripts/verifyRolefixRoutes.js`. Temp
+user and its exact-`jti` session were deleted immediately after.
 
 ## Explicitly not built yet
 
