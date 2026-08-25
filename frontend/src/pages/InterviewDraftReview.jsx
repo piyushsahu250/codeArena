@@ -475,7 +475,8 @@ function CompanyQuestionsTab() {
   const [bulkWorking, setBulkWorking] = useState(false);
   const [health, setHealth] = useState(null);
 
-  useEffect(() => { api.get("/companies").then((res) => setCompanies(res.data)).catch(() => {}); }, []);
+  function loadCompanies() { api.get("/companies").then((res) => setCompanies(res.data)).catch(() => {}); }
+  useEffect(loadCompanies, []);
 
   function loadDrafts() {
     if (!form.companyId || !form.role.trim()) { setDrafts([]); return; }
@@ -537,17 +538,28 @@ function CompanyQuestionsTab() {
   return (
     <div style={{ marginTop: 16 }}>
       <div className="card" style={{ padding: 16 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>Update Company Questions</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Update Company Questions</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Link to="/admin/companies" className="btn btn-ghost" style={{ fontSize: 12 }}>+ Manage companies</Link>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={loadCompanies}>↻ Refresh list</button>
+          </div>
+        </div>
         <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
           Reviews existing questions for this company/role/level/round, flags stale ones, checks for likely
           duplicates, and drafts new AI-generated practice questions where there's a real gap — every result lands
           as a PENDING draft below for your review, nothing is published automatically.
         </p>
+        {companies.length === 0 && (
+          <p style={{ fontSize: 12, color: "var(--rust)", marginTop: 6 }}>
+            No active companies found. Add one via <Link to="/admin/companies">Manage companies</Link>, then Refresh above.
+          </p>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 10, marginTop: 10 }}>
           <div>
             <label style={labelStyle}>Company</label>
             <select style={inputStyle} value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
-              <option value="">Select…</option>
+              <option value="">{companies.length === 0 ? "No active companies yet" : "Select…"}</option>
               {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
