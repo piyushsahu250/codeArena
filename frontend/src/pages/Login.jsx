@@ -27,7 +27,11 @@ export default function Login() {
         navigate("/change-password");
         return;
       }
-      const homeByRole = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
+      // SUPER_ADMIN lands on the same platform-wide dashboard ADMIN always has — it's a rename of
+      // that same platform-level capability, not a new destination. INSTITUTE_ADMIN doesn't have
+      // a dedicated dashboard yet either, so it lands there too for now (still institute-scoped by
+      // the backend regardless of which page it renders).
+      const homeByRole = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
       navigate(homeByRole[data.user.role] || "/login");
     } catch (err) {
       // err.response only exists if the server actually answered (even with an error status) --

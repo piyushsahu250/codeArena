@@ -123,6 +123,13 @@ const MENU = {
   ],
 };
 
+// SUPER_ADMIN (added 2026-08-24) is a rename of the same platform-level capability ADMIN already
+// had, not a new/reduced one — same menu. INSTITUTE_ADMIN intentionally does NOT alias to this:
+// it's institute-scoped and shouldn't see platform-wide items like Institutes/Backups/Feature
+// Management, so it still falls through to MENU[role] || [] (empty) below until a dedicated,
+// correctly-scoped menu is built for it (see docs/INSTITUTE_ADMIN_ROLLOUT.md).
+MENU.SUPER_ADMIN = MENU.ADMIN;
+
 export default function Sidebar({ role, profileGateActive = false }) {
   const location = useLocation();
   const navigate = useNavigate();

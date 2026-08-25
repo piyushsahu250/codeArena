@@ -119,7 +119,7 @@ import StudentProfile from "./pages/StudentProfile";
 import ClerkDashboard from "./pages/ClerkDashboard";
 import CompanyMaster from "./pages/CompanyMaster";
 
-const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
+const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
 
 // Student Profile Completion gating — true only for a STUDENT whose institute has the toggle on
 // and who hasn't finished the mandatory Personal Academic & Info section yet. Mirrors
@@ -149,7 +149,16 @@ function Protected({ roles, children, noChrome = false }) {
   if (!user) return <Navigate to="/login" replace />;
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
   if (blocked) return <Navigate to="/profile" replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  // SUPER_ADMIN/INSTITUTE_ADMIN are new roles (added 2026-08-24) that don't appear in most
+  // existing route `roles` lists yet — updating every one of those lists individually is a large,
+  // ongoing rollout (see docs/INSTITUTE_ADMIN_ROLLOUT.md), so in the meantime both are treated as
+  // satisfying any gate that already admits "ADMIN": SUPER_ADMIN is a straight rename of the
+  // platform-level ADMIN capability that already existed, and INSTITUTE_ADMIN reuses the same
+  // institute-scoped data access an institute-scoped ADMIN already had. The backend remains
+  // authoritative either way — a page rendering here doesn't guarantee every API call inside it
+  // has been extended yet; some may still 403 until that file's backend routes are rolled out.
+  const roleSatisfied = !roles || roles.includes(user.role) || (roles.includes("ADMIN") && (user.role === "SUPER_ADMIN" || user.role === "INSTITUTE_ADMIN"));
+  if (!roleSatisfied) return <Navigate to="/" replace />;
   return (
     <>
       {!noChrome && <Sidebar role={user.role} profileGateActive={profileGateActive(user)} />}
