@@ -11,12 +11,14 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid, SkeletonCard } from "../components/Skeleton";
 import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
-const ALL_ROLES = ["STUDENT", "STAFF", "ADMIN", "CLERK"];
+const ALL_ROLES = ["STUDENT", "STAFF", "ADMIN", "INSTITUTE_ADMIN", "CLERK"];
 // Mirrors users.js's POST / role whitelist exactly: an institute-scoped creator (which
 // INSTITUTE_ADMIN always is) can grant STUDENT/STAFF/CLERK but never ADMIN-tier roles — only a
-// platform-level account can create another admin-tier account, and per spec that's an Institute
-// Admin (via a Super-Admin-only flow), never through this generic form. Keeping this list in sync
-// with the frontend avoids the confusing UX of picking "ADMIN" here and getting a 400 back.
+// platform-level account (SUPER_ADMIN or legacy platform-level ADMIN) can grant ADMIN or
+// INSTITUTE_ADMIN, which is why this generic form is the right place for it: the same
+// role+institute picker already here covers the "create an Institute Admin, scoped to one
+// institute" case without a separate screen. Keeping this list in sync with the frontend avoids
+// the confusing UX of picking a role here and getting a 400 back.
 const INSTITUTE_ADMIN_CREATABLE_ROLES = ["STUDENT", "STAFF", "CLERK"];
 const emptyForm = {
   name: "", email: "", role: "STUDENT", instituteId: "",
