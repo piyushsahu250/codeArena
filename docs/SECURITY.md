@@ -32,7 +32,7 @@ See [AUTHENTICATION.md](AUTHENTICATION.md) — `LoginSession` tracking, `singleS
 `bcryptjs` hashing, complexity/history/expiration policy, never logged or returned in any response.
 
 ## Rate Limiting
-See above — multiple purpose-specific limiters beyond the global one: `loginLimiter`, `execLimiter` (code execution routes), `runLimiter` (practice/challenge runs), `draftGenLimiter`/`aiInsightsLimiter`/`improveLimiter`/`aiReviewLimiter` (Claude-backed routes).
+See above — multiple purpose-specific limiters beyond the global one: `loginLimiter`, `execLimiter` (code execution routes), `runLimiter` (practice/challenge runs), `draftGenLimiter`/`aiInsightsLimiter`/`improveLimiter`/`aiReviewLimiter` (Gemini-backed routes, migrated off Anthropic — see aiService.js), plus platform-wide daily AI usage quotas (per-institute/global, `AiUsageLog`-backed).
 
 ## Input Validation
 Per-route, hand-written (no shared schema-validation library like Zod/Joi found in this codebase — validation is inline `if` checks in each handler). This means validation completeness depends on each route author, not a shared contract — worth keeping in mind when adding new routes.
@@ -42,10 +42,19 @@ Per-route, hand-written (no shared schema-validation library like Zod/Joi found 
 
 ## Data Protection
 - `StudentProfile` PII fields encrypted at rest (`PII_ENCRYPTION_KEY` env var — see [ENVIRONMENT.md](ENVIRONMENT.md); losing/rotating this key without a migration plan has previously caused profile-save failures in production).
-- The judge's child-process code execution previously leaked the full server environment (including secrets) to sandboxed student code — fixed (per project history; NOT independently re-verified in this pass).
+- The judge's child-process code execution previously leaked the full server environment (including secrets) to sandboxed student code — fixed and LIVE-VERIFIED this pass (real submissions confirmed no secrets reachable, see Coding Judge Sandbox below).
+
+## Coding Judge Sandbox (`backend/src/utils/judge.js`) — LIVE TESTED 2026-08-25
+`JUDGE_DROP_PRIVILEGES=true` is set in production. Verified against real submissions, not just code review:
+- **PASS**: submitted code runs as unprivileged uid/gid 10001 (`sandbox`), confirmed via a live probe — not root.
+- **PASS**: cannot read app secrets (`/app/.env`) or root-only files (`/etc/shadow`) — `Permission denied`, real OS enforcement.
+- **PASS**: cannot write outside its own tmp directory.
+- **PASS**: memory limit (`ulimit -v`, 256MB default) and CPU-time limit (`ulimit -t`) both genuinely enforced — confirmed via `resource.getrlimit()` matching the configured values exactly, and a real 500MB allocation attempt correctly raised `MemoryError`.
+- **FIXED THIS PASS**: the fork-bomb/process-count limit (`ulimit -u`, `JUDGE_MAX_PROCESSES=64`) was NOT actually taking effect — `RLIMIT_NPROC` read back as unlimited despite being set in the same shell command chain that successfully applies the memory/CPU limits (a known Linux/container quirk isolated to this specific rlimit, not a systemic ulimit failure). Fixed with a Docker-level `--pids-limit=512` on the container (cgroup-enforced by the runtime itself, not dependent on the in-process shell builtin) — re-verified live: a bounded 600-process spawn attempt was cut off at 476.
+- **KNOWN GAP, unresolved**: network egress from submitted code is NOT blocked. The code's own best-effort `unshare -n` network-namespace denial silently falls back to "no isolation" on this host (logged: `unshare -n unavailable on this host`) — confirmed live, a submission successfully reached an external host. Fixing this requires a host-level change (an iptables rule dropping outbound traffic from uid 10001, or a working network-namespace setup) — deliberately not made yet pending a dedicated pass, since it's a different risk tier (host firewall) than anything else on this list.
 
 ## Known Security Gaps (as of this documentation pass)
-See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): KI-001 (Interview Question Bank isolation), KI-003 (admin.js platform-data routes not institute-scoped — NOT VERIFIED as intentional).
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): KI-001 (Interview Question Bank isolation), KI-003 (admin.js platform-data routes not institute-scoped — NOT VERIFIED as intentional). Plus: judge sandbox network egress (above).
 
 ## Security Review History
 This platform has had at least two dedicated security-audit passes (per project task history) plus this session's QA/RBAC audit. See [FIXED_ISSUES.md](FIXED_ISSUES.md)'s "Pre-existing fixes" section for the list of prior security fixes (JWT algorithm allowlist, judge env leakage, SSRF, login rate limiting/enumeration, institute-scoping gaps, unsanitized HTML rendering, missing file-type validation, PII encryption).
