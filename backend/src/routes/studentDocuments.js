@@ -139,7 +139,7 @@ async function authorizeStudentAccess(req, res, studentId) {
   return student;
 }
 
-router.get("/student/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/student/:studentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const student = await authorizeStudentAccess(req, res, req.params.studentId);
     if (!student) return;
@@ -151,7 +151,7 @@ router.get("/student/:studentId", authenticate, requireRole("ADMIN", "STAFF", "C
   }
 });
 
-router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id/verify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { status, reason } = req.body;
     if (!["VERIFIED", "REJECTED", "REUPLOAD_REQUIRED"].includes(status)) {
@@ -197,7 +197,7 @@ router.patch("/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
 // authorization, but skips (rather than fails the whole batch on) any document that's missing or
 // belongs to a student outside the requester's institute, mirroring the skip-and-report idiom
 // used elsewhere on this platform for batch operations (e.g. question bank bulk-delete).
-router.post("/bulk-verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-verify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { documentIds, status, reason } = req.body;
     if (!Array.isArray(documentIds) || documentIds.length === 0) {
@@ -278,7 +278,7 @@ router.post("/bulk-verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
 // handler. STAFF and CLERK are both deliberately excluded — their document responsibilities are
 // view/download/verify/remarks, never irreversible deletion (see the Document Verification
 // permission review).
-router.delete("/:id/admin", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/admin", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const doc = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!doc) return res.status(404).json({ error: "Document not found" });
@@ -304,7 +304,7 @@ router.delete("/:id/admin", authenticate, requireRole("ADMIN"), attachRequesterI
 // link through our own server with a Content-Disposition: attachment header; the response is
 // whatever the source file really is (usually already a PDF for placement documents) — it is
 // never relabeled to .pdf if the source is something else, since that would corrupt the download.
-router.get("/:id/download", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/download", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const doc = await prisma.studentDocument.findUnique({ where: { id: req.params.id } });
     if (!doc) return res.status(404).json({ error: "Document not found" });

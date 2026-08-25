@@ -553,7 +553,7 @@ router.get("/me/pdf", authenticate, requireRole("STUDENT"), async (req, res) => 
 // Both routes below load every scoped student's full resume content to compute
 // completion — cached briefly per institute scope, since this is otherwise a full
 // load-everything-and-aggregate-in-JS pass on every dashboard/list load.
-router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteKey = req.requesterInstituteId || "all";
     const stats = await cached(`resumeStats:${instituteKey}`, 60 * 1000, async () => {
@@ -577,7 +577,7 @@ router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   }
 });
 
-router.get("/admin/students", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/students", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteKey = req.requesterInstituteId || "all";
     const rows = await cached(`resumeStudents:${instituteKey}`, 60 * 1000, async () => {
@@ -619,7 +619,7 @@ async function authorizeStudentResumeAccess(req, res) {
   return target;
 }
 
-router.get("/admin/:studentId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/:studentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const target = await authorizeStudentResumeAccess(req, res);
     if (!target) return;
@@ -633,7 +633,7 @@ router.get("/admin/:studentId", authenticate, requireRole("ADMIN", "STAFF"), att
   }
 });
 
-router.get("/admin/:studentId/pdf", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/:studentId/pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const target = await authorizeStudentResumeAccess(req, res);
     if (!target) return;
@@ -650,7 +650,7 @@ router.get("/admin/:studentId/pdf", authenticate, requireRole("ADMIN", "STAFF"),
 
 // ADMIN/STAFF: leave a feedback note on a student's resume ("Suggest improvements") — separate
 // from the auto-generated ATS suggestions, visible to the student on their own resume page.
-router.post("/admin/:studentId/feedback", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/:studentId/feedback", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const target = await authorizeStudentResumeAccess(req, res);
     if (!target) return;
@@ -667,11 +667,11 @@ router.post("/admin/:studentId/feedback", authenticate, requireRole("ADMIN", "ST
   }
 });
 
-router.get("/field-config", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/field-config", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   res.json(await getFieldConfig());
 });
 
-router.patch("/field-config", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/field-config", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { mandatorySections } = req.body;
     if (!Array.isArray(mandatorySections)) return res.status(400).json({ error: "mandatorySections must be an array" });

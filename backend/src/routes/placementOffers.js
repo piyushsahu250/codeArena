@@ -132,7 +132,7 @@ async function authorizeStudentAccess(req, res, studentId) {
   return student;
 }
 
-router.get("/offers/student/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/offers/student/:studentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const student = await authorizeStudentAccess(req, res, req.params.studentId);
     if (!student) return;
@@ -144,7 +144,7 @@ router.get("/offers/student/:studentId", authenticate, requireRole("ADMIN", "STA
   }
 });
 
-router.patch("/offers/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.patch("/offers/:id/verify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { status, rejectionReason } = req.body;
     if (!["VERIFIED", "REJECTED"].includes(status)) return res.status(400).json({ error: "status must be VERIFIED or REJECTED" });
@@ -180,7 +180,7 @@ router.patch("/offers/:id/verify", authenticate, requireRole("ADMIN", "STAFF", "
 // ownership check as attendance.js's resolveAssignmentAccess) — Department Eligibility is meant
 // to represent that specific staff member's academic judgement, not any staff at the institute.
 // ADMIN: institute-scoped only, no group-ownership requirement.
-router.patch("/students/:studentId/department-eligibility", authenticate, requireRole("STAFF", "ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/students/:studentId/department-eligibility", authenticate, requireRole("STAFF", "ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { status } = req.body;
     if (!["ELIGIBLE", "NOT_ELIGIBLE"].includes(status)) return res.status(400).json({ error: "status must be ELIGIBLE or NOT_ELIGIBLE" });
@@ -211,7 +211,7 @@ router.patch("/students/:studentId/department-eligibility", authenticate, requir
   }
 });
 
-router.patch("/students/:studentId/clerk-eligibility", authenticate, requireRole("CLERK", "ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/students/:studentId/clerk-eligibility", authenticate, requireRole("CLERK", "ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { status } = req.body;
     if (!["ELIGIBLE", "NOT_ELIGIBLE"].includes(status)) return res.status(400).json({ error: "status must be ELIGIBLE or NOT_ELIGIBLE" });
@@ -292,7 +292,7 @@ async function computeRegistrationAnalytics(req) {
   });
 }
 
-router.get("/analytics/registration", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics/registration", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     res.json(await computeRegistrationAnalytics(req));
   } catch (err) {
@@ -358,7 +358,7 @@ async function computeOfferAnalytics(req) {
   });
 }
 
-router.get("/analytics/offers", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics/offers", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     res.json(await computeOfferAnalytics(req));
   } catch (err) {
@@ -397,7 +397,7 @@ async function computeDepartmentAnalytics(req) {
   });
 }
 
-router.get("/analytics/department", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics/department", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     res.json(await computeDepartmentAnalytics(req));
   } catch (err) {
@@ -406,7 +406,7 @@ router.get("/analytics/department", authenticate, requireRole("ADMIN", "STAFF", 
   }
 });
 
-router.get("/analytics/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics/report.pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const [registration, offers, department] = await Promise.all([
       computeRegistrationAnalytics(req), computeOfferAnalytics(req), computeDepartmentAnalytics(req),
@@ -427,7 +427,7 @@ router.get("/analytics/report.pdf", authenticate, requireRole("ADMIN", "STAFF", 
   }
 });
 
-router.get("/analytics/documents", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics/documents", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
     const counts = await cached(`placementAnalytics:documents:${instituteKey}`, 60 * 1000, async () => {

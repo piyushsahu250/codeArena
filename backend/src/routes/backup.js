@@ -13,7 +13,7 @@ const router = express.Router();
 // Dockerfile) against DATABASE_URL and buffers the whole dump in memory before responding —
 // simpler and safer than streaming for a dataset this platform's size, and it means a mid-dump
 // failure can still be reported as a clean error instead of a truncated download.
-router.get("/database", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/database", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, async (req, res) => {
   if (req.requesterInstituteId) {
     return res.status(403).json({ error: "Database backups are restricted to platform-level Super Admin accounts (not tied to a specific institute)." });
   }

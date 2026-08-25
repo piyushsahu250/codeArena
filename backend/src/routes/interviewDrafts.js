@@ -25,7 +25,7 @@ const VALID_CATEGORIES = ["HR", "TECHNICAL", "CODING", "APTITUDE", "SYSTEM_DESIG
 // inconsistent here — Interview Prep's existing /admin/questions routes allow STAFF to create/edit
 // too, so this mirrors that, not the ADMIN-only pattern used for challenges.js.
 
-router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), draftGenLimiter, async (req, res) => {
+router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), draftGenLimiter, async (req, res) => {
   try {
     const { category, company, count, difficulty, packageBand, experienceLevel, topicHint } = req.body;
     if (!VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: "Invalid category" });
@@ -38,7 +38,7 @@ router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN
   }
 });
 
-router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const where = {};
   if (req.query.status) where.status = req.query.status;
   if (req.query.company) where.company = req.query.company;
@@ -52,7 +52,7 @@ router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "STAFF"
   res.json({ rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
-router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const existing = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Draft not found" });
@@ -77,7 +77,7 @@ router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "
 // CODING 2-visible/10-hidden validation and resolveCodingFields() server-side resolution that
 // /admin/questions's own create/update routes enforce — a draft's own generation prompt only
 // requests that same minimum, but this is the real backstop, not the prompt.
-router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
     if (!draft) return res.status(404).json({ error: "Draft not found" });
@@ -132,7 +132,7 @@ router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("AD
   }
 });
 
-router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
     if (!draft) return res.status(404).json({ error: "Draft not found" });
@@ -148,7 +148,7 @@ router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADM
   }
 });
 
-router.delete("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.delete("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
     if (!draft) return res.status(404).json({ error: "Draft not found" });
@@ -163,7 +163,7 @@ router.delete("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", 
 
 // =========================== Admin/Staff: company pattern drafts ===========================
 
-router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), draftGenLimiter, async (req, res) => {
+router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), draftGenLimiter, async (req, res) => {
   try {
     const { company, category } = req.body;
     if (!company || !String(company).trim()) return res.status(400).json({ error: "company is required" });
@@ -177,7 +177,7 @@ router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN"
   }
 });
 
-router.get("/admin/drafts/patterns", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/drafts/patterns", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const where = {};
   if (req.query.status) where.status = req.query.status;
   if (req.query.company) where.company = req.query.company;
@@ -185,7 +185,7 @@ router.get("/admin/drafts/patterns", authenticate, requireRole("ADMIN", "STAFF")
   res.json(rows);
 });
 
-router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Pattern note not found" });
@@ -199,7 +199,7 @@ router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "S
   }
 });
 
-router.post("/admin/drafts/patterns/:id/approve", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/patterns/:id/approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Pattern note not found" });
@@ -218,7 +218,7 @@ router.post("/admin/drafts/patterns/:id/approve", authenticate, requireRole("ADM
   }
 });
 
-router.post("/admin/drafts/patterns/:id/reject", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/patterns/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Pattern note not found" });
@@ -234,7 +234,7 @@ router.post("/admin/drafts/patterns/:id/reject", authenticate, requireRole("ADMI
   }
 });
 
-router.delete("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.delete("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Pattern note not found" });
@@ -254,7 +254,7 @@ router.delete("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "
 // platform" signal — no denormalized counter to drift out of sync, no AI involved anywhere in
 // this response.
 
-router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const questionId = req.params.id;
   // Previously had no institute/ownership check at all beyond role -- any Staff/Admin could pull
   // usage analytics for any InterviewQuestion id, including another institute's private question.
@@ -278,7 +278,7 @@ router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", 
 
 // =========================== Companies catalog + AI-estimated pattern ===========================
 
-router.get("/companies/catalog", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/companies/catalog", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const counts = await prisma.interviewQuestion.groupBy({ by: ["company"], where: { company: { not: null } }, _count: { _all: true } });
   const countByCompany = Object.fromEntries(counts.map((c) => [c.company, c._count._all]));
   res.json(COMPANIES.map((company) => ({ company, questionCount: countByCompany[company] || 0 })));

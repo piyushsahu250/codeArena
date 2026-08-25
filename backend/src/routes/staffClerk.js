@@ -18,10 +18,13 @@ const LIST_SELECT_FIELDS = {
 
 const PROFILE_SELECT_FIELDS = { ...LIST_SELECT_FIELDS, mustChangePassword: true, gender: true };
 
-// Every route below is ADMIN-only and institute-scoped — Staff/Clerk accounts cannot reach any
-// route in this file (requireRole("ADMIN") rejects them outright). Applied per-route (not via
-// router.use) to match this platform's established convention.
-const guard = [authenticate, requireRole("ADMIN"), attachRequesterInstitute];
+// Every route below is admin-tier-only and institute-scoped — Staff/Clerk accounts cannot reach
+// any route in this file (requireRole rejects them outright). Applied per-route (not via
+// router.use) to match this platform's established convention. Every route already scopes via
+// attachRequesterInstitute (institute-filtered queries, loadTarget()'s ownership check), so
+// SUPER_ADMIN/INSTITUTE_ADMIN are safe to include here the same way they were added everywhere
+// else in the rollout — no separate hardcoded role check exists in this file to trap them.
+const guard = [authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute];
 
 // Shared load-authorize-scope helper for every route below that targets one Staff/Clerk account —
 // mirrors the authorizeStudentAccess()-style helpers used elsewhere on this platform

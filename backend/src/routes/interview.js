@@ -1146,7 +1146,7 @@ router.get("/companies", authenticate, async (req, res) => {
 // even with zero questions" shape too, to let an admin start a profile for a brand-new company —
 // nothing in this response is student-specific or sensitive (public company names, aggregate
 // counts, a boolean), so it's safe to open to ADMIN/STAFF rather than duplicate the query.
-router.get("/companies/browse", authenticate, requireRole("STUDENT", "ADMIN", "STAFF"), async (req, res) => {
+router.get("/companies/browse", authenticate, requireRole("STUDENT", "ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const result = await cached("interview:companies:browse", 120 * 1000, async () => {
     const [counts, patternCompanies] = await Promise.all([
       prisma.interviewQuestion.groupBy({ by: ["company"], where: { isActive: true, company: { not: null } }, _count: { _all: true } }),
@@ -1251,7 +1251,7 @@ router.get("/certificate/verify/:code", async (req, res) => {
 
 // =========================== Admin/Staff: question bank CMS ===========================
 
-router.get("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const where = { generatedForStudentId: null, ...interviewQuestionVisibilityWhere(req) };
   if (req.query.category) where.category = req.query.category;
   if (req.query.subject) where.subject = req.query.subject;
@@ -1264,7 +1264,7 @@ router.get("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), atta
   res.json({ rows: questions, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
-router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       category, subject, company, aptitudeCategory, difficulty, title, prompt, expectedKeywords, modelAnswer, options, correctAnswer, explanation, starterCode, testCases, language, tags, followUpQuestionId,
@@ -1313,7 +1313,7 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "STAFF"), att
   }
 });
 
-router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.interviewQuestion.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Question not found" });
@@ -1365,7 +1365,7 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF")
   }
 });
 
-router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.interviewQuestion.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Question not found" });
@@ -1389,7 +1389,7 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "STAFF"
 // routes (ADMIN+STAFF); write access is ADMIN-only since this materially changes what every
 // student sees in a Company Round, not a per-question edit.
 
-router.get("/admin/company-profiles", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/company-profiles", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   try {
     const profiles = await prisma.companyInterviewProfile.findMany({ orderBy: { company: "asc" } });
     res.json(profiles);
@@ -1412,7 +1412,7 @@ function validateRoundPlan(roundPlan) {
   return null;
 }
 
-router.post("/admin/company-profiles", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/admin/company-profiles", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { company, isActive, categoryWeights, roundPlan, notes } = req.body;
     const trimmed = String(company || "").trim();
@@ -1439,7 +1439,7 @@ router.post("/admin/company-profiles", authenticate, requireRole("ADMIN"), async
   }
 });
 
-router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const existing = await prisma.companyInterviewProfile.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Profile not found" });
@@ -1471,7 +1471,7 @@ router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN"), 
   }
 });
 
-router.delete("/admin/company-profiles/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const existing = await prisma.companyInterviewProfile.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Profile not found" });
@@ -1516,7 +1516,7 @@ const INTERVIEW_TEMPLATE_HEADERS = [
   "sampleInput1", "sampleOutput1", "sampleExplanation1", "sampleInput2", "sampleOutput2", "sampleExplanation2",
   "hiddenTestCases", "language",
 ];
-router.get("/admin/questions/bulk-template", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+router.get("/admin/questions/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), (req, res) => {
   const sampleRow = [
     "TECHNICAL", "Operating Systems", "", "", "MEDIUM", "Explain the difference between a process and a thread.",
     "process|thread|memory|scheduling", "A process is an independent execution unit with its own memory space; a thread is a lightweight unit of execution within a process, sharing its memory.",
@@ -1533,8 +1533,8 @@ router.get("/admin/questions/bulk-template", authenticate, requireRole("ADMIN", 
   res.send(buffer);
 });
 
-router.get("/admin/questions/export", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
-  const where = { generatedForStudentId: null };
+router.get("/admin/questions/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const where = { generatedForStudentId: null, ...interviewQuestionVisibilityWhere(req) };
   if (req.query.category) where.category = req.query.category;
   const questions = await prisma.interviewQuestion.findMany({ where });
   const rows = questions.map((q) => {
@@ -1564,7 +1564,7 @@ router.get("/admin/questions/export", authenticate, requireRole("ADMIN", "STAFF"
 
 // ADMIN/STAFF: bulk-import questions from a .csv/.xlsx file. expectedKeywords/options are
 // pipe-separated ("java|jvm|bytecode"); testCases is a JSON array string.
-router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     let workbook;
@@ -1670,7 +1670,7 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "STAFF
 
 // =========================== Admin/Staff: reports + analytics ===========================
 
-router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const stats = await cached(`interview:stats:${req.requesterInstituteId || "all"}`, 60 * 1000, async () => {
       const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
@@ -1709,7 +1709,7 @@ router.get("/admin/stats", authenticate, requireRole("ADMIN", "STAFF"), attachRe
 // naturally excludes students with zero rows) — this is a "who's been interviewing and how are
 // they doing" view, not a full roster; the full roster is available via /admin/students/:id or
 // the general student list.
-router.get("/admin/students", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/students", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -1755,7 +1755,7 @@ router.get("/admin/students", authenticate, requireRole("ADMIN", "STAFF"), attac
 
 // ADMIN/STAFF: which topics show up as "weak areas" most often across all reports — the
 // signal an admin actually needs to decide what to update in the question bank next.
-router.get("/admin/weak-topics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/weak-topics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = req.requesterInstituteId ? { instituteId: req.requesterInstituteId, role: "STUDENT" } : { role: "STUDENT" };
     const students = await prisma.user.findMany({ where, select: { id: true } });
@@ -1778,7 +1778,7 @@ router.get("/admin/weak-topics", authenticate, requireRole("ADMIN", "STAFF"), at
   }
 });
 
-router.get("/admin/students/:studentId/sessions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/students/:studentId/sessions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const target = await prisma.user.findUnique({ where: { id: req.params.studentId } });
     if (!target || target.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
@@ -1799,7 +1799,7 @@ router.get("/admin/students/:studentId/sessions", authenticate, requireRole("ADM
 
 // ADMIN/STAFF: event-level proctoring log for one session — for reviewing exactly what
 // happened during a TERMINATED (or any) interview, not just the final violation count.
-router.get("/admin/sessions/:sessionId/violations", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/sessions/:sessionId/violations", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.sessionId }, include: { student: true } });
     if (!session) return res.status(404).json({ error: "Session not found" });
@@ -1901,7 +1901,7 @@ function toReportRow(s) {
 // students (institute-scoped for Staff) — the "Student List" / results table the per-student-
 // summary /admin/students endpoint above doesn't provide (that one aggregates one row per
 // student, not one row per attempt).
-router.get("/admin/sessions", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/sessions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = buildAdminSessionWhere(req);
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -1924,7 +1924,7 @@ router.get("/admin/sessions", authenticate, requireRole("ADMIN", "STAFF"), attac
 
 // STAFF/ADMIN: dashboard summary cards + chart data, computed over the same filtered set as
 // /admin/sessions above (so selecting a filter updates both the table and the charts).
-router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     // Staff requests are already institute-scoped, so the working set is naturally bounded. An
     // unscoped platform Admin request with no explicit date range is not — it would load every
@@ -2029,7 +2029,7 @@ router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF"), atta
 // STAFF/ADMIN: full detail for one student's interview — session + report + every question with
 // the student's answer/code and per-question score, plus a proctoring summary (violation counts
 // by type, not just the raw log /admin/sessions/:sessionId/violations already exposes).
-router.get("/admin/sessions/:sessionId/report", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/sessions/:sessionId/report", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({
       where: { id: req.params.sessionId },
@@ -2070,7 +2070,7 @@ router.get("/admin/sessions/:sessionId/report", authenticate, requireRole("ADMIN
 
 // STAFF/ADMIN: PDF download for any (institute-scoped) student's report — same generator as the
 // student's own self-service download, just fetched by sessionId instead of the requester's own id.
-router.get("/admin/sessions/:sessionId/report/pdf", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/sessions/:sessionId/report/pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({
       where: { id: req.params.sessionId },
@@ -2096,7 +2096,7 @@ router.get("/admin/sessions/:sessionId/report/pdf", authenticate, requireRole("A
 
 // STAFF/ADMIN: Excel summary export of the filtered session list (same filters as /admin/sessions,
 // unpaginated) — one row per interview attempt.
-router.get("/admin/sessions/export", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/sessions/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = buildAdminSessionWhere(req);
     const sessions = await prisma.interviewSession.findMany({

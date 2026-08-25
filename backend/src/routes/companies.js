@@ -22,7 +22,7 @@ router.get("/", authenticate, async (req, res) => {
   }
 });
 
-router.post("/", authenticate, requireRole("ADMIN", "CLERK"), async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "CLERK"), async (req, res) => {
   try {
     const { name, logoUrl, companyType, website } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Company name is required" });
@@ -44,7 +44,7 @@ router.post("/", authenticate, requireRole("ADMIN", "CLERK"), async (req, res) =
   }
 });
 
-router.patch("/:id", authenticate, requireRole("ADMIN", "CLERK"), async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "CLERK"), async (req, res) => {
   try {
     const existing = await prisma.company.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Company not found" });

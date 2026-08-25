@@ -12,7 +12,7 @@ const router = express.Router();
 // codebase has no way to actually score. Every draft here is reviewed and edited by an
 // admin/staff member in the existing CreateQuestion form before it's ever saved — this endpoint
 // only drafts, it never writes to the question bank itself.
-router.get("/status", authenticate, requireRole("ADMIN", "STAFF"), (req, res) => {
+router.get("/status", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), (req, res) => {
   res.json({ configured: isConfigured() });
 });
 
@@ -31,7 +31,7 @@ const BTL_TASK_DEFINITIONS = {
   6: "BTL 6 — Create: the question must require designing, constructing, or proposing a new solution, structure, or system from scratch — not selecting or applying an existing one.",
 };
 
-router.post("/generate-question", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   const { questionType, subject, topic, difficulty, btlLevel, skillTested, subtopic } = req.body;
   const type = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT"].includes(questionType) ? questionType : "MCQ";
   if (!subject || !subject.trim()) return res.status(400).json({ error: "Subject is required" });

@@ -211,7 +211,7 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
 
 // ADMIN/STAFF/CLERK: view a specific student's profile — own institute only for scoped roles
 // (unscoped Platform Admin sees everyone), same convention as every other institute-scoped route.
-router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/:studentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const student = await prisma.user.findUnique({ where: { id: req.params.studentId } });
     if (!student || student.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
@@ -244,7 +244,7 @@ router.get("/:studentId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), 
 // department-eligibility upsert-with-setBy/setAt pattern exactly). Deliberately not in
 // STUDENT_PROFILE_FIELDS above, so a student can never self-report this — it's a Talent Pool
 // auto-selection criterion and needs to stay a trustworthy, staff-verified number.
-router.patch("/students/:studentId/cgpa", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/students/:studentId/cgpa", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const cgpa = Number(req.body.cgpa);
     if (!Number.isFinite(cgpa) || cgpa < 0 || cgpa > 10) return res.status(400).json({ error: "cgpa must be a number between 0 and 10" });
@@ -273,7 +273,7 @@ router.patch("/students/:studentId/cgpa", authenticate, requireRole("ADMIN", "ST
 
 // ADMIN/STAFF/CLERK: downloadable PDF of the same profile data above, for offline record-keeping
 // (e.g. Placement Cell staff printing a student's academic-record sheet).
-router.get("/:studentId/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/:studentId/report.pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const student = await prisma.user.findUnique({ where: { id: req.params.studentId } });
     if (!student || student.role !== "STUDENT") return res.status(404).json({ error: "Student not found" });
