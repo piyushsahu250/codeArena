@@ -2039,7 +2039,7 @@ model Company {
   // CompanyInterviewProfile/CandidateQuestionReport/QuestionGenerationJob all reference via
   // companyId, instead of each carrying its own disconnected free-text company name.
   industry  String?
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   interviewQuestions      InterviewQuestion[]
   interviewQuestionDrafts InterviewQuestionDraft[]
