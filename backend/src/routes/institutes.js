@@ -24,7 +24,7 @@ const router = express.Router();
 // management case (InstituteManagement.jsx); an institute-scoped STAFF or ADMIN now only ever
 // gets their own institute, as a single-item array so every existing `institutes.map(...)`
 // dropdown caller keeps working unchanged.
-router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const institutes = await cached(`institutes:list:${req.requesterInstituteId || "all"}`, 2 * 60 * 1000, () =>
     prisma.institute.findMany({
       where: req.requesterInstituteId ? { id: req.requesterInstituteId } : {},
@@ -151,7 +151,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachR
 // how many of its students are actively learning each one, certificates issued, and coding-
 // assessment performance. Course counts per institute are small, so per-course stats are computed
 // with a plain loop rather than a single aggregate query.
-router.get("/:id/course-analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/course-analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.params.id;
     if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {
@@ -230,7 +230,7 @@ router.get("/:id/course-analytics", authenticate, requireRole("ADMIN", "SUPER_AD
 // incomplete/percent plus the list of students still pending, optionally filtered by department.
 // Institute-scoped for Staff/Clerk (attachRequesterInstitute) the same way every other Placement
 // Cell/analytics route on this platform is; an unscoped Platform Admin can query any institute.
-router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/profile-completion-stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.params.id;
     if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {
