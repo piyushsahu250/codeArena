@@ -9,10 +9,11 @@ const { generateQuestionDrafts, generateCompanyPatternNote } = require("../utils
 const { COMPANIES } = require("../utils/companies");
 const { safeErrorMessage } = require("../utils/errors");
 const { ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
+const { sendAiError } = require("../utils/aiErrors");
 
 const router = express.Router();
 
-// Real, billed Claude API calls — same tighter-than-global rate-limit pattern as interview.js's
+// Real, billed Gemini API calls — same tighter-than-global rate-limit pattern as interview.js's
 // own aiInsightsLimiter, resume.js's aiReviewLimiter, learning.js's hintLimiter.
 const draftGenLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
 
@@ -29,11 +30,13 @@ router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN
   try {
     const { category, company, count, difficulty, packageBand, experienceLevel, topicHint } = req.body;
     if (!VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: "Invalid category" });
-    const rows = await generateQuestionDrafts({ category, company: company || null, count, difficulty, packageBand, experienceLevel, topicHint: topicHint || undefined });
+    const rows = await generateQuestionDrafts({ category, company: company || null, count, difficulty, packageBand, experienceLevel, topicHint: topicHint || undefined, userId: req.user.id, instituteId: req.requesterInstituteId });
     res.json({ created: rows.length, drafts: rows });
   } catch (err) {
+    if (err.notConfigured || err.quotaExceeded || err.queueBusy || err.timedOut || err.blocked || err.invalidResponse || err.status === 429) {
+      return sendAiError(res, err);
+    }
     console.error(err);
-    if (err.notConfigured) return res.status(503).json({ error: err.message });
     res.status(400).json({ error: safeErrorMessage(err, "Failed to generate drafts") });
   }
 });
@@ -168,11 +171,13 @@ router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN"
     const { company, category } = req.body;
     if (!company || !String(company).trim()) return res.status(400).json({ error: "company is required" });
     if (!VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: "Invalid category" });
-    const note = await generateCompanyPatternNote({ company: company.trim(), category });
+    const note = await generateCompanyPatternNote({ company: company.trim(), category, userId: req.user.id, instituteId: req.requesterInstituteId });
     res.json(note);
   } catch (err) {
+    if (err.notConfigured || err.quotaExceeded || err.queueBusy || err.timedOut || err.blocked || err.invalidResponse || err.status === 429) {
+      return sendAiError(res, err);
+    }
     console.error(err);
-    if (err.notConfigured) return res.status(503).json({ error: err.message });
     res.status(400).json({ error: safeErrorMessage(err, "Failed to generate pattern note") });
   }
 });

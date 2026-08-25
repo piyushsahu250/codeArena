@@ -1,5 +1,5 @@
 const prisma = require("../prisma");
-const { askClaudeJson } = require("../utils/aiClient");
+const aiService = require("../services/ai/aiService");
 
 // Generates AI-drafted InterviewQuestion candidates and CompanyPatternNote checklists — the core
 // content-generation logic behind the AI-Powered Auto-Updating Mock Interview System. Deliberately
@@ -55,12 +55,14 @@ function clampCount(count) {
   return Math.min(10, Math.max(1, Number(count) || 3));
 }
 
-async function generateQuestionDrafts({ category, company, count, difficulty, packageBand, experienceLevel, sourceRun, topicHint }) {
+async function generateQuestionDrafts({ category, company, count, difficulty, packageBand, experienceLevel, sourceRun, topicHint, userId, instituteId }) {
   const n = clampCount(count);
-  const draft = await askClaudeJson({
+  const draft = await aiService.generateJson({
+    feature: aiService.FEATURES.INTERVIEW_QUESTION_DRAFT, userId, instituteId,
     system: SYSTEM_PROMPT,
     prompt: buildQuestionPrompt({ category, company, difficulty, count: n, topicHint }),
     maxTokens: category === "CODING" ? 4096 : 2048,
+    validate: (v) => !Array.isArray(v?.questions) ? "expected a questions array" : null,
   });
   const questions = Array.isArray(draft?.questions) ? draft.questions : [];
   const rows = await Promise.all(
@@ -88,8 +90,9 @@ async function generateQuestionDrafts({ category, company, count, difficulty, pa
   return rows;
 }
 
-async function generateCompanyPatternNote({ company, category, sourceRun }) {
-  const draft = await askClaudeJson({
+async function generateCompanyPatternNote({ company, category, sourceRun, userId, instituteId }) {
+  const draft = await aiService.generateDraft({
+    feature: aiService.FEATURES.COMPANY_PATTERN_DRAFT, userId, instituteId,
     system: SYSTEM_PROMPT,
     prompt:
       `Summarize, from general public knowledge, the commonly-reported ${category} interview pattern at ${company} ` +
@@ -97,6 +100,7 @@ async function generateCompanyPatternNote({ company, category, sourceRun }) {
       '"Leadership Principles", "System Design Round"). This is a general pattern summary, not a claim about any ' +
       "specific real question.",
     maxTokens: 512,
+    validate: (v) => !Array.isArray(v?.checklistItems) ? "expected a checklistItems array" : null,
   });
   const checklistItems = Array.isArray(draft?.checklistItems) ? draft.checklistItems.filter((s) => typeof s === "string" && s.trim()) : [];
   return prisma.companyPatternNote.create({ data: { company, category, checklistItems, sourceRun: sourceRun || undefined } });

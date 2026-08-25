@@ -2485,9 +2485,48 @@ model InterviewReport {
   timeEfficiency          Json? // { avgTimePerQuestionSec, byCategory: {...}, comparedToBudget: "under"|"on-pace"|"over" }
   optimizationSuggestions Json? // string[] — pacing/structure advice, distinct from the weak-area-driven `recommendations` above
 
+  // AI-generated supplementary narrative (GET /interview/sessions/:id/ai-insights) — deliberately
+  // separate from the rule-based fields above, which never depend on any AI call succeeding and
+  // are always available the instant an interview finalizes. This block is generated on first
+  // request (not at finalize time, to avoid billing every student for a report they may never
+  // open) and persisted here once so it's never regenerated on a second view, and so a refresh
+  // mid-generation can recover the real status instead of re-firing the request or showing nothing.
+  // aiInsightsStatus: null (never requested) | GENERATING | READY | FAILED. A stuck GENERATING row
+  // (a request that crashed the process mid-call) self-heals: aiInsightsRequestedAt older than the
+  // request timeout is treated as FAILED by the route rather than blocking a retry forever.
+  aiInsightsStatus      String?
+  aiInsights            Json?     // structured shape — see AI_SERVICE.md; validated before write
+  aiInsightsRequestedAt DateTime?
+  aiInsightsError       String?   // last failure's user-safe message, cleared on next success
+
   createdAt       DateTime @default(now())
 
   @@index([studentId, createdAt])
+}
+
+// Per-request AI usage telemetry — covers every aiService.js call platform-wide (mock interview
+// insights, question drafting, resume review/improve, learning hints, etc.), not just interviews.
+// Deliberately plain string fields (no FK relation), same denormalize-at-write-time convention as
+// AuditLog above — a usage log must survive the user/institute it references being deleted later,
+// and must never be blocked by (or block) that deletion. Never stores prompt/response content,
+// API keys, or other credentials — see aiService.js's logUsage().
+model AiUsageLog {
+  id             String   @id @default(uuid())
+  userId         String?
+  instituteId    String?
+  feature        String   // e.g. "interview_insights", "interview_draft_question", "resume_review" — see aiService.js FEATURES
+  provider       String   // "gemini"
+  model          String
+  success        Boolean
+  errorType      String?  // e.g. "TIMEOUT", "RATE_LIMITED", "QUOTA_EXCEEDED", "INVALID_RESPONSE", "NOT_CONFIGURED", "PROVIDER_ERROR"
+  latencyMs      Int
+  promptTokens   Int?
+  completionTokens Int?
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([instituteId, createdAt])
+  @@index([createdAt])
 }
 
 model InterviewCertificate {

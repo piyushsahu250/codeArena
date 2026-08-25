@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { timingMiddleware, recordProcessError } = require("./utils/metrics");
 const logger = require("./utils/logger");
-const { isConfigured: isAiConfigured } = require("./utils/aiClient");
+const aiService = require("./services/ai/aiService");
 const { getClientIp } = require("./utils/clientIp");
 
 const authRoutes = require("./routes/auth");
@@ -118,9 +118,9 @@ app.use((req, res, next) => {
 // a stale build," since a health check with no version marker can't distinguish the two.
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeArena API", commit: process.env.COMMIT_SHA || process.env.RENDER_GIT_COMMIT || null }));
 
-// Public, boolean-only — lets any page check whether ANTHROPIC_API_KEY is set before showing an
+// Public, boolean-only — lets any page check whether GEMINI_API_KEY is set before showing an
 // AI-feature button, instead of the student clicking it and hitting a raw 503 error message.
-app.get("/api/ai/status", (req, res) => res.json({ configured: isAiConfigured() }));
+app.get("/api/ai/status", (req, res) => res.json({ configured: aiService.isConfigured() }));
 
 // Global floor well above any legitimate per-user traffic pattern (dashboard loads fire several
 // parallel GETs; this is not meant to constrain normal use, just block runaway scripts/scraping).

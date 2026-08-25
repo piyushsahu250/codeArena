@@ -9,7 +9,8 @@ const { generateCertificatePdf } = require("../utils/certificatePdf");
 const { issueCertificate } = require("../utils/certificates");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { processGamification } = require("../utils/gamification");
-const { askClaude } = require("../utils/aiClient");
+const aiService = require("../services/ai/aiService");
+const { sendAiError } = require("../utils/aiErrors");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { notifyCourseAssigned } = require("../utils/notifications");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -700,7 +701,7 @@ router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attach
 // can't be requested before actually trying (or after already solving it).
 router.post("/practice/:id/hint", authenticate, requireRole("STUDENT"), hintLimiter, async (req, res) => {
   try {
-    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { institute: { select: { aiHintsEnabled: true } } } });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, institute: { select: { aiHintsEnabled: true } } } });
     if (!student?.institute?.aiHintsEnabled) {
       return res.status(403).json({ error: "AI hints aren't enabled for your institute" });
     }
@@ -719,17 +720,16 @@ router.post("/practice/:id/hint", authenticate, requireRole("STUDENT"), hintLimi
     const { code, language } = req.body;
     if (!code || !code.trim()) return res.status(400).json({ error: "code is required" });
 
-    const hint = await askClaude({
+    const hint = await aiService.generateText({
+      feature: aiService.FEATURES.LEARNING_HINT, userId: req.user.id, instituteId: student.instituteId,
       system: "You are a patient programming tutor. Give a short, specific hint that nudges the student toward finding and fixing their own bug — never write corrected code, never give the full solution. 2-4 sentences.",
-      prompt: `Question: ${q.prompt}\n\nStudent's ${language || "code"} submission (verdict: ${lastAttempt.verdict}):\n\`\`\`\n${code.slice(0, 4000)}\n\`\`\`\n\nGive one concise hint.`,
+      prompt: `Question: ${q.prompt}\n\n${aiService.wrapUntrusted(`Student's ${language || "code"} submission (verdict: ${lastAttempt.verdict})`, code.slice(0, 4000))}\n\nGive one concise hint.`,
       maxTokens: 300,
       temperature: 0.5,
     });
     res.json({ hint });
   } catch (err) {
-    if (err.notConfigured) return res.status(503).json({ error: err.message });
-    console.error(err);
-    res.status(500).json({ error: "Failed to generate hint" });
+    sendAiError(res, err, "Failed to generate hint");
   }
 });
 

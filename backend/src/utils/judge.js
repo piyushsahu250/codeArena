@@ -26,7 +26,7 @@ const { judgeSqlSubmission } = require("./sqlJudge");
 
 // Node's child_process.spawn inherits the FULL parent environment by default when no `env`
 // option is given — that meant every compiled/executed student submission ran with
-// JWT_SECRET/DATABASE_URL/ANTHROPIC_API_KEY/mailer credentials sitting right there in its
+// JWT_SECRET/DATABASE_URL/GEMINI_API_KEY/mailer credentials sitting right there in its
 // process environment, readable by trivially printing it (`print(os.environ)`,
 // `System.getenv()`, `getenv()`, etc.) and returned straight back to the student in the /run
 // endpoints' response (unlike /submit paths, which strip raw output). Whitelisting to exactly

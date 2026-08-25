@@ -10,12 +10,13 @@ const { generateResumeDocx } = require("../utils/resumeDocx");
 const { buildAutofillData } = require("../utils/resumeAutofill");
 const { parseResumeFile } = require("../utils/resumeParser");
 const { improveText } = require("../utils/resumeImprove");
-const { askClaudeJson, isConfigured: aiIsConfigured } = require("../utils/aiClient");
+const aiService = require("../services/ai/aiService");
+const { sendAiError } = require("../utils/aiErrors");
 const { ROLE_KEYWORDS, analyzeForRole } = require("../utils/resumeJobRoles");
 const { cached } = require("../utils/cache");
 
 const router = express.Router();
-// Real, billed Claude API calls — tighter than the global per-user limiter, same rationale as
+// Real, billed Gemini API calls — tighter than the global per-user limiter, same rationale as
 // learning.js's hintLimiter.
 const aiReviewLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
 // Separate, more generous bucket from aiReviewLimiter — a student calling "Improve with AI" once
@@ -277,21 +278,22 @@ router.post("/me/clear-section", authenticate, requireRole("STUDENT"), async (re
 
 // STUDENT: rewrite suggestion for one block of text (summary / project description / experience
 // responsibilities / achievement). Returns a suggestion only — never auto-saves, so the student
-// explicitly accepts or rejects it in the editor. Uses a real Claude call when the server has
-// ANTHROPIC_API_KEY configured, falling back to the deterministic rule-based rewrite otherwise —
+// explicitly accepts or rejects it in the editor. Uses a real Gemini call when the server has
+// GEMINI_API_KEY configured, falling back to the deterministic rule-based rewrite otherwise —
 // same graceful-degradation posture as every other AI feature on this platform (this endpoint
 // must keep working even when AI isn't configured, since it predates the AI integration). The
 // response's `source` field tells the frontend which path produced the suggestion so it can be
 // honest about it rather than always implying a real AI rewrite happened.
-router.post("/me/improve", authenticate, requireRole("STUDENT"), improveLimiter, async (req, res) => {
+router.post("/me/improve", authenticate, requireRole("STUDENT"), attachRequesterInstitute, improveLimiter, async (req, res) => {
   try {
     const { text, section } = req.body;
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text is required" });
     const original = String(text).trim();
 
-    if (aiIsConfigured()) {
+    if (aiService.isConfigured()) {
       try {
-        const ai = await askClaudeJson({
+        const ai = await aiService.generateJson({
+          feature: aiService.FEATURES.RESUME_IMPROVE, userId: req.user.id, instituteId: req.requesterInstituteId,
           system:
             "You are a resume-writing coach helping a student rewrite one section of their resume to be concise, " +
             "ATS-friendly, and impactful. Use strong action verbs and active voice. NEVER invent facts, technologies, " +
@@ -299,11 +301,12 @@ router.post("/me/improve", authenticate, requireRole("STUDENT"), improveLimiter,
             "outcome in the original, do not add a fake one; you may suggest the student add a real one instead. " +
             "Return only JSON.",
           prompt:
-            `Section: ${section || "general"}\nOriginal text:\n"""${original}"""\n\n` +
+            `Section: ${section || "general"}\n${aiService.wrapUntrusted("Original text", original)}\n\n` +
             'Return JSON exactly shaped: {"improved": string (the rewritten text, same underlying facts, no invented content), ' +
             '"changes": string[] (2-4 short bullet points explaining what changed and why)}.',
           maxTokens: 500,
           temperature: 0.4,
+          validate: (v) => typeof v?.improved !== "string" ? "missing improved text" : null,
         });
         if (ai && typeof ai.improved === "string" && ai.improved.trim()) {
           return res.json({
@@ -325,27 +328,27 @@ router.post("/me/improve", authenticate, requireRole("STUDENT"), improveLimiter,
   }
 });
 
-// STUDENT: whole-resume qualitative review via Claude — augments the existing rule-based
+// STUDENT: whole-resume qualitative review via Gemini — augments the existing rule-based
 // completion/ATS scoring above rather than replacing it (that heuristic system stays the
 // always-available default; this is an optional richer pass on top, same graceful-degradation
 // posture as every other AI feature on this platform). Read-only — never saves anything.
-router.post("/me/ai-review", authenticate, requireRole("STUDENT"), aiReviewLimiter, async (req, res) => {
+router.post("/me/ai-review", authenticate, requireRole("STUDENT"), attachRequesterInstitute, aiReviewLimiter, async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — build one first" });
 
     const { id, studentId, createdAt, updatedAt, photoUrl, ...content } = resume;
-    const review = await askClaudeJson({
+    const review = await aiService.generateJson({
+      feature: aiService.FEATURES.RESUME_REVIEW, userId: req.user.id, instituteId: req.requesterInstituteId,
       system: "You are a career coach reviewing a student's resume for placement readiness. Be specific and concrete — reference their actual content, don't give generic advice. Return only JSON matching the requested schema.",
-      prompt: `Review this resume${resume.targetRole ? ` for a ${resume.targetRole} role` : ""}:\n\n${JSON.stringify(content, null, 2)}\n\nReturn JSON exactly shaped: {"overallFeedback": string (2-3 sentences), "strengths": string[] (2-4 items), "improvements": string[] (3-5 specific, actionable items referencing actual resume content)}.`,
+      prompt: `Review this resume${resume.targetRole ? ` for a ${resume.targetRole} role` : ""}:\n\n${aiService.wrapUntrusted("Resume content (JSON)", JSON.stringify(content, null, 2))}\n\nReturn JSON exactly shaped: {"overallFeedback": string (2-3 sentences), "strengths": string[] (2-4 items), "improvements": string[] (3-5 specific, actionable items referencing actual resume content)}.`,
       maxTokens: 1200,
       temperature: 0.4,
+      validate: (v) => (!v?.overallFeedback || !Array.isArray(v?.strengths) || !Array.isArray(v?.improvements)) ? "missing overallFeedback/strengths/improvements" : null,
     });
     res.json(review);
   } catch (err) {
-    if (err.notConfigured) return res.status(503).json({ error: err.message });
-    console.error(err);
-    res.status(500).json({ error: "AI review failed — try again later" });
+    sendAiError(res, err, "AI review failed — try again later");
   }
 });
 

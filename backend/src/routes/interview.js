@@ -17,7 +17,8 @@ const { generateResumeQuestions } = require("../utils/resumeInterviewQuestions")
 const { generateInterviewCertificatePdf } = require("../utils/interviewCertificatePdf");
 const { generateInterviewReportPdf } = require("../utils/interviewReportPdf");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
-const { askClaudeJson } = require("../utils/aiClient");
+const aiService = require("../services/ai/aiService");
+const { sendAiError } = require("../utils/aiErrors");
 const { cached } = require("../utils/cache");
 const { dedupe, isInFlight } = require("../utils/requestDedup");
 const { COMPANIES } = require("../utils/companies");
@@ -548,14 +549,49 @@ router.get("/sessions/:id", authenticate, requireRole("STUDENT"), async (req, re
 // utils/interviewEvaluation.js) rather than replacing it. That heuristic scoring stays the
 // authoritative, always-available number; this is a read-only, on-demand richer pass reading
 // the same transcript. Never stored — recomputed fresh each time it's requested.
+// A row stuck at GENERATING longer than this is treated as dead (the process that started it
+// crashed or was redeployed mid-call, not a real long-running request) — self-heals into a
+// retryable FAILED state instead of blocking every future request on this session forever. Kept
+// comfortably above GEMINI_TIMEOUT_MS + one retry so a genuinely-still-running call is never
+// preempted by a client that just happened to poll at the wrong moment.
+const AI_INSIGHTS_STALE_GENERATING_MS = 60000;
+
 router.get("/sessions/:id/ai-insights", authenticate, requireRole("STUDENT"), aiInsightsLimiter, async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({
       where: { id: req.params.id },
-      include: { answers: { orderBy: { createdAt: "asc" } }, report: true },
+      include: { answers: { orderBy: { createdAt: "asc" } }, report: true, student: { select: { instituteId: true } } },
     });
     if (!session || session.studentId !== req.user.id) return res.status(404).json({ error: "Session not found" });
     if (!session.report) return res.status(400).json({ error: "This interview hasn't been submitted yet" });
+
+    let report = session.report;
+
+    // Already generated — return the persisted result. Never regenerates on a page refresh or a
+    // second visit to the report (this is exactly what a browser-refresh-during/after-generation
+    // must recover into, per the "don't create duplicate work from a refresh" requirement).
+    if (report.aiInsightsStatus === "READY" && report.aiInsights) {
+      return res.json({ status: "READY", ...report.aiInsights });
+    }
+
+    const isStale = report.aiInsightsStatus === "GENERATING" && report.aiInsightsRequestedAt
+      && (Date.now() - new Date(report.aiInsightsRequestedAt).getTime() > AI_INSIGHTS_STALE_GENERATING_MS);
+    if (report.aiInsightsStatus === "GENERATING" && !isStale) {
+      // A genuinely in-flight request (this instance or another) — the frontend polls this same
+      // endpoint again shortly rather than firing a second generation.
+      return res.status(202).json({ status: "GENERATING" });
+    }
+
+    if (report.aiInsightsStatus === "FAILED" && !req.query.retry) {
+      // Surface the last failure without re-billing a call the student hasn't explicitly retried —
+      // the frontend's Retry button re-requests with ?retry=1 to actually attempt again.
+      return res.status(200).json({ status: "FAILED", error: report.aiInsightsError || "AI analysis failed — try again later" });
+    }
+
+    report = await prisma.interviewReport.update({
+      where: { id: report.id },
+      data: { aiInsightsStatus: "GENERATING", aiInsightsRequestedAt: new Date(), aiInsightsError: null },
+    });
 
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
     const transcript = session.answers.map((a) => {
@@ -569,21 +605,38 @@ router.get("/sessions/:id/ai-insights", authenticate, requireRole("STUDENT"), ai
       : Array.isArray(session.roundPlanSnapshot) && session.roundPlanSnapshot.length > 0
         ? ` The candidate cleared all ${session.roundPlanSnapshot.length} rounds of a company-style interview (company readiness score: ${session.report.companyReadinessScore ?? "n/a"}%).`
         : "";
-    // A double-click within the 5/min rate-limit window would otherwise fire two separate billed
-    // Claude calls for the exact same (never-persisted) request — coalesce into one.
-    const insights = await dedupe(`ai-insights:${session.id}`, () =>
-      askClaudeJson({
-        system: "You are an interview coach analyzing a completed mock interview transcript. Be specific — reference the candidate's actual answers, not generic advice. Return only JSON matching the requested schema.",
-        prompt: `Overall score: ${session.report.overallScore}%.${roundContext} Transcript:\n\n${transcript.slice(0, 8000)}\n\nReturn JSON exactly shaped: {"narrative": string (3-4 sentence performance summary), "recommendations": string[] (3-5 specific, actionable next steps referencing the actual answers)}.`,
-        maxTokens: 1000,
-        temperature: 0.4,
-      })
-    );
-    res.json(insights);
+
+    try {
+      // A double-click (or a poll landing at the same instant as another) would otherwise fire two
+      // separate billed Gemini calls for the exact same request — coalesce into one in-process.
+      const evaluation = await dedupe(`ai-insights:${session.id}`, () =>
+        aiService.evaluateInterview({
+          userId: req.user.id, instituteId: session.student.instituteId,
+          transcript: `Overall rule-based score: ${session.report.overallScore}%.${roundContext}\n\n${transcript.slice(0, 8000)}`,
+          category: session.category, jobRole: session.config?.jobRole,
+        })
+      );
+      await prisma.interviewReport.update({
+        where: { id: report.id },
+        data: { aiInsightsStatus: "READY", aiInsights: evaluation, aiInsightsError: null },
+      });
+      return res.json({ status: "READY", ...evaluation });
+    } catch (aiErr) {
+      // Never leaves the row stuck at GENERATING — every failure path lands on FAILED with a
+      // safe, student-facing message, so the next request (retry) always has a clean state to
+      // start from instead of tripping the stale-GENERATING self-heal unnecessarily.
+      const message = aiErr.notConfigured
+        ? "AI features are not configured on this server yet."
+        : aiErr.quotaExceeded ? aiErr.message
+        : "AI service is temporarily unavailable. Please retry.";
+      await prisma.interviewReport.update({
+        where: { id: report.id },
+        data: { aiInsightsStatus: "FAILED", aiInsightsError: message },
+      });
+      throw aiErr;
+    }
   } catch (err) {
-    if (err.notConfigured) return res.status(503).json({ error: err.message });
-    console.error(err);
-    res.status(500).json({ error: "AI analysis failed — try again later" });
+    sendAiError(res, err, "AI analysis failed — try again later");
   }
 });
 

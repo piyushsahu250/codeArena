@@ -1,8 +1,16 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const { authenticate, requireRole } = require("../middleware/auth");
-const { askClaudeJson, isConfigured } = require("../utils/aiClient");
+const { attachRequesterInstitute } = require("../middleware/institute");
+const aiService = require("../services/ai/aiService");
+const { sendAiError } = require("../utils/aiErrors");
 
 const router = express.Router();
+
+// This route previously had no per-user AI rate limit at all — same 5/min budget as the sibling
+// generators (draftGenLimiter, hintLimiter) elsewhere on the platform, so no single staff member
+// can burn through the shared free-tier quota alone.
+const generateLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
 
 // Scoped to the four QuestionType values this platform can actually grade (CODING via the judge,
 // MCQ/TRUE_FALSE/MULTISELECT via stored correctAnswer indices — see schema.prisma's QuestionType
@@ -13,7 +21,7 @@ const router = express.Router();
 // admin/staff member in the existing CreateQuestion form before it's ever saved — this endpoint
 // only drafts, it never writes to the question bank itself.
 router.get("/status", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), (req, res) => {
-  res.json({ configured: isConfigured() });
+  res.json({ configured: aiService.isConfigured() });
 });
 
 // Bloom's Taxonomy cognitive-task definitions, given verbatim to the model when a target BTL
@@ -31,7 +39,7 @@ const BTL_TASK_DEFINITIONS = {
   6: "BTL 6 — Create: the question must require designing, constructing, or proposing a new solution, structure, or system from scratch — not selecting or applying an existing one.",
 };
 
-router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, generateLimiter, async (req, res) => {
   const { questionType, subject, topic, difficulty, btlLevel, skillTested, subtopic } = req.body;
   const type = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT"].includes(questionType) ? questionType : "MCQ";
   if (!subject || !subject.trim()) return res.status(400).json({ error: "Subject is required" });
@@ -46,12 +54,15 @@ router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMI
 
   try {
     if (type === "CODING") {
-      const draft = await askClaudeJson({
+      const draft = await aiService.generateJson({
+        feature: aiService.FEATURES.QUESTION_BANK_GENERATE, userId: req.user.id, instituteId: req.requesterInstituteId,
         system: "You write programming exam questions for a computer-science education platform. Return only JSON matching the requested schema — no markdown formatting inside JSON string values.",
         prompt: `Write one ${difficulty || "MEDIUM"}-difficulty CODING question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. The student writes a complete stdin/stdout program in any language — no function-signature harness.${btlInstruction}${skillInstruction}
 Return JSON exactly shaped: {"title": string, "description": string (full problem statement including input/output format and constraints), "explanation": string (brief solution approach), "testCases": [{"input": string, "expected": string, "isHidden": boolean}]}.
 Provide exactly 5 testCases: 2 with isHidden=false (visible samples shown to students) and 3 with isHidden=true (used only for grading, covering edge cases).`,
         maxTokens: 1500,
+        injectionGuard: false, // subject/topic/skillTested are short admin-typed labels, not free-form student content
+        validate: (v) => (!v?.title || !v?.description || !Array.isArray(v?.testCases)) ? "missing title/description/testCases" : null,
       });
       return res.json({ questionType: "CODING", btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null, ...draft });
     }
@@ -61,17 +72,18 @@ Provide exactly 5 testCases: 2 with isHidden=false (visible samples shown to stu
       : type === "MULTISELECT"
       ? "4 to 6 options with 2 or more correct."
       : "4 options with exactly 1 correct.";
-    const draft = await askClaudeJson({
+    const draft = await aiService.generateJson({
+      feature: aiService.FEATURES.QUESTION_BANK_GENERATE, userId: req.user.id, instituteId: req.requesterInstituteId,
       system: "You write exam questions for a computer-science education platform. Return only JSON matching the requested schema.",
       prompt: `Write one ${difficulty || "MEDIUM"}-difficulty ${type} question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. ${shapeHint}${btlInstruction}${skillInstruction}
 Return JSON exactly shaped: {"title": string, "description": string (the question text), "options": string[], "correctAnswer": number[] (0-based indices into options), "explanation": string}.`,
       maxTokens: 800,
+      injectionGuard: false,
+      validate: (v) => (!v?.title || !v?.description) ? "missing title/description" : null,
     });
     res.json({ questionType: type, btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null, ...draft });
   } catch (err) {
-    if (err.notConfigured) return res.status(503).json({ error: err.message });
-    console.error(err);
-    res.status(500).json({ error: "AI question generation failed — try again or write it manually" });
+    sendAiError(res, err, "AI question generation failed — try again or write it manually");
   }
 });
 
