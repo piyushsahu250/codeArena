@@ -12,7 +12,7 @@ const router = express.Router();
 // accounts always see only their own institute; platform-level accounts (no instituteId)
 // may optionally filter via ?instituteId=. Cached per scope key — classes change rarely but
 // this list is read on nearly every test-creation/bulk-upload/student-management page load.
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const where = {};
   if (req.requesterInstituteId) {
     where.instituteId = req.requesterInstituteId;
@@ -38,7 +38,7 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
 // only add classes under their own institute (their instituteId wins over anything in the
 // body). A class is uniquely identified by institute + name + batch year, so the same
 // program name can recur across batches (e.g. MCA 2025, MCA 2026).
-router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { name, code, batchYear } = req.body;
     if (req.requesterInstituteId && req.body.instituteId && req.body.instituteId !== req.requesterInstituteId) {
@@ -72,7 +72,7 @@ router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, a
 // ADMIN: edit name/code/batchYear/institute, or toggle active/inactive. Institute-scoped
 // admins can only touch classes already under their own institute, and can't move a class
 // elsewhere.
-router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.class.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Class not found" });
@@ -122,7 +122,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 });
 
 // ADMIN: delete a class. Institute-scoped admins can only delete classes under their own institute.
-router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.class.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Class not found" });
@@ -143,7 +143,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitu
 });
 
 // ADMIN/STAFF: full student roster for one class (roll number, name, email, mobile).
-router.get("/:id/students", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/students", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const cls = await prisma.class.findUnique({ where: { id: req.params.id }, include: { institute: { select: { id: true, name: true } } } });
     if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -168,7 +168,7 @@ router.get("/:id/students", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // of reused-across-many-accounts secret that gets a class collectively compromised if any one
 // student's password leaks). Each account is flagged to force a password change on next login.
 // Individual per-row updates (not a single updateMany) since each student needs a distinct hash.
-router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const cls = await prisma.class.findUnique({ where: { id: req.params.id } });
     if (!cls) return res.status(404).json({ error: "Class not found" });

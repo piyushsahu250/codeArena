@@ -44,7 +44,7 @@ function poolInstituteIds(pool) {
 
 // =========================== Pool CRUD ===========================
 
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const { status, search } = req.query;
   const where = {};
   const effectiveInstituteId = req.requesterInstituteId || req.query.instituteId;
@@ -61,7 +61,7 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
   res.json(pools);
 });
 
-router.post("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { name, description } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Pool name is required" });
@@ -153,7 +153,7 @@ router.get("/my-pools", authenticate, requireRole("STUDENT"), attachRequesterIns
 // =========================== Analytics (platform/institute-wide, across all pools) ===========================
 // Registered before "/:id" for the same route-ordering reason as "/my-pools" above.
 
-router.get("/analytics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const cacheKey = `talentPoolAnalytics:${req.requesterInstituteId || "all"}:${JSON.stringify(req.query)}`;
     const result = await cached(cacheKey, 60 * 1000, () => computeTalentPoolAnalytics(req));
@@ -273,13 +273,13 @@ async function computeTalentPoolAnalytics(req) {
     };
 }
 
-router.get("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   res.json(pool);
 });
 
-router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -319,7 +319,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 // Blocks deletion of a pool with real members — same "empty child rows only" safety bar as the
 // Department/Institute auto-cleanup elsewhere on this platform, except here nothing is empty by
 // accident (members are always deliberately added), so this is a hard block, not an auto-clean.
-router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -341,7 +341,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitu
 
 // =========================== Members ===========================
 
-router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/members", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const { search, departmentId, batch, section, academicGroupId, instituteId, placementStatus } = req.query;
@@ -393,7 +393,7 @@ router.get("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   res.json(members);
 });
 
-router.post("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/members", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -435,7 +435,7 @@ router.post("/:id/members", authenticate, requireRole("ADMIN", "STAFF"), attachR
   }
 });
 
-router.delete("/:id/members/:studentId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/members/:studentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -461,7 +461,7 @@ router.delete("/:id/members/:studentId", authenticate, requireRole("ADMIN", "STA
 // Move (remove from source, add to target) or copy (add to target only) a batch of students
 // between two pools in one call — for STAFF/institute-scoped ADMIN, both pools must include their
 // institute and every student must belong to it, same boundary as the plain add/remove routes.
-router.post("/:id/members/transfer", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/members/transfer", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const sourcePool = await loadPoolScoped(req, res, req.params.id);
   if (!sourcePool) return;
   try {
@@ -543,7 +543,7 @@ function buildBulkImportHeaderMap(headers) {
   return map;
 }
 
-router.get("/:id/bulk-import-template", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/bulk-import-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const headers = ["Institute", "Registration Number (PRN)"];
@@ -562,7 +562,7 @@ router.get("/:id/bulk-import-template", authenticate, requireRole("ADMIN"), atta
 // Number is never an import column here, same as every other bulk-upload workflow on the platform.
 // Continues past invalid rows rather than aborting, and buckets every row into exactly one of five
 // outcomes per the spec's required summary shape.
-router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+router.post("/:id/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -683,14 +683,14 @@ router.post("/:id/bulk-import", authenticate, requireRole("ADMIN"), attachReques
 
 // =========================== Auto-selection rule ===========================
 
-router.get("/:id/auto-rule", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/auto-rule", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const rule = await prisma.talentPoolAutoRule.findUnique({ where: { poolId: pool.id } });
   res.json(rule);
 });
 
-router.put("/:id/auto-rule", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.put("/:id/auto-rule", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -714,7 +714,7 @@ router.put("/:id/auto-rule", authenticate, requireRole("ADMIN"), attachRequester
   }
 });
 
-router.post("/:id/auto-rule/preview", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/auto-rule/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -726,7 +726,7 @@ router.post("/:id/auto-rule/preview", authenticate, requireRole("ADMIN"), attach
   }
 });
 
-router.post("/:id/auto-rule/run", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/auto-rule/run", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -748,7 +748,7 @@ router.post("/:id/auto-rule/run", authenticate, requireRole("ADMIN"), attachRequ
 
 // =========================== Exclusive assessments: Tests ===========================
 
-router.get("/:id/tests", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const links = await prisma.talentPoolTest.findMany({
@@ -765,7 +765,7 @@ router.get("/:id/tests", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
 // staff member touches a test (see testOwnership.js). Without this, a staff member could pool-scope
 // (and thereby expose to every pool member) another staff member's private test they have no
 // authorization over.
-router.post("/:id/tests", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -798,7 +798,7 @@ router.post("/:id/tests", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   }
 });
 
-router.delete("/:id/tests/:testId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/tests/:testId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const test = await prisma.test.findUnique({ where: { id: req.params.testId }, select: { createdById: true, shares: { select: { staffId: true } } } });
@@ -813,14 +813,14 @@ router.delete("/:id/tests/:testId", authenticate, requireRole("ADMIN", "STAFF"),
 
 // =========================== Exclusive assessments: Interview configs ===========================
 
-router.get("/:id/interview-configs", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/interview-configs", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const configs = await prisma.talentPoolInterviewConfig.findMany({ where: { poolId: pool.id }, orderBy: { createdAt: "desc" } });
   res.json(configs);
 });
 
-router.post("/:id/interview-configs", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/interview-configs", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -843,7 +843,7 @@ router.post("/:id/interview-configs", authenticate, requireRole("ADMIN"), attach
   }
 });
 
-router.patch("/:id/interview-configs/:configId", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id/interview-configs/:configId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -862,7 +862,7 @@ router.patch("/:id/interview-configs/:configId", authenticate, requireRole("ADMI
   }
 });
 
-router.delete("/:id/interview-configs/:configId", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/interview-configs/:configId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   await prisma.talentPoolInterviewConfig.deleteMany({ where: { id: req.params.configId, poolId: pool.id } });
@@ -877,7 +877,7 @@ router.delete("/:id/interview-configs/:configId", authenticate, requireRole("ADM
 // (see attendance.js's resolveAssignmentAccess / rosterWhereForAssignment / eligibleTests, which
 // branch on talentPoolId being set).
 
-router.get("/:id/attendance-owners", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/attendance-owners", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const owners = await prisma.staffClassAssignment.findMany({
@@ -895,7 +895,7 @@ router.get("/:id/attendance-owners", authenticate, requireRole("ADMIN", "STAFF")
 // Find-existing-by-(talentPoolId, attendanceInstituteId)-then-update-or-create mirrors the
 // convention in attendance.js's POST /admin/staff-assignments, backed additionally here by a real
 // @@unique constraint (see schema.prisma's StaffClassAssignment comment).
-router.post("/:id/attendance-owners", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/attendance-owners", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -938,7 +938,7 @@ router.post("/:id/attendance-owners", authenticate, requireRole("ADMIN", "STAFF"
   }
 });
 
-router.delete("/:id/attendance-owners/:assignmentId", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/attendance-owners/:assignmentId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   try {
@@ -947,7 +947,7 @@ router.delete("/:id/attendance-owners/:assignmentId", authenticate, requireRole(
     if (req.user.role === "STAFF" && existing.staffId !== req.user.id) {
       return res.status(403).json({ error: "You can only remove your own attendance ownership assignment" });
     }
-    if (req.user.role === "ADMIN" && req.requesterInstituteId && existing.attendanceInstituteId !== req.requesterInstituteId) {
+    if (req.user.role !== "STAFF" && req.requesterInstituteId && existing.attendanceInstituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only remove assignments for your own institute" });
     }
     await prisma.staffClassAssignment.delete({ where: { id: existing.id } });
@@ -964,7 +964,7 @@ router.delete("/:id/attendance-owners/:assignmentId", authenticate, requireRole(
 
 // =========================== Rankings / Dashboard / Reports ===========================
 
-router.get("/:id/leaderboard", authenticate, requireRole("ADMIN", "STAFF", "STUDENT"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/leaderboard", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "STUDENT"), attachRequesterInstitute, async (req, res) => {
   const pool = await prisma.talentPool.findUnique({ where: { id: req.params.id }, include: INSTITUTES_INCLUDE });
   if (!pool) return res.status(404).json({ error: "Talent Pool not found" });
   if (req.user.role === "STUDENT") {
@@ -992,7 +992,7 @@ router.get("/:id/leaderboard", authenticate, requireRole("ADMIN", "STAFF", "STUD
   res.json(rows);
 });
 
-router.get("/:id/dashboard", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/dashboard", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const [memberCount, testAssignmentCount, interviewConfigCount, members] = await Promise.all([
@@ -1030,7 +1030,7 @@ router.get("/:id/dashboard", authenticate, requireRole("ADMIN", "STAFF"), attach
   });
 });
 
-router.get("/:id/report.pdf", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/report.pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
   const members = await prisma.talentPoolMember.findMany({ where: { poolId: pool.id }, include: { student: { select: MEMBER_SELECT } } });

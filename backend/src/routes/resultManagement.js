@@ -44,7 +44,7 @@ function computeResult(obtainedMarks, exam) {
 // may touch entries (matches the spec's explicit "Update Results" being an Admin-only publication
 // action).
 function canEditEntries(examination, user) {
-  if (user.role === "ADMIN") return true;
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTITUTE_ADMIN") return true;
   if ((user.role === "STAFF" || user.role === "CLERK") && examination.status === "DRAFT") return true;
   return false;
 }
@@ -241,7 +241,7 @@ function pickExamData(body) {
   return data;
 }
 
-router.get("/admin/examinations", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { status, batch, departmentId, search } = req.query;
     const where = {};
@@ -268,7 +268,7 @@ router.get("/admin/examinations", authenticate, requireRole("ADMIN", "STAFF", "C
   }
 });
 
-router.post("/admin/examinations", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId, departmentIds, visibility } = req.body;
     const effectiveInstituteId = req.requesterInstituteId || instituteId;
@@ -309,7 +309,7 @@ router.post("/admin/examinations", authenticate, requireRole("ADMIN"), attachReq
   }
 });
 
-router.get("/admin/examinations/:id", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -324,7 +324,7 @@ router.get("/admin/examinations/:id", authenticate, requireRole("ADMIN", "STAFF"
 // percentage/passed inside a transaction, so a mid-flight threshold correction never leaves stale
 // derived values lying around — "no manual calculation required" applies to edits too, not just
 // entry creation.
-router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await loadExaminationScoped(req, res, req.params.id);
     if (!existing) return;
@@ -372,7 +372,7 @@ router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN"), atta
   }
 });
 
-router.delete("/admin/examinations/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await loadExaminationScoped(req, res, req.params.id);
     if (!existing) return;
@@ -388,7 +388,7 @@ router.delete("/admin/examinations/:id", authenticate, requireRole("ADMIN"), att
   }
 });
 
-router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await loadExaminationScoped(req, res, req.params.id);
     if (!existing) return;
@@ -424,7 +424,7 @@ router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN
   }
 });
 
-router.patch("/admin/examinations/:id/unpublish", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/examinations/:id/unpublish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await loadExaminationScoped(req, res, req.params.id);
     if (!existing) return;
@@ -446,7 +446,7 @@ router.patch("/admin/examinations/:id/unpublish", authenticate, requireRole("ADM
 // Admin+Staff+Clerk: entries (manual entry + read), gated by canEditEntries()
 // ============================================================
 
-router.get("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -462,7 +462,7 @@ router.get("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN",
   }
 });
 
-router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -498,7 +498,7 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
   }
 });
 
-router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -530,7 +530,7 @@ router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRo
   }
 });
 
-router.delete("/admin/examinations/:id/entries/:entryId", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.delete("/admin/examinations/:id/entries/:entryId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -556,7 +556,7 @@ async function loadAdminMarksheetEntry(req, res) {
   return { examination, entry };
 }
 
-router.get("/admin/examinations/:id/entries/:entryId/marksheet", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations/:id/entries/:entryId/marksheet", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const loaded = await loadAdminMarksheetEntry(req, res);
     if (!loaded) return;
@@ -572,7 +572,7 @@ router.get("/admin/examinations/:id/entries/:entryId/marksheet", authenticate, r
   }
 });
 
-router.get("/admin/examinations/:id/entries/:entryId/qr.png", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations/:id/entries/:entryId/qr.png", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const loaded = await loadAdminMarksheetEntry(req, res);
     if (!loaded) return;
@@ -590,7 +590,7 @@ router.get("/admin/examinations/:id/entries/:entryId/qr.png", authenticate, requ
   }
 });
 
-router.get("/admin/examinations/:id/entries/:entryId/marksheet.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations/:id/entries/:entryId/marksheet.pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const loaded = await loadAdminMarksheetEntry(req, res);
     if (!loaded) return;
@@ -645,7 +645,7 @@ function buildBulkImportHeaderMap(headers) {
 // one still gets the old single-sample-row template), but the admin UI always passes one now —
 // the whole point of this route is to pre-fill the template with a real roster instead of making
 // the admin build their own student list.
-router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -683,7 +683,7 @@ router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("A
   }
 });
 
-router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
@@ -851,7 +851,7 @@ async function loadFilteredEntries(req) {
   return prisma.resultEntry.findMany({ where: buildEntryWhere(req), include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" }, take: EXPORT_ROW_CAP });
 }
 
-router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteKey = req.requesterInstituteId || req.query.instituteId || "all";
     const filterKey = JSON.stringify(req.query);
@@ -894,7 +894,7 @@ router.get("/admin/analytics", authenticate, requireRole("ADMIN", "STAFF", "CLER
   }
 });
 
-router.get("/admin/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/search", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { studentName, rollNumber, status } = req.query;
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -943,7 +943,7 @@ router.get("/admin/search", authenticate, requireRole("ADMIN", "STAFF", "CLERK")
 // stays bounded instead of pulling the entire table into memory.
 const EXPORT_ROW_CAP = 10000;
 
-router.get("/admin/export", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/admin/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const entries = await prisma.resultEntry.findMany({ where: buildEntryWhere(req), include: ENTRY_INCLUDE, orderBy: { createdAt: "desc" }, take: EXPORT_ROW_CAP });
     const rows = entries.map((e) => ({

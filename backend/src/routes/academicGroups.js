@@ -23,7 +23,7 @@ const router = express.Router();
 // here, that call 403'd and was silently swallowed by the frontend's .catch(() => setGroups([])),
 // leaving the Department dropdown permanently empty and the Fetch button permanently unusable for
 // Clerk (it stays disabled until both a department and section are picked).
-router.get("/", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   const where = {};
   if (req.requesterInstituteId) where.instituteId = req.requesterInstituteId;
   else if (req.query.instituteId) where.instituteId = req.query.instituteId;
@@ -54,7 +54,7 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequ
 });
 
 // ADMIN/STAFF: full student roster for one academic group (roll number, name, email, mobile).
-router.get("/:id/students", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/students", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const group = await prisma.academicGroup.findUnique({
       where: { id: req.params.id },
@@ -82,7 +82,7 @@ router.get("/:id/students", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // reused-across-many-accounts secret that gets a group collectively compromised if any one
 // student's password leaks). Each account is flagged to force a password change on next login.
 // Individual per-row updates (not a single updateMany) since each student needs a distinct hash.
-router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const group = await prisma.academicGroup.findUnique({ where: { id: req.params.id } });
     if (!group) return res.status(404).json({ error: "Academic group not found" });
@@ -121,7 +121,7 @@ router.post("/:id/bulk-reset-password", authenticate, requireRole("ADMIN"), atta
 // most destructive single action (it deletes real student accounts, not just the group), so it
 // gets the same "type your password to confirm" gate a password manager's own sudo mode would use,
 // on top of the count-and-warn confirmation the frontend shows before this call is ever made.
-router.delete("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const group = await prisma.academicGroup.findUnique({
       where: { id: req.params.id },

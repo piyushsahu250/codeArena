@@ -24,7 +24,7 @@ function canManageSubject(req, subject) {
 // subjects they're authorized for — an unauthorized subject is never sent to the client, let
 // alone selectable (spec section 10: "Backend permission must enforce this. Do not rely only on
 // frontend dropdown filtering.").
-router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const where = { ...instituteWhere(req.requesterInstituteId) };
     if (req.user.role === "STAFF") {
@@ -50,7 +50,7 @@ router.get("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInst
   }
 });
 
-router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const name = String(req.body.name || "").trim();
   if (!name) return res.status(400).json({ error: "Subject name is required" });
   const code = req.body.code ? String(req.body.code).trim() : null;
@@ -72,7 +72,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterIns
   }
 });
 
-router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
@@ -100,7 +100,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequeste
   }
 });
 
-router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
@@ -135,7 +135,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequest
 
 // =========================== Units ===========================
 
-router.get("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/units", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   if (!(await canStaffUseSubject(req, subject.id))) {
@@ -149,7 +149,7 @@ router.get("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachRequ
   res.json(units);
 });
 
-router.post("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/units", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   // Explicit institute compare, on top of canStaffUseSubject's creator/assignment check below —
@@ -203,7 +203,7 @@ router.post("/:id/units", authenticate, requireRole("ADMIN", "STAFF"), attachReq
   }
 });
 
-router.patch("/units/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.patch("/units/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const unit = await prisma.unit.findUnique({ where: { id: req.params.id }, include: { subject: true } });
   if (!unit) return res.status(404).json({ error: "Unit not found" });
   if (!(await canStaffUseSubject(req, unit.subjectId))) return res.status(403).json({ error: "You aren't authorized for this subject" });
@@ -224,7 +224,7 @@ router.patch("/units/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRe
   }
 });
 
-router.delete("/units/:id", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.delete("/units/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const unit = await prisma.unit.findUnique({ where: { id: req.params.id } });
   if (!unit) return res.status(404).json({ error: "Unit not found" });
   if (!(await canStaffUseSubject(req, unit.subjectId))) return res.status(403).json({ error: "You aren't authorized for this subject" });
@@ -241,7 +241,7 @@ router.delete("/units/:id", authenticate, requireRole("ADMIN", "STAFF"), attachR
 // schema.prisma's Topic model comment). Create-if-not-exists (case-insensitive) so authoring a
 // question with a new topic name never requires a separate "create topic first" step.
 
-router.get("/units/:id/topics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/units/:id/topics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const unit = await prisma.unit.findUnique({ where: { id: req.params.id } });
   if (!unit) return res.status(404).json({ error: "Unit not found" });
   if (!(await canStaffUseSubject(req, unit.subjectId))) return res.status(403).json({ error: "You aren't authorized for this subject" });
@@ -249,7 +249,7 @@ router.get("/units/:id/topics", authenticate, requireRole("ADMIN", "STAFF"), att
   res.json(topics);
 });
 
-router.post("/units/:id/topics", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.post("/units/:id/topics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const unit = await prisma.unit.findUnique({ where: { id: req.params.id } });
   if (!unit) return res.status(404).json({ error: "Unit not found" });
   if (!(await canStaffUseSubject(req, unit.subjectId))) return res.status(403).json({ error: "You aren't authorized for this subject" });
@@ -263,7 +263,7 @@ router.post("/units/:id/topics", authenticate, requireRole("ADMIN", "STAFF"), at
 
 // =========================== Staff authorization (ADMIN only) ===========================
 
-router.get("/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
@@ -277,7 +277,7 @@ router.get("/:id/assignments", authenticate, requireRole("ADMIN"), attachRequest
   res.json(assignments);
 });
 
-router.post("/:id/assignments", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
@@ -303,7 +303,7 @@ router.post("/:id/assignments", authenticate, requireRole("ADMIN"), attachReques
   }
 });
 
-router.delete("/:id/assignments/:staffId", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.delete("/:id/assignments/:staffId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const subject = await prisma.subject.findUnique({ where: { id: req.params.id } });
   if (!subject) return res.status(404).json({ error: "Subject not found" });
   if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {

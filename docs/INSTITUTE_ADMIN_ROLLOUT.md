@@ -110,15 +110,36 @@ institute using that course sees. So:
 This is the intended behavior per spec section 17 ("do not accidentally make global courses
 institute-specific") — not a gap, a deliberate boundary.
 
-## Not yet audited (NOT TESTED — do not assume covered)
+## Round 6 (`academicGroups.js`, `classes.js`, `features.js`, `resultManagement.js`,
+`subjects.js`, `talentPools.js`) — final round, rollout complete
 
-`academicGroups.js`, `classes.js`, `features.js`, `resultManagement.js`, `subjects.js`,
-`talentPools.js`, and the rest. `INSTITUTE_ADMIN`/`SUPER_ADMIN` do **not** currently work on any of
-these. Extending coverage is ongoing work, file by file, each verified the same way (confirm
-`attachRequesterInstitute` + real institute-scoping already exists — and that no requester-role
-check is hardcoded to literal `"ADMIN"` — before adding the role; if either isn't true yet, that
-route needs fixing first, separate from adding the role name; and check whether the underlying
-data model is even institute-owned at all, per this round's lesson).
+Every route in these 6 files already had `attachRequesterInstitute`. Two real hardcoded-role traps
+found and fixed before extending, one in each direction:
+
+- **`resultManagement.js`'s `canEditEntries()`** — `if (user.role === "ADMIN") return true` gated
+  whether a Published/Unpublished examination's entries could still be edited. Extending the route
+  gate without fixing this would have *silently blocked* `SUPER_ADMIN`/`INSTITUTE_ADMIN` from
+  editing entries they should have full rights to — over-restrictive, not a leak, but broken
+  functionality. Fixed by including both new roles in the same branch.
+- **`talentPools.js`'s attendance-owner removal** — `if (req.user.role === "ADMIN" && req.requesterInstituteId && existing.attendanceInstituteId !== req.requesterInstituteId)` — the institute-
+  boundary check itself was gated on the literal role string. Extending the route gate without
+  fixing this would have let `INSTITUTE_ADMIN` (who has `requesterInstituteId` set, but isn't
+  literally `"ADMIN"`) skip the boundary check entirely — a real cross-institute leak. Fixed by
+  checking `role !== "STAFF"` instead (matches the STAFF-ownership check already handled just
+  above it).
+
+## Rollout status: complete
+
+Every backend route file with a `requireRole("ADMIN"...)` call site has now been individually
+audited and (where appropriate) extended. `SUPER_ADMIN` and `INSTITUTE_ADMIN` now work correctly
+across the entire platform, with two deliberate, documented exceptions: `institutes.js` (creating/
+editing/deleting institutes stays Super-Admin-only) and the global-content-authoring routes in
+`learning.js`/`moduleCoding.js` (courses/modules/chapters/lessons/module-coding-test authoring
+stays Super-Admin-only, since that content has no `instituteId` at all).
+
+What's still NOT built, tracked from round 1 and still true: a dedicated Institute Admin
+dashboard/sidebar/frontend route guards, and the dedicated Super-Admin "Manage Institute Admins"
+UI (the backend supports it via the existing `users.js` endpoints, no frontend screen yet).
 
 ## Explicitly not built yet
 

@@ -31,7 +31,7 @@ function dependentsOf(featureKey) {
 // own) — an institute-scoped ADMIN must match the instituteId they're asking about, or every
 // other institute's feature configuration (and, via PATCH/bulk/copy below, its write access)
 // would be reachable just by supplying a different id in the query string/body.
-router.get("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId } = req.query;
     if (!instituteId) return res.status(400).json({ error: "instituteId is required" });
@@ -72,7 +72,7 @@ router.get("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, as
 });
 
 // ADMIN: toggle a single feature for a single institute.
-router.patch("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.patch("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId, featureKey, enabled } = req.body;
     if (!instituteId || !featureKey || typeof enabled !== "boolean") {
@@ -134,7 +134,7 @@ router.patch("/", authenticate, requireRole("ADMIN"), attachRequesterInstitute, 
 // ADMIN: bulk-toggle one feature across an explicit, admin-chosen list of institutes. Never
 // resolves an implicit "all institutes" — the caller must enumerate exactly which ones, so a
 // frontend bug or confirmation-skip can't silently touch the whole platform (Section 16).
-router.post("/bulk", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteIds, featureKey, enabled } = req.body;
     if (!Array.isArray(instituteIds) || instituteIds.length === 0) return res.status(400).json({ error: "instituteIds must be a non-empty array" });
@@ -175,7 +175,7 @@ router.post("/bulk", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 });
 
 // ADMIN: preview what "Copy Configuration" would change, before the admin confirms it.
-router.get("/copy-preview", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/copy-preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { fromInstituteId, toInstituteId } = req.query;
     if (!fromInstituteId || !toInstituteId) return res.status(400).json({ error: "fromInstituteId and toInstituteId are required" });
@@ -203,7 +203,7 @@ router.get("/copy-preview", authenticate, requireRole("ADMIN"), attachRequesterI
 // ADMIN: apply the copy. Overwrites every catalog key on the target with the source's value —
 // intentionally all-or-nothing per key (not a partial merge) since a partial copy would be
 // surprising; the preview above is what lets the admin decide whether that's what they want.
-router.post("/copy", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/copy", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { fromInstituteId, toInstituteId } = req.body;
     if (!fromInstituteId || !toInstituteId) return res.status(400).json({ error: "fromInstituteId and toInstituteId are required" });
@@ -247,7 +247,7 @@ router.post("/copy", authenticate, requireRole("ADMIN"), attachRequesterInstitut
 
 // ADMIN: configuration-change history for one institute's feature settings — a scoped view over
 // the platform's general audit log (Section 18), not a separate logging system.
-router.get("/audit", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/audit", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { instituteId } = req.query;
     if (!instituteId) return res.status(400).json({ error: "instituteId is required" });
