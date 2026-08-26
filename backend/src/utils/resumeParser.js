@@ -95,8 +95,15 @@ async function extractTextFromFile(buffer, mimetype, filename) {
     // <a href="..."> targets; appending them lets the existing email/LinkedIn/GitHub/portfolio
     // regexes (which already scan the whole extracted text, not just specific lines) pick them
     // up for free, with no other changes needed.
+    // { allowLineBreaks: true } — without it, mammoth silently drops every manual line break
+    // (<w:br/>) instead of turning it into "\n", concatenating multi-line content with NO
+    // separator at all (confirmed live: a whole project entry came back as one run-on string with
+    // its title, description, tech line, and URL all mashed directly together, unparseable).
+    // resumeDocx.js relies on manual line breaks within a single paragraph specifically so a
+    // multi-line entry survives round-trip as ONE block rather than several blank-line-separated
+    // paragraphs (see multiLineParagraph() there) — this option is what makes that work.
     const [textResult, htmlResult] = await Promise.all([
-      mammoth.extractRawText({ buffer }),
+      mammoth.extractRawText({ buffer }, { allowLineBreaks: true }),
       mammoth.convertToHtml({ buffer }).catch(() => ({ value: "" })),
     ]);
     const hrefs = [...(htmlResult.value || "").matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
