@@ -29,6 +29,33 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// pdfjs-dist's own bundled Node canvas factory assumes the `canvas` (node-canvas/cairo) package's
+// semantics — specifically, it "recycles" a canvas by mutating `.width`/`.height` in place on
+// cleanup (`reset`/`destroy`). @napi-rs/canvas's canvas object throws a native error
+// ("Failed to unwrap exclusive reference of `CanvasElement` type from napi value") if `.width` is
+// reassigned after its context has already been used — confirmed live: rendering itself succeeds,
+// then `doc.destroy()`'s internal cleanup path crashes on exactly that line. Supplying this factory
+// explicitly avoids the in-place mutation entirely by creating a fresh canvas instead, which is a
+// non-issue here since every OCR call is short-lived and one-shot (no canvas pooling needed).
+class ApiRsCanvasFactory {
+  constructor(createCanvas) {
+    this.createCanvas = createCanvas;
+  }
+  create(width, height) {
+    const canvas = this.createCanvas(width, height);
+    return { canvas, context: canvas.getContext("2d") };
+  }
+  reset(canvasAndContext, width, height) {
+    const canvas = this.createCanvas(width, height);
+    canvasAndContext.canvas = canvas;
+    canvasAndContext.context = canvas.getContext("2d");
+  }
+  destroy(canvasAndContext) {
+    canvasAndContext.canvas = null;
+    canvasAndContext.context = null;
+  }
+}
+
 async function renderPdfPagesToPngBuffers(pdfBuffer, maxPages) {
   const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
   const { createCanvas } = require("@napi-rs/canvas");
@@ -38,6 +65,7 @@ async function renderPdfPagesToPngBuffers(pdfBuffer, maxPages) {
     isEvalSupported: false,
     disableWorker: true, // no browser Worker in Node — the legacy build runs rendering inline
     useSystemFonts: true,
+    canvasFactory: new ApiRsCanvasFactory(createCanvas),
   });
   const doc = await loadingTask.promise;
   try {
