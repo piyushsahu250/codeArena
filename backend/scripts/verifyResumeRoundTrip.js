@@ -41,12 +41,12 @@ async function generateAndExtract(template, resume) {
     stream.on("end", resolve);
     stream.on("error", reject); // otherwise an unhandled stream 'error' event crashes the process, bypassing any try/catch
   });
-  // generateResumePdf is synchronous (pipes doc -> stream, calls doc.end() itself), but pdfkit's
-  // internal pipe writes land on the next microtask tick — calling stream.end() in the very same
-  // synchronous tick races with those writes (ERR_STREAM_WRITE_AFTER_END). `await`ing the
-  // (non-promise) call costs one microtask tick, which is enough for pdfkit's writes to land first.
-  await generateResumePdf({ ...resume, template }, stream);
-  stream.end();
+  // generateResumePdf calls doc.pipe(stream) — Node's .pipe() already ends the destination stream
+  // automatically once the source (doc) ends, since doc.end() is called with no {end:false} option
+  // anywhere in this call chain. Calling stream.end() here too is redundant AND racy: it can fire
+  // before pdfkit's own pipe-driven end, causing ERR_STREAM_WRITE_AFTER_END on the next chunk
+  // pdfkit was still flushing. Just await the stream's own 'end' event; don't end it ourselves.
+  generateResumePdf({ ...resume, template }, stream);
   await done;
   const buf = Buffer.concat(chunks);
   return (await pdfParse(buf)).text;
