@@ -493,6 +493,13 @@ function parseSkillsSection(lines) {
 // a resume with genuinely one very long entry isn't incorrectly fragmented.
 const ORDINAL_HEADER_RE = /^(project|experience|internship|work\s*experience|company)\s*[#:\-]?\s*\d+\b\s*[:\-]?\s*$/i;
 
+// A line that is unambiguously metadata (tech stack, role, a date range, or a bare link) rather
+// than prose — used both inside splitStructuralEntries (below) and by mergeMetadataOnlyBlocks
+// (used when blank-line splitting itself is what over-fragmented an entry — see its comment).
+function looksLikeMetadataLine(line) {
+  return TECH_LINE_RE.test(line) || ROLE_LINE_RE.test(line) || DATE_RANGE_RE.test(line) || GENERIC_URL_RE.test(line) || GITHUB_RE.test(line);
+}
+
 function splitStructuralEntries(lines) {
   const nonEmpty = lines.filter((l) => l !== "");
   if (nonEmpty.length === 0) return [];
@@ -533,8 +540,7 @@ function splitStructuralEntries(lines) {
     // with no blank-line separation from its own "Tech: ..."/link line (a real, common PDF export
     // shape — confirmed live via scripts/debugUrlRoundTrip.js) had that line misread as starting a
     // brand-new entry, silently losing the technologies/link fields off the entry they belonged to.
-    const looksLikeMetadata = isTechLine || ROLE_LINE_RE.test(raw) || DATE_RANGE_RE.test(raw) || GENERIC_URL_RE.test(raw) || GITHUB_RE.test(raw);
-    const startsNewEntry = current && current.length > 0 && !isBullet && sawBodyContent && !looksLikeContinuation && looksLikeTitle && !looksLikeMetadata;
+    const startsNewEntry = current && current.length > 0 && !isBullet && sawBodyContent && !looksLikeContinuation && looksLikeTitle && !looksLikeMetadataLine(raw);
     if (startsNewEntry) {
       entries.push(current);
       current = [];
@@ -552,9 +558,31 @@ function splitStructuralEntries(lines) {
 
 // Blank-line splitting first (trusted when it actually finds more than one block); structural
 // splitting only as a fallback when the whole section collapsed into a single undivided block.
+// A DOCX upload's blank-line splitting can be MUCH too granular — mammoth's extractRawText()
+// inserts a blank line between every paragraph, including a single project's own title/
+// description/tech/link lines, each rendered as its own paragraph by resumeDocx.js (confirmed
+// live via scripts/debugUrlRoundTrip.js). A one-line block that is unambiguously metadata (never
+// a real entry's own title/description) almost certainly belongs to the entry immediately before
+// it, so it's folded back in rather than kept as its own bogus fragment. This is deliberately
+// narrow — it only merges blocks that are ENTIRELY a tech/role/date/URL line, never a genuine
+// short title, so a resume that legitimately lists several one-line project titles in a row is
+// untouched.
+function mergeMetadataOnlyBlocks(blocks) {
+  const merged = [];
+  for (const block of blocks) {
+    const isMetadataOnlyBlock = block.length === 1 && looksLikeMetadataLine(block[0]);
+    if (isMetadataOnlyBlock && merged.length > 0) {
+      merged[merged.length - 1] = [...merged[merged.length - 1], block[0]];
+    } else {
+      merged.push(block);
+    }
+  }
+  return merged;
+}
+
 function splitEntries(lines) {
   const blankBased = splitBlocks(lines);
-  if (blankBased.length > 1) return blankBased;
+  if (blankBased.length > 1) return mergeMetadataOnlyBlocks(blankBased);
   const structural = splitStructuralEntries(lines);
   return structural.length > 0 ? structural : blankBased;
 }
