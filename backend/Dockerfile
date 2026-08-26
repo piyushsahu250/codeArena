@@ -11,6 +11,14 @@ FROM node:20-slim
 # Docker build failures under CPU/memory-constrained build hosts — the headless variant is both
 # smaller (faster build, less likely to hit a host resource ceiling) and has fewer postinst steps
 # that can flake. Acquire::Retries survives transient Debian-mirror hiccups on apt-get update.
+# libcairo2-dev/libpango1.0-dev/libjpeg-dev/libgif-dev/librsvg2-dev/libpixman-1-dev: build-time
+# headers the `canvas` npm package (node-canvas) needs to compile its native binding against —
+# used by resumeOcr.js to rasterize scanned-PDF pages before running Tesseract OCR on them.
+# `canvas` was chosen over the no-native-deps @napi-rs/canvas alternative specifically because
+# pdfjs-dist's own Node rendering internals are hardcoded to node-canvas's exact mutable-canvas
+# semantics (confirmed live: @napi-rs/canvas's canvas object threw an uncatchable native error the
+# moment pdf.js's internal cleanup path touched it) — this is the combination pdf.js actually
+# expects, not a preference.
 RUN apt-get update -o Acquire::Retries=3 && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
     default-jdk-headless \
@@ -19,6 +27,12 @@ RUN apt-get update -o Acquire::Retries=3 && DEBIAN_FRONTEND=noninteractive apt-g
     postgresql-client \
     util-linux \
     libcap2-bin \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libpixman-1-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Dedicated, unprivileged, fixed-UID/GID system user for compiling/running untrusted

@@ -4,7 +4,7 @@
 // of a resume), rendering it to a PNG, and embedding ONLY that PNG into a PDF page via pdfkit —
 // deliberately with no text layer at all, so pdf-parse's native extraction genuinely returns
 // nothing and the OCR fallback path is the only way any text comes out.
-const { createCanvas } = require("@napi-rs/canvas");
+const { createCanvas } = require("canvas");
 const PDFDocument = require("pdfkit");
 const { PassThrough } = require("stream");
 const { parseResumeFile } = require("../src/utils/resumeParser");

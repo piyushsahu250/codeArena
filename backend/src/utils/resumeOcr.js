@@ -2,13 +2,22 @@
 // resumeParser.js) is ALWAYS tried first and is what every normal (text-based) resume upload
 // uses — this file is only ever invoked when that native pass comes back empty, per the spec's
 // "use native extraction first, OCR only when necessary, OCR must never silently replace
-// high-quality native extraction" requirement. pdfjs-dist/@napi-rs/canvas/tesseract.js are
-// required lazily inside the functions below so the normal (fast) upload path never pays the
-// cost of loading them.
+// high-quality native extraction" requirement. pdfjs-dist/canvas/tesseract.js are required lazily
+// inside the functions below so the normal (fast) upload path never pays the cost of loading them.
 //
 // pdfjs-dist is pinned to 3.11.174 in package.json specifically because v4+ dropped CommonJS
 // support entirely (ESM-only, `require()` throws ERR_REQUIRE_ESM) — this file uses
 // `pdfjs-dist/legacy/build/pdf.js`, the Node-targeted CJS build that was still shipped at 3.x.
+//
+// Uses the `canvas` package (node-canvas, Cairo-backed — see the added system libraries in
+// Dockerfile), NOT @napi-rs/canvas. Confirmed live: pdfjs-dist's Node rendering path creates its
+// OWN internal temporary canvases mid-render (for pattern/soft-mask operators) via a hardcoded
+// bundled factory that is not the one passed in `getDocument()`'s `canvasFactory` option, and that
+// internal factory calls `canvas.width = <n>` to recycle a canvas in place — @napi-rs/canvas's
+// canvas object throws a native, uncatchable error the instant that happens (confirmed: neither a
+// custom canvasFactory option nor wrapping every call in try/catch could intercept it, since it
+// fires from a detached internal callback). `canvas` is the package pdfjs-dist's Node code was
+// actually built and tested against, so this mutation is exactly what it expects.
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
@@ -29,65 +38,32 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-// pdfjs-dist's own bundled Node canvas factory assumes the `canvas` (node-canvas/cairo) package's
-// semantics — specifically, it "recycles" a canvas by mutating `.width`/`.height` in place on
-// cleanup (`reset`/`destroy`). @napi-rs/canvas's canvas object throws a native error
-// ("Failed to unwrap exclusive reference of `CanvasElement` type from napi value") if `.width` is
-// reassigned after its context has already been used — confirmed live: rendering itself succeeds,
-// then `doc.destroy()`'s internal cleanup path crashes on exactly that line. Supplying this factory
-// explicitly avoids the in-place mutation entirely by creating a fresh canvas instead, which is a
-// non-issue here since every OCR call is short-lived and one-shot (no canvas pooling needed).
-class ApiRsCanvasFactory {
-  constructor(createCanvas) {
-    this.createCanvas = createCanvas;
-  }
-  create(width, height) {
-    const canvas = this.createCanvas(width, height);
-    return { canvas, context: canvas.getContext("2d") };
-  }
-  reset(canvasAndContext, width, height) {
-    const canvas = this.createCanvas(width, height);
-    canvasAndContext.canvas = canvas;
-    canvasAndContext.context = canvas.getContext("2d");
-  }
-  destroy(canvasAndContext) {
-    canvasAndContext.canvas = null;
-    canvasAndContext.context = null;
-  }
-}
-
 async function renderPdfPagesToPngBuffers(pdfBuffer, maxPages) {
   const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
-  const { createCanvas } = require("@napi-rs/canvas");
+  const { createCanvas } = require("canvas");
 
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
     isEvalSupported: false,
     disableWorker: true, // no browser Worker in Node — the legacy build runs rendering inline
     useSystemFonts: true,
-    canvasFactory: new ApiRsCanvasFactory(createCanvas),
   });
   const doc = await loadingTask.promise;
-  const pageCount = Math.min(doc.numPages, maxPages);
-  const buffers = [];
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await doc.getPage(i);
-    const viewport = page.getViewport({ scale: RENDER_SCALE });
-    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const ctx = canvas.getContext("2d");
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    buffers.push(canvas.toBuffer("image/png"));
+  try {
+    const pageCount = Math.min(doc.numPages, maxPages);
+    const buffers = [];
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await doc.getPage(i);
+      const viewport = page.getViewport({ scale: RENDER_SCALE });
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      const ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      buffers.push(canvas.toBuffer("image/png"));
+    }
+    return { buffers, totalPages: doc.numPages };
+  } finally {
+    await doc.destroy();
   }
-  // Deliberately NOT calling doc.destroy() here. pdf.js's own internal cleanup path (cancelling
-  // tracked render tasks, which clears an internal CachedCanvases pool via pdf.js's bundled
-  // Node canvas factory) assumes the `canvas` (node-canvas/cairo) package's semantics and throws
-  // a native, UNCATCHABLE error the moment it touches an @napi-rs/canvas object instead — it
-  // fires from a detached internal callback, not the promise this function returns, so no
-  // try/catch here can actually intercept it (confirmed live: it crashes the process even wrapped
-  // in try/finally). Every page's PNG buffer is already safely captured above by this point, and
-  // each OCR call is one-shot and short-lived, so skipping explicit destroy() just means the
-  // document object is reclaimed by normal garbage collection instead — not a correctness issue.
-  return { buffers, totalPages: doc.numPages };
 }
 
 // One shared worker, lazily created on first real use and reused for the process lifetime —
