@@ -254,7 +254,10 @@ function renderMinimal(resume) {
     for (const raw of projects) {
       const p = projectLine(raw);
       doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#000").text(p.title);
+      if (p.meta) doc.font("Helvetica").fillColor("#444").fontSize(8.5).text(p.meta);
       if (p.body) doc.font("Helvetica").fillColor("#1a1a1a").fontSize(9.5).text(p.body);
+      if (p.tech) doc.font("Helvetica").fillColor("#444").fontSize(8.5).text(p.tech);
+      if (p.links) doc.font("Helvetica").fillColor("#444").fontSize(8.5).text(p.links);
       doc.moveDown(0.3);
     }
   }
@@ -262,7 +265,12 @@ function renderMinimal(resume) {
   const certifications = arr(resume.certifications);
   if (certifications.length) {
     sectionHeader("Certifications");
-    doc.text(certifications.map((c) => `${c.name || ""}${c.org ? ` (${c.org})` : ""}`).join("; "));
+    // Previously dropped issueDate/credentialId entirely for this template — the other four
+    // templates all show them (see the `meta` line built the same way just below in each).
+    doc.text(certifications.map((c) => {
+      const meta = [c.issueDate, c.credentialId ? `ID: ${c.credentialId}` : null].filter(Boolean).join(", ");
+      return `${c.name || ""}${c.org ? ` (${c.org})` : ""}${meta ? ` — ${meta}` : ""}`;
+    }).join("; "));
     doc.moveDown(0.3);
   }
 
@@ -400,6 +408,7 @@ function renderModern(resume) {
       if (p.meta) { doc.font("Helvetica").fontSize(9).fillColor("#777").text(p.meta, mainX, y2, { width: mainRight - mainX }); y2 = doc.y; }
       if (p.body) { doc.fillColor("#1C1B18").fontSize(9.5).text(p.body, mainX, y2, { width: mainRight - mainX }); y2 = doc.y; }
       if (p.tech) { doc.fontSize(8.5).fillColor("#777").text(p.tech, mainX, y2, { width: mainRight - mainX }); y2 = doc.y; }
+      if (p.links) { doc.fontSize(8.5).fillColor("#777").text(p.links, mainX, y2, { width: mainRight - mainX }); y2 = doc.y; }
       mainY = y2 + 10;
     }
   }
@@ -502,7 +511,10 @@ function renderExecutive(resume) {
     for (const raw of projects) {
       const p = projectLine(raw);
       doc.font("Times-Bold").fontSize(10.5).fillColor("#1C1B18").text(p.title);
+      if (p.meta) doc.font("Times-Italic").fontSize(9.5).fillColor("#555").text(p.meta);
       if (p.body) doc.font("Times-Roman").fillColor("#1C1B18").fontSize(10.5).text(p.body);
+      if (p.tech) doc.font("Times-Italic").fontSize(9.5).fillColor("#555").text(p.tech);
+      if (p.links) doc.font("Times-Roman").fontSize(9.5).fillColor("#555").text(p.links);
       doc.moveDown(0.5);
     }
   }
@@ -591,7 +603,9 @@ function renderCreative(resume) {
     for (const raw of projects) {
       const p = projectLine(raw);
       doc.font("Helvetica-Bold").fontSize(10.5).fillColor("#1C1B18").text(p.title, left, doc.y, { width: right - left });
+      if (p.meta) doc.font("Helvetica").fillColor("#777").fontSize(8.5).text(p.meta, left, doc.y, { width: right - left });
       if (p.body) doc.font("Helvetica").fillColor("#1C1B18").fontSize(9.5).text(p.body, left, doc.y, { width: right - left });
+      if (p.tech) doc.font("Helvetica").fillColor("#777").fontSize(8.5).text(p.tech, left, doc.y, { width: right - left });
       if (p.links) doc.fontSize(8.5).fillColor(accent).text(p.links, left, doc.y, { width: right - left });
       doc.moveDown(0.6);
       doc.x = left;
