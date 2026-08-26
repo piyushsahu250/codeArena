@@ -521,7 +521,13 @@ function splitStructuralEntries(lines) {
     // like temperature and humidity, enhancing model" — a near-full-width sentence fragment, not a
     // title. Titles also don't dangle on a mid-clause punctuation mark the way a wrap point can.
     const looksLikeTitle = raw.trim().length < 80 && !/[,;:]$/.test(raw.trim());
-    const startsNewEntry = current && current.length > 0 && !isBullet && sawBodyContent && !looksLikeContinuation && looksLikeTitle;
+    // A recognizable metadata line (tech stack, role, a date range, or a bare link) is always body
+    // content continuing the CURRENT entry, never a new entry's title — without this, a project
+    // with no blank-line separation from its own "Tech: ..."/link line (a real, common PDF export
+    // shape — confirmed live via scripts/debugUrlRoundTrip.js) had that line misread as starting a
+    // brand-new entry, silently losing the technologies/link fields off the entry they belonged to.
+    const looksLikeMetadata = isTechLine || ROLE_LINE_RE.test(raw) || DATE_RANGE_RE.test(raw) || GENERIC_URL_RE.test(raw) || GITHUB_RE.test(raw);
+    const startsNewEntry = current && current.length > 0 && !isBullet && sawBodyContent && !looksLikeContinuation && looksLikeTitle && !looksLikeMetadata;
     if (startsNewEntry) {
       entries.push(current);
       current = [];

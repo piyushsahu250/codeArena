@@ -28,6 +28,28 @@ function body(text, opts = {}) {
   });
 }
 
+// Renders several lines as ONE paragraph (using a manual line break before every line after the
+// first) instead of one paragraph per line. mammoth's extractRawText() inserts a blank line
+// BETWEEN paragraphs but not between manual line-breaks within a single paragraph — building a
+// project/experience entry out of several separate Paragraph objects (the old approach) meant its
+// own title/description/tech/link lines each came back from a round-trip upload as if they were
+// blank-line-separated, which is exactly the signal resumeParser.js's entry-splitter uses to mean
+// "these are two different projects." Confirmed live (scripts/debugUrlRoundTrip.js): a single
+// project with a tech line and a link line was coming back as 2-4 fragmented bogus entries with
+// most fields empty. One multi-line paragraph per entry preserves the visual line breaks while
+// keeping the entry as a single block on round-trip, matching how a real blank line ONLY appears
+// between genuinely different entries (added separately, after this paragraph, by the caller).
+function multiLineParagraph(lines, afterSpacing = 40) {
+  const runs = [];
+  lines.forEach((line, i) => {
+    runs.push(new TextRun({
+      text: line.text || "", bold: !!line.bold, italics: !!line.italics,
+      size: line.size ?? 20, color: line.color, break: i === 0 ? 0 : 1,
+    }));
+  });
+  return new Paragraph({ spacing: { after: afterSpacing }, children: runs });
+}
+
 async function generateResumeDocx(resume) {
   const color = TEMPLATE_COLORS[resume.template] || TEMPLATE_COLORS.modern;
   const children = [];
@@ -76,21 +98,20 @@ async function generateResumeDocx(resume) {
   if (projects.length) {
     children.push(heading("Projects", color));
     for (const p of projects) {
-      children.push(body(p.title || "", { bold: true, after: 20 }));
+      const lines = [{ text: p.title || "", bold: true, size: 20 }];
       const meta = [p.role, p.duration].filter(Boolean).join("   ·   ");
-      if (meta) children.push(body(meta, { size: 18, color: "555555", after: 20 }));
-      if (p.description) children.push(body(p.description, { after: 20 }));
-      if (p.technologies) children.push(body(`Tech: ${p.technologies}`, { size: 18, color: "555555", after: 20 }));
+      if (meta) lines.push({ text: meta, size: 18, color: "555555" });
+      if (p.description) lines.push({ text: p.description, size: 20 });
+      if (p.technologies) lines.push({ text: `Tech: ${p.technologies}`, size: 18, color: "555555" });
       // Deduplicated for the same reason as resumePdf.js's projectLine() — a student can enter the
       // same URL into both githubUrl and liveUrl, which previously printed it twice.
       const rawLinks = [p.githubUrl, p.liveUrl].filter(Boolean);
       const links = rawLinks.filter((url, i) => rawLinks.indexOf(url) === i).join("   |   ");
-      if (links) children.push(body(links, { size: 18, color: "555555" }));
-      // A real blank line between entries — without it, mammoth's extracted text has no blank-line
-      // signal at all between projects, and resumeParser.js's upload-side entry-splitter (which
-      // relies on blank lines first, a much fragiler structural heuristic only as a fallback) mis-
-      // split a single project into several bogus entries on round-trip (confirmed live via
-      // scripts/validationDatasetAccuracy.js / debugUrlRoundTrip.js).
+      if (links) lines.push({ text: links, size: 18, color: "555555" });
+      children.push(multiLineParagraph(lines));
+      // A real blank paragraph between entries — this is the ONLY blank-line signal between
+      // projects now that each project's own lines are one combined paragraph (see
+      // multiLineParagraph's comment above for why that combining was necessary).
       children.push(body("", { after: 40 }));
     }
   }
@@ -99,11 +120,12 @@ async function generateResumeDocx(resume) {
   if (experience.length) {
     children.push(heading("Experience", color));
     for (const e of experience) {
-      children.push(body(`${e.title || ""}${e.company ? ` — ${e.company}` : ""}`, { bold: true, after: 20 }));
+      const lines = [{ text: `${e.title || ""}${e.company ? ` — ${e.company}` : ""}`, bold: true, size: 20 }];
       const meta = [e.employmentType, [e.startDate, e.endDate].filter(Boolean).join(" – ")].filter(Boolean).join("   ·   ");
-      if (meta) children.push(body(meta, { size: 18, color: "555555", after: 20 }));
-      if (e.responsibilities) children.push(body(e.responsibilities, { after: 20 }));
-      if (e.technologies) children.push(body(`Tech: ${e.technologies}`, { size: 18, color: "555555" }));
+      if (meta) lines.push({ text: meta, size: 18, color: "555555" });
+      if (e.responsibilities) lines.push({ text: e.responsibilities, size: 20 });
+      if (e.technologies) lines.push({ text: `Tech: ${e.technologies}`, size: 18, color: "555555" });
+      children.push(multiLineParagraph(lines));
       children.push(body("", { after: 40 })); // see the matching comment in the Projects loop above
     }
   }
