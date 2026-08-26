@@ -3314,3 +3314,71 @@ model ReadinessReport {
 
   @@index([studentId])
 }
+
+// ============================================================
+// Automated Daily Platform Health System
+// ============================================================
+// Persisted result of one run of backend/scripts/dailyHealthCheck.js (triggered by a daily
+// scheduled task — see docs/PLATFORM_HEALTH.md). Deliberately detect-and-report only: this system
+// never auto-deploys a fix to production. `findings` holds the full structured report (per-
+// category status, every individual check result, counts by priority) so the Super-Admin-only
+// dashboard can render the same thing this model's summary fields are denormalized from, without
+// re-running anything.
+model PlatformHealthReport {
+  id            String   @id @default(uuid())
+  runAt         DateTime @default(now())
+  overallStatus String   // HEALTHY | WARNING | CRITICAL
+  findings      Json     // full structured report — see dailyHealthCheck.js's buildReport()
+  totalChecks   Int
+  issuesFound   Int
+  p0Count       Int      @default(0)
+  p1Count       Int      @default(0)
+  p2Count       Int      @default(0)
+  p3Count       Int      @default(0)
+  durationMs    Int?
+  createdAt     DateTime @default(now())
+
+  @@index([runAt])
+  @@index([overallStatus])
+}
+
+enum IssueReportStatus {
+  PENDING
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  DUPLICATE
+  WONT_FIX
+}
+
+// Student/Staff/Institute Admin/Clerk-facing "Report a Problem" — the one part of the daily-
+// health spec that's a genuine user-facing feature, not a background job. Deliberately simple:
+// severity/duplicate-of are set by a human reviewer, never auto-closed by anything automated (see
+// this feature's own spec section: "Do not allow AI to silently close a genuine bug").
+model UserReportedIssue {
+  id               String   @id @default(uuid())
+  reportedByUserId String
+  reportedByRole   String
+  instituteId      String?
+  page             String?
+  feature          String?
+  description      String
+  errorId          String?  // correlates to a specific logged error/requestId, when the reporting page can supply one
+  browserInfo      String?
+  screenshotUrl    String?  // data URL or hosted link if the reporting UI supports attaching one; never required
+
+  status          IssueReportStatus @default(PENDING)
+  severity        String?  // P0-P4, set by a human reviewer (or left null until triaged)
+  duplicateOfId   String?
+  reviewNotes      String?
+  reviewedByAdminId String?
+  reviewedByName    String?
+  reviewedAt        DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([reportedByUserId])
+  @@index([instituteId])
+  @@index([status])
+  @@index([createdAt])
+}
