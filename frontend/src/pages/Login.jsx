@@ -51,7 +51,7 @@ export default function Login() {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", minHeight: "100vh" }}>
+    <div className="ca-login-grid">
       {/* Blackboard panel */}
       <div
         style={{

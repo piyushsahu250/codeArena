@@ -104,6 +104,15 @@ body.has-sidebar.sidebar-collapsed { padding-left: var(--sidebar-w-collapsed); }
   .page-container { padding: 24px 16px; }
 }
 
+/* Login page's two-column layout (blackboard panel + form) never collapsed below the two-column
+   breakpoint — at a real mobile width the fixed 1.1fr/1fr grid squeezed the sign-in form into a
+   fraction of the viewport instead of stacking, causing horizontal overflow (confirmed live at
+   375px: the form column rendered at ~189px wide with content pushed off-screen to the right). */
+.ca-login-grid { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 100vh; }
+@media (max-width: 768px) {
+  .ca-login-grid { grid-template-columns: 1fr; min-height: auto; }
+}
+
 h1, h2, h3 {
   font-family: var(--font-display);
   font-weight: 700;
