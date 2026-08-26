@@ -206,6 +206,10 @@ model User {
   section      String?
   isActive     Boolean  @default(true) // false = account is deactivated; blocked at login
   profilePhotoUrl String? // optional; stored as a data URL, no external file storage in use
+  // Account-level LinkedIn, shown on the Profile page for every role — distinct from Resume.linkedin
+  // below (that one is specific to what's printed in a student's generated resume PDF; this one is
+  // "your profile's LinkedIn link" for STAFF/CLERK/INSTITUTE_ADMIN/SUPER_ADMIN who have no Resume at all).
+  linkedinUrl String?
   mustChangePassword Boolean @default(false)
   passwordChangedAt  DateTime? // drives per-institute password-expiry enforcement
   createdAt    DateTime @default(now())

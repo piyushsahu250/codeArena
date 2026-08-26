@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronUp, ChevronDown, Search } from "lucide-react";
 import EmptyState from "./EmptyState";
 import { SkeletonLine } from "./Skeleton";
+import Pagination from "./Pagination";
 
 // Shared table, replacing the ~26 pages that each hand-roll their own `<table style={{...}}>`
 // markup (see docs/PLATFORM_HEALTH.md-adjacent audit — no dedicated Table component existed before
@@ -22,10 +23,14 @@ import { SkeletonLine } from "./Skeleton";
 //   refetch data per page.
 // pagination: { page, totalPages, onPageChange } — for server-driven pagination (caller owns data
 //   fetching per page); mutually exclusive with `pageSize`.
+// selectable: bool — adds a checkbox column (row checkboxes + a header "select all" that applies to
+//   the currently-visible/rendered rows only, not the whole unpaginated dataset). Caller owns the
+//   selection set via `selectedKeys` (a Set of row keys) and `onSelectionChange(nextSet)`.
 export default function Table({
   columns, data, getRowKey, emptyMessage = "No records found.", emptyIcon, loading = false,
   searchable = false, searchPlaceholder = "Search…", searchKeys, searchValue,
   sortable = false, pageSize, pagination, dense = false,
+  selectable = false, selectedKeys, onSelectionChange,
 }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState({ key: null, dir: "asc" });
@@ -67,6 +72,22 @@ export default function Table({
 
   const rowPad = dense ? "6px 10px" : "10px 12px";
 
+  const visibleKeys = pageRows.map((row, i) => getRowKey(row, i));
+  const allVisibleSelected = selectable && visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys?.has(k));
+  const someVisibleSelected = selectable && !allVisibleSelected && visibleKeys.some((k) => selectedKeys?.has(k));
+
+  function toggleAllVisible() {
+    const next = new Set(selectedKeys);
+    if (allVisibleSelected) visibleKeys.forEach((k) => next.delete(k));
+    else visibleKeys.forEach((k) => next.add(k));
+    onSelectionChange(next);
+  }
+  function toggleRow(key) {
+    const next = new Set(selectedKeys);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    onSelectionChange(next);
+  }
+
   return (
     <div>
       {searchable && (
@@ -85,6 +106,17 @@ export default function Table({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
+              {selectable && (
+                <th style={{ padding: rowPad, width: 1 }}>
+                  <input
+                    type="checkbox"
+                    aria-label="Select all rows on this page"
+                    checked={allVisibleSelected}
+                    ref={(el) => { if (el) el.indeterminate = someVisibleSelected; }}
+                    onChange={toggleAllVisible}
+                  />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -105,11 +137,22 @@ export default function Table({
           <tbody>
             {loading && Array.from({ length: 4 }).map((_, i) => (
               <tr key={`sk-${i}`} style={{ borderBottom: "1px solid var(--line)" }}>
+                {selectable && <td style={{ padding: rowPad }} />}
                 {columns.map((col) => <td key={col.key} style={{ padding: rowPad }}><SkeletonLine height={12} /></td>)}
               </tr>
             ))}
             {!loading && pageRows.map((row, i) => (
               <tr key={getRowKey(row, i)} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                {selectable && (
+                  <td style={{ padding: rowPad }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select row ${i + 1}`}
+                      checked={!!selectedKeys?.has(getRowKey(row, i))}
+                      onChange={() => toggleRow(getRowKey(row, i))}
+                    />
+                  </td>
+                )}
                 {columns.map((col) => (
                   <td key={col.key} className={col.mono ? "mono" : undefined} style={{ padding: rowPad, textAlign: col.align || "left" }}>
                     {col.render ? col.render(row) : (row[col.key] ?? "—")}
@@ -119,7 +162,7 @@ export default function Table({
             ))}
             {!loading && pageRows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} style={{ padding: 0 }}>
+                <td colSpan={columns.length + (selectable ? 1 : 0)} style={{ padding: 0 }}>
                   <EmptyState text={query.trim() ? "No results match your search." : emptyMessage} icon={emptyIcon} />
                 </td>
               </tr>
@@ -128,21 +171,8 @@ export default function Table({
         </table>
       </div>
 
-      {pageSize && totalClientPages > 1 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginTop: 12 }}>
-          <button className="btn btn-ghost" disabled={clientPage <= 1} onClick={() => setClientPage((p) => p - 1)}>Prev</button>
-          <span style={{ fontSize: 13 }}>Page {clientPage} of {totalClientPages}</span>
-          <button className="btn btn-ghost" disabled={clientPage >= totalClientPages} onClick={() => setClientPage((p) => p + 1)}>Next</button>
-        </div>
-      )}
-
-      {pagination && pagination.totalPages > 1 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center", marginTop: 12 }}>
-          <button className="btn btn-ghost" disabled={pagination.page <= 1} onClick={() => pagination.onPageChange(pagination.page - 1)}>Prev</button>
-          <span style={{ fontSize: 13 }}>Page {pagination.page} of {pagination.totalPages}</span>
-          <button className="btn btn-ghost" disabled={pagination.page >= pagination.totalPages} onClick={() => pagination.onPageChange(pagination.page + 1)}>Next</button>
-        </div>
-      )}
+      {pageSize && <Pagination page={clientPage} totalPages={totalClientPages} onPageChange={setClientPage} />}
+      {pagination && <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={pagination.onPageChange} />}
     </div>
   );
 }

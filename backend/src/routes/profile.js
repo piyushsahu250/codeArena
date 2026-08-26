@@ -77,6 +77,19 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     if (userData.mobile && !MOBILE_RE.test(userData.mobile)) {
       return res.status(400).json({ error: "Enter a valid mobile number" });
     }
+    // Client-side (FileUpload.jsx) already validates type/size before encoding, but the server
+    // must be the actual source of truth: reject anything that isn't a genuine image data URL
+    // (never an arbitrary string/script/executable disguised with an image extension) and cap the
+    // encoded size — a compressed photo should never approach this, so hitting it means either a
+    // bug in the client-side compression or a deliberately oversized payload.
+    if (userData.profilePhotoUrl) {
+      if (!/^data:image\/(png|jpeg|jpg|webp);base64,/.test(userData.profilePhotoUrl)) {
+        return res.status(400).json({ error: "Profile photo must be a valid image (PNG, JPEG, or WEBP)." });
+      }
+      if (userData.profilePhotoUrl.length > 700_000) {
+        return res.status(400).json({ error: "Profile photo is too large after processing. Please choose a smaller image." });
+      }
+    }
     // Roll Number is the classroom number, intentionally not unique platform-wide (duplicates
     // across different Academic Groups are expected by design) — but a collision within the
     // SAME group (Institute+Batch+Department+Section) IS a real conflict, so it's checked here
@@ -206,6 +219,66 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       return res.status(409).json({ error: `That ${Array.isArray(err.meta?.target) ? err.meta.target.join(", ") : "value"} is already in use.` });
     }
     res.status(500).json({ error: "Failed to save profile. Please try again, and contact support if the issue persists." });
+  }
+});
+
+// STAFF/CLERK/ADMIN/INSTITUTE_ADMIN/SUPER_ADMIN: self-service profile edit (name/mobile/photo/
+// LinkedIn) — the non-student equivalent of PATCH /me above. Deliberately separate from that route
+// (different editable-field set, no StudentProfile/completion-tracking involved) and from
+// users.js's PATCH /me (which is security-sensitive email/password change requiring
+// currentPassword + rate-limiting — mixing a photo upload into that flow would force every
+// profile-photo change to also re-enter a password for no security benefit).
+router.patch("/me/account", authenticate, requireRole("STAFF", "CLERK", "ADMIN", "INSTITUTE_ADMIN", "SUPER_ADMIN"), async (req, res) => {
+  try {
+    const { name, mobile, profilePhotoUrl, linkedinUrl } = req.body || {};
+    const data = {};
+
+    if (name !== undefined) {
+      const trimmed = String(name || "").trim();
+      if (!trimmed) return res.status(400).json({ error: "Name cannot be empty" });
+      data.name = trimmed;
+    }
+    if (mobile !== undefined) {
+      const trimmed = String(mobile || "").trim();
+      if (trimmed && !MOBILE_RE.test(trimmed)) return res.status(400).json({ error: "Enter a valid mobile number" });
+      data.mobile = trimmed || null;
+    }
+    if (profilePhotoUrl !== undefined) {
+      if (profilePhotoUrl) {
+        if (!/^data:image\/(png|jpeg|jpg|webp);base64,/.test(profilePhotoUrl)) {
+          return res.status(400).json({ error: "Profile photo must be a valid image (PNG, JPEG, or WEBP)." });
+        }
+        if (profilePhotoUrl.length > 700_000) {
+          return res.status(400).json({ error: "Profile photo is too large after processing. Please choose a smaller image." });
+        }
+      }
+      data.profilePhotoUrl = profilePhotoUrl || null;
+    }
+    if (linkedinUrl !== undefined) {
+      const trimmed = String(linkedinUrl || "").trim();
+      if (trimmed && !/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/.+/i.test(trimmed)) {
+        return res.status(400).json({ error: "Enter a valid LinkedIn profile URL (must start with https://linkedin.com/)." });
+      }
+      data.linkedinUrl = trimmed || null;
+    }
+
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: "Nothing to update" });
+
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data,
+      select: { id: true, name: true, mobile: true, profilePhotoUrl: true, linkedinUrl: true, role: true },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.USER_PROFILE_UPDATED,
+      actorId: req.user.id, actorName: updated.name, actorRole: req.user.role,
+      instituteId: req.user.instituteId,
+      details: { self: true, fieldsChanged: Object.keys(data) },
+    });
+    res.json({ success: true, user: updated });
+  } catch (err) {
+    console.error("[profile.patchMeAccount] failed:", { userId: req.user.id, message: err.message });
+    res.status(500).json({ error: "Failed to save profile. Please try again." });
   }
 });
 

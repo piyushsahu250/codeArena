@@ -5,11 +5,43 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { Laptop, Smartphone, Tablet, LogOut } from "lucide-react";
 import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
+import FileUpload from "../components/FileUpload";
+import { compressImageToDataUrl } from "../utils/imageCompression";
 
 const DEVICE_ICON = { Mobile: Smartphone, Tablet: Tablet, Desktop: Laptop };
 
 export default function AccountSettings() {
-  const { user, login } = useAuth();
+  const { user, login, updateUser } = useAuth();
+  // Name/mobile/photo/LinkedIn are STUDENT-editable from StudentProfile.jsx already (a richer page
+  // with academic fields this page doesn't have) — this section is the equivalent for every other
+  // role, which previously had no way at all to set a name, photo, phone, or LinkedIn on their own account.
+  const isStudent = user.role === "STUDENT";
+  const [profileName, setProfileName] = useState(user.name || "");
+  const [profileMobile, setProfileMobile] = useState(user.mobile || "");
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(user.profilePhotoUrl || "");
+  const [profileLinkedin, setProfileLinkedin] = useState(user.linkedinUrl || "");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    setProfileError("");
+    setProfileSuccess("");
+    setProfileSaving(true);
+    try {
+      const { data } = await api.patch("/profile/me/account", {
+        name: profileName, mobile: profileMobile, profilePhotoUrl, linkedinUrl: profileLinkedin,
+      });
+      updateUser({ name: data.user.name, mobile: data.user.mobile, profilePhotoUrl: data.user.profilePhotoUrl, linkedinUrl: data.user.linkedinUrl });
+      setProfileSuccess("Profile updated.");
+    } catch (err) {
+      setProfileError(err.response?.data?.error || "Failed to save profile");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newEmail, setNewEmail] = useState(user.email);
   const [newPassword, setNewPassword] = useState("");
@@ -104,7 +136,55 @@ export default function AccountSettings() {
       <div style={{ maxWidth: 440, margin: "0 auto", padding: "48px 24px" }}>
         <h1>Account settings</h1>
         <ChalkUnderline />
-        <p style={{ color: "var(--ink-dim)", fontSize: 14, marginTop: 16 }}>
+
+        {!isStudent && (
+          <>
+            <h2 style={{ fontSize: 16, marginTop: 24 }}>Profile</h2>
+            <form onSubmit={saveProfile} style={{ marginTop: 8 }}>
+              <div style={{ maxWidth: 200 }}>
+                <FileUpload
+                  accept="image/png,image/jpeg,image/webp"
+                  maxSizeMB={8}
+                  imagePreview
+                  existingPreviewUrl={profilePhotoUrl || null}
+                  label="Upload a photo"
+                  onFileSelected={async (file) => {
+                    if (!file) { setProfilePhotoUrl(""); return; }
+                    try {
+                      setProfilePhotoUrl(await compressImageToDataUrl(file));
+                    } catch {
+                      setProfileError("Could not process that image. Please try a different file.");
+                    }
+                  }}
+                />
+              </div>
+
+              <label style={labelStyle}>Full name</label>
+              <input style={inputStyle} required value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+
+              <label style={labelStyle}>Mobile number</label>
+              <input style={inputStyle} value={profileMobile} onChange={(e) => setProfileMobile(e.target.value)} placeholder="9876543210" />
+
+              <label style={labelStyle}>LinkedIn profile URL</label>
+              <input style={inputStyle} type="url" value={profileLinkedin} onChange={(e) => setProfileLinkedin(e.target.value)} placeholder="https://linkedin.com/in/yourname" />
+
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
+                Role: <span className="mono">{user.role}</span>{user.institute?.name && ` · ${user.institute.name}`}
+              </p>
+
+              {profileError && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{profileError}</p>}
+              {profileSuccess && <p style={{ color: "var(--mint)", fontSize: 13, marginTop: 8 }}>{profileSuccess}</p>}
+
+              <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={profileSaving}>
+                {profileSaving ? "Saving…" : "Save profile"}
+              </button>
+            </form>
+            <hr style={{ border: "none", borderTop: "1px solid var(--line)", margin: "28px 0" }} />
+          </>
+        )}
+
+        <h2 style={{ fontSize: 16 }}>Sign-in details</h2>
+        <p style={{ color: "var(--ink-dim)", fontSize: 14, marginTop: 8 }}>
           Change your sign-in email and/or password. Your current password is required to confirm the change.
         </p>
 

@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CompleteProfileModal from "../components/CompleteProfileModal";
+import FileUpload from "../components/FileUpload";
+import { compressImageToDataUrl } from "../utils/imageCompression";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -543,9 +545,35 @@ export default function StudentProfile() {
             <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} placeholder="A couple of sentences about yourself" />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Profile Picture</div>
-            <label style={labelStyle}>Profile Picture URL</label>
-            <input style={inputStyle} value={form.profilePhotoUrl} onChange={(e) => setForm({ ...form, profilePhotoUrl: e.target.value })} placeholder="https://…" />
-            {form.profilePhotoUrl && <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginTop: 8 }} />}
+            <div style={{ marginTop: 6, maxWidth: 260 }}>
+              <FileUpload
+                accept="image/png,image/jpeg,image/webp"
+                maxSizeMB={8}
+                imagePreview
+                existingPreviewUrl={form.profilePhotoUrl || null}
+                label="Upload a photo"
+                onFileSelected={async (file) => {
+                  if (!file) { setForm({ ...form, profilePhotoUrl: "" }); return; }
+                  try {
+                    const dataUrl = await compressImageToDataUrl(file);
+                    setForm({ ...form, profilePhotoUrl: dataUrl });
+                  } catch {
+                    toast.error("Could not process that image. Please try a different file.");
+                  }
+                }}
+              />
+            </div>
+
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>LinkedIn</div>
+            <p style={{ fontSize: 13, marginTop: 4 }}>
+              {data?.linkedin ? (
+                <a href={data.linkedin} target="_blank" rel="noopener noreferrer">{data.linkedin}</a>
+              ) : (
+                <span style={{ color: "var(--ink-dim)" }}>Not added yet.</span>
+              )}
+              {" — "}
+              <Link to="/resume" onClick={confirmDiscardIfDirty}>Add or edit in Resume Builder</Link>
+            </p>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>
             <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, marginBottom: 10 }}>
