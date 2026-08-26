@@ -440,6 +440,12 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 .ca-topbar-icon-btn:hover { color: var(--chalk); background: rgba(244,239,227,0.08); }
 .ca-hamburger-btn { display: none; }
 @media (max-width: 860px) { .ca-hamburger-btn { display: flex; } }
+
+/* The topbar's profile button showed the user's first name unconditionally — confirmed live at
+   375px width that a longer first name (e.g. an 8-character name) pushed the button past the
+   viewport edge, since the topbar's icon row doesn't wrap. Icon-only below 480px, same pattern
+   already used for .ca-hamburger-btn's reverse case above. */
+@media (max-width: 480px) { .ca-topbar-username { display: none; } }
 .ca-topbar-dot {
   position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--rust);
 }

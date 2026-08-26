@@ -134,7 +134,7 @@ export default function Navbar() {
             <div style={{ position: "relative" }}>
               <button className="ca-topbar-icon-btn" style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={() => { const o = !profileOpen; closeMenus(); setProfileOpen(o); }}>
                 <UserIcon size={17} />
-                <span className="mono" style={{ fontSize: 12 }}>{user.name?.split(" ")[0]}</span>
+                <span className="mono ca-topbar-username" style={{ fontSize: 12 }}>{user.name?.split(" ")[0]}</span>
               </button>
               {profileOpen && (
                 <div className="ca-dropdown">
