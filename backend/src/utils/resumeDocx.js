@@ -86,6 +86,12 @@ async function generateResumeDocx(resume) {
       const rawLinks = [p.githubUrl, p.liveUrl].filter(Boolean);
       const links = rawLinks.filter((url, i) => rawLinks.indexOf(url) === i).join("   |   ");
       if (links) children.push(body(links, { size: 18, color: "555555" }));
+      // A real blank line between entries — without it, mammoth's extracted text has no blank-line
+      // signal at all between projects, and resumeParser.js's upload-side entry-splitter (which
+      // relies on blank lines first, a much fragiler structural heuristic only as a fallback) mis-
+      // split a single project into several bogus entries on round-trip (confirmed live via
+      // scripts/validationDatasetAccuracy.js / debugUrlRoundTrip.js).
+      children.push(body("", { after: 40 }));
     }
   }
 
@@ -98,6 +104,7 @@ async function generateResumeDocx(resume) {
       if (meta) children.push(body(meta, { size: 18, color: "555555", after: 20 }));
       if (e.responsibilities) children.push(body(e.responsibilities, { after: 20 }));
       if (e.technologies) children.push(body(`Tech: ${e.technologies}`, { size: 18, color: "555555" }));
+      children.push(body("", { after: 40 })); // see the matching comment in the Projects loop above
     }
   }
 
@@ -108,6 +115,7 @@ async function generateResumeDocx(resume) {
       children.push(body(`${c.name || ""}${c.org ? ` — ${c.org}` : ""}`, { bold: true, after: 20 }));
       const meta = [c.issueDate, c.credentialId ? `ID: ${c.credentialId}` : null].filter(Boolean).join("   ·   ");
       if (meta) children.push(body(meta, { size: 18, color: "555555" }));
+      children.push(body("", { after: 40 }));
     }
   }
 

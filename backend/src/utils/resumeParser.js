@@ -70,13 +70,22 @@ function renderPageInReadingOrder(pageData) {
   });
 }
 
+// Both resumePdf.js and resumeDocx.js stamp every document they generate with this exact footer
+// line. It carries no resume content at all, but with no heading of its own it silently gets
+// absorbed into whatever section happens to be last in the document — confirmed live via
+// scripts/validationDatasetAccuracy.js: re-uploading a CodeArena-generated file could turn this
+// single line into a bogus extra "project"/"experience"/etc. entry. Stripped unconditionally
+// before section-splitting; a real resume from any other source will simply never contain this
+// exact line, so this can't discard genuine user content.
+const GENERATED_FOOTER_RE = /^created with codearena$/i;
+
 async function extractTextFromFile(buffer, mimetype, filename) {
   const ext = String(filename || "").toLowerCase().split(".").pop();
+  let text;
   if (mimetype === "application/pdf" || ext === "pdf") {
     const data = await pdfParse(buffer, { pagerender: renderPageInReadingOrder });
-    return data.text;
-  }
-  if (
+    text = data.text;
+  } else if (
     mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     ext === "docx"
   ) {
@@ -91,12 +100,16 @@ async function extractTextFromFile(buffer, mimetype, filename) {
       mammoth.convertToHtml({ buffer }).catch(() => ({ value: "" })),
     ]);
     const hrefs = [...(htmlResult.value || "").matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
-    return hrefs.length ? `${textResult.value}\n${hrefs.join("\n")}` : textResult.value;
-  }
-  if (ext === "doc") {
+    text = hrefs.length ? `${textResult.value}\n${hrefs.join("\n")}` : textResult.value;
+  } else if (ext === "doc") {
     throw new Error("Legacy .doc files aren't supported. Please save your resume as .docx or .pdf and try again.");
+  } else {
+    throw new Error("Unsupported file type. Please upload a .pdf or .docx file.");
   }
-  throw new Error("Unsupported file type. Please upload a .pdf or .docx file.");
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !GENERATED_FOOTER_RE.test(line.trim()))
+    .join("\n");
 }
 
 // ---- Section heading recognition ----
