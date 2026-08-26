@@ -22,11 +22,15 @@ router.post("/", authenticate, async (req, res) => {
   if (description.length > MAX_DESCRIPTION_LENGTH) {
     return res.status(400).json({ error: `Description must be under ${MAX_DESCRIPTION_LENGTH} characters.` });
   }
+  // req.user comes straight from the JWT payload ({ id, role, email, jti }) — it never carries
+  // instituteId, so it has to be looked up, same as every other route that needs the acting
+  // user's own institute (see users.js:1289, attendance.js:1076, etc).
+  const reporter = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
   const issue = await prisma.userReportedIssue.create({
     data: {
       reportedByUserId: req.user.id,
       reportedByRole: req.user.role,
-      instituteId: req.user.instituteId || null,
+      instituteId: reporter?.instituteId || null,
       page: typeof page === "string" ? page.slice(0, 300) : null,
       feature: typeof feature === "string" ? feature.slice(0, 200) : null,
       description: description.trim(),
