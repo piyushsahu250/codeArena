@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BookOpen, BarChart3, Mic, FileText, History, Award, Trophy, Settings,
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
-  CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target, StickyNote,
+  CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target, StickyNote, AlertTriangle,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
@@ -113,6 +113,7 @@ const MENU = {
       { label: "Question Audit", to: "/admin/question-audit", icon: CheckSquare },
       { label: "Password Reset History", to: "/admin/password-reset-history", icon: History },
       { label: "Audit Log", to: "/admin/audit-log", icon: History },
+      { label: "Reported Problems", to: "/admin/issue-reports", icon: AlertTriangle },
       { label: "Certificates", to: "/admin/certificates", icon: Award },
       { label: "Monitoring", to: "/admin/monitoring", icon: Activity },
       { label: "Backups", to: "/admin/backups", icon: Download },
@@ -159,6 +160,7 @@ const MENU = {
       { label: "Email Logs", to: "/admin/email-logs", icon: Mail },
       { label: "Password Reset History", to: "/admin/password-reset-history", icon: History },
       { label: "Audit Log", to: "/admin/audit-log", icon: History },
+      { label: "Reported Problems", to: "/admin/issue-reports", icon: AlertTriangle },
       { label: "Certificates", to: "/admin/certificates", icon: Award, featureKey: "certificates" },
       { label: "Export Center", to: "/admin/exports", icon: Download, featureKey: "export_center" },
       { label: "Feature Management", to: "/admin/feature-management", icon: Settings },

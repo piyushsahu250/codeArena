@@ -46,6 +46,8 @@ const staffClerkRoutes = require("./routes/staffClerk");
 const readinessRoutes = require("./routes/readiness");
 const featureRoutes = require("./routes/features");
 const subjectRoutes = require("./routes/subjects");
+const issueReportRoutes = require("./routes/issueReports");
+const platformHealthRoutes = require("./routes/platformHealth");
 
 const app = express();
 // There are TWO proxy hops in front of this service, not one — confirmed directly via a
@@ -187,6 +189,8 @@ app.use("/api/staff-clerk", staffClerkRoutes);
 app.use("/api/readiness", readinessRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/features", featureRoutes);
+app.use("/api/issue-reports", issueReportRoutes);
+app.use("/api/platform-health", platformHealthRoutes);
 
 // Global 4-arg error handler — must be mounted after every route above so any error a route
 // hands to next(err) (or an unhandled synchronous throw) lands here instead of Express's default

@@ -12,6 +12,7 @@ import { SidebarUIProvider } from "./context/SidebarContext";
 import LoadingScreen from "./components/LoadingScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Sidebar from "./components/Sidebar";
+import ReportProblemWidget from "./components/ReportProblemWidget";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import About from "./pages/marketing/About";
@@ -118,6 +119,7 @@ import ExportCenter from "./pages/ExportCenter";
 import StudentProfile from "./pages/StudentProfile";
 import ClerkDashboard from "./pages/ClerkDashboard";
 import CompanyMaster from "./pages/CompanyMaster";
+import IssueReports from "./pages/IssueReports";
 
 const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
 
@@ -162,6 +164,7 @@ function Protected({ roles, children, noChrome = false }) {
   return (
     <>
       {!noChrome && <Sidebar role={user.role} profileGateActive={profileGateActive(user)} />}
+      {!noChrome && <ReportProblemWidget />}
       {/* Keyed by path so this remounts (and re-triggers the fade-in) on every navigation,
           instead of silently reusing the same DOM node with stale animation state. */}
       <div key={location.pathname} className="ca-page-enter">
@@ -360,6 +363,7 @@ export default function App() {
           <Route path="/admin/staff-clerk" element={<Protected roles={["ADMIN"]}><StaffClerkManagement /></Protected>} />
           <Route path="/admin/staff-clerk/:id" element={<Protected roles={["ADMIN"]}><StaffClerkProfile /></Protected>} />
           <Route path="/admin/companies" element={<Protected roles={["ADMIN"]}><CompanyMaster /></Protected>} />
+          <Route path="/admin/issue-reports" element={<Protected roles={["ADMIN"]}><IssueReports basePath="/admin" /></Protected>} />
 
           {/* Placement Clerk — always institute-scoped, Placement Cell operations only (no
               Learning/Test Management access — those routes above simply never list CLERK). */}
