@@ -1931,6 +1931,11 @@ model ResumeVersion {
   resumeId  String
   snapshot  Json     // full copy of the resume's fields at this point in time
   atsScore  Int
+  // Which version of the deterministic scoring rubric (backend/src/utils/resumeAts.js) produced
+  // this score — see ATS_ENGINE_VERSION there. Existing rows default to "v1.0" since that's the
+  // only rubric that has ever run; if the weights/logic change later, bump the constant there
+  // (never silently reinterpret an old score under a new rubric).
+  atsEngineVersion String @default("v1.0")
   createdAt DateTime @default(now())
 
   @@index([resumeId, createdAt])

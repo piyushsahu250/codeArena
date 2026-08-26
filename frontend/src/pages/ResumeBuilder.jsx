@@ -463,7 +463,7 @@ export default function ResumeBuilder() {
             {/* ATS score */}
             <div className="card" style={{ padding: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>ATS Score Checker</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>CodeArena ATS Compatibility Score</div>
                 {!reviewPending && (
                   <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={checkAts} disabled={checkingAts}>{checkingAts ? "Checking…" : ats ? "Regenerate" : "Check ATS Score"}</button>
                 )}
@@ -477,6 +477,13 @@ export default function ResumeBuilder() {
                     <span className="mono" style={{ fontSize: 28, fontWeight: 700, color: ats.score >= 75 ? "var(--mint)" : ats.score >= 60 ? "var(--amber-dark)" : "var(--rust)" }}>{ats.score}/100</span>
                     <span style={{ fontSize: 13, color: "var(--ink-dim)" }}>{ats.status}</span>
                   </div>
+                  <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 6, lineHeight: 1.5 }}>
+                    This measures resume completeness, writing quality, and general keyword presence against CodeArena's
+                    own rubric ({ats.engineVersion || "v1.0"}) — it does not match a specific job posting and does not
+                    reproduce any external ATS product's algorithm. Real-world ATS platforms (Workday, Greenhouse, Taleo,
+                    and others) each use different parsing and ranking logic, so this score will not exactly match what
+                    you see elsewhere. Use it as a completeness/quality check, not a guarantee.
+                  </p>
 
                   {scoreDelta && (
                     <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: scoreDelta.overall >= 0 ? "var(--success-bg)" : "var(--danger-bg)" }}>

@@ -1,6 +1,19 @@
 // Rule-based (not AI) resume completeness + ATS scoring — deterministic and reproducible, same
 // spirit as the judge's exact-match grading elsewhere on this platform. "No real AI/LLM anywhere
 // on this platform" is a deliberate, standing decision, not a missing feature.
+//
+// HONEST SCOPE (read before assuming this number means more than it does): this score measures
+// resume completeness + general resume-writing quality + presence of ~38 generic CS keywords
+// (see KEYWORDS below) against THIS rubric only. It does NOT match against any specific job
+// description (no such feature exists on this platform), and it does NOT run the resume through
+// any real external ATS product's parser (Workday/Greenhouse/Taleo/etc. all use different,
+// proprietary parsing and ranking logic this platform has no access to). A resume can legitimately
+// score 100/100 here — every section complete, well-written, keyword-rich by this rubric's own
+// list — and still score very differently on a specific job posting's real ATS, because that
+// system is scoring something else entirely (this exact resume's fit against ONE job's specific
+// required keywords). This is why the frontend must label this "CodeArena ATS Compatibility Score"
+// and never bare "ATS Score," and must never imply it predicts or guarantees any external result.
+const ATS_ENGINE_VERSION = "v1.0";
 
 function arr(x) {
   return Array.isArray(x) ? x : [];
@@ -198,7 +211,11 @@ function computeAtsScore(resume) {
   if (readability.passivePercent > 30) suggestions.push({ issue: "Descriptions read as passive voice.", recommendation: "Rewrite in active voice, starting each bullet with an action verb (Built, Designed, Implemented, Optimized)." });
   if (!/\d/.test(text)) suggestions.push({ issue: "Missing measurable achievements.", recommendation: 'Quantify impact where you genuinely can — e.g. "reduced load time by 30%" or "supported 500+ users" — only using real numbers, never invented ones.' });
 
-  return { score, status, breakdown, matchedKeywords, actionVerbUsage, suggestions: suggestions.slice(0, 10) };
+  return {
+    score, status, breakdown, matchedKeywords, actionVerbUsage, suggestions: suggestions.slice(0, 10),
+    engineVersion: ATS_ENGINE_VERSION,
+    methodology: "CodeArena ATS Compatibility Score — measures resume completeness, keyword presence (against a fixed general list, not a specific job posting), and writing quality against this platform's own documented rubric. It does not match a job description and does not reproduce any external ATS product's scoring. Different systems use different algorithms; a high score here does not guarantee any particular result elsewhere.",
+  };
 }
 
-module.exports = { SECTION_DEFS, computeCompletion, computeAtsScore };
+module.exports = { SECTION_DEFS, computeCompletion, computeAtsScore, ATS_ENGINE_VERSION };

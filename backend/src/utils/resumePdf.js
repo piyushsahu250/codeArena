@@ -60,12 +60,19 @@ function experienceLine(e) {
 }
 
 function projectLine(p) {
+  // Deduplicated before joining — githubUrl and liveUrl are independent fields in the editor, but
+  // a student can (and, seen live, does) enter the same URL into both. Printing it twice in the
+  // generated resume is a real, verifiable defect (confirmed on a real generated PDF), not a
+  // hallucination-prevention edge case — nothing here changes which URLs are shown, only removes
+  // an exact repeat.
+  const links = [p.githubUrl, p.liveUrl].filter(Boolean);
+  const uniqueLinks = links.filter((url, i) => links.indexOf(url) === i);
   return {
     title: p.title || "",
     meta: [p.role, p.duration].filter(Boolean).join("   ·   "),
     body: p.description || "",
     tech: p.technologies ? `Tech: ${p.technologies}` : null,
-    links: [p.githubUrl, p.liveUrl].filter(Boolean).join("   |   "),
+    links: uniqueLinks.join("   |   "),
   };
 }
 

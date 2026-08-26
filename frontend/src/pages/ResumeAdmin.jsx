@@ -139,7 +139,7 @@ export default function ResumeAdmin() {
                 </div>
                 <div style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>{detail.resume.email} · {detail.resume.mobile}</div>
                 <div className="mono" style={{ fontSize: 12, marginTop: 8 }}>
-                  Completion: {detail.completion.percent}% · ATS Score: {detail.atsScore.score}/100 ({detail.atsScore.status})
+                  Completion: {detail.completion.percent}% · CodeArena ATS Compatibility Score: {detail.atsScore.score}/100 ({detail.atsScore.status})
                 </div>
                 {detail.completion.missingSections.length > 0 && (
                   <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>Missing: {detail.completion.missingSections.join(", ")}</div>

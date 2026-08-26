@@ -81,7 +81,10 @@ async function generateResumeDocx(resume) {
       if (meta) children.push(body(meta, { size: 18, color: "555555", after: 20 }));
       if (p.description) children.push(body(p.description, { after: 20 }));
       if (p.technologies) children.push(body(`Tech: ${p.technologies}`, { size: 18, color: "555555", after: 20 }));
-      const links = [p.githubUrl, p.liveUrl].filter(Boolean).join("   |   ");
+      // Deduplicated for the same reason as resumePdf.js's projectLine() — a student can enter the
+      // same URL into both githubUrl and liveUrl, which previously printed it twice.
+      const rawLinks = [p.githubUrl, p.liveUrl].filter(Boolean);
+      const links = rawLinks.filter((url, i) => rawLinks.indexOf(url) === i).join("   |   ");
       if (links) children.push(body(links, { size: 18, color: "555555" }));
     }
   }

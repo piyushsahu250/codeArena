@@ -4,7 +4,7 @@ const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
-const { computeCompletion, computeAtsScore } = require("../utils/resumeAts");
+const { computeCompletion, computeAtsScore, ATS_ENGINE_VERSION } = require("../utils/resumeAts");
 const { generateResumePdf } = require("../utils/resumePdf");
 const { generateResumeDocx } = require("../utils/resumeDocx");
 const { buildAutofillData } = require("../utils/resumeAutofill");
@@ -56,7 +56,7 @@ function pdfFilename(resume) {
 // unbounded growth from an active editing session.
 async function saveVersion(resumeId, resumeSnapshot) {
   const atsScore = computeAtsScore(resumeSnapshot).score;
-  const version = await prisma.resumeVersion.create({ data: { resumeId, snapshot: resumeSnapshot, atsScore } });
+  const version = await prisma.resumeVersion.create({ data: { resumeId, snapshot: resumeSnapshot, atsScore, atsEngineVersion: ATS_ENGINE_VERSION } });
   const versions = await prisma.resumeVersion.findMany({
     where: { resumeId }, orderBy: { createdAt: "desc" }, select: { id: true }, skip: 20,
   });
