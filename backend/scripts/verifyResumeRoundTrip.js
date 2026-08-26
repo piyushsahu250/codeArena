@@ -37,8 +37,15 @@ async function generateAndExtract(template, resume) {
   const stream = new PassThrough();
   const chunks = [];
   stream.on("data", (c) => chunks.push(c));
-  const done = new Promise((resolve) => stream.on("end", resolve));
-  generateResumePdf({ ...resume, template }, stream); // synchronous — completion signaled via the stream's 'end' event below
+  const done = new Promise((resolve, reject) => {
+    stream.on("end", resolve);
+    stream.on("error", reject); // otherwise an unhandled stream 'error' event crashes the process, bypassing any try/catch
+  });
+  // generateResumePdf is synchronous (pipes doc -> stream, calls doc.end() itself), but pdfkit's
+  // internal pipe writes land on the next microtask tick — calling stream.end() in the very same
+  // synchronous tick races with those writes (ERR_STREAM_WRITE_AFTER_END). `await`ing the
+  // (non-promise) call costs one microtask tick, which is enough for pdfkit's writes to land first.
+  await generateResumePdf({ ...resume, template }, stream);
   stream.end();
   await done;
   const buf = Buffer.concat(chunks);
