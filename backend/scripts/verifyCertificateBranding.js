@@ -3,6 +3,7 @@
 // trivially greppable since it's often encoded, but pdfkit's default WinAnsi text often stays
 // literal for plain ASCII strings like this one, so a raw byte search is a reasonable smoke check).
 const { PassThrough } = require("stream");
+const pdfParse = require("pdf-parse");
 const { generateCertificatePdf } = require("../src/utils/certificatePdf");
 const { generateInterviewCertificatePdf } = require("../src/utils/interviewCertificatePdf");
 
@@ -23,7 +24,8 @@ async function main() {
   }, cert.stream);
   await cert.done;
   const certBuf = cert.getBuffer();
-  console.log("Learning Module certificate PDF bytes:", certBuf.length, "| contains attribution text:", certBuf.includes("Acrosoft Webtech Solution"));
+  const certText = (await pdfParse(certBuf)).text;
+  console.log("Learning Module certificate PDF bytes:", certBuf.length, "| extracted text contains attribution:", certText.includes("Acrosoft Webtech Solution"));
 
   const interview = captureStream();
   await generateInterviewCertificatePdf({
@@ -32,7 +34,8 @@ async function main() {
   }, interview.stream);
   await interview.done;
   const interviewBuf = interview.getBuffer();
-  console.log("Interview certificate PDF bytes:", interviewBuf.length, "| contains attribution text:", interviewBuf.includes("Acrosoft Webtech Solution"));
+  const interviewText = (await pdfParse(interviewBuf)).text;
+  console.log("Interview certificate PDF bytes:", interviewBuf.length, "| extracted text contains attribution:", interviewText.includes("Acrosoft Webtech Solution"));
 }
 
 main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });
