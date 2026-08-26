@@ -36,6 +36,11 @@ async function generateInterviewCertificatePdf({ studentName, averageScore, cert
     console.error("QR code generation failed", e);
   }
 
+  // Same small, bottom-left platform attribution as the Learning Module certificate — never
+  // collides with the QR block, which always sits bottom-right.
+  doc.font("Helvetica").fontSize(8).fillColor("#A8A69C")
+    .text("Powered by Acrosoft Webtech Solution Pvt. Ltd.", 60, height - 60, { width: 260, align: "left" });
+
   doc.end();
 }
 

@@ -41,7 +41,8 @@ function wrapCredentialsEmail({ heading, subheading, bodyHtml, instructions }) {
       </div>
       <div style="text-align:center; padding:20px; color:#999; font-size:11px; border-top:1px solid #eee;">
         © ${new Date().getFullYear()} CodeArena<br/>
-        Empowering Students Through Coding, AI &amp; Innovation
+        Empowering Students Through Coding, AI &amp; Innovation<br/>
+        A platform by Acrosoft Webtech Solution Pvt. Ltd.
       </div>
     </div>
   `;

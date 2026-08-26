@@ -60,7 +60,8 @@ function wrapBranded(bodyHtml) {
         ${bodyHtml}
       </div>
       <div style="text-align: center; padding: 16px; color: #999; font-size: 11px; border-top: 1px solid #eee;">
-        CodeArena — Code · Learn · Assess · Succeed
+        CodeArena — Code · Learn · Assess · Succeed<br/>
+        A platform by Acrosoft Webtech Solution Pvt. Ltd.
       </div>
     </div>
   `;

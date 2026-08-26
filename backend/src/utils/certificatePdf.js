@@ -51,6 +51,12 @@ async function generateCertificatePdf({ studentName, title, programName, certifi
     }
   }
 
+  // Small, separate platform attribution — deliberately distinct from the institute branding
+  // above (instituteName/instituteLogoUrl), never replacing it. Bottom-left so it never collides
+  // with the QR code block, which always sits bottom-right.
+  doc.font("Helvetica").fontSize(8).fillColor("#A8A69C")
+    .text("Powered by Acrosoft Webtech Solution Pvt. Ltd.", 60, height - 58, { width: 260, align: "left" });
+
   if (status === "REVOKED") {
     doc.save();
     doc.rotate(-25, { origin: [width / 2, height / 2] });

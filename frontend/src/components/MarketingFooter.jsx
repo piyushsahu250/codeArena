@@ -53,6 +53,9 @@ export default function MarketingFooter() {
             An AI-powered coding, assessment, learning and employability platform for students and
             educational institutions.
           </p>
+          <p className="ca-landing-footer-tagline" style={{ marginTop: 10, opacity: 0.8 }}>
+            CodeArena is a platform by Acrosoft Webtech Solution Pvt. Ltd.
+          </p>
         </div>
         {COLUMNS.map((col) => (
           <nav key={col.heading} className="ca-landing-footer-col">
@@ -64,7 +67,7 @@ export default function MarketingFooter() {
         ))}
       </div>
       <div className="ca-landing-footer-bottom">
-        © {new Date().getFullYear()} CodeArena. Empowering talent through smart coding assessments.
+        © {new Date().getFullYear()} CodeArena. All rights reserved. Acrosoft Webtech Solution Pvt. Ltd.
       </div>
     </footer>
   );

@@ -122,6 +122,9 @@ export default function Login() {
             Don't have an account? Contact your admin to get one created.
           </p>
         </form>
+        <p style={{ marginTop: 32, fontSize: 12, color: "var(--ink-dim)", opacity: 0.75 }}>
+          Powered by Acrosoft Webtech Solution Pvt. Ltd.
+        </p>
       </div>
     </div>
   );

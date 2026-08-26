@@ -256,6 +256,11 @@ export default function Sidebar({ role, profileGateActive = false }) {
             </div>
           ))}
         </div>
+        {!collapsed && (
+          <div style={{ fontSize: 10.5, color: "var(--ink-dim)", opacity: 0.65, textAlign: "center", padding: "0 12px 8px" }}>
+            Powered by Acrosoft Webtech Solution Pvt. Ltd.
+          </div>
+        )}
         <button className="ca-sidebar-collapse-btn" onClick={() => setCollapsed((c) => !c)}>
           {collapsed ? <ChevronRight size={16} /> : <><ChevronLeft size={16} /><span style={{ fontSize: 12 }}>Collapse</span></>}
         </button>

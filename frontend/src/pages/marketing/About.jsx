@@ -81,6 +81,11 @@ export default function About() {
         established platform in this space. Every capability described on this site is a real,
         shipped feature, not a roadmap item.
       </p>
+
+      <h2>Who builds CodeArena</h2>
+      <p>
+        CodeArena is developed and operated by <strong>Acrosoft Webtech Solution Pvt. Ltd.</strong>
+      </p>
     </MarketingPageShell>
   );
 }
