@@ -294,7 +294,7 @@ function renderMinimal(resume) {
 // ===================== Modern: two-column, accent color, timeline experience =====================
 function renderModern(resume) {
   const accent = TEMPLATE_META.modern.accent;
-  const doc = new PDFDocument({ margin: 0, size: "A4" });
+  const doc = new PDFDocument({ margin: 0, size: "A4", bufferPages: true });
   const sidebarW = 190;
   const sidebarX = 0, mainX = sidebarW + 30, mainRight = PAGE_WIDTH - 36;
 
