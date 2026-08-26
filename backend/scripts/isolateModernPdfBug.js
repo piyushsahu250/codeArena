@@ -18,18 +18,26 @@ const full = {
 };
 
 async function gen(resume, label) {
+  // generateResumePdf is synchronous (pipes doc -> stream, calls doc.end() itself) — it does NOT
+  // return a promise, so completion must be observed via the stream's own 'end'/'error' events.
   const stream = new PassThrough();
   const chunks = [];
   stream.on("data", (c) => chunks.push(c));
-  const errP = new Promise((resolve) => stream.on("error", (e) => resolve(e)));
-  const endP = new Promise((resolve) => stream.on("end", () => resolve(null)));
-  const genErr = await generateResumePdf(resume, stream).then(() => null).catch((e) => e);
-  stream.end();
-  const err = await Promise.race([errP, endP]);
+  const donePromise = new Promise((resolve) => {
+    stream.on("end", () => resolve({ ok: true }));
+    stream.on("error", (e) => resolve({ ok: false, error: e }));
+  });
+  let genErr = null;
+  try {
+    generateResumePdf(resume, stream);
+  } catch (e) {
+    genErr = e;
+  }
+  const result = await donePromise;
   const buf = Buffer.concat(chunks);
   const path = `/tmp/isolate-${label}.pdf`;
   fs.writeFileSync(path, buf);
-  console.log(`${label}: genErr=${genErr?.message || "none"} streamErr=${err?.message || "none"} bytes=${buf.length} savedTo=${path}`);
+  console.log(`${label}: genErr=${genErr?.message || "none"} streamErr=${result.ok ? "none" : result.error?.message} bytes=${buf.length} savedTo=${path}`);
   return buf;
 }
 
