@@ -114,6 +114,7 @@ const MENU = {
       { label: "Password Reset History", to: "/admin/password-reset-history", icon: History },
       { label: "Audit Log", to: "/admin/audit-log", icon: History },
       { label: "Reported Problems", to: "/admin/issue-reports", icon: AlertTriangle },
+      { label: "Platform Health", to: "/admin/platform-health", icon: Activity, onlyRole: "SUPER_ADMIN" },
       { label: "Certificates", to: "/admin/certificates", icon: Award },
       { label: "Monitoring", to: "/admin/monitoring", icon: Activity },
       { label: "Backups", to: "/admin/backups", icon: Download },
@@ -224,7 +225,13 @@ export default function Sidebar({ role, profileGateActive = false }) {
   // dropdown regardless, so it doesn't need a sidebar entry here.
   const rawGroups = MENU[role] || [];
   const featureFiltered = rawGroups
-    .map((g) => ({ ...g, items: g.items.filter((item) => !item.featureKey || isFeatureEnabled(item.featureKey)) }))
+    .map((g) => ({
+      ...g,
+      // MENU.SUPER_ADMIN is literally MENU.ADMIN (same array reference — see the assignment below),
+      // so an item meant for SUPER_ADMIN only (e.g. the platform-wide Health dashboard) needs its own
+      // filter keyed off the real logged-in role, not the menu key.
+      items: g.items.filter((item) => (!item.featureKey || isFeatureEnabled(item.featureKey)) && (!item.onlyRole || item.onlyRole === role)),
+    }))
     .filter((g) => g.items.length > 0);
   const groups = profileGateActive
     ? featureFiltered
