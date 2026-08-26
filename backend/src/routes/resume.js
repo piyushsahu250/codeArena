@@ -13,6 +13,8 @@ const { improveText } = require("../utils/resumeImprove");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { ROLE_KEYWORDS, analyzeForRole } = require("../utils/resumeJobRoles");
+const { checkResumeFacts } = require("../utils/resumeFactCheck");
+const { computeJobMatch } = require("../utils/resumeJobMatch");
 const { cached } = require("../utils/cache");
 
 const router = express.Router();
@@ -211,6 +213,7 @@ router.post(
         parsedFieldsCount: extractedCount,
         confidence: parsed.confidence, lowConfidenceFields: parsed.lowConfidenceFields,
         rawText: parsed.rawText,
+        usedOcr: parsed.usedOcr, ocrConfidence: parsed.ocrConfidence,
         previousVersionId,
       });
     } catch (err) {
@@ -538,6 +541,40 @@ router.get("/me/ats-score", authenticate, requireRole("STUDENT"), async (req, re
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to compute ATS score" });
+  }
+});
+
+// STUDENT: compare the resume against a pasted job description. Entirely deterministic (no AI
+// call) and stateless — the job description text is never persisted, so nothing here needs a
+// schema change; the same resume + same JD text + same engine version always produces the same
+// result. Never modifies the resume itself.
+router.post("/me/job-match", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const jobDescriptionText = String(req.body.jobDescriptionText || "").trim();
+    if (!jobDescriptionText) return res.status(400).json({ error: "Paste a job description first." });
+    if (jobDescriptionText.length > 20000) return res.status(400).json({ error: "Job description is too long (max 20,000 characters)." });
+
+    const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
+    if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
+
+    res.json(computeJobMatch(resume, jobDescriptionText));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to analyze this job description" });
+  }
+});
+
+// STUDENT: deterministic consistency/fact-check pass (overlapping dates, duplicate skills,
+// invalid contact/URL formats, etc.) — read-only, never modifies the resume; surfaces warnings
+// for the student to review and fix themselves via the normal editor.
+router.get("/me/fact-check", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
+    if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
+    res.json(checkResumeFacts(resume));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to run consistency check" });
   }
 });
 

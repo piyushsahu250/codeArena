@@ -10,6 +10,7 @@
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@napi-rs/canvas": "*",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
@@ -25,8 +26,10 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.15",
     "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "3.11.174",
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.3",
+    "tesseract.js": "*",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

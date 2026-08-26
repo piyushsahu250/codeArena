@@ -75,6 +75,8 @@ export default function ResumeBuilder() {
   const [undoUploadVersionId, setUndoUploadVersionId] = useState(null);
   const [clearingAll, setClearingAll] = useState(false);
   const [rawText, setRawText] = useState(null);
+  const [usedOcr, setUsedOcr] = useState(false);
+  const [ocrConfidence, setOcrConfidence] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
   const [reviewPending, setReviewPending] = useState(false);
   const [pendingAts, setPendingAts] = useState(null);
@@ -219,6 +221,8 @@ export default function ResumeBuilder() {
       setConfidenceScores(res.confidence || {});
       setUndoUploadVersionId(res.previousVersionId || null);
       setRawText(res.rawText || null);
+      setUsedOcr(!!res.usedOcr);
+      setOcrConfidence(typeof res.ocrConfidence === "number" ? res.ocrConfidence : null);
       // Manual review gate: the ATS score is already computed server-side, but it's held back
       // from display until the student confirms the extracted data looks right — per spec,
       // scoring shouldn't happen (visibly) before review.
@@ -248,6 +252,8 @@ export default function ResumeBuilder() {
       setShowComparison(false);
       setReviewPending(false);
       setPendingAts(null);
+      setUsedOcr(false);
+      setOcrConfidence(null);
     } catch (err) {
       alert(err.response?.data?.error || "Failed to undo the upload");
     }
@@ -268,6 +274,8 @@ export default function ResumeBuilder() {
       setShowComparison(false);
       setReviewPending(false);
       setPendingAts(null);
+      setUsedOcr(false);
+      setOcrConfidence(null);
     } catch (err) {
       alert(err.response?.data?.error || "Failed to clear resume data");
     } finally {
@@ -317,8 +325,8 @@ export default function ResumeBuilder() {
             </button>
             <button className="btn btn-ghost" onClick={runAutofill} disabled={autofilling}>{autofilling ? "Filling…" : "Auto-fill from Platform"}</button>
             <button className="btn btn-ghost" onClick={() => window.print()}>Print</button>
-            <button className="btn btn-ghost" onClick={downloadDocx} disabled={downloadingDocx}>{downloadingDocx ? "Preparing…" : "Download DOCX"}</button>
-            <button className="btn btn-primary" onClick={downloadPdf} disabled={downloading}>{downloading ? "Preparing…" : "Download PDF"}</button>
+            <button className="btn btn-ghost" onClick={downloadDocx} disabled={downloadingDocx || reviewPending} title={reviewPending ? "Finish reviewing the extracted data above first (or click \"Skip review\")" : undefined}>{downloadingDocx ? "Preparing…" : "Download DOCX"}</button>
+            <button className="btn btn-primary" onClick={downloadPdf} disabled={downloading || reviewPending} title={reviewPending ? "Finish reviewing the extracted data above first (or click \"Skip review\")" : undefined}>{downloading ? "Preparing…" : "Download PDF"}</button>
             <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={clearAll} disabled={clearingAll}>
               {clearingAll ? "Clearing…" : "Clear All Resume Data"}
             </button>
@@ -327,6 +335,16 @@ export default function ResumeBuilder() {
         <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
           Supported upload formats: .pdf, .docx (max 10 MB). Uploading replaces the fields below with what's extracted — review and edit afterward.
         </p>
+
+        {usedOcr && (
+          <div className="card" style={{ padding: 16, marginTop: 16, background: "var(--warning-bg)", borderLeft: "4px solid var(--amber-dark)" }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>This file looked like a scanned image, not a text-based document</div>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+              CodeArena used automatic text recognition (OCR) to read it{ocrConfidence !== null ? ` — the recognition engine's own confidence for this scan was ${ocrConfidence}%` : ""}.
+              OCR is less reliable than reading a native PDF/DOCX file directly, so every field below has been marked with lower confidence — please check each one carefully against your original document before continuing.
+            </p>
+          </div>
+        )}
 
         {Object.keys(confidenceScores).length > 0 && (
           <div className="card" style={{ padding: 16, marginTop: 16, background: lowConfidenceFields.length ? "var(--warning-bg)" : undefined, borderLeft: lowConfidenceFields.length ? "4px solid var(--amber-dark)" : undefined }}>
@@ -586,6 +604,10 @@ export default function ResumeBuilder() {
             </div>
 
             <TargetRoleCard resume={resume} onRoleChange={(targetRole) => setData((d) => ({ ...d, resume: { ...d.resume, targetRole } }))} />
+
+            <JobMatchCard reviewPending={reviewPending} />
+
+            <FactCheckCard resume={resume} reviewPending={reviewPending} />
 
             <VersionHistoryCard onRestore={(res) => {
               setData((d) => ({ ...d, resume: res.resume, completion: res.completion }));
@@ -1484,9 +1506,241 @@ function TargetRoleCard({ resume, onRoleChange }) {
   );
 }
 
+// Identity key per array-section item — lets the diff tell "this project was edited" apart from
+// "this project was removed and an unrelated one added", instead of just index-comparing arrays.
+const SECTION_IDENTITY = {
+  education: (e) => `${e.degree || ""}|${e.institution || ""}`,
+  skills: (s) => (s.name || "").toLowerCase(),
+  projects: (p) => (p.title || "").toLowerCase(),
+  experience: (e) => `${(e.title || "").toLowerCase()}|${(e.company || "").toLowerCase()}`,
+  certifications: (c) => (c.name || "").toLowerCase(),
+  achievements: (a) => (a.text || "").toLowerCase(),
+  languages: (l) => (l.name || "").toLowerCase(),
+};
+const SECTION_DISPLAY_LABEL = {
+  education: (e) => [e.degree, e.institution].filter(Boolean).join(" — ") || "(untitled entry)",
+  skills: (s) => s.name || "(untitled skill)",
+  projects: (p) => p.title || "(untitled project)",
+  experience: (e) => [e.title, e.company].filter(Boolean).join(" @ ") || "(untitled role)",
+  certifications: (c) => c.name || "(untitled certification)",
+  achievements: (a) => a.text || "(untitled achievement)",
+  languages: (l) => l.name || "(untitled language)",
+};
+const SCALAR_FIELDS_TO_DIFF = [
+  { key: "fullName", label: "Full Name" }, { key: "email", label: "Email" }, { key: "mobile", label: "Mobile" },
+  { key: "address", label: "Address" }, { key: "linkedin", label: "LinkedIn" }, { key: "github", label: "GitHub" },
+  { key: "portfolio", label: "Portfolio" }, { key: "summary", label: "Professional Summary" }, { key: "template", label: "Template" },
+];
+
+// Pure client-side structural diff between two resume snapshots — both are already fetched in
+// full for the score comparison above, so this needs no extra backend call. Deterministic: same
+// two snapshots always produce the same added/removed/modified lists.
+function diffResumeSnapshots(older, newer) {
+  const added = [], removed = [], modified = [];
+
+  for (const { key, label } of SCALAR_FIELDS_TO_DIFF) {
+    const before = (older[key] || "").toString().trim();
+    const after = (newer[key] || "").toString().trim();
+    if (before === after) continue;
+    if (!before && after) added.push({ section: label, detail: after.length > 80 ? after.slice(0, 80) + "…" : after });
+    else if (before && !after) removed.push({ section: label, detail: before.length > 80 ? before.slice(0, 80) + "…" : before });
+    else modified.push({ section: label, before: before.length > 60 ? before.slice(0, 60) + "…" : before, after: after.length > 60 ? after.slice(0, 60) + "…" : after });
+  }
+
+  for (const [section, identityFn] of Object.entries(SECTION_IDENTITY)) {
+    const beforeItems = Array.isArray(older[section]) ? older[section] : [];
+    const afterItems = Array.isArray(newer[section]) ? newer[section] : [];
+    const beforeMap = new Map(beforeItems.map((item) => [identityFn(item), item]));
+    const afterMap = new Map(afterItems.map((item) => [identityFn(item), item]));
+    const label = SECTION_LABELS[section] || section;
+    const displayFn = SECTION_DISPLAY_LABEL[section];
+
+    for (const [id, item] of afterMap) {
+      if (!beforeMap.has(id)) added.push({ section: label, detail: displayFn(item) });
+    }
+    for (const [id, item] of beforeMap) {
+      if (!afterMap.has(id)) removed.push({ section: label, detail: displayFn(item) });
+    }
+    for (const [id, afterItem] of afterMap) {
+      const beforeItem = beforeMap.get(id);
+      if (beforeItem && JSON.stringify(beforeItem) !== JSON.stringify(afterItem)) {
+        modified.push({ section: label, before: displayFn(beforeItem), after: displayFn(afterItem) });
+      }
+    }
+  }
+
+  return { added, removed, modified };
+}
+
+// Deterministic consistency/fact-check pass (overlapping dates, duplicate skills, invalid
+// contact/URL formats, ...) — read-only, never modifies the resume. Re-runs whenever the resume
+// content itself changes (not on every keystroke — `resume.updatedAt` only changes on an actual
+// save), so warnings stay in sync with edits without a separate manual refresh most of the time;
+// a manual "Re-check" button is still offered for right after fixing something.
+function FactCheckCard({ resume, reviewPending }) {
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  function runCheck() {
+    setLoading(true);
+    setError("");
+    api.get("/resume/me/fact-check")
+      .then((res) => setResult(res.data))
+      .catch((err) => setError(err.response?.data?.error || "Failed to run consistency check"))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    if (reviewPending) return; // wait until the student has confirmed the extracted data first
+    runCheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.updatedAt, reviewPending]);
+
+  const warnings = result?.warnings || [];
+  const errors = warnings.filter((w) => w.severity === "error");
+  const softWarnings = warnings.filter((w) => w.severity !== "error");
+
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Resume Consistency Check</div>
+        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={runCheck} disabled={loading || reviewPending}>{loading ? "Checking…" : "Re-check"}</button>
+      </div>
+      {reviewPending && <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>Complete the "Review Extracted Data" step above first.</p>}
+      {error && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 8 }}>{error}</p>}
+      {!reviewPending && result && warnings.length === 0 && (
+        <p style={{ fontSize: 12, color: "var(--mint)", marginTop: 8, fontWeight: 600 }}>✓ No inconsistencies found — dates, duplicates, and contact/link formats all look fine.</p>
+      )}
+      {(errors.length > 0 || softWarnings.length > 0) && (
+        <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+          {errors.map((w, i) => (
+            <div key={`e${i}`} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, background: "var(--danger-bg)", color: "var(--rust)" }}>⚠ {w.message}</div>
+          ))}
+          {softWarnings.map((w, i) => (
+            <div key={`w${i}`} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, background: "var(--warning-bg)" }}>ⓘ {w.message}</div>
+          ))}
+        </div>
+      )}
+      <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 10 }}>
+        This is an automated, read-only check for internal inconsistencies (like an end date before a start date) — it never changes your resume. Unusual-but-true situations (working while studying, a promotion, concurrent roles) may still get flagged for a quick confirmation; that isn't a claim that anything is wrong.
+      </p>
+    </div>
+  );
+}
+
+// Job Description Match — paste (or type) a job description and compare it against the resume.
+// Entirely separate from the CodeArena ATS Compatibility Score above: that score measures
+// completeness/quality against this platform's own rubric, this measures overlap with ONE
+// specific job posting. Never modifies the resume — every "missing skill" is a suggestion to
+// consider adding ONLY if the student genuinely has that experience, never an instruction.
+function JobMatchCard({ reviewPending }) {
+  const [jobText, setJobText] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function analyze() {
+    if (!jobText.trim()) { setError("Paste a job description first."); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await api.post("/resume/me/job-match", { jobDescriptionText: jobText });
+      setResult(data);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to analyze this job description");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Job Description Match</div>
+      <textarea
+        style={{ ...inputStyle, minHeight: 100, fontFamily: "inherit" }}
+        placeholder="Paste a job description here…"
+        value={jobText}
+        onChange={(e) => setJobText(e.target.value)}
+        disabled={reviewPending}
+      />
+      <button className="btn btn-ghost" style={{ fontSize: 12, marginTop: 8 }} onClick={analyze} disabled={loading || reviewPending}>
+        {loading ? "Analyzing…" : "Analyze Match"}
+      </button>
+      {reviewPending && <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>Complete the "Review Extracted Data" step above first.</p>}
+      {error && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 8 }}>{error}</p>}
+
+      {result && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span className="mono" style={{ fontSize: 28, fontWeight: 700, color: result.score >= 75 ? "var(--mint)" : result.score >= 60 ? "var(--amber-dark)" : "var(--rust)" }}>{result.score}/100</span>
+            <span style={{ fontSize: 13, color: "var(--ink-dim)" }}>{result.status}</span>
+          </div>
+          <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 6, lineHeight: 1.5 }}>{result.methodology}</p>
+
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Breakdown</div>
+            {result.breakdown.map((b) => (
+              <div key={b.key} style={{ marginBottom: 4 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                  <span>{b.label}</span>
+                  <span className="mono">{b.score}/{b.max}</span>
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: "var(--line)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${(b.score / b.max) * 100}%`, background: b.score === b.max ? "var(--mint)" : "var(--amber-dark)" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {result.matchedSkills?.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--mint)" }}>Matched Skills</div>
+              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{result.matchedSkills.join(", ")}</div>
+            </div>
+          )}
+          {result.missingRequiredSkills?.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--rust)" }}>Missing Required Skills</div>
+              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{result.missingRequiredSkills.join(", ")}</div>
+            </div>
+          )}
+          {result.missingPreferredSkills?.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--amber-dark)" }}>Missing Preferred Skills</div>
+              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{result.missingPreferredSkills.join(", ")}</div>
+            </div>
+          )}
+          {result.potentialGaps?.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Suggestions</div>
+              <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                {result.potentialGaps.map((g, i) => <li key={i} style={{ fontSize: 12, color: "var(--ink-dim)" }}>{g}</li>)}
+              </ul>
+            </div>
+          )}
+          {result.relevantExperience?.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Most Relevant Experience</div>
+              <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{result.relevantExperience.map((r) => r.title).join(", ")}</div>
+            </div>
+          )}
+          {result.educationMatch && (
+            <div style={{ marginTop: 8, fontSize: 12 }}>
+              <strong>Education:</strong> <span style={{ color: result.educationMatch.matched ? "var(--mint)" : "var(--rust)" }}>{result.educationMatch.matched ? "Matches" : "Does not clearly match"}</span>
+              {result.educationMatch.note && <div style={{ color: "var(--ink-dim)" }}>{result.educationMatch.note}</div>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Version history — auto-saved on every resume save (capped at the 20 most recent server-side).
-// "Compare" fetches two full snapshots client-side and diffs just the ATS score; the snapshots
-// themselves are visible via Restore if a student wants to inspect one in full.
+// "Compare" fetches two full snapshots client-side and diffs both the ATS score AND the actual
+// content (added/removed/modified, per-field and per-entry) — the snapshots themselves are also
+// visible via Restore if a student wants to inspect one in full.
 function VersionHistoryCard({ onRestore }) {
   const [versions, setVersions] = useState([]);
   const [compareIds, setCompareIds] = useState([]);
@@ -1571,7 +1825,7 @@ function VersionHistoryCard({ onRestore }) {
     if (compareIds.length !== 2) return;
     const [a, b] = await Promise.all(compareIds.map((id) => api.get(`/resume/me/versions/${id}`)));
     const [older, newer] = [a.data, b.data].sort((x, y) => new Date(x.createdAt) - new Date(y.createdAt));
-    setCompareResult({ older, newer });
+    setCompareResult({ older, newer, diff: diffResumeSnapshots(older.snapshot, newer.snapshot) });
   }
 
   return (
@@ -1611,6 +1865,41 @@ function VersionHistoryCard({ onRestore }) {
           <div style={{ marginTop: 4, fontWeight: 700, color: compareResult.newer.atsScore >= compareResult.older.atsScore ? "var(--mint)" : "var(--rust)" }}>
             {compareResult.newer.atsScore - compareResult.older.atsScore >= 0 ? "+" : ""}{compareResult.newer.atsScore - compareResult.older.atsScore} point difference
           </div>
+
+          {compareResult.diff.added.length === 0 && compareResult.diff.removed.length === 0 && compareResult.diff.modified.length === 0 ? (
+            <p style={{ marginTop: 8, color: "var(--ink-dim)" }}>No content differences between these two versions.</p>
+          ) : (
+            <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+              {compareResult.diff.added.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 700, color: "var(--mint)" }}>+ Added</div>
+                  {compareResult.diff.added.map((d, i) => (
+                    <div key={i} style={{ marginLeft: 10 }}><span style={{ color: "var(--ink-dim)" }}>{d.section}:</span> {d.detail}</div>
+                  ))}
+                </div>
+              )}
+              {compareResult.diff.removed.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 700, color: "var(--rust)" }}>− Removed</div>
+                  {compareResult.diff.removed.map((d, i) => (
+                    <div key={i} style={{ marginLeft: 10 }}><span style={{ color: "var(--ink-dim)" }}>{d.section}:</span> {d.detail}</div>
+                  ))}
+                </div>
+              )}
+              {compareResult.diff.modified.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 700, color: "var(--amber-dark)" }}>~ Modified</div>
+                  {compareResult.diff.modified.map((d, i) => (
+                    <div key={i} style={{ marginLeft: 10 }}>
+                      <span style={{ color: "var(--ink-dim)" }}>{d.section}:</span>{" "}
+                      <span style={{ textDecoration: "line-through", color: "var(--rust)" }}>{d.before}</span>{" → "}
+                      <span style={{ color: "var(--mint)" }}>{d.after}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

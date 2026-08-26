@@ -734,7 +734,25 @@ function entryConfidence(entries, rawLines, scoreFn) {
   return Math.round(total / entries.length);
 }
 
-function computeConfidence(parsed, sections) {
+// Fine-grained per-field confidence (spec: "Name -> 99%, Email -> 100%, ..." not one blended
+// number) — purely additive alongside the existing coarse `personal` score below, which stays
+// exactly as it was so the existing low-confidence banner's behavior doesn't change. These extra
+// keys are for the Review Extracted Information screen, which needs a real number per field, not
+// a five-field-blended average.
+function computePersonalFieldConfidence(parsed, sections) {
+  const hasHeaderContent = hadRawContent(sections.header);
+  const fullName = parsed.fullName
+    ? (/^[A-Z][a-zA-Z.'-]*(\s+[A-Z][a-zA-Z.'-]*){0,3}$/.test(parsed.fullName) ? 99 : 70)
+    : (hasHeaderContent ? 0 : null);
+  const email = parsed.email ? (EMAIL_RE.test(parsed.email) ? 100 : 60) : (hasHeaderContent ? 0 : null);
+  const mobile = parsed.mobile ? (parsed.mobile.replace(/\D/g, "").length >= 10 ? 99 : 60) : (hasHeaderContent ? 0 : null);
+  const linkedin = parsed.linkedin ? 98 : null;
+  const github = parsed.github ? 98 : null;
+  const address = parsed.address ? 85 : null;
+  return { fullName, email, mobile, linkedin, github, address };
+}
+
+function computeConfidence(parsed, sections, ocrCeiling = null) {
   let personalPts = 0;
   if (parsed.fullName) personalPts++;
   if (parsed.email) personalPts++;
@@ -742,6 +760,7 @@ function computeConfidence(parsed, sections) {
   if (parsed.linkedin || parsed.github) personalPts++;
   if (parsed.address) personalPts++;
   const personal = Math.round((personalPts / 5) * 100);
+  const personalFields = computePersonalFieldConfidence(parsed, sections);
 
   const summary = parsed.summary && parsed.summary.length >= 40 ? 95 : parsed.summary ? 55 : hadRawContent(sections.summary) ? 0 : null;
 
@@ -779,8 +798,22 @@ function computeConfidence(parsed, sections) {
 
   const certifications = entryConfidence(parsed.certifications, sections.certifications, (c) => (c.name ? (c.org ? 100 : 65) : 0));
 
-  const scores = { personal, summary, education, skills, projects, experience, certifications };
-  const lowConfidenceFields = Object.entries(scores).filter(([, v]) => v !== null && v < 70).map(([k]) => k);
+  let scores = { personal, ...personalFields, summary, education, skills, projects, experience, certifications };
+
+  // OCR-derived text is inherently less reliable than a native PDF/DOCX text layer even when a
+  // field's own pattern happens to match cleanly (e.g. a misread character can still produce a
+  // syntactically valid-looking email) — cap every non-null field once OCR was used, scaled by
+  // Tesseract's own recognition confidence for this document. `null` sections (nothing found and
+  // no raw content to explain it) are left untouched — a lower ceiling doesn't change "N/A".
+  if (typeof ocrCeiling === "number") {
+    scores = Object.fromEntries(Object.entries(scores).map(([k, v]) => [k, v === null ? null : Math.min(v, ocrCeiling)]));
+  }
+
+  // Unchanged from before: only the original 7 coarse section keys drive the existing
+  // low-confidence banner, so adding the new fine-grained personal fields above never changes
+  // that banner's behavior — they're additive, for the new Review Extracted Information screen.
+  const COARSE_KEYS = ["personal", "summary", "education", "skills", "projects", "experience", "certifications"];
+  const lowConfidenceFields = COARSE_KEYS.filter((k) => scores[k] !== null && scores[k] < 70);
   return { scores, lowConfidenceFields };
 }
 
@@ -790,10 +823,39 @@ function computeConfidence(parsed, sections) {
 // to highlight exactly which sections need a manual review pass, instead of implying the whole
 // resume is equally reliable.
 async function parseResumeFile(buffer, mimetype, filename) {
-  const text = await extractTextFromFile(buffer, mimetype, filename);
-  if (!text || text.trim().length < 30) {
-    throw new Error("Couldn't extract readable text from this file — it may be a scanned image rather than a text-based document.");
+  let text = await extractTextFromFile(buffer, mimetype, filename);
+  const ext = String(filename || "").toLowerCase().split(".").pop();
+  const looksLikePdf = mimetype === "application/pdf" || ext === "pdf";
+
+  // Native extraction (pdf-parse) is always tried first — this only runs when it came back
+  // (near-)empty, which is exactly what a scanned/image-only PDF with no real text layer looks
+  // like. OCR is never used for a PDF that already has usable native text, and DOCX has no
+  // "scanned" equivalent (it's always a real text document), so this path is PDF-only.
+  let usedOcr = false;
+  let ocrConfidence = null;
+  if ((!text || text.trim().length < 30) && looksLikePdf) {
+    try {
+      const { ocrPdfBuffer } = require("./resumeOcr");
+      const ocrResult = await ocrPdfBuffer(buffer);
+      if (ocrResult.text && ocrResult.text.trim().length >= 30) {
+        text = ocrResult.text;
+        usedOcr = true;
+        ocrConfidence = ocrResult.confidence;
+      }
+    } catch (ocrErr) {
+      console.error("OCR fallback failed:", ocrErr.message);
+      // fall through — the original "couldn't extract readable text" error below still fires
+    }
   }
+
+  if (!text || text.trim().length < 30) {
+    throw new Error("Couldn't extract readable text from this file — it may be a scanned image rather than a text-based document, and automatic text recognition (OCR) could not read it either.");
+  }
+
+  // Tesseract's own recognition confidence (0-100) scales how much we trust every extracted
+  // field — a clean scan still isn't as reliable as a native text layer, and a messy one is much
+  // less reliable, so every field's confidence score is capped accordingly (see computeConfidence).
+  const ocrCeiling = usedOcr ? (ocrConfidence >= 85 ? 80 : ocrConfidence >= 65 ? 65 : 45) : null;
 
   const sections = segmentSections(text);
   const personal = extractPersonalDetails(sections.header || [], text);
@@ -815,14 +877,21 @@ async function parseResumeFile(buffer, mimetype, filename) {
   const languages = [...fromLanguageSection, ...spokenLanguages.filter((l) => !seenLangNames.has(l.name.toLowerCase()))];
 
   const parsed = { ...personal, summary, education, skills, projects, experience, certifications, achievements, languages };
-  const confidence = computeConfidence(parsed, sections);
+  const confidence = computeConfidence(parsed, sections, ocrCeiling);
 
   // Raw extracted text, capped to a sane size — used only for the frontend's "original vs
   // parsed" side-by-side review view. Never persisted (no original file is stored either), just
   // passed through this one response so students can sanity-check the parse against the source.
   const rawText = text.trim().slice(0, 20000);
 
-  return { ...parsed, confidence: confidence.scores, lowConfidenceFields: confidence.lowConfidenceFields, rawText };
+  return {
+    ...parsed,
+    confidence: confidence.scores,
+    lowConfidenceFields: confidence.lowConfidenceFields,
+    rawText,
+    usedOcr,
+    ocrConfidence,
+  };
 }
 
 module.exports = { parseResumeFile, extractTextFromFile };
