@@ -199,11 +199,11 @@ router.get("/badges", authenticate, async (req, res) => {
 
 // =========================== Admin configuration ===========================
 
-router.get("/xp-rules", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.get("/xp-rules", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
   res.json(await prisma.xpRule.findMany({ orderBy: { activity: "asc" } }));
 });
 
-router.patch("/xp-rules/:activity", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/xp-rules/:activity", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { xp, label } = req.body;
     const rule = await prisma.xpRule.update({
@@ -217,7 +217,7 @@ router.patch("/xp-rules/:activity", authenticate, requireRole("ADMIN"), async (r
   }
 });
 
-router.post("/badges", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/badges", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { code, name, description, icon, category } = req.body;
     if (!code || !name || !category) return res.status(400).json({ error: "code, name, and category are required" });
@@ -229,7 +229,7 @@ router.post("/badges", authenticate, requireRole("ADMIN"), async (req, res) => {
   }
 });
 
-router.patch("/badges/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.patch("/badges/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const { name, description, icon, category, isActive } = req.body;
     const badge = await prisma.badge.update({
@@ -249,7 +249,7 @@ router.patch("/badges/:id", authenticate, requireRole("ADMIN"), async (req, res)
   }
 });
 
-router.delete("/badges/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/badges/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     // StudentBadge.badge is Restrict, not Cascade — deleting a badge definition must not
     // silently erase every student's already-earned record of it.
@@ -273,7 +273,7 @@ router.delete("/badges/:id", authenticate, requireRole("ADMIN"), async (req, res
 // ADMIN: wipes every XP event platform-wide (every student's total XP and level resets to
 // zero; earned badges and streaks are untouched since those aren't XP-derived). Irreversible —
 // the frontend must confirm before calling this.
-router.post("/leaderboard/reset", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.post("/leaderboard/reset", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const deleted = await prisma.xpEvent.deleteMany({});
     invalidate("leaderboard:");

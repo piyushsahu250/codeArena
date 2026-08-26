@@ -710,7 +710,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
 });
 
 // ADMIN: download a sample .xlsx template for bulk student upload
-router.get("/bulk-template", authenticate, requireRole("ADMIN"), (req, res) => {
+router.get("/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), (req, res) => {
   const sampleRow = ["John Doe", "MCA2024001", "john.doe@codearena.edu.in", "CodeArena University", "2024-26", "9876543210", "Computer Applications", "MCA", "A", "Male", "Active"];
   const sheet = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, sampleRow]);
   const workbook = XLSX.utils.book_new();
@@ -842,7 +842,7 @@ function validateBulkRow(row, { instituteByName, requesterInstituteId, existingE
 // creation spec: never insert thousands of rows straight off an upload — this exists precisely so
 // the admin sees "185 valid / 10 invalid / 5 duplicate" and can review row-level errors before a
 // single account is created.
-router.post("/bulk-upload/preview", authenticate, requireRole("ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
+router.post("/bulk-upload/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
     const parsed = parseBulkFile(req.file.buffer);
@@ -876,7 +876,7 @@ router.post("/bulk-upload/preview", authenticate, requireRole("ADMIN"), attachRe
 // snapshot) — closing the race where another admin creates a colliding PRN/email in the gap
 // between preview and confirm. Each row gets its own unique, randomly generated password, and the
 // account is flagged to force a password change on first login.
-router.post("/bulk-upload/confirm", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.post("/bulk-upload/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
     if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
@@ -985,7 +985,7 @@ router.post("/bulk-upload/confirm", authenticate, requireRole("ADMIN"), attachRe
 });
 
 // ADMIN: look up a student by roll number and see which tests they've completed
-router.get("/lookup/:query", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/lookup/:query", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const q = req.params.query;
     const user = await prisma.user.findFirst({
@@ -1083,7 +1083,7 @@ router.get("/search", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
 // are both required: a bare institute/department selection with no section would return an
 // entire institute's roster unbounded. Page/pageSize paginated (previously a hard 500-row cap
 // with no way to see further students in a large section).
-router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/browse", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const { departmentId, section, batch, placementParticipation, offerVerificationStatus, documentType, documentVerificationStatus } = req.query;
     if (!departmentId || !section) return res.status(400).json({ error: "Department and Section are required" });
@@ -1149,7 +1149,7 @@ router.get("/browse", authenticate, requireRole("ADMIN", "STAFF", "CLERK"), atta
 // sees every institute's history. Capped at 300 rows, most recent first — an operational log,
 // not a paginated archive (same convention as /admin/email-logs). Placed before the "/:id"
 // catch-all below so this literal segment can never be shadowed by it.
-router.get("/password-reset-history", authenticate, requireRole("ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/password-reset-history", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const logs = await prisma.auditLog.findMany({
       where: {
@@ -1254,7 +1254,7 @@ router.get("/audit-log/actions", authenticate, requireRole("ADMIN", "SUPER_ADMIN
 // backend/scripts/migrateAcademicGroups.js) — lets the migration's zero-data-loss gate be checked
 // over HTTP instead of requiring direct database access. Kept permanently (cheap aggregate counts),
 // not a throwaway diagnostic.
-router.get("/migration-status", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.get("/migration-status", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const [classesTotal, academicGroupsTotal, studentsWithClassId, studentsWithGroupId, studentsUnlinked] = await Promise.all([
       prisma.class.count(),
@@ -1299,7 +1299,7 @@ async function authorizeStudentPerformanceAccess(req, res) {
 // populating dropdowns, plus fields not exposed by the search/performance endpoints). Placed
 // after every literal-segment GET route (bulk-template, lookup/:query, search) so this catch-all
 // "/:id" can never shadow them — Express matches routes in registration order.
-router.get("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.params.id }, select: SELECT_FIELDS });
   if (!user) return res.status(404).json({ error: "User not found" });
   if (req.requesterInstituteId && user.instituteId !== req.requesterInstituteId) {
@@ -1311,7 +1311,7 @@ router.get("/:id", authenticate, requireRole("ADMIN"), attachRequesterInstitute,
 // ADMIN/STAFF/STUDENT(self): full performance dashboard — summary stats, test history, and
 // chart-ready analytics. A student's own view masks scores for any test whose results aren't
 // published yet, same principle as the single-test result page.
-router.get("/:id/performance", authenticate, requireRole("ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
+router.get("/:id/performance", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
   try {
     const target = await authorizeStudentPerformanceAccess(req, res);
     if (!target) return;
@@ -1324,7 +1324,7 @@ router.get("/:id/performance", authenticate, requireRole("ADMIN", "STAFF", "CLER
 });
 
 // Same access rule as above: downloadable Excel report.
-router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
+router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
   try {
     const target = await authorizeStudentPerformanceAccess(req, res);
     if (!target) return;
@@ -1384,7 +1384,7 @@ router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "S
 });
 
 // Same access rule as above: downloadable PDF report.
-router.get("/:id/performance/report.pdf", authenticate, requireRole("ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
+router.get("/:id/performance/report.pdf", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
   try {
     const target = await authorizeStudentPerformanceAccess(req, res);
     if (!target) return;
@@ -1475,12 +1475,18 @@ router.post("/:id/reset-password", authenticate, requireRole("ADMIN", "SUPER_ADM
 // bulk action. Optional `sendEmail: true` also emails each student their own new password
 // directly (best-effort — a failed send for one student doesn't affect the others, and the CSV
 // download stays available regardless as the reliable fallback).
-router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), async (req, res) => {
+// Previously had NO institute filtering at all — an institute-scoped ADMIN could bulk-reset
+// passwords for any student ID regardless of institute, a real cross-institute IDOR predating
+// (and unrelated to) the SUPER_ADMIN/INSTITUTE_ADMIN rollout. Fixed the same way GET /:id already
+// does it elsewhere in this file: out-of-institute ids are excluded from the query itself (not
+// merely hidden from the response), so they fall into the existing failedIds/skip-and-report path
+// rather than silently succeeding.
+router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const ids = Array.isArray(req.body.studentIds) ? [...new Set(req.body.studentIds)] : [];
     if (ids.length === 0) return res.status(400).json({ error: "No students selected" });
 
-    const users = await prisma.user.findMany({ where: { id: { in: ids } } });
+    const users = await prisma.user.findMany({ where: { id: { in: ids }, ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}) } });
     const results = [];
     for (const user of users) {
       const generatedPassword = generateTempPassword();
@@ -1537,13 +1543,19 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN"), asy
 // (scoped only to that student — nothing anyone else can see is affected). Deleting a staff/
 // admin account that has created tests is blocked instead of cascading, since that would
 // delete a shared Test (and every student's attempts on it), not just this one account's data.
-router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+// Previously had NO institute-boundary check at all — an institute-scoped ADMIN could delete any
+// user by ID regardless of institute, a real cross-institute IDOR predating (and unrelated to) the
+// SUPER_ADMIN/INSTITUTE_ADMIN rollout. Fixed alongside extending the role gate, not caused by it.
+router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   if (req.params.id === req.user.id) {
     return res.status(400).json({ error: "You cannot delete your own account" });
   }
   try {
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return res.status(404).json({ error: "User not found" });
+    if (req.requesterInstituteId && user.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage accounts under your own institute" });
+    }
 
     if (user.role !== "STUDENT") {
       const createdTestCount = await prisma.test.count({ where: { createdById: req.params.id } });
