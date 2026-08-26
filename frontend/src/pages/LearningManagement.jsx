@@ -8,6 +8,7 @@ import ProblemStatementFields from "../components/ProblemStatementFields";
 import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
+import Badge from "../components/Badge";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
@@ -69,7 +70,7 @@ export default function LearningManagement() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1>Learning Management</h1>
             {!isAdmin && (
-              <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 12 }}>Read-Only Access</span>
+              <Badge style={{ fontSize: 12 }}>Read-Only Access</Badge>
             )}
           </div>
           {/* Every course/module/chapter/lesson create/edit/delete is already recorded in the
@@ -206,16 +207,9 @@ function StudentProgressPanel({ courses }) {
                   <div key={m.moduleId} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, opacity: m.locked ? 0.65 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <span style={{ fontWeight: 600, fontSize: 13 }}>Module {m.order + 1}: {m.title}</span>
-                      <span
-                        className="badge"
-                        style={{
-                          fontSize: 11,
-                          background: m.locked ? "#F0EEE3" : m.completed ? "#E7F3EB" : "#FCEFD9",
-                          color: m.locked ? "var(--ink-dim)" : m.completed ? "var(--mint)" : "var(--amber-dark)",
-                        }}
-                      >
+                      <Badge tone={m.locked ? "default" : m.completed ? "success" : "warning"} style={{ fontSize: 11 }}>
                         {m.locked ? "🔒 Locked" : m.completed ? "✓ Completed" : "🔓 Available / In Progress"}
-                      </span>
+                      </Badge>
                     </div>
                     {m.codingAssessment?.required && (
                       <div className="mono" style={{ fontSize: 11, color: m.codingAssessment.passed ? "var(--mint)" : "var(--ink-dim)", marginTop: 6 }}>
@@ -246,11 +240,11 @@ function StudentProgressPanel({ courses }) {
 const COURSE_STATUS_OPTIONS = ["DRAFT", "UNDER_REVIEW", "PUBLISHED", "ARCHIVED", "INACTIVE"];
 const COURSE_STATUS_LABELS = { DRAFT: "Draft", UNDER_REVIEW: "Under Review", PUBLISHED: "Published", ARCHIVED: "Archived", INACTIVE: "Inactive" };
 const COURSE_STATUS_COLORS = {
-  DRAFT: { bg: "#F0EEE3", color: "var(--ink-dim)" },
-  UNDER_REVIEW: { bg: "#FCEFD9", color: "var(--amber-dark)" },
-  PUBLISHED: { bg: "#E7F3EB", color: "var(--mint)" },
-  ARCHIVED: { bg: "#F7E4E0", color: "var(--rust)" },
-  INACTIVE: { bg: "#F0EEE3", color: "var(--ink-dim)" },
+  DRAFT: { bg: "var(--card-bg)", color: "var(--ink-dim)" },
+  UNDER_REVIEW: { bg: "var(--warning-bg)", color: "var(--amber-dark)" },
+  PUBLISHED: { bg: "var(--success-bg)", color: "var(--mint)" },
+  ARCHIVED: { bg: "var(--danger-bg)", color: "var(--rust)" },
+  INACTIVE: { bg: "var(--card-bg)", color: "var(--ink-dim)" },
 };
 const DIFFICULTY_OPTIONS = ["EASY", "MEDIUM", "HARD"];
 const EMPTY_COURSE_FORM = {
@@ -445,7 +439,7 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
                 <div style={{ cursor: "pointer" }} onClick={() => onSelect(c.id)}>
                   <div style={{ fontWeight: 600 }}>{c.name} <span className="mono" style={{ fontWeight: 400, fontSize: 12, color: "var(--ink-dim)" }}>/{c.slug}</span></div>
                   <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{c.description}</div>
-                  {c.category && <span className="badge" style={{ marginTop: 4, display: "inline-block", background: "#EAF1FB", color: "var(--ink)" }}>{c.category}</span>}
+                  {c.category && <span className="badge" style={{ marginTop: 4, display: "inline-block", background: "var(--info-bg)", color: "var(--ink)" }}>{c.category}</span>}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   {isAdmin ? (
@@ -686,7 +680,7 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
       <form onSubmit={save} className="card" style={{ padding: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <h3 style={{ fontSize: 15 }}>{isAdmin ? "Edit lesson" : "Lesson"}</h3>
-          {!isAdmin && <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only</span>}
+          {!isAdmin && <Badge style={{ fontSize: 11 }}>Read-Only</Badge>}
         </div>
         <label style={labelStyle}>Title</label>
         <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
@@ -1102,7 +1096,7 @@ function CodingTestPanel({ moduleId }) {
         <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
         <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
         {!isAdmin && (
-          <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only Access</span>
+          <Badge style={{ fontSize: 11 }}>Read-Only Access</Badge>
         )}
       </div>
 
@@ -1463,10 +1457,10 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
 }
 
 const ATTEMPT_STATUS_COLORS = {
-  "Not Started": { bg: "#F0EEE3", color: "var(--ink-dim)" },
-  "In Progress": { bg: "#FCEFD9", color: "var(--amber-dark)" },
-  "Completed": { bg: "#E7F3EB", color: "var(--mint)" },
-  "Locked": { bg: "#F7E4E0", color: "var(--rust)" },
+  "Not Started": { bg: "var(--card-bg)", color: "var(--ink-dim)" },
+  "In Progress": { bg: "var(--warning-bg)", color: "var(--amber-dark)" },
+  "Completed": { bg: "var(--success-bg)", color: "var(--mint)" },
+  "Locked": { bg: "var(--danger-bg)", color: "var(--rust)" },
 };
 
 // Per-student aggregate attempt view — search by name/roll/email, Attempts Used/Remaining, Last
@@ -1726,10 +1720,8 @@ function ChapterListPanel({ moduleId, onSelect }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <span className="badge" style={{ background: c.isActive ? "#E7F3EB" : "#F0EEE3", color: c.isActive ? "var(--mint)" : "var(--ink-dim)" }}>
-                {c.isActive ? "Active" : "Inactive"}
-              </span>
-              <span className="badge" style={{ background: c.countsTowardCertificate ? "#E9EEFB" : "#F0EEE3", color: c.countsTowardCertificate ? "var(--ink)" : "var(--ink-dim)" }}>
+              <Badge tone={c.isActive ? "success" : "default"}>{c.isActive ? "Active" : "Inactive"}</Badge>
+              <span className="badge" style={{ background: c.countsTowardCertificate ? "var(--info-bg)" : "var(--card-bg)", color: c.countsTowardCertificate ? "var(--ink)" : "var(--ink-dim)" }}>
                 {c.countsTowardCertificate ? "Required" : "Optional"}
               </span>
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, -1)}>↑</button>}
@@ -1781,7 +1773,7 @@ function ChapterDetailPanel({ chapter, onBack }) {
       {tab === "settings" && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 480 }}>
           {!isAdmin && (
-            <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</span>
+            <Badge style={{ fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</Badge>
           )}
           <label style={labelStyle}>Title</label>
           <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
@@ -1932,7 +1924,7 @@ function TopicDetailPanel({ topicId, onBack }) {
         <form onSubmit={save} className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <h3 style={{ fontSize: 15 }}>{isAdmin ? "Edit topic" : "Topic"}</h3>
-            {!isAdmin && <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only</span>}
+            {!isAdmin && <Badge style={{ fontSize: 11 }}>Read-Only</Badge>}
           </div>
           {/* fieldset's disabled attribute cascades to every nested input/textarea/button — including
               inside TopicBlockEditor/TableBlockEditor — without gating each field individually. */}
@@ -2163,9 +2155,7 @@ function ChapterLevelsPanel({ chapterId }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span className="badge" style={{ background: l.isActive ? "#E7F3EB" : "#F0EEE3", color: l.isActive ? "var(--mint)" : "var(--ink-dim)" }}>
-                {l.isActive ? "Active" : "Inactive"}
-              </span>
+              <Badge tone={l.isActive ? "success" : "default"}>{l.isActive ? "Active" : "Inactive"}</Badge>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setLevelId(l.id)}>Manage →</button>
             </div>
           </div>
@@ -2242,7 +2232,7 @@ function LevelPanel({ levelId, onBack }) {
         <button className={tab === "questions" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("questions")}>Questions ({test.questions.length})</button>
         <button className={tab === "attempts" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("attempts")}>Student Attempts</button>
         {!isAdmin && (
-          <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", fontSize: 11 }}>Read-Only Access</span>
+          <Badge style={{ fontSize: 11 }}>Read-Only Access</Badge>
         )}
       </div>
 

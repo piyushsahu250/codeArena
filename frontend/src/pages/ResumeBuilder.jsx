@@ -3,6 +3,7 @@ import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import useAiStatus from "../hooks/useAiStatus";
+import Badge from "../components/Badge";
 
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 4 };
 const labelStyle = { fontSize: 11, fontWeight: 600, color: "var(--ink-dim)" };
@@ -328,7 +329,7 @@ export default function ResumeBuilder() {
         </p>
 
         {Object.keys(confidenceScores).length > 0 && (
-          <div className="card" style={{ padding: 16, marginTop: 16, background: lowConfidenceFields.length ? "#FCEFD9" : undefined, borderLeft: lowConfidenceFields.length ? "4px solid var(--amber-dark)" : undefined }}>
+          <div className="card" style={{ padding: 16, marginTop: 16, background: lowConfidenceFields.length ? "var(--warning-bg)" : undefined, borderLeft: lowConfidenceFields.length ? "4px solid var(--amber-dark)" : undefined }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>
               {lowConfidenceFields.length > 0
                 ? "Some information could not be extracted with high confidence. Please review the highlighted sections below."
@@ -362,11 +363,11 @@ export default function ResumeBuilder() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 4 }}>ORIGINAL (extracted text)</div>
-                <pre style={{ fontSize: 11, whiteSpace: "pre-wrap", maxHeight: 400, overflowY: "auto", background: "#FBFAF6", padding: 10, borderRadius: 6, margin: 0, fontFamily: "var(--font-mono)" }}>{rawText}</pre>
+                <pre style={{ fontSize: 11, whiteSpace: "pre-wrap", maxHeight: 400, overflowY: "auto", background: "var(--paper)", padding: 10, borderRadius: 6, margin: 0, fontFamily: "var(--font-mono)" }}>{rawText}</pre>
               </div>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 4 }}>PARSED (what was extracted into fields)</div>
-                <div style={{ fontSize: 12, maxHeight: 400, overflowY: "auto", background: "#FBFAF6", padding: 10, borderRadius: 6 }}>
+                <div style={{ fontSize: 12, maxHeight: 400, overflowY: "auto", background: "var(--paper)", padding: 10, borderRadius: 6 }}>
                   <div><strong>Name:</strong> {resume.fullName || "—"}</div>
                   <div><strong>Email:</strong> {resume.email || "—"}</div>
                   <div><strong>Mobile:</strong> {resume.mobile || "—"}</div>
@@ -427,7 +428,7 @@ export default function ResumeBuilder() {
         </div>
 
         {feedback.length > 0 && (
-          <div className="card" style={{ padding: 16, marginTop: 16, background: "#FCEFD9" }}>
+          <div className="card" style={{ padding: 16, marginTop: 16, background: "var(--warning-bg)" }}>
             <div style={{ fontSize: 13, fontWeight: 600 }}>Feedback from your institute</div>
             {feedback.map((f) => (
               <div key={f.id} style={{ fontSize: 13, marginTop: 6 }}>
@@ -478,7 +479,7 @@ export default function ResumeBuilder() {
                   </div>
 
                   {scoreDelta && (
-                    <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: scoreDelta.overall >= 0 ? "#E7F3EB" : "#F7E4E0" }}>
+                    <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: scoreDelta.overall >= 0 ? "var(--success-bg)" : "var(--danger-bg)" }}>
                       <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: scoreDelta.overall >= 0 ? "var(--mint)" : "var(--rust)" }}>
                         {scoreDelta.previous} → {scoreDelta.current} ({scoreDelta.overall >= 0 ? "+" : ""}{scoreDelta.overall})
                       </div>
@@ -678,11 +679,11 @@ export default function ResumeBuilder() {
 }
 
 function ConfidenceBadge({ confidence, lowConfidence }) {
-  if (confidence == null) return lowConfidence ? <span className="badge" style={{ background: "#FCEFD9", color: "var(--amber-dark)", fontSize: 11 }}>Please review</span> : null;
+  if (confidence == null) return lowConfidence ? <Badge tone="warning" style={{ fontSize: 11 }}>Please review</Badge> : null;
   return (
-    <span className="mono badge" style={{ background: confidence < 70 ? "#FCEFD9" : "#E7F3EB", color: confidence < 70 ? "var(--amber-dark)" : "var(--mint)", fontSize: 11 }}>
+    <Badge tone={confidence < 70 ? "warning" : "success"} style={{ fontSize: 11 }} mono>
       {confidence}% confidence
-    </span>
+    </Badge>
   );
 }
 
@@ -874,7 +875,7 @@ function ArraySectionEditor({ title, items, fields, onChange, renderSummary, onC
 
 function ItemForm({ fields, draft, setDraft, onSave, onCancel, companies }) {
   return (
-    <div className="card" style={{ padding: 12, background: "#FBFAF6" }}>
+    <div className="card" style={{ padding: 12, background: "var(--paper)" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
         {fields.map((f) => (
           <div key={f.key} style={{ gridColumn: f.wide ? "1 / -1" : undefined }}>
@@ -1389,7 +1390,7 @@ function ImproveButton({ text, section, onApply }) {
         {loading ? "Improving…" : "✨ Improve with AI"}
       </button>
       {suggestion && (
-        <div className="card" style={{ padding: 10, marginTop: 6, background: "#FBFAF6", fontSize: 12 }}>
+        <div className="card" style={{ padding: 10, marginTop: 6, background: "var(--paper)", fontSize: 12 }}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Suggested rewrite</div>
           <div style={{ marginBottom: 6, whiteSpace: "pre-wrap" }}>{suggestion.improved}</div>
           <ul style={{ paddingLeft: 16, margin: "0 0 8px", color: "var(--ink-dim)" }}>

@@ -24,6 +24,16 @@
   --mint: #4F9D6E;        /* accepted / success */
   --line: #E4DECF;        /* hairline on paper */
 
+  /* Soft tinted backgrounds for inline status banners/badges (success/warning/danger/info) —
+     matches the badge-easy/medium/hard palette below. Previously hardcoded per-page as raw hex
+     (e.g. "#FCEFD9") with no dark-mode counterpart, so any such banner turned into light-text-on-
+     light-background (illegible) once dark mode shipped. Use these tokens instead of a literal hex
+     for any status-tinted surface — see Badge.jsx for the React-level equivalent. */
+  --success-bg: #E7F3EB;
+  --warning-bg: #FCEFD9;
+  --danger-bg: #F7E4E0;
+  --info-bg: #E5EDF6;
+
   /* Type */
   --font-display: 'Source Serif 4', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -51,6 +61,13 @@
   --ink-dim: #A9AB9E;
   --line: #2C5B45;
   --card-bg: #1B2E24;
+  /* Darker, desaturated versions of the light-mode tints — dark enough that --ink (near-white in
+     dark mode) stays readable on top, but each still reads as "this tinted surface," not just a
+     plain card. */
+  --success-bg: #1E3A2A;
+  --warning-bg: #3D2F16;
+  --danger-bg: #3A2420;
+  --info-bg: #1E2E3D;
 }
 :root:not([data-theme="dark"]) { --card-bg: #fff; }
 
@@ -198,9 +215,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 .course-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
 .course-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 
-.badge-easy { background: #E7F3EB; color: var(--mint); }
-.badge-medium { background: #FCEFD9; color: var(--amber-dark); }
-.badge-hard { background: #F7E4E0; color: var(--rust); }
+.badge-easy { background: var(--success-bg); color: var(--mint); }
+.badge-medium { background: var(--warning-bg); color: var(--amber-dark); }
+.badge-hard { background: var(--danger-bg); color: var(--rust); }
 
 .mono { font-family: var(--font-mono); }
 

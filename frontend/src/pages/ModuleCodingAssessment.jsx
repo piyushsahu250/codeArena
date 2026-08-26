@@ -758,7 +758,7 @@ export default function ModuleCodingAssessment() {
                   flexShrink: isMobile ? 0 : undefined,
                   textAlign: "left", padding: "10px 12px", marginBottom: isMobile ? 0 : 6, borderRadius: 8,
                   border: idx === activeIdx ? "1px solid var(--amber)" : "1px solid var(--line)",
-                  background: idx === activeIdx ? "#FCEFD9" : "var(--card-bg)", fontSize: 13,
+                  background: idx === activeIdx ? "var(--warning-bg)" : "var(--card-bg)", fontSize: 13,
                   color: idx === activeIdx ? "var(--amber-dark)" : "var(--ink)",
                 }}
               >
@@ -826,13 +826,13 @@ export default function ModuleCodingAssessment() {
           >
             <div style={{ width: 40, height: 3, borderRadius: 2, background: "var(--ink-dim)" }} />
           </div>
-          <div style={{ flex: 1, minHeight: 80, overflowY: "auto", padding: 16, background: "#FBF9F4" }}>
+          <div style={{ flex: 1, minHeight: 80, overflowY: "auto", padding: 16, background: "var(--paper)" }}>
             {submitResultMsg && !running && (
               <div
                 className="mono"
                 style={{
                   padding: "10px 12px", borderRadius: 8, marginBottom: runResult ? 12 : 0, fontSize: 12.5, fontWeight: 600,
-                  background: submitResultMsg.ok ? "#E7F3EB" : "#F7E4E0",
+                  background: submitResultMsg.ok ? "var(--success-bg)" : "var(--danger-bg)",
                   color: submitResultMsg.ok ? "var(--mint)" : "var(--rust)",
                   border: `1px solid ${submitResultMsg.ok ? "var(--mint)" : "var(--rust)"}`,
                 }}

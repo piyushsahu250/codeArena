@@ -1334,7 +1334,7 @@ export default function TestTaking() {
                   marginBottom: isMobile ? 0 : 6,
                   borderRadius: 8,
                   border: idx === activeIdx ? "1px solid var(--amber)" : "1px solid var(--line)",
-                  background: idx === activeIdx ? "#FCEFD9" : "var(--card-bg)",
+                  background: idx === activeIdx ? "var(--warning-bg)" : "var(--card-bg)",
                   color: idx === activeIdx ? "var(--amber-dark)" : "var(--ink)",
                   fontSize: 13,
                 }}
@@ -1492,13 +1492,13 @@ export default function TestTaking() {
           {!isMobile && (
             <div onMouseDown={startResize("results")} className="ca-resize-handle" style={{ height: 6, cursor: "row-resize", background: "var(--line)", flexShrink: 0 }} title="Drag to resize" />
           )}
-          <div style={{ height: isMobile ? Math.min(resultsPanelHeight, 220) : resultsPanelHeight, overflowY: "auto", padding: 16, background: "#FBF9F4", flexShrink: 0 }}>
+          <div style={{ height: isMobile ? Math.min(resultsPanelHeight, 220) : resultsPanelHeight, overflowY: "auto", padding: 16, background: "var(--paper)", flexShrink: 0 }}>
             {submitResultMsg && !running && (
               <div
                 className="mono"
                 style={{
                   padding: "10px 12px", borderRadius: 8, marginBottom: runResult ? 12 : 0, fontSize: 12.5, fontWeight: 600,
-                  background: submitResultMsg.ok ? "#E7F3EB" : "#F7E4E0",
+                  background: submitResultMsg.ok ? "var(--success-bg)" : "var(--danger-bg)",
                   color: submitResultMsg.ok ? "var(--mint)" : "var(--rust)",
                   border: `1px solid ${submitResultMsg.ok ? "var(--mint)" : "var(--rust)"}`,
                 }}
