@@ -140,6 +140,10 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   padding: 10px 18px;
   border-radius: var(--radius);
   border: none;
+  /* .btn is applied to plain <button>s and to <Link>/<a> elements alike (e.g. the dashboard
+     quick-action row) — buttons never show underlined text, but an anchor does unless told
+     otherwise, so every button-styled link was rendering with a browser-default underline. */
+  text-decoration: none;
   font-weight: 600;
   font-size: 14px;
   transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;

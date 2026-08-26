@@ -1,22 +1,7 @@
-// The platform's signature mark: a hand-scratched chalk underline,
-// standing in for the red-pen tick of a graded exam paper.
-export default function ChalkUnderline({ width = 140, color = "var(--amber)" }) {
-  return (
-    <svg
-      width={width}
-      height="10"
-      viewBox="0 0 140 10"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", marginTop: 2 }}
-      aria-hidden="true"
-    >
-      <path
-        d="M2 6.5C22 3.5 44 8.5 66 5C88 1.5 108 7.5 138 4"
-        stroke={color}
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+// Deliberately a no-op: the amber chalk-underline mark under page titles was removed platform-wide
+// per explicit request. Kept as a component (rather than deleting it and its ~73 call sites) so
+// every existing <ChalkUnderline /> usage across the app keeps resolving without needing a
+// mechanical edit of each file — this is the single place that controls whether it renders.
+export default function ChalkUnderline() {
+  return null;
 }
