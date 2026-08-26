@@ -5,7 +5,7 @@
 const { PassThrough } = require("stream");
 const { generateResumePdf } = require("../src/utils/resumePdf");
 const { generateResumeDocx } = require("../src/utils/resumeDocx");
-const { parseResumeFile } = require("../src/utils/resumeParser");
+const { parseResumeFile, extractTextFromFile } = require("../src/utils/resumeParser");
 
 const truth = {
   fullName: "Aarav Sharma", email: "aarav.sharma@example.com", mobile: "9876543210",
@@ -28,14 +28,18 @@ async function streamToBuffer(writeFn) {
 
 async function main() {
   const pdfBuffer = await streamToBuffer((s) => generateResumePdf({ ...truth, template: "minimal" }, s));
+  const pdfRawText = await extractTextFromFile(pdfBuffer, "application/pdf", "t.pdf");
+  console.log("=== PDF raw lines (JSON, so blank lines are visible as \"\") ===");
+  console.log(JSON.stringify(pdfRawText.split(/\r?\n/), null, 0));
   const extractedFromPdf = await parseResumeFile(pdfBuffer, "application/pdf", "t.pdf");
   console.log("PDF projects:", JSON.stringify(extractedFromPdf.projects, null, 2));
-  console.log("PDF rawText around project:", (extractedFromPdf.rawText || "").split("\n").filter((l) => /library|github/i.test(l)));
 
   const docxBuffer = await generateResumeDocx({ ...truth, template: "minimal" });
+  const docxRawText = await extractTextFromFile(docxBuffer, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "t.docx");
+  console.log("\n=== DOCX raw lines (JSON, so blank lines are visible as \"\") ===");
+  console.log(JSON.stringify(docxRawText.split(/\r?\n/), null, 0));
   const extractedFromDocx = await parseResumeFile(docxBuffer, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "t.docx");
-  console.log("\nDOCX projects:", JSON.stringify(extractedFromDocx.projects, null, 2));
-  console.log("DOCX rawText around project:", (extractedFromDocx.rawText || "").split("\n").filter((l) => /library|github/i.test(l)));
+  console.log("DOCX projects:", JSON.stringify(extractedFromDocx.projects, null, 2));
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
