@@ -121,10 +121,10 @@ export default function Login() {
           <p style={{ marginTop: 20, fontSize: 14, color: "var(--ink-dim)" }}>
             Don't have an account? Contact your admin to get one created.
           </p>
+          <p style={{ marginTop: 32, fontSize: 12, color: "var(--ink-dim)", opacity: 0.75, textAlign: "center" }}>
+            Powered by Acrosoft Webtech Solution Pvt. Ltd.
+          </p>
         </form>
-        <p style={{ marginTop: 32, fontSize: 12, color: "var(--ink-dim)", opacity: 0.75 }}>
-          Powered by Acrosoft Webtech Solution Pvt. Ltd.
-        </p>
       </div>
     </div>
   );
