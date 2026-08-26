@@ -144,9 +144,9 @@ export default function CourseAssignments() {
               <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 8 }}>Loading…</p>
             ) : (
               <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {(current?.institutes || []).map((i) => <span key={i.id} className="badge" style={{ background: "#E7F3EB", color: "var(--mint)" }}>{i.name}</span>)}
+                {(current?.institutes || []).map((i) => <span key={i.id} className="badge" style={{ background: "var(--success-bg)", color: "var(--mint)" }}>{i.name}</span>)}
                 {(current?.academicGroups || []).map((g) => (
-                  <span key={g.id} className="badge" style={{ background: "#EAF1FB", color: "var(--ink)" }}>
+                  <span key={g.id} className="badge" style={{ background: "var(--info-bg)", color: "var(--ink)" }}>
                     {g.institute?.name} · {g.department?.name} · {g.section} ({g.batch})
                   </span>
                 ))}

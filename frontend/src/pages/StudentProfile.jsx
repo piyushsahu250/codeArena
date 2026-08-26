@@ -424,7 +424,7 @@ export default function StudentProfile() {
         <ChalkUnderline />
 
         {gated && (
-          <div className="card" style={{ padding: 16, marginTop: 16, background: "#FCEFD9", border: "1px solid var(--amber)" }}>
+          <div className="card" style={{ padding: 16, marginTop: 16, background: "var(--warning-bg)", border: "1px solid var(--amber)" }}>
             <strong>Complete your Personal Academic &amp; Info to continue.</strong>
             <p style={{ fontSize: 13, marginTop: 4, marginBottom: 0 }}>
               Every other section of CodeArena unlocks once this reaches 80% completion. Fill in the fields below,

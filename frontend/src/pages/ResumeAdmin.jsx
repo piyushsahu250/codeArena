@@ -112,7 +112,7 @@ export default function ResumeAdmin() {
                   className="card"
                   style={{
                     padding: 10, cursor: "pointer",
-                    background: selected?.studentId === s.studentId ? "#FCEFD9" : "var(--card-bg)",
+                    background: selected?.studentId === s.studentId ? "var(--warning-bg)" : "var(--card-bg)",
                     color: selected?.studentId === s.studentId ? "var(--amber-dark)" : "var(--ink)",
                   }}
                 >

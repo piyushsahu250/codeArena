@@ -180,12 +180,12 @@ export default function WeeklyChallenge() {
             </div>
 
             {runResult && (
-              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: runResult.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0" }}>
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: runResult.verdict === "ACCEPTED" ? "var(--success-bg)" : "var(--danger-bg)" }}>
                 <CodeResultBlock title="Sample run result" result={runResult} />
               </div>
             )}
             {submitResult && (
-              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0" }}>
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "var(--success-bg)" : "var(--danger-bg)" }}>
                 <CodeResultBlock title="Submission result" result={submitResult} />
               </div>
             )}

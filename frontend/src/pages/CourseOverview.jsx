@@ -5,6 +5,7 @@ import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import Badge from "../components/Badge";
 
 const STATUS_ICON = { COMPLETED: "✓", IN_PROGRESS: "◐", NOT_STARTED: "○" };
 const STATUS_COLOR = { COMPLETED: "var(--mint)", IN_PROGRESS: "var(--amber-dark)", NOT_STARTED: "var(--ink-dim)" };
@@ -104,9 +105,9 @@ export default function CourseOverview() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {isStudent && !locked && (isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
                     <h3 style={{ fontSize: 16 }}>Module {mi + 1}: {m.title}</h3>
-                    {isStudent && m.completed && <span className="badge" style={{ background: "#E7F3EB", color: "var(--mint)" }}>✓ Completed</span>}
-                    {isCurrent && <span className="badge" style={{ background: "#FCEFD9", color: "var(--amber-dark)" }}>In progress</span>}
-                    {locked && <span className="badge" style={{ background: "#F0EEE3", color: "var(--ink-dim)", display: "inline-flex", alignItems: "center", gap: 4 }}><Lock size={11} /> Locked</span>}
+                    {isStudent && m.completed && <Badge tone="success">✓ Completed</Badge>}
+                    {isCurrent && <Badge tone="warning">In progress</Badge>}
+                    {locked && <Badge style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Lock size={11} /> Locked</Badge>}
                   </div>
                   {isStudent && !locked && (
                     <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{m.completedCount}/{m.totalCount}</span>

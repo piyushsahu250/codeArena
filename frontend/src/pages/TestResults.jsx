@@ -4,13 +4,13 @@ import api from "../api";
 import Navbar from "../components/Navbar";
 
 const STATUS_STYLE = {
-  SUBMITTED: { bg: "#E7F3EB", color: "var(--mint)", label: "Submitted" },
-  AUTO_SUBMITTED: { bg: "#FCEFD9", color: "var(--amber-dark)", label: "Auto-submitted" },
-  IN_PROGRESS: { bg: "#F1F1F1", color: "var(--ink-dim)", label: "In progress" },
+  SUBMITTED: { bg: "var(--success-bg)", color: "var(--mint)", label: "Submitted" },
+  AUTO_SUBMITTED: { bg: "var(--warning-bg)", color: "var(--amber-dark)", label: "Auto-submitted" },
+  IN_PROGRESS: { bg: "var(--card-bg)", color: "var(--ink-dim)", label: "In progress" },
 };
 
 function StatusBadge({ status }) {
-  const s = STATUS_STYLE[status] || { bg: "#F1F1F1", color: "var(--ink-dim)", label: status };
+  const s = STATUS_STYLE[status] || { bg: "var(--card-bg)", color: "var(--ink-dim)", label: status };
   return <span className="badge" style={{ background: s.bg, color: s.color }}>{s.label}</span>;
 }
 

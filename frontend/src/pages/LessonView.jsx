@@ -116,7 +116,7 @@ export default function LessonView() {
             <ChalkUnderline />
             <span
               className="badge"
-              style={{ marginTop: 8, display: "inline-block", background: lesson.isModuleTest ? "var(--amber)" : "var(--mint-light, #E7F3EB)" }}
+              style={{ marginTop: 8, display: "inline-block", background: lesson.isModuleTest ? "var(--amber)" : "var(--success-bg)" }}
             >
               {lesson.isModuleTest ? "Official Test — one graded attempt" : "Practice Module — unlimited attempts"}
             </span>
@@ -385,7 +385,7 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
                   {r.options.map((opt, idx) => {
                     const isSelected = Number(r.selected) === idx;
                     const isCorrectOpt = Number(r.correctAnswer) === idx;
-                    const bg = isCorrectOpt ? "#E7F3EB" : isSelected && !r.correct ? "#F7E4E0" : "transparent";
+                    const bg = isCorrectOpt ? "var(--success-bg)" : isSelected && !r.correct ? "var(--danger-bg)" : "transparent";
                     const color = isCorrectOpt ? "var(--mint)" : isSelected && !r.correct ? "var(--rust)" : "var(--ink)";
                     return (
                       <div key={idx} style={{ padding: "8px 12px", borderRadius: 8, background: bg, color, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
@@ -625,12 +625,12 @@ function PracticeQuestionCard({ question }) {
             />
           </div>
           {runResult && (
-            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: runResult.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0" }}>
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: runResult.verdict === "ACCEPTED" ? "var(--success-bg)" : "var(--danger-bg)" }}>
               <CodeResultBlock title="Sample run result" result={runResult} />
             </div>
           )}
           {submitResult && (
-            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "#E7F3EB" : "#F7E4E0" }}>
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "var(--success-bg)" : "var(--danger-bg)" }}>
               <CodeResultBlock title="Submission result" result={submitResult} />
               {submitResult.verdict !== "ACCEPTED" && aiAvailable !== false && (
                 <div style={{ marginTop: 10 }}>
@@ -681,7 +681,7 @@ function PracticeQuestionCard({ question }) {
       )}
 
       {result && (
-        <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: result.correct ? "#E7F3EB" : "#F7E4E0" }}>
+        <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: result.correct ? "var(--success-bg)" : "var(--danger-bg)" }}>
           <div className="mono" style={{ fontWeight: 700, color: result.correct ? "var(--mint)" : "var(--rust)" }}>
             {result.correct ? "✓ Correct" : "✗ Not quite"}
           </div>
