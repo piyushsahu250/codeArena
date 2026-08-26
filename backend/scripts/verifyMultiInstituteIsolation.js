@@ -11,7 +11,7 @@ const API_BASE = "http://127.0.0.1:4000/api";
 const results = [];
 
 function record(area, status, expected, note) {
-  const ok = Array.isArray(expected) ? expected.includes(status) : status === expected;
+  const ok = expected === "NO_LEAK" ? status === "NO_LEAK" : Array.isArray(expected) ? expected.includes(status) : status === expected;
   results.push({ area, status, expected, ok, note });
 }
 
@@ -61,10 +61,13 @@ async function main() {
     // 4. Institute Admin A -> Institute B's profile-completion-stats
     record("Profile completion stats (cross-institute id)", await req(`/institutes/${instB.id}/profile-completion-stats`, instAdminA.headers), [403, 404]);
 
-    // 5. Staff A -> Audit log (should only see own institute, not error, but verify scoping via a
-    //    request that would 200 but should never include instB rows — checked by status only here,
-    //    full row-content check is a deeper test; a non-institute-admin correctly gets 403 first)
-    record("Audit log access (staff, should be admin-only)", await req(`/users/audit-log`, staffA.headers), [403]);
+    // 5. Staff A IS legitimately allowed to view the audit log (requireRole includes STAFF/CLERK —
+    //    confirmed at users.js:1194, a deliberate extension from earlier this session), so the real
+    //    test is row-level: institute B's rows must never appear in institute A staff's response.
+    const auditRes = await fetch(`${API_BASE}/users/audit-log`, { headers: staffA.headers });
+    const auditBody = auditRes.status === 200 ? await auditRes.json() : null;
+    const auditLeaks = auditBody?.logs?.some((l) => l.instituteId === instB.id) || auditBody?.rows?.some((l) => l.instituteId === instB.id);
+    record("Audit log row-level isolation (staff)", auditLeaks ? "LEAK" : "NO_LEAK", "NO_LEAK", auditLeaks ? "Institute A staff saw an Institute B audit row!" : `status=${auditRes.status}, no cross-institute rows`);
 
     // 6. Company Master (GET /companies) is deliberately global reference data (real company
     //    names like "Google"/"TCS" that every institute's placement cell places students with),
@@ -76,7 +79,7 @@ async function main() {
     const issueRes = await fetch(`${API_BASE}/issue-reports`, { headers: instAdminA.headers });
     const issueBody = issueRes.status === 200 ? await issueRes.json() : null;
     const leaksInstB = issueBody?.issues?.some((i) => i.instituteId === instB.id);
-    record("Issue reports row-level isolation", leaksInstB ? "LEAK" : issueRes.status, false, leaksInstB ? "Institute A admin saw an Institute B row!" : "no cross-institute rows returned");
+    record("Issue reports row-level isolation", leaksInstB ? "LEAK" : "NO_LEAK", "NO_LEAK", leaksInstB ? "Institute A admin saw an Institute B row!" : `status=${issueRes.status}, no cross-institute rows`);
 
     // 8. Student A -> another student's readiness/talent-pool/attendance data via direct ID guess —
     //    covered by the generic user-profile check (#1 style) already; add explicit readiness check:
@@ -86,7 +89,7 @@ async function main() {
     const searchRes = await fetch(`${API_BASE}/users/search?q=MI%20Verify`, { headers: staffA.headers });
     const searchBody = searchRes.status === 200 ? await searchRes.json() : null;
     const searchLeaks = searchBody?.rows?.some((r) => r.id === studentB.user.id);
-    record("User search cross-institute leak", searchLeaks ? "LEAK" : searchRes.status, false, searchLeaks ? "Staff A's search surfaced Institute B's student!" : "no cross-institute rows returned");
+    record("User search cross-institute leak", searchLeaks ? "LEAK" : "NO_LEAK", "NO_LEAK", searchLeaks ? "Staff A's search surfaced Institute B's student!" : `status=${searchRes.status}, no cross-institute rows`);
 
   } finally {
     const jtis = cleanup.map((c) => c.jti);
