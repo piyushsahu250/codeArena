@@ -68,21 +68,26 @@ async function renderPdfPagesToPngBuffers(pdfBuffer, maxPages) {
     canvasFactory: new ApiRsCanvasFactory(createCanvas),
   });
   const doc = await loadingTask.promise;
-  try {
-    const pageCount = Math.min(doc.numPages, maxPages);
-    const buffers = [];
-    for (let i = 1; i <= pageCount; i++) {
-      const page = await doc.getPage(i);
-      const viewport = page.getViewport({ scale: RENDER_SCALE });
-      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-      const ctx = canvas.getContext("2d");
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      buffers.push(canvas.toBuffer("image/png"));
-    }
-    return { buffers, totalPages: doc.numPages };
-  } finally {
-    await doc.destroy();
+  const pageCount = Math.min(doc.numPages, maxPages);
+  const buffers = [];
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await doc.getPage(i);
+    const viewport = page.getViewport({ scale: RENDER_SCALE });
+    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+    const ctx = canvas.getContext("2d");
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    buffers.push(canvas.toBuffer("image/png"));
   }
+  // Deliberately NOT calling doc.destroy() here. pdf.js's own internal cleanup path (cancelling
+  // tracked render tasks, which clears an internal CachedCanvases pool via pdf.js's bundled
+  // Node canvas factory) assumes the `canvas` (node-canvas/cairo) package's semantics and throws
+  // a native, UNCATCHABLE error the moment it touches an @napi-rs/canvas object instead — it
+  // fires from a detached internal callback, not the promise this function returns, so no
+  // try/catch here can actually intercept it (confirmed live: it crashes the process even wrapped
+  // in try/finally). Every page's PNG buffer is already safely captured above by this point, and
+  // each OCR call is one-shot and short-lived, so skipping explicit destroy() just means the
+  // document object is reclaimed by normal garbage collection instead — not a correctness issue.
+  return { buffers, totalPages: doc.numPages };
 }
 
 // One shared worker, lazily created on first real use and reused for the process lifetime —
