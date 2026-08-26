@@ -7,6 +7,8 @@ import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
 
 function statusOf(test) {
   const now = new Date();
@@ -244,7 +246,7 @@ export default function StaffDashboard() {
             <h3 style={{ fontSize: 16, marginBottom: 12 }}>Test Status Overview</h3>
             <div className="card" style={{ padding: 20, height: 220 }}>
               {tests.length === 0 ? (
-                <p style={{ color: "var(--ink-dim)", fontSize: 13, textAlign: "center", paddingTop: 60 }}>No tests yet.</p>
+                <EmptyState text="No tests yet." />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={testStatusChartData(tests)}>
@@ -435,9 +437,7 @@ export default function StaffDashboard() {
             );
           })}
           {filtered.length === 0 && (
-            <div className="card" style={{ padding: 32, textAlign: "center", color: "var(--ink-dim)" }}>
-              {tests.length === 0 ? "No tests yet. Create a question bank first, then assemble a test." : "No tests match these filters."}
-            </div>
+            <EmptyState title={tests.length === 0 ? "No tests yet" : "No tests match these filters"} text={tests.length === 0 ? "Create a question bank first, then assemble a test." : undefined} />
           )}
         </div>
       </div>
@@ -446,25 +446,6 @@ export default function StaffDashboard() {
 }
 
 const inputStyle = { padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
-
-function StatCard({ icon: Icon, label, value, onClick }) {
-  return (
-    <div
-      className="card"
-      style={{ padding: "14px 16px", cursor: onClick ? "pointer" : "default", transition: "transform 0.1s, box-shadow 0.1s" }}
-      onClick={onClick}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      onMouseEnter={onClick ? (e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08))"; } : undefined}
-      onMouseLeave={onClick ? (e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; } : undefined}
-    >
-      <Icon size={20} />
-      <div className="mono" style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
-    </div>
-  );
-}
 
 function testStatusChartData(tests) {
   const counts = { Draft: 0, Scheduled: 0, Active: 0, Completed: 0 };

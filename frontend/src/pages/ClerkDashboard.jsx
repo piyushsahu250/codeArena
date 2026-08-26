@@ -7,8 +7,35 @@ import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
+import StatCard from "../components/StatCard";
+import Table from "../components/Table";
 
 const PIE_COLORS = ["#4F9D6E", "#C7852A", "#B0473F", "#5B7DB1"];
+
+const READINESS_COLUMNS = [
+  { key: "name", header: "Name" },
+  { key: "registrationNumber", header: "Reg. No. (PRN)", mono: true, render: (s) => s.registrationNumber || "—" },
+  { key: "subject", header: "Subject" },
+  { key: "overallScore", header: "Readiness", mono: true, render: (s) => `${s.overallScore}% — ${s.readinessLevel.replace(/_/g, " ")}` },
+];
+
+const DEPARTMENT_COLUMNS = [
+  { key: "department", header: "Department" },
+  { key: "total", header: "Total", mono: true },
+  { key: "registered", header: "Registered", mono: true },
+  { key: "notRegistered", header: "Not Registered", mono: true },
+  { key: "deptEligible", header: "Dept Eligible", mono: true },
+  { key: "deptIneligible", header: "Dept Ineligible", mono: true },
+  { key: "clerkEligible", header: "Cell Eligible", mono: true },
+  { key: "clerkIneligible", header: "Cell Ineligible", mono: true },
+];
+
+const RECENT_PROFILE_COLUMNS = [
+  { key: "rollNumber", header: "Roll Number", mono: true, render: (p) => p.rollNumber || "—" },
+  { key: "name", header: "Name", render: (p) => <Link to={`/clerk/students/${p.id}`}>{p.name}</Link> },
+  { key: "department", header: "Department", render: (p) => p.department || "—" },
+  { key: "updatedAt", header: "Updated", mono: true, render: (p) => new Date(p.updatedAt).toLocaleString(), sortValue: (p) => new Date(p.updatedAt).getTime() },
+];
 
 export default function ClerkDashboard() {
   const { user } = useAuth();
@@ -219,54 +246,16 @@ export default function ClerkDashboard() {
             </div>
 
             {readiness.readyStudents.length > 0 && (
-              <div className="card" style={{ overflowX: "auto", marginTop: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, padding: "12px 12px 0" }}>Students Ready for Technical Assessments</div>
-                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-                  <thead>
-                    <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                      <th style={{ padding: "10px 12px" }}>Name</th>
-                      <th style={{ padding: "10px 12px" }}>Reg. No. (PRN)</th>
-                      <th style={{ padding: "10px 12px" }}>Subject</th>
-                      <th style={{ padding: "10px 12px" }}>Readiness</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {readiness.readyStudents.slice(0, 20).map((s, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                        <td style={{ padding: "10px 12px" }}>{s.name}</td>
-                        <td className="mono" style={{ padding: "10px 12px" }}>{s.registrationNumber || "—"}</td>
-                        <td style={{ padding: "10px 12px" }}>{s.subject}</td>
-                        <td className="mono" style={{ padding: "10px 12px" }}>{s.overallScore}% — {s.readinessLevel.replace(/_/g, " ")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Students Ready for Technical Assessments</div>
+                <Table columns={READINESS_COLUMNS} data={readiness.readyStudents.slice(0, 20)} getRowKey={(s, i) => s.registrationNumber || i} sortable />
               </div>
             )}
 
             {readiness.needsPreparationStudents.length > 0 && (
-              <div className="card" style={{ overflowX: "auto", marginTop: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, padding: "12px 12px 0" }}>Students Needing Preparation</div>
-                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
-                  <thead>
-                    <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                      <th style={{ padding: "10px 12px" }}>Name</th>
-                      <th style={{ padding: "10px 12px" }}>Reg. No. (PRN)</th>
-                      <th style={{ padding: "10px 12px" }}>Subject</th>
-                      <th style={{ padding: "10px 12px" }}>Readiness</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {readiness.needsPreparationStudents.slice(0, 20).map((s, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                        <td style={{ padding: "10px 12px" }}>{s.name}</td>
-                        <td className="mono" style={{ padding: "10px 12px" }}>{s.registrationNumber || "—"}</td>
-                        <td style={{ padding: "10px 12px" }}>{s.subject}</td>
-                        <td className="mono" style={{ padding: "10px 12px" }}>{s.overallScore}% — {s.readinessLevel.replace(/_/g, " ")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Students Needing Preparation</div>
+                <Table columns={READINESS_COLUMNS} data={readiness.needsPreparationStudents.slice(0, 20)} getRowKey={(s, i) => s.registrationNumber || i} sortable />
               </div>
             )}
           </>
@@ -289,65 +278,12 @@ export default function ClerkDashboard() {
             </ResponsiveContainer>
           </div>
         )}
-        <div className="card" style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                <th style={{ padding: "10px 12px" }}>Department</th>
-                <th style={{ padding: "10px 12px" }}>Total</th>
-                <th style={{ padding: "10px 12px" }}>Registered</th>
-                <th style={{ padding: "10px 12px" }}>Not Registered</th>
-                <th style={{ padding: "10px 12px" }}>Dept Eligible</th>
-                <th style={{ padding: "10px 12px" }}>Dept Ineligible</th>
-                <th style={{ padding: "10px 12px" }}>Cell Eligible</th>
-                <th style={{ padding: "10px 12px" }}>Cell Ineligible</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(department || []).map((d) => (
-                <tr key={d.departmentId} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                  <td style={{ padding: "10px 12px" }}>{d.department}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.total}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.registered}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.notRegistered}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.deptEligible}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.deptIneligible}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.clerkEligible}</td>
-                  <td className="mono" style={{ padding: "10px 12px" }}>{d.clerkIneligible}</td>
-                </tr>
-              ))}
-              {(!department || department.length === 0) && (
-                <tr><td colSpan={8} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No students yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Table columns={DEPARTMENT_COLUMNS} data={department || []} getRowKey={(d) => d.departmentId} emptyMessage="No students yet." sortable />
 
         {profileStats && profileStats.recentlyUpdated.length > 0 && (
           <>
             <h3 style={{ fontSize: 16, marginTop: 28, marginBottom: 10 }}>Recently Updated Student Profiles</h3>
-            <div className="card" style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                    <th style={{ padding: "10px 12px" }}>Roll Number</th>
-                    <th style={{ padding: "10px 12px" }}>Name</th>
-                    <th style={{ padding: "10px 12px" }}>Department</th>
-                    <th style={{ padding: "10px 12px" }}>Updated</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profileStats.recentlyUpdated.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                      <td className="mono" style={{ padding: "10px 12px" }}>{p.rollNumber || "—"}</td>
-                      <td style={{ padding: "10px 12px" }}><Link to={`/clerk/students/${p.id}`}>{p.name}</Link></td>
-                      <td style={{ padding: "10px 12px" }}>{p.department || "—"}</td>
-                      <td className="mono" style={{ padding: "10px 12px" }}>{new Date(p.updatedAt).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table columns={RECENT_PROFILE_COLUMNS} data={profileStats.recentlyUpdated} getRowKey={(p) => p.id} sortable />
           </>
         )}
 
@@ -359,16 +295,6 @@ export default function ClerkDashboard() {
           </p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value }) {
-  return (
-    <div className="card" style={{ padding: "14px 16px" }}>
-      <Icon size={20} />
-      <div className="mono" style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
     </div>
   );
 }

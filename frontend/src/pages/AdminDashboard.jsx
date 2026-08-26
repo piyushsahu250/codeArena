@@ -9,6 +9,9 @@ import { useConfirm } from "../context/ConfirmContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid, SkeletonCard } from "../components/Skeleton";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
+import Badge from "../components/Badge";
 import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
 const ALL_ROLES = ["STUDENT", "STAFF", "ADMIN", "INSTITUTE_ADMIN", "CLERK"];
@@ -300,7 +303,7 @@ export default function AdminDashboard() {
               {tests === null ? (
                 <SkeletonCard height={220} />
               ) : tests.length === 0 ? (
-                <p style={{ color: "var(--ink-dim)", fontSize: 13, textAlign: "center", paddingTop: 60 }}>No tests yet.</p>
+                <EmptyState text="No tests yet." />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={adminTestStatusData(tests)}>
@@ -401,9 +404,7 @@ export default function AdminDashboard() {
                   </div>
                 ))}
                 {lookupResult.attempts.length === 0 && (
-                  <div className="card" style={{ padding: 16, textAlign: "center", color: "var(--ink-dim)", fontSize: 13 }}>
-                    This student hasn't started any test yet.
-                  </div>
+                  <EmptyState text="This student hasn't started any test yet." />
                 )}
               </div>
             </div>
@@ -608,8 +609,8 @@ function UserRow({ u, onResetPassword, onDelete }) {
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        {u.isActive === false && <span className="badge" style={{ background: "var(--rust)", color: "#fff" }}>Inactive</span>}
-        <span className="badge">{u.role}</span>
+        {u.isActive === false && <Badge tone="danger">Inactive</Badge>}
+        <Badge>{u.role}</Badge>
         {u.role === "STUDENT" && (
           <button
             onClick={() => onResetPassword(u)}
@@ -626,15 +627,6 @@ function UserRow({ u, onResetPassword, onDelete }) {
           Delete
         </button>
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, accent }) {
-  return (
-    <div className="card" style={{ padding: "14px 16px" }}>
-      <div className="mono" style={{ fontSize: 22, fontWeight: 700, color: accent || "var(--ink)" }}>{value ?? "—"}</div>
-      <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
     </div>
   );
 }

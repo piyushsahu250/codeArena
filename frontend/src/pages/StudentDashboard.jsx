@@ -12,6 +12,10 @@ import { useFeatures } from "../context/FeatureContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import Table from "../components/Table";
 
 // Consistent vertical rhythm for every top-level block on the page — replaces what used to be
 // ad hoc 20/24/32px margins picked per-section, which is a big part of why the page read as
@@ -35,6 +39,18 @@ const MORE_CARD_DEFS = [
   { key: "codingSolved", label: "Coding Solved", icon: Code2 },
   { key: "mcqCorrect", label: "MCQs Correct", icon: ListChecks },
   { key: "certificatesEarned", label: "Certificates", icon: Award },
+];
+
+const RECENT_RESULTS_COLUMNS = [
+  { key: "testName", header: "Test Name" },
+  { key: "score", header: "Score", mono: true, render: (h) => h.resultsPending ? "—" : `${h.score}/${h.maxScore}` },
+  { key: "percentage", header: "Percentage", mono: true, render: (h) => h.resultsPending ? "Pending" : `${h.percentage}%` },
+  { key: "timeTakenMin", header: "Time Taken", mono: true, render: (h) => h.timeTakenMin != null ? `${h.timeTakenMin} min` : "—" },
+  { key: "status", header: "Status", render: (h) => h.status === "AUTO_SUBMITTED" ? "Auto-submitted" : "Completed" },
+  {
+    key: "actions", header: "", align: "right",
+    render: (h) => <Link to={`/test/${h.testId}/result`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>View Details</Link>,
+  },
 ];
 
 export default function StudentDashboard() {
@@ -228,7 +244,7 @@ export default function StudentDashboard() {
         {/* Key stats — the 5 numbers a student actually scans for first. Bigger cards, clearer
             number-first hierarchy than the flat 10-card grid this replaces. */}
         {dashError ? (
-          <DashSummaryError onRetry={retryDashSummary} retrying={dashRetrying} style={{ marginTop: SECTION_GAP }} />
+          <ErrorState title="Unable to load your dashboard right now." message="Please refresh the page or try again in a few moments." onRetry={retryDashSummary} retrying={dashRetrying} style={{ marginTop: SECTION_GAP }} />
         ) : (
           <>
             <div style={{ marginTop: SECTION_GAP }}>
@@ -236,11 +252,11 @@ export default function StudentDashboard() {
                 {loading
                   ? <SkeletonGrid count={5} minWidth={160} />
                   : KEY_CARD_DEFS.map((c) => (
-                      <DashboardCard
+                      <StatCard
                         key={c.key}
                         icon={c.icon}
                         label={c.label}
-                        color={c.color}
+                        accent={c.color}
                         value={
                           c.key === "rank"
                             ? dash.cards.rank ? `#${dash.cards.rank}/${dash.cards.totalStudentsInClass}` : "—"
@@ -253,7 +269,7 @@ export default function StudentDashboard() {
               {!loading && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 20, marginTop: 14, padding: "12px 16px", borderTop: "1px solid var(--line)" }}>
                   {MORE_CARD_DEFS.map((c) => (
-                    <MoreStat key={c.key} icon={c.icon} label={c.label} value={`${dash.cards[c.key] ?? 0}${c.suffix || ""}`} />
+                    <StatCard key={c.key} icon={c.icon} label={c.label} value={`${dash.cards[c.key] ?? 0}${c.suffix || ""}`} size="compact" />
                   ))}
                 </div>
               )}
@@ -401,34 +417,7 @@ export default function StudentDashboard() {
           ) : dash.recentTestResults.length === 0 ? (
             <EmptyState text="No completed tests yet." />
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)" }}>
-                    <th style={{ padding: "8px 6px" }}>Test Name</th>
-                    <th style={{ padding: "8px 6px" }}>Score</th>
-                    <th style={{ padding: "8px 6px" }}>Percentage</th>
-                    <th style={{ padding: "8px 6px" }}>Time Taken</th>
-                    <th style={{ padding: "8px 6px" }}>Status</th>
-                    <th style={{ padding: "8px 6px" }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dash.recentTestResults.map((h) => (
-                    <tr key={h.testId} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                      <td style={{ padding: "10px 6px" }}>{h.testName}</td>
-                      <td className="mono" style={{ padding: "10px 6px" }}>{h.resultsPending ? "—" : `${h.score}/${h.maxScore}`}</td>
-                      <td className="mono" style={{ padding: "10px 6px" }}>{h.resultsPending ? "Pending" : `${h.percentage}%`}</td>
-                      <td className="mono" style={{ padding: "10px 6px" }}>{h.timeTakenMin != null ? `${h.timeTakenMin} min` : "—"}</td>
-                      <td style={{ padding: "10px 6px" }}>{h.status === "AUTO_SUBMITTED" ? "Auto-submitted" : "Completed"}</td>
-                      <td style={{ padding: "10px 6px", textAlign: "right" }}>
-                        <Link to={`/test/${h.testId}/result`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>View Details</Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table columns={RECENT_RESULTS_COLUMNS} data={dash.recentTestResults} getRowKey={(h) => h.testId} dense />
           )}
         </Section>
       </div>
@@ -449,28 +438,6 @@ function NotificationIcon({ type }) {
   return <Icon size={14} style={{ verticalAlign: "-2px", marginRight: 4 }} />;
 }
 
-function DashboardCard({ icon: Icon, label, value, color }) {
-  return (
-    <div className="card" style={{ padding: "18px 18px" }}>
-      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 8, background: "var(--card-bg, #F7F7F5)" }}>
-        <Icon size={17} color={color} />
-      </div>
-      <div className="mono" style={{ fontSize: 24, fontWeight: 700, color, marginTop: 10 }}>{value}</div>
-      <div style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 2 }}>{label}</div>
-    </div>
-  );
-}
-
-function MoreStat({ icon: Icon, label, value }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <Icon size={14} style={{ color: "var(--ink-dim)" }} />
-      <span className="mono" style={{ fontSize: 13, fontWeight: 700 }}>{value}</span>
-      <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>{label}</span>
-    </div>
-  );
-}
-
 function MiniStat({ label, value }) {
   return (
     <div>
@@ -487,24 +454,6 @@ function Section({ title, icon: Icon, children, style }) {
         {Icon && <Icon size={16} style={{ color: "var(--ink-dim)" }} />} {title}
       </h3>
       <div className="card" style={{ padding: 20 }}>{children}</div>
-    </div>
-  );
-}
-
-function EmptyState({ text }) {
-  return <p style={{ color: "var(--ink-dim)", fontSize: 13, textAlign: "center", padding: "12px 0" }}>{text}</p>;
-}
-
-function DashSummaryError({ onRetry, retrying, style }) {
-  return (
-    <div className="card" style={{ padding: 28, textAlign: "center", ...style }}>
-      <p style={{ fontSize: 14, fontWeight: 600 }}>Unable to load your dashboard right now.</p>
-      <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
-        Please refresh the page or try again in a few moments.
-      </p>
-      <button className="btn btn-dark" style={{ marginTop: 14 }} onClick={onRetry} disabled={retrying}>
-        {retrying ? "Retrying…" : "Try again"}
-      </button>
     </div>
   );
 }

@@ -159,7 +159,18 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+/* A card acting as a button (e.g. a clickable StatCard) gets a small hover lift — used instead of
+   the previous per-page inline onMouseEnter/onMouseLeave handlers so every clickable card animates
+   identically. Respects reduced-motion since it's transform-only and cheap either way, but skip the
+   lift for users who've asked for less motion. */
+.card-clickable:hover {
+  box-shadow: var(--shadow-md);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card-clickable:hover { transform: translateY(-2px); }
 }
 
 /* Reduce a page's own layout shift/flicker as route content mounts — a plain fade, not a
