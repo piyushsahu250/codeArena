@@ -357,7 +357,10 @@ function renderModern(resume) {
   const certifications = arr(resume.certifications);
   if (certifications.length) {
     sideHeader("Certifications");
-    for (const c of certifications) sideText(`${c.name || ""}${c.org ? ` — ${c.org}` : ""}`);
+    for (const c of certifications) {
+      const meta = [c.issueDate, c.credentialId ? `ID: ${c.credentialId}` : null].filter(Boolean).join(" · ");
+      sideText(`${c.name || ""}${c.org ? ` — ${c.org}` : ""}${meta ? ` (${meta})` : ""}`);
+    }
   }
 
   // Main column
@@ -525,6 +528,13 @@ function renderExecutive(resume) {
     for (const a of achievements) doc.fontSize(10.5).fillColor("#1C1B18").text(`•  ${a.text || a}`);
   }
 
+  // This template had no Languages section at all — every other template has one.
+  const languages = arr(resume.languages);
+  if (languages.length) {
+    sectionHeader("Languages");
+    doc.font("Times-Roman").fontSize(10.5).fillColor("#1C1B18").text(languages.map((l) => `${l.name} (${l.proficiency})`).join(", "));
+  }
+
   return doc;
 }
 
@@ -624,12 +634,33 @@ function renderCreative(resume) {
     }
   }
 
+  // Certifications and Languages were previously missing entirely from this template (every other
+  // template has both) — a real content-loss gap, not a styling choice.
+  const certifications = arr(resume.certifications);
+  if (certifications.length) {
+    sectionHeader("Certifications");
+    for (const c of certifications) {
+      doc.font("Helvetica-Bold").fontSize(10.5).fillColor("#1C1B18").text(`${c.name || ""}${c.org ? ` — ${c.org}` : ""}`, left, doc.y, { width: right - left });
+      const meta = [c.issueDate, c.credentialId ? `ID: ${c.credentialId}` : null].filter(Boolean).join("   ·   ");
+      if (meta) doc.font("Helvetica").fontSize(9).fillColor("#777").text(meta, left, doc.y, { width: right - left });
+      doc.fillColor("#1C1B18");
+      doc.moveDown(0.4);
+      doc.x = left;
+    }
+  }
+
   const achievements = arr(resume.achievements);
   if (achievements.length) {
     sectionHeader("Achievements");
     for (const a of achievements) {
       doc.font("Helvetica").fontSize(9.5).fillColor("#1C1B18").text(`•  ${a.text || a}`, left, doc.y, { width: right - left });
     }
+  }
+
+  const languages = arr(resume.languages);
+  if (languages.length) {
+    sectionHeader("Languages");
+    doc.font("Helvetica").fontSize(9.5).fillColor("#1C1B18").text(languages.map((l) => `${l.name} (${l.proficiency})`).join(", "), left, doc.y, { width: right - left });
   }
 
   return doc;
