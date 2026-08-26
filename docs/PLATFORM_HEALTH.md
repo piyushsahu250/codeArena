@@ -59,13 +59,24 @@ These were considered and deliberately left out — do not assume they exist:
   specific checks this script runs passed on this one run. Read the actual `findings` array before
   trusting the headline status for anything important.
 
-## Scheduling caveat (read before promising "runs every night at 2 AM")
+## Scheduling (actually wired up)
 
-If this is scheduled via the `scheduled-tasks` mechanism available in this environment: **that
-scheduler only fires while the host app is open — if it's closed when the task is due, the task
-runs on next launch instead of at the scheduled time.** A guaranteed fixed-time daily run needs a
-real always-on scheduler (a cron job on the EC2 host itself, or a CI scheduled workflow) — see
-whichever mechanism was actually wired up for this deployment before claiming a specific time.
+A real crontab entry on the production EC2 host (`i-075147bbdfea613de`), not an app-dependent
+scheduler — this fires regardless of whether any chat client/IDE/agent session is open:
+
+```
+0 2 * * * /usr/bin/docker exec codearena-backend node scripts/dailyHealthCheck.js >> /var/log/codearena-health-check.log 2>&1
+```
+
+The host's system clock is UTC (confirmed via `date`), so this runs at **02:00 UTC daily (07:30
+IST)**. Installed alongside the pre-existing `backup-db.sh` cron entry — did not touch or replace it.
+Logs accumulate at `/var/log/codearena-health-check.log` on the host with no rotation configured;
+if that becomes a problem, add a `logrotate` entry rather than removing the log.
+
+This deliberately does NOT use this environment's own `scheduled-tasks` mechanism, which only fires
+while this chat app is open (and runs on next launch instead of at the scheduled time if it was
+closed) — that caveat does not apply here since a real host cron job runs independently of any
+client session.
 
 ## Running it manually
 
