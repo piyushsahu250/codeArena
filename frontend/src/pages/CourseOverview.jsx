@@ -116,7 +116,18 @@ export default function CourseOverview() {
 
                 {locked ? (
                   <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 10 }}>
-                    Complete the previous module's practice test to unlock this module.
+                    {(() => {
+                      // Which specific requirement is actually blocking this module — the previous
+                      // module's lesson content, its Coding Assessment (now a real prerequisite,
+                      // not just a certificate perk — see learningLock.js), or both — rather than
+                      // one generic message regardless of which one it actually is.
+                      const prev = modules[mi - 1];
+                      const needsLessons = prev && !prev.lessonsComplete;
+                      const needsCoding = prev && prev.codingTest?.required && !prev.codingTest?.passed;
+                      if (needsLessons && needsCoding) return `Complete Module ${mi}'s lessons and pass its Coding Assessment to unlock this module.`;
+                      if (needsCoding) return `Pass the Coding Assessment in Module ${mi} to unlock this module.`;
+                      return `Complete the previous module's practice test to unlock this module.`;
+                    })()}
                   </p>
                 ) : !isOpen ? null : (
                   <>
@@ -152,7 +163,7 @@ export default function CourseOverview() {
                         }}
                       >
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          {m.codingTest.passed ? <><CheckCircle2 size={14} /> Coding Assessment Passed</> : m.lessonsComplete ? <><Clock size={14} /> Coding Assessment available — optional, required for your certificate</> : <><Lock size={14} /> Coding Assessment (complete lessons first)</>}
+                          {m.codingTest.passed ? <><CheckCircle2 size={14} /> Coding Assessment Passed</> : m.lessonsComplete ? <><Clock size={14} /> Coding Assessment available — required to unlock the next module</> : <><Lock size={14} /> Coding Assessment (complete lessons first)</>}
                         </span>
                         {m.lessonsComplete && (
                           <Link to={`/learning/${slug}/module/${m.id}/coding-assessment`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>

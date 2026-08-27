@@ -213,7 +213,7 @@ function StudentProgressPanel({ courses }) {
                     </div>
                     {m.codingAssessment?.required && (
                       <div className="mono" style={{ fontSize: 11, color: m.codingAssessment.passed ? "var(--mint)" : "var(--ink-dim)", marginTop: 6 }}>
-                        Coding Assessment: {m.codingAssessment.passed ? "Passed" : "Not passed yet (optional — does not block unlock)"}
+                        Coding Assessment: {m.codingAssessment.passed ? "Passed" : "Not passed yet — blocks the next module's unlock"}
                       </div>
                     )}
                     {!m.locked && (

@@ -2,12 +2,20 @@
 // "module unlocked" notification) — kept in one place so the two never drift out of sync.
 
 // Sequential module locking: module N is locked unless every lesson in module N-1 is COMPLETED
-// (including that module's isModuleTest lesson, the final practice test). A module's proctored
-// Coding Assessment (the legacy Module-direct codingTest, or a Chapter's Level) is tracked and
-// returned here too, but deliberately does NOT gate the next module's unlock — it's an
-// independent, optional achievement that only gates the CODING_ASSESSMENT certificate (see
-// gatingLevels.js/gradeModuleCodingAttempt.js, which don't call this function at all). Once one
-// module is locked, everything after it stays locked, regardless of that module's own state.
+// (including that module's isModuleTest lesson, the final practice test) AND, when module N-1 has
+// an active Coding Assessment configured (the legacy Module-direct codingTest, or a Chapter's
+// Level), the student has actually PASSED it — a submission alone, or an in-progress/still-
+// evaluating attempt, is never enough (see ModuleCodingAttempt.status: only a `passed: true` row
+// counts, computed by gradeModuleCodingAttempt.js after real grading, never at submission time).
+// The passing bar itself is whatever that Level/Test's own passingPercent is configured to (see
+// moduleCoding.js's admin CRUD) — never hard-coded here. Previously excluded the Coding Assessment
+// entirely from this gate ("intentionally excluded... only lesson content is required") — that let
+// the next module unlock on lesson-completion alone even when a required Coding Assessment was
+// still unsubmitted, in progress, or outright failed. Fixed 2026-08-28: a Coding Assessment
+// configured on a module is now a real prerequisite for the module *after* it, exactly like lesson
+// completion already was — it still ALSO gates the CODING_ASSESSMENT certificate via the
+// independent path in gatingLevels.js/gradeModuleCodingAttempt.js, unchanged. Once one module is
+// locked, everything after it stays locked, regardless of that module's own state.
 async function getModuleLockMap(prisma, studentId, courseId) {
   const modules = await prisma.courseModule.findMany({
     where: { courseId },
@@ -51,10 +59,10 @@ async function getModuleLockMap(prisma, studentId, courseId) {
     const testIds = gatingTestIds(m);
     const codingRequired = testIds.length > 0;
     const codingPassed = codingRequired ? testIds.every((id) => passedTestIds.has(id)) : true;
-    // Coding Assessment status is reported below (for the UI badge / certificate eligibility) but
-    // intentionally excluded from moduleSatisfied — passing it is not required to unlock the next
-    // module, only lesson content (including the final practice test) is.
-    const moduleSatisfied = !locked && lessonsComplete;
+    // A module is only satisfied (and so only unlocks the one after it) once its lesson content
+    // AND its required Coding Assessment (if any) are both done — codingPassed is only true for a
+    // graded `passed: true` ModuleCodingAttempt, never a bare submission/in-progress/failed one.
+    const moduleSatisfied = !locked && lessonsComplete && codingPassed;
     map.set(m.id, {
       locked,
       completed: moduleSatisfied,

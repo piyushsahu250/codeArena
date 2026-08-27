@@ -1147,7 +1147,7 @@ router.get("/admin/student-progress", authenticate, requireRole("ADMIN", "SUPER_
             locked: lock.locked,
             completed: lock.completed,
             lessonsComplete: lock.lessonsComplete,
-            codingAssessment: lock.codingTest, // { required, passed } — no longer blocks unlock, kept for visibility
+            codingAssessment: lock.codingTest, // { required, passed } — a required-but-unpassed assessment is why this module's `locked` (and the next module's) is true; see learningLock.js
             lessons: m.lessons.map((l) => ({
               id: l.id,
               title: l.title,
