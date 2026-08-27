@@ -71,8 +71,13 @@ async function main() {
     check("Institute Admin B PATCH blocked (403)", crossEditRes.status === 403, `got ${crossEditRes.status}`);
     const crossDeleteRes = await fetch(`${API_BASE}/learning/courses/${course.id}`, { method: "DELETE", headers: adminB.headers });
     check("Institute Admin B DELETE blocked (403)", crossDeleteRes.status === 403, `got ${crossDeleteRes.status}`);
+    // This route deliberately returns 404, not 403, for a course outside the requester's scope —
+    // same pre-existing anti-enumeration convention already documented on this exact route for
+    // students ("the same 404 as a genuinely nonexistent slug, rather than a 403 that would
+    // confirm the course exists"); the institute-scoped WHERE filter added for admin/staff simply
+    // extends that same behavior to them.
     const crossViewRes = await fetch(`${API_BASE}/learning/courses/${slug}`, { headers: adminB.headers });
-    check("Institute Admin B slug-detail view blocked (403)", crossViewRes.status === 403, `got ${crossViewRes.status}`);
+    check("Institute Admin B slug-detail view blocked (404, anti-enumeration)", crossViewRes.status === 404, `got ${crossViewRes.status}`);
     const crossListRes = await j(await fetch(`${API_BASE}/learning/courses`, { headers: adminB.headers }));
     check("Institute Admin B's course list does NOT include Institute A's private course", !crossListRes.some((c) => c.id === course.id), JSON.stringify(crossListRes.map((c) => c.id)));
 
