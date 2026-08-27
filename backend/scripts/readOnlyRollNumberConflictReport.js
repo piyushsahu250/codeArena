@@ -25,7 +25,7 @@ async function main() {
     });
     const students = await prisma.user.findMany({
       where: { academicGroupId: g.academicGroupId, rollNumber: g.rollNumber, role: "STUDENT" },
-      select: { id: true, name: true, registrationNumber: true, email: true, rollNumber: true, createdAt: true, updatedAt: true },
+      select: { id: true, name: true, registrationNumber: true, email: true, rollNumber: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
     totalStudentsInvolved += students.length;
@@ -36,7 +36,7 @@ async function main() {
       section: group?.section || "(unknown)",
       rollNumber: g.rollNumber,
       academicGroupId: g.academicGroupId,
-      students: students.map((s) => ({ id: s.id, name: s.name, prn: s.registrationNumber, email: s.email, createdAt: s.createdAt, updatedAt: s.updatedAt })),
+      students: students.map((s) => ({ id: s.id, name: s.name, prn: s.registrationNumber, email: s.email, createdAt: s.createdAt })),
     });
   }
 
@@ -45,7 +45,7 @@ async function main() {
     console.log(`Institute: ${r.institute} | Batch: ${r.batch} | Branch: ${r.branch} | Section: ${r.section} | Roll Number: ${r.rollNumber}`);
     console.log(`AcademicGroup ID: ${r.academicGroupId}`);
     r.students.forEach((s, j) => {
-      console.log(`  Student ${j + 1}: ${s.name} | PRN: ${s.prn || "(none)"} | Student ID: ${s.id} | Email: ${s.email} | Created: ${s.createdAt.toISOString()} | Updated: ${s.updatedAt.toISOString()}`);
+      console.log(`  Student ${j + 1}: ${s.name} | PRN: ${s.prn || "(none)"} | Student ID: ${s.id} | Email: ${s.email} | Created: ${s.createdAt.toISOString()}`);
     });
     console.log("");
   });
