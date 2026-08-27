@@ -49,7 +49,12 @@ router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADM
   const where = {};
   const effectiveInstituteId = req.requesterInstituteId || req.query.instituteId;
   if (effectiveInstituteId) where.institutes = { some: { instituteId: effectiveInstituteId } };
-  if (status === "active") where.isActive = true;
+  // STAFF may only ever see active pools — an inactive/archived pool is an admin-management
+  // concern, not something Staff should browse or be tempted to add students into (spec: "Staff
+  // should NOT see all Talent Pools ... only Active"). Unlike ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN,
+  // this is a hard floor Staff can't lift via the status query param, not just a default.
+  if (req.user.role === "STAFF") where.isActive = true;
+  else if (status === "active") where.isActive = true;
   else if (status === "inactive") where.isActive = false;
   if (search && search.trim()) where.name = { contains: search.trim(), mode: "insensitive" };
 
@@ -101,8 +106,11 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
 // and single-segment paths like "/my-pools" or "/analytics" would otherwise be swallowed by
 // "/:id" (with id="my-pools"/"analytics").
 router.get("/my-pools", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("talent_pool"), async (req, res) => {
+  // pool: { isActive: true } — a student must never see membership/exclusive-assessment detail for
+  // a pool an admin has deactivated (spec: "Do not expose ... Inactive Talent Pools"). Previously
+  // this route showed every membership regardless of the pool's current active state.
   const memberships = await prisma.talentPoolMember.findMany({
-    where: { studentId: req.user.id },
+    where: { studentId: req.user.id, pool: { isActive: true } },
     include: {
       pool: {
         include: {
@@ -396,6 +404,11 @@ router.get("/:id/members", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
 router.post("/:id/members", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const pool = await loadPoolScoped(req, res, req.params.id);
   if (!pool) return;
+  // Staff should not be able to add students unless explicitly permitted — an inactive pool is an
+  // admin-management state; only an Admin-tier role may add into one (e.g. while reactivating it).
+  if (!pool.isActive && req.user.role === "STAFF") {
+    return res.status(403).json({ error: "This Talent Pool is inactive. Ask your Institute Admin to activate it before adding students." });
+  }
   try {
     const studentIds = Array.isArray(req.body.studentIds) ? req.body.studentIds : [];
     if (!studentIds.length) return res.status(400).json({ error: "At least one student is required" });
@@ -474,6 +487,11 @@ router.post("/:id/members/transfer", authenticate, requireRole("ADMIN", "SUPER_A
 
     const targetPool = await prisma.talentPool.findUnique({ where: { id: targetPoolId }, include: INSTITUTES_INCLUDE });
     if (!targetPool) return res.status(404).json({ error: "Target Talent Pool not found" });
+    // Same "Staff can't add into an inactive pool" floor as POST /:id/members — a transfer is
+    // still an addition into the target pool.
+    if (!targetPool.isActive && req.user.role === "STAFF") {
+      return res.status(403).json({ error: "The target Talent Pool is inactive. Ask your Institute Admin to activate it before transferring students in." });
+    }
 
     const students = await prisma.user.findMany({ where: { id: { in: studentIds }, role: "STUDENT" }, select: { ...MEMBER_SELECT, instituteId: true } });
 

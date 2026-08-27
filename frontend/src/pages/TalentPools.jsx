@@ -5,6 +5,19 @@ import Navbar from "../components/Navbar";
 import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+
+// Shared "N students added successfully." / "N added. M could not be added." feedback — every
+// member-add flow (Search, Browse, Bulk Import's own summary text, Transfer's own alert) should
+// surface this the same way; Bulk Import and Transfer already show their own detailed summaries,
+// so this helper is only used by the two plain add flows (Search/Browse) that previously gave no
+// feedback at all beyond a silent list refresh.
+function announceAddResult(toast, data) {
+  const { addedCount = 0, skippedCount = 0 } = data || {};
+  if (addedCount > 0 && skippedCount === 0) toast.success(`${addedCount} student${addedCount === 1 ? "" : "s"} added successfully.`);
+  else if (addedCount > 0 && skippedCount > 0) toast.info(`${addedCount} student${addedCount === 1 ? "" : "s"} added. ${skippedCount} could not be added (already a member).`);
+  else if (addedCount === 0 && skippedCount > 0) toast.info(`No new students added — ${skippedCount} selected student${skippedCount === 1 ? " is" : "s are"} already a member.`);
+}
 
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
@@ -17,7 +30,12 @@ const TABS = ["Members", "Auto-Selection", "Assessments", "Rankings & Dashboard"
 // Tests/Mock Interview configs.
 export default function TalentPools() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  // Bug fix: this previously matched only the literal legacy "ADMIN" role, silently hiding Create
+  // Pool, Delete, Bulk Import, Auto-Selection Rules, Assign Test/Interview, and Attendance-owner-
+  // assign from every real SUPER_ADMIN and INSTITUTE_ADMIN account — i.e. from every admin who can
+  // actually manage Talent Pools per the backend's own requireRole lists in talentPools.js. Same
+  // role-list-omission bug class already found and fixed in tests.js and ResultManagement.jsx.
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [pools, setPools] = useState([]);
   const [institutes, setInstitutes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -161,7 +179,13 @@ export default function TalentPools() {
               )}
             </div>
           ))}
-          {pools.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No Talent Pools yet{isAdmin ? " — create one above." : "."}</p>}
+          {pools.length === 0 && (
+            <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
+              {isAdmin
+                ? "No Talent Pool has been created for your institute yet — use \"+ New Pool\" above to create one."
+                : "Your institute has no active Talent Pool available yet."}
+            </p>
+          )}
         </div>
 
         {selected && (
@@ -301,6 +325,14 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
   const [departmentId, setDepartmentId] = useState("");
   const [placementStatus, setPlacementStatus] = useState("");
   const [departments, setDepartments] = useState([]);
+  // Client-side pagination of the already-filtered member list — the backend intentionally
+  // returns the full (search/filter-scoped) set in one response rather than a server-paginated
+  // page, because this same response also feeds the "already a member" checks in Search/Browse/
+  // Transfer (see GET /:id/members's own comment in talentPools.js); paginating only the DOM
+  // render avoids dumping hundreds/thousands of rows into the page at once without disturbing
+  // that already-solved correctness requirement.
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   function loadMembers() {
     api.get(`/talent-pools/${poolId}/members`, {
@@ -312,6 +344,7 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
     }).then((res) => setMembers(res.data)).catch(() => setMembers([]));
   }
   useEffect(loadMembers, [poolId, memberSearch, departmentId, placementStatus]);
+  useEffect(() => setPage(1), [poolId, memberSearch, departmentId, placementStatus]);
 
   // Department options come from the pool's own configured institutes' academic groups — same
   // source BrowseAddPanel below already uses, just deduplicated by department rather than kept
@@ -382,7 +415,7 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
       </div>
       <h3 style={{ fontSize: 15, marginTop: 12 }}>Members ({members.length})</h3>
       <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
-        {members.map((m) => (
+        {members.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((m) => (
           <div key={m.id} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 13 }}>
               {m.student.rollNumber || "—"} · {m.student.name} <span style={{ color: "var(--ink-dim)" }}>({m.student.registrationNumber || m.student.email})</span>
@@ -394,11 +427,21 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
         ))}
         {members.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No members yet.</p>}
       </div>
+      {members.length > PAGE_SIZE && (
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12, fontSize: 13 }}>
+          <button className="btn btn-ghost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+          <span className="mono" style={{ color: "var(--ink-dim)" }}>
+            Page {page} of {Math.ceil(members.length / PAGE_SIZE)}
+          </span>
+          <button className="btn btn-ghost" disabled={page >= Math.ceil(members.length / PAGE_SIZE)} onClick={() => setPage((p) => p + 1)}>Next →</button>
+        </div>
+      )}
     </div>
   );
 }
 
 function SearchAddPanel({ pool, members, setError, onChange }) {
+  const toast = useToast();
   const [q, setQ] = useState("");
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -429,8 +472,9 @@ function SearchAddPanel({ pool, members, setError, onChange }) {
     setAdding(true);
     setError("");
     try {
-      await api.post(`/talent-pools/${pool.id}/members`, { studentIds: selected });
+      const { data } = await api.post(`/talent-pools/${pool.id}/members`, { studentIds: selected });
       setSelected([]);
+      announceAddResult(toast, data);
       onChange();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to add members");
@@ -475,6 +519,7 @@ function SearchAddPanel({ pool, members, setError, onChange }) {
 // restricted to this pool's own configured institutes — a student can only be manually added if
 // their institute is one this pool is already scoped to.
 function BrowseAddPanel({ pool, members, setError, onChange }) {
+  const toast = useToast();
   const [instituteId, setInstituteId] = useState("");
   const [groups, setGroups] = useState([]);
   const [departmentId, setDepartmentId] = useState("");
@@ -528,8 +573,9 @@ function BrowseAddPanel({ pool, members, setError, onChange }) {
     setAdding(true);
     setError("");
     try {
-      await api.post(`/talent-pools/${pool.id}/members`, { studentIds: selected });
+      const { data } = await api.post(`/talent-pools/${pool.id}/members`, { studentIds: selected });
       setSelected([]);
+      announceAddResult(toast, data);
       onChange();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to add members");
