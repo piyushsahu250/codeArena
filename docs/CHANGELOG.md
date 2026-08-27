@@ -242,3 +242,10 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 - API endpoint count: 500 -> 502 (review API_DOCUMENTATION.md)
 - This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
 - Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
+
+## 2026-08-27 (auto-detected drift)
+- API endpoint count: 502 -> 516 (review API_DOCUMENTATION.md)
+- Database model count: 98 -> 102 (review DATABASE.md, DATA_DICTIONARY.md)
+- Database enum count: 26 -> 27 (review DATABASE.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
