@@ -21,6 +21,18 @@ export default function TestPreview() {
     <div>
       <Navbar />
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 24px" }}>
+        {/* This view intentionally shows correct answers and hidden test cases — it is the
+            instructor answer-key preview, not a simulation of what a student sees during an
+            attempt. The banner below exists specifically so nobody mistakes one for the other
+            (spec requirement: never expose this information without explicitly labeling it as
+            an admin view). There is currently no separate student-simulation preview mode. */}
+        <div className="card" style={{ padding: "10px 16px", marginBottom: 20, background: "var(--warn-bg, #fff8e1)", border: "1px solid var(--warn-border, #f0c95f)" }}>
+          <strong style={{ fontSize: 13 }}>⚠ Instructor Answer-Key Preview</strong>
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0 0" }}>
+            This shows correct answers and hidden test cases so you can review the test before publishing.
+            Students never see this — during an attempt they see only the question text, options, and visible test cases.
+          </p>
+        </div>
         <h1>{test.title}</h1>
         <ChalkUnderline />
         {test.description && <p style={{ color: "var(--ink-dim)", marginTop: 12 }}>{test.description}</p>}
@@ -48,13 +60,13 @@ export default function TestPreview() {
                     <div key={tc.id} className="card" style={{ padding: 10, marginTop: 6, fontSize: 12 }}>
                       <div className="mono"><strong>Input:</strong> {tc.input}</div>
                       <div className="mono"><strong>Expected:</strong> {tc.expected}</div>
-                      {tc.isHidden && <div className="mono" style={{ color: "var(--ink-dim)" }}>hidden</div>}
+                      {tc.isHidden && <div className="mono" style={{ color: "var(--ink-dim)" }}>hidden from students during the attempt</div>}
                     </div>
                   ))}
                 </div>
               ) : (
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>OPTIONS</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>OPTIONS (✓ marks the correct answer — shown to you only)</div>
                   <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
                     {(tq.question.options || []).map((opt, i) => {
                       const isCorrect = (tq.question.correctAnswer || []).includes(i);

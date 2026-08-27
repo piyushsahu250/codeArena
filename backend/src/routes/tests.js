@@ -242,6 +242,10 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       },
       include: { questions: true, classes: true, academicGroups: true },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.TEST_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: effectiveInstituteId, details: { testId: test.id, title: test.title, questionCount: test.questions.length },
+    });
     res.json(test);
   } catch (err) {
     console.error(err);
@@ -262,6 +266,14 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
     }
     if (!canStaffAccessTest(req, existing)) {
       return res.status(403).json({ error: "You can only edit tests you created or that were shared with you" });
+    }
+
+    // Optimistic-concurrency check (spec: two staff members editing the same test at once must
+    // never silently overwrite each other) — `version` is omitted by callers that don't send one
+    // (e.g. a future automated caller), so this only enforces the check when the client actually
+    // read a version to compare against.
+    if (req.body.version !== undefined && Number(req.body.version) !== existing.version) {
+      return res.status(409).json({ error: "This test was modified by another user. Please refresh before saving.", conflict: true });
     }
 
     const {
@@ -342,6 +354,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       randomBankFolderId: effectiveBankFolderId,
       randomQuestionsPerStudent: effectivePerStudent != null ? Number(effectivePerStudent) : null,
       difficultyDistribution: effectiveDistribution || null,
+      version: { increment: 1 },
     };
 
     await prisma.$transaction(async (tx) => {
@@ -365,6 +378,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
     const test = await prisma.test.findUnique({
       where: { id: existing.id },
       include: { questions: true, classes: true, academicGroups: true },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.TEST_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: existing.instituteId, details: { testId: test.id, title: test.title },
     });
     res.json(test);
   } catch (err) {
@@ -416,6 +433,10 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
       },
       include: { questions: true, classes: true, academicGroups: true },
     });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.TEST_DUPLICATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: original.instituteId, details: { originalTestId: original.id, newTestId: copy.id, title: copy.title },
+    });
     res.json(copy);
   } catch (err) {
     console.error(err);
@@ -428,12 +449,16 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
   try {
     // Previously missing entirely — an institute-scoped Admin could delete another institute's
     // test by id. Staff-delete stays disallowed altogether (unchanged); this only tightens Admin.
-    const existing = await prisma.test.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    const existing = await prisma.test.findUnique({ where: { id: req.params.id }, select: { instituteId: true, title: true } });
     if (!existing) return res.status(404).json({ error: "Test not found" });
     if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
       return res.status(403).json({ error: "You can only delete tests under your own institute" });
     }
     await prisma.test.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.TEST_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: existing.instituteId, details: { testId: req.params.id, title: existing.title },
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -448,7 +473,15 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
     // publish/unpublish any test by id. Now matches every other staff-reachable route's gate.
     const existing = await prisma.test.findUnique({
       where: { id: req.params.id },
-      include: { shares: { select: { staffId: true } }, questions: { select: { id: true } } },
+      include: {
+        shares: { select: { staffId: true } },
+        questions: {
+          select: {
+            id: true,
+            question: { select: { questionNumber: true, title: true, questionType: true, points: true, correctAnswer: true, testCases: { select: { id: true } } } },
+          },
+        },
+      },
     });
     if (!existing) return res.status(404).json({ error: "Test not found" });
     if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
@@ -475,6 +508,21 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
       if (existing.questionSelectionMode === "RANDOM" && !(existing.randomQuestionsPerStudent > 0)) {
         problems.push("Set how many random questions each student should receive.");
       }
+      // Per-question validity (spec section 21's own worked example: "Question 7 has no correct
+      // answer.") — every question on the test must have real marks and, depending on type, an
+      // actually-gradable answer key. RANDOM mode still checks every question in the bank folder,
+      // since any of them could be drawn for a student.
+      const questionLabel = (q) => `Question ${q.question.questionNumber}${q.question.title ? ` ("${q.question.title}")` : ""}`;
+      for (const tq of existing.questions) {
+        const q = tq.question;
+        if (!(q.points > 0)) problems.push(`${questionLabel(tq)} has no marks set.`);
+        if (["MCQ", "TRUE_FALSE", "MULTISELECT", "SQL"].includes(q.questionType)) {
+          const correct = Array.isArray(q.correctAnswer) ? q.correctAnswer : [];
+          if (correct.length === 0) problems.push(`${questionLabel(tq)} has no correct answer selected.`);
+        } else if (q.questionType === "CODING") {
+          if (!q.testCases || q.testCases.length === 0) problems.push(`${questionLabel(tq)} has no test cases.`);
+        }
+      }
       if (problems.length) return res.status(400).json({ error: "Cannot publish — please fix the following:", problems });
     }
 
@@ -498,6 +546,11 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
         })
         .then((students) => notifyTestAssigned(prisma, students, test))
         .catch((err) => console.error("[tests.publish] notification failed:", err));
+    } else if (!test.isPublished && existing.isPublished) {
+      await logAudit({
+        req, action: AUDIT_ACTIONS.TEST_UNPUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+        instituteId: req.requesterInstituteId, details: { testId: test.id, title: test.title },
+      });
     }
     res.json(test);
   } catch (err) {

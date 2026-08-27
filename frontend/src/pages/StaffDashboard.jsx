@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGri
 import { PlusCircle, BookOpen, Trophy, FileText, Mic, Users as UsersIcon, Upload, Download, School, GraduationCap, ClipboardList, BarChart3 } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
+import { useConfirm } from "../context/ConfirmContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
@@ -22,6 +23,7 @@ function statusOf(test) {
 
 export default function StaffDashboard() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const manageTestsRef = useRef(null);
   const [tests, setTests] = useState([]);
@@ -61,6 +63,23 @@ export default function StaffDashboard() {
   }
 
   async function togglePublish(test) {
+    // Publishing needs an explicit confirmation showing exactly who this affects (spec: "Publish
+    // Result? ... 145 students will receive this test.") — unpublishing has no such prompt since
+    // taking a test down is the lower-stakes direction and the existing behavior already reflects
+    // that ("Unpublish always succeeds unconditionally").
+    if (!test.isPublished) {
+      const studentCount = test.academicGroups.reduce((sum, tg) => sum + (tg.academicGroup?._count?.users || 0), 0)
+        + test.classes.reduce((sum, tc) => sum + (tc.class?._count?.users || 0), 0);
+      const ok = await confirm({
+        title: "Publish this test?",
+        message: `"${test.title}" (${test.questions?.length ?? test._count?.questions ?? "?"} question(s), ${test.durationMin} min) will become visible to eligible students. ${
+          studentCount > 0 ? `${studentCount} student(s) will receive this test.` : "This test has no academic group/class assignment yet, so no student will see it until one is added."
+        }`,
+        confirmLabel: "Publish Test",
+        cancelLabel: "Cancel",
+      });
+      if (!ok) return;
+    }
     try {
       await api.patch(`/tests/${test.id}/publish`, { isPublished: !test.isPublished });
       refresh();

@@ -76,6 +76,10 @@ export default function CreateTest() {
   const [shares, setShares] = useState([]); // [{ staffId, staff: { id, name } }]
   const [subjectId, setSubjectId] = useState(null);
   const [unitId, setUnitId] = useState(null);
+  // Optimistic-concurrency guard (spec: "protect against two staff members editing the same test
+  // simultaneously") — the version read when this test was loaded; sent back on save so the
+  // backend can detect someone else saved in between (see tests.js's PATCH /:id).
+  const [version, setVersion] = useState(0);
   const { setGuard } = useUnsavedChangesGuard() || {};
 
   useEffect(() => {
@@ -150,6 +154,7 @@ export default function CreateTest() {
         randomHard: t.difficultyDistribution?.hard ?? "",
       });
       setAcademicGroupIds((t.academicGroups || []).map((g) => g.academicGroupId));
+      setVersion(t.version || 0);
       setSubjectId(t.subjectId || null);
       setUnitId(t.unitId || null);
       setInstituteId(t.instituteId || "");
@@ -231,6 +236,13 @@ export default function CreateTest() {
     return sum + (q?.points || 0);
   }, 0);
 
+  // "3 groups selected — 145 students affected" (spec section 14) — derived entirely from
+  // academicGroups' already-fetched _count.users, no extra request needed.
+  const affectedStudentCount = academicGroupIds.reduce((sum, gid) => {
+    const g = academicGroups.find((ag) => ag.id === gid);
+    return sum + (g?._count?.users || 0);
+  }, 0);
+
   const institutes = [];
   const seenInstituteIds = new Set();
   for (const g of academicGroups) {
@@ -275,10 +287,12 @@ export default function CreateTest() {
           ? { easy: Number(form.randomEasy || 0), medium: Number(form.randomMedium || 0), hard: Number(form.randomHard || 0) }
           : undefined,
         allowDuplicate: allowDuplicate || undefined,
+        version: isEdit ? version : undefined,
       };
       let testId = id;
       if (isEdit) {
-        await api.patch(`/tests/${id}`, payload);
+        const { data: updated } = await api.patch(`/tests/${id}`, payload);
+        setVersion(updated.version);
       } else {
         const { data: created } = await api.post("/tests", payload);
         testId = created.id;
@@ -298,6 +312,11 @@ export default function CreateTest() {
     } catch (err) {
       // Create-only duplicate warning (never fires on edit, or once already confirmed) — mirrors
       // CreateQuestion.jsx's identical 409 { duplicate, existing } handling for the Question Bank.
+      if (isEdit && err.response?.status === 409 && err.response?.data?.conflict) {
+        alert("This test was modified by another user (possibly in another tab). Please refresh the page and re-apply your changes before saving.");
+        setSaving(false);
+        return;
+      }
       if (!isEdit && err.response?.status === 409 && err.response?.data?.duplicate) {
         const existing = err.response.data.existing;
         const ok = await confirmDialog({
@@ -318,12 +337,47 @@ export default function CreateTest() {
 
   if (loading) return <div><Navbar /><div style={{ maxWidth: 720, margin: "0 auto", padding: 48 }}><SkeletonGrid count={3} minWidth={220} /></div></div>;
 
+  // Lightweight progress indicator (spec section 1) — deliberately NOT a literal multi-step
+  // wizard with separate mounted steps: this page's existing single-scroll form already preserves
+  // all state reliably across Subject/Unit/Topic creation, question-bank/bulk-upload modals, etc.
+  // (confirmed via the audit before this change), and rebuilding it as discrete steps would risk
+  // that continuity for a purely cosmetic navigation improvement. This is a step/completion
+  // overlay on top of the same form, not a replacement for it — a click just scrolls to that
+  // section; nothing unmounts or resets.
+  const steps = [
+    { id: "step-basic", label: "Basic Info", done: !!form.title.trim() },
+    { id: "step-subject", label: "Subject", done: !!subjectId },
+    { id: "step-config", label: "Configuration", done: !!form.durationMin },
+    { id: "step-questions", label: "Questions", done: isRandomMode ? !!form.randomBankFolderId : selected.length > 0 },
+    { id: "step-assign", label: "Assignment", done: groupType === "TALENT_POOL" ? talentPoolIds.length > 0 : true },
+    { id: "step-schedule", label: "Schedule", done: !!form.startTime && !!form.endTime },
+    { id: "step-security", label: "Security", done: true },
+  ];
+
   return (
     <div>
       <Navbar />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
         <h1>{isEdit ? "Edit test" : "New test"}</h1>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 16, position: "sticky", top: 0, background: "var(--paper)", zIndex: 5, paddingBottom: 8 }}>
+          {steps.map((s, i) => (
+            <button
+              key={s.id} type="button"
+              onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, padding: "5px 10px", borderRadius: 999,
+                border: "1px solid var(--line)", background: s.done ? "var(--success-bg)" : "transparent",
+                color: s.done ? "var(--mint)" : "var(--ink-dim)", cursor: "pointer",
+              }}
+            >
+              <span className="mono">{s.done ? "✓" : i + 1}</span> {s.label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
+          <div id="step-basic" />
           <label style={labelStyle}>Title</label>
           <input style={inputStyle} required value={form.title} onChange={updateField("title")} />
 
@@ -334,6 +388,7 @@ export default function CreateTest() {
             Test names are not required to be unique — "Unit 1 Test" for Java and "Unit 1 Test" for DBMS are two
             separate tests, told apart by Subject + Unit + who created them, never by the title alone.
           </p>
+          <div id="step-subject" />
           <SubjectUnitPicker
             subjectId={subjectId}
             unitId={unitId}
@@ -360,7 +415,8 @@ export default function CreateTest() {
           <label style={labelStyle}>Company (optional — marks this as a company-specific placement round, e.g. "TCS", "Amazon")</label>
           <input style={inputStyle} value={form.company} onChange={updateField("company")} placeholder="Leave blank for a regular test" />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div id="step-config" />
+          <div id="step-schedule" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelStyle}>Duration (min)</label>
               <input style={inputStyle} type="number" value={form.durationMin} onChange={updateField("durationMin")} />
@@ -388,7 +444,7 @@ export default function CreateTest() {
             </div>
           </div>
 
-          <div style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Proctoring Settings</div>
+          <div id="step-security" style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Proctoring Settings</div>
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
             Tab switching is always tracked and disabled for every test, regardless of these settings.
           </p>
@@ -430,7 +486,7 @@ export default function CreateTest() {
             </label>
           </div>
 
-          <div style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Assign to</div>
+          <div id="step-assign" style={{ marginTop: 20, fontWeight: 700, fontSize: 14 }}>Assign to</div>
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
             Choose exactly one Group Type. A Talent-Pool-exclusive test is only visible to that pool's members — any
             Academic Group assignment is ignored while Talent Pools is selected.
@@ -475,6 +531,11 @@ export default function CreateTest() {
               <div style={{ marginTop: 8 }}>
                 <AcademicGroupPicker multi groups={academicGroups} value={academicGroupIds} onChange={setAcademicGroupIds} />
               </div>
+              {academicGroupIds.length > 0 && (
+                <p className="mono" style={{ fontSize: 12, color: "var(--mint)", marginTop: 8, fontWeight: 600 }}>
+                  {academicGroupIds.length} group{academicGroupIds.length === 1 ? "" : "s"} selected — {affectedStudentCount} student{affectedStudentCount === 1 ? "" : "s"} affected
+                </p>
+              )}
             </>
           ) : (
             <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -521,7 +582,7 @@ export default function CreateTest() {
             </>
           )}
 
-          <div style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Question Selection Mode</div>
+          <div id="step-questions" style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Question Selection Mode</div>
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
             Fixed: every student gets the same questions you pick below (the order can still be shuffled per
             student, see Question Order above). Random: every student gets their own random subset drawn from a

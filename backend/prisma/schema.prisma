@@ -408,6 +408,14 @@ model Test {
   unitRef      Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
   unitId       String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  // Optimistic-concurrency guard (spec: "protect against two staff members editing the same test
+  // simultaneously") — incremented on every PATCH /:id; a client must send back the version it
+  // last read, and a mismatch means someone else saved first. No schema change needed to add this
+  // later would have been possible via updatedAt alone, but updatedAt changes on ANY write
+  // (including ones a concurrent editor didn't care about, e.g. a publish toggle) where version is
+  // deliberately only bumped by the content-editing PATCH route itself.
+  version      Int      @default(0)
 
   questions TestQuestion[]
   attempts  TestAttempt[]
