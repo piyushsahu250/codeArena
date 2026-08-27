@@ -15,6 +15,10 @@ const { requireFeature } = require("../middleware/featureGate");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { safeErrorMessage } = require("../utils/errors");
+const {
+  ownsLmsInstitute, resolveModuleCourseInstituteId, resolveChapterCourseInstituteId,
+  resolveModuleCodingTestCourseInstituteId,
+} = require("../utils/lmsOwnership");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -520,30 +524,46 @@ router.post("/attempts/:attemptId/finalize", authenticate, requireRole("STUDENT"
 // but every mutating route (create/edit/delete/bulk-import) below is ADMIN-only.
 
 // ADMIN/STAFF: this module's coding-test config (or null) + its full question pool.
-router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { moduleId: req.params.moduleId },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
   });
+  // Exposes hidden test-case answers (Admin/Staff CMS view) — must never leak another
+  // institute's assessment content, not just block editing it.
+  if (test && !ownsLmsInstitute(req, await resolveModuleCourseInstituteId(req.params.moduleId))) {
+    return res.status(403).json({ error: "You can only view assessments under your own institute" });
+  }
   res.json(test);
 });
 
 // Generic single-test lookup by its own id — used by the Level detail UI, since a chapter-scoped
 // Level has no moduleId to look it up by (unlike the legacy route above).
-router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const test = await prisma.moduleCodingTest.findUnique({
     where: { id: req.params.id },
     include: { questions: { include: { testCases: true }, orderBy: { questionNumber: "asc" } } },
   });
   if (!test) return res.status(404).json({ error: "Not found" });
+  if (!ownsLmsInstitute(req, await resolveModuleCodingTestCourseInstituteId(req.params.id))) {
+    return res.status(403).json({ error: "You can only view assessments under your own institute" });
+  }
   res.json(test);
 });
 
 // ADMIN/STAFF: flat list of every coding assessment (title + course/module/chapter label only —
 // no config, no questions) so Staff can search for one to reset attempts on without any course-
-// structure browsing access. This is the only "list assessments" surface Staff gets.
-router.get("/admin/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+// structure browsing access. This is the only "list assessments" surface Staff gets. Institute-
+// scoped requesters only ever see their own institute's + global courses' assessments.
+router.get("/admin/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const instituteWhere = req.requesterInstituteId
+    ? { OR: [
+        { module: { course: { instituteId: req.requesterInstituteId } } }, { module: { course: { instituteId: null } } },
+        { chapter: { module: { course: { instituteId: req.requesterInstituteId } } } }, { chapter: { module: { course: { instituteId: null } } } },
+      ] }
+    : {};
   const tests = await prisma.moduleCodingTest.findMany({
+    where: instituteWhere,
     select: {
       id: true, title: true, maxAttempts: true, isActive: true,
       module: { select: { title: true, course: { select: { name: true } } } },
@@ -559,8 +579,13 @@ router.get("/admin/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
   })));
 });
 
-router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.moduleId);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, instructions, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
     const test = await prisma.moduleCodingTest.create({
       data: {
@@ -595,7 +620,12 @@ router.post("/admin/module/:moduleId", authenticate, requireRole("ADMIN", "SUPER
 // which is capped at one by ModuleCodingTest.moduleId's @unique constraint). Every downstream
 // route (question CRUD, bulk-import, attempts, export) already operates purely on test.id, so
 // none of them need any change to support this.
-router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const chapterInstituteId = await resolveChapterCourseInstituteId(req.params.chapterId);
+  if (chapterInstituteId === undefined) return res.status(404).json({ error: "Chapter not found" });
+  if (!ownsLmsInstitute(req, chapterInstituteId)) {
+    return res.status(403).json({ error: "You can only view courses under your own institute" });
+  }
   const levels = await prisma.moduleCodingTest.findMany({
     where: { chapterId: req.params.chapterId },
     orderBy: { order: "asc" },
@@ -604,11 +634,14 @@ router.get("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN"
   res.json(levels);
 });
 
-router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { title, instructions, order, allowedLanguages, questionCount, randomizeQuestions, passingPercent, timeLimitMin, maxAttempts, cooldownMinutes, maxViolations, requireFullscreen, requireWebcam, requireMicrophone, allowResume } = req.body;
     const chapter = await prisma.chapter.findUnique({ where: { id: req.params.chapterId } });
     if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    if (!ownsLmsInstitute(req, await resolveChapterCourseInstituteId(req.params.chapterId))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const level = await prisma.moduleCodingTest.create({
       data: {
         chapterId: chapter.id,
@@ -636,8 +669,13 @@ router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN
   }
 });
 
-router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const testInstituteId = await resolveModuleCodingTestCourseInstituteId(req.params.id);
+    if (testInstituteId === undefined) return res.status(404).json({ error: "Coding assessment not found" });
+    if (!ownsLmsInstitute(req, testInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const f = req.body;
     const data = {};
     for (const key of ["title", "instructions"]) if (f[key] !== undefined) data[key] = f[key];
@@ -663,8 +701,13 @@ router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN
   }
 });
 
-router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const testInstituteId = await resolveModuleCodingTestCourseInstituteId(req.params.id);
+    if (testInstituteId === undefined) return res.status(404).json({ error: "Coding assessment not found" });
+    if (!ownsLmsInstitute(req, testInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     await prisma.moduleCodingTest.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
@@ -673,8 +716,13 @@ router.delete("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMI
   }
 });
 
-router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const testInstituteId = await resolveModuleCodingTestCourseInstituteId(req.params.id);
+    if (testInstituteId === undefined) return res.status(404).json({ error: "Coding assessment not found" });
+    if (!ownsLmsInstitute(req, testInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const {
       title, description, difficulty, timeLimitMs, starterCode, starterCodeByLanguage, testCases,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
@@ -729,10 +777,13 @@ router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "SU
 // belong to at most one Module Coding Test's pool at a time), so moving the original instead of
 // cloning would silently pull it out of the shared Question Bank — and out of any Formal Test it's
 // already attached to via TestQuestion.
-router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
     if (!test) return res.status(404).json({ error: "Coding assessment not found" });
+    if (!ownsLmsInstitute(req, await resolveModuleCodingTestCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
 
     const source = await prisma.question.findUnique({ where: { id: req.body.questionId }, include: { testCases: true } });
     if (!source || source.questionType !== "CODING") return res.status(404).json({ error: "Coding question not found" });
@@ -829,7 +880,9 @@ function parseModuleCodingHiddenTestCases(raw) {
 }
 
 // ADMIN/STAFF: download a sample .xlsx template for bulk-importing this test's questions.
-router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), (req, res) => {
+// Static/generic template — no test-specific data is read, so no ownership check is needed here
+// (unlike bulk-import below, which actually writes into a specific test's question pool).
+router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), (req, res) => {
   const sampleRows = [
     [
       "Sum of Two Integers", "Return the sum of two integers.", "Easy",
@@ -859,10 +912,13 @@ router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole
 // bulk-import (questions.js), scoped straight to this test instead of a Question Bank folder.
 // STDIO-only, matching the single "+ Add question" form this mirrors (which doesn't offer
 // FUNCTION-mode evaluationType/functionSignature fields either).
-router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), upload.single("file"), async (req, res) => {
+router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, upload.single("file"), async (req, res) => {
   try {
     const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.id } });
     if (!test) return res.status(404).json({ error: "Module coding test not found" });
+    if (!ownsLmsInstitute(req, await resolveModuleCodingTestCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     let workbook;
@@ -980,8 +1036,16 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
   }
 });
 
-router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existingQuestion = await prisma.question.findUnique({ where: { id: req.params.id }, select: { moduleCodingTestId: true } });
+    if (!existingQuestion) return res.status(404).json({ error: "Question not found" });
+    const owningTestInstituteId = existingQuestion.moduleCodingTestId
+      ? await resolveModuleCodingTestCourseInstituteId(existingQuestion.moduleCodingTestId)
+      : null;
+    if (!ownsLmsInstitute(req, owningTestInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const {
       title, description, difficulty, timeLimitMs, starterCode, starterCodeByLanguage, testCases,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
@@ -1041,8 +1105,16 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
 // questions that attempt was assigned would be wiped, and any ModuleCodingSubmission rows (code,
 // score, verdict) would be left pointing at a questionId that no longer exists — breaking that
 // student's attempt-review screen with no admin-visible error at delete time.
-router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existingQuestion = await prisma.question.findUnique({ where: { id: req.params.id }, select: { moduleCodingTestId: true } });
+    if (!existingQuestion) return res.status(404).json({ error: "Question not found" });
+    const owningTestInstituteId = existingQuestion.moduleCodingTestId
+      ? await resolveModuleCodingTestCourseInstituteId(existingQuestion.moduleCodingTestId)
+      : null;
+    if (!ownsLmsInstitute(req, owningTestInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const [hasSubmissions, hasAttemptSnapshots] = await Promise.all([
       prisma.moduleCodingSubmission.findFirst({ where: { questionId: req.params.id }, select: { id: true } }),
       prisma.moduleCodingAttemptQuestion.findFirst({ where: { questionId: req.params.id }, select: { id: true } }),

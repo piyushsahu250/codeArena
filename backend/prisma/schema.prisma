@@ -129,6 +129,7 @@ model Institute {
   departments     Department[]
   academicGroups  AcademicGroup[]
   courseAssignments CourseInstituteAssignment[]
+  courses         Course[] // institute-authored courses only — see Course.instituteId's comment; unrelated to courseAssignments above (visibility grants on any course, including global ones)
   talentPools     TalentPoolInstitute[]
   talentPoolAttendanceAssignments StaffClassAssignment[] @relation("TalentPoolAttendanceInstitute")
   dailyChallenges  DailyChallenge[]
@@ -1206,6 +1207,19 @@ model Course {
   // sync with `status === PUBLISHED` on every write, for backward compat with any read site that
   // still checks isActive directly rather than status.
   createdAt   DateTime @default(now())
+
+  // Content-ownership scope, additive and nullable — every course before this field existed (and
+  // every future course created by an unscoped Super Admin) stays instituteId: null, meaning
+  // "platform-wide content" whose actual student-visibility is still governed entirely by the
+  // existing CourseInstituteAssignment/CourseAcademicGroupAssignment join tables below, completely
+  // unchanged. This field answers a DIFFERENT question — not "who can see it" but "which
+  // institute-scoped admin is allowed to CREATE/EDIT/DELETE it" — set only when an INSTITUTE_ADMIN
+  // authors a course of their own (see routes/learning.js's POST /courses); an institute-scoped
+  // admin may never edit/delete a null-instituteId (global) course, only a Super Admin/unscoped
+  // Admin can. Module/Chapter/Lesson/PracticeQuestion below have no instituteId of their own —
+  // ownership is always resolved by walking up to their parent Course (see utils/lmsOwnership.js).
+  institute   Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+  instituteId String?
 
   // --- lifecycle & metadata (additive) ---
   status               CourseStatus @default(DRAFT)

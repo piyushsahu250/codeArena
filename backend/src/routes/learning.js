@@ -18,6 +18,10 @@ const { requireFeature } = require("../middleware/featureGate");
 const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
+const {
+  ownsLmsInstitute, resolveModuleCourseInstituteId, resolveChapterCourseInstituteId,
+  resolveLessonCourseInstituteId, resolvePracticeQuestionCourseInstituteId,
+} = require("../utils/lmsOwnership");
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 
@@ -81,13 +85,18 @@ const PASS_THRESHOLD = 70; // % correct required on a module's practice test to 
 // never even published. courseEligibilityWhere/isEligibilityUnresolvable are the same helpers
 // already used on the admin assignment routes; this just closes the gap where students were the
 // one place they were never actually applied.
-router.get("/courses", authenticate, async (req, res) => {
+router.get("/courses", authenticate, attachRequesterInstitute, async (req, res) => {
   const where = {};
   if (req.user.role === "STUDENT") {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
     if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return res.json([]);
     where.status = "PUBLISHED";
     Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
+  } else if (req.requesterInstituteId) {
+    // Institute-scoped ADMIN/STAFF (management view): their own institute-authored courses plus
+    // every global (platform-authored) course — never another institute's private course. Spec:
+    // "must not view another institute's private LMS content."
+    where.OR = [{ instituteId: req.requesterInstituteId }, { instituteId: null }];
   }
   const courses = await prisma.course.findMany({
     where,
@@ -102,13 +111,17 @@ router.get("/courses", authenticate, async (req, res) => {
 // full content directly even though it was filtered out of their course list. A student who fails
 // this gate gets the same 404 as a genuinely nonexistent slug, rather than a 403 that would confirm
 // the course exists.
-router.get("/courses/:slug", authenticate, async (req, res) => {
+router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req, res) => {
   const where = { slug: req.params.slug };
   if (req.user.role === "STUDENT") {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
     if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return res.status(404).json({ error: "Course not found" });
     where.status = "PUBLISHED";
     Object.assign(where, courseEligibilityWhere(student.instituteId, student.academicGroupId));
+  } else if (req.requesterInstituteId) {
+    // Same "own institute or global, never another institute's" gate as GET /courses above —
+    // opening a course's full CMS detail directly by slug must be no less protected than the list.
+    where.OR = [{ instituteId: req.requesterInstituteId }, { instituteId: null }];
   }
   // Module metadata only, no nested lessons — the full per-lesson list (title/estimatedMinutes/
   // isModuleTest/etc.) is fetched on demand per module via GET .../modules/:moduleId/lessons
@@ -910,22 +923,32 @@ async function setCoursePrerequisites(courseId, prerequisiteCourseIds) {
   ]);
 }
 
-router.post("/courses", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/courses", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const { slug, name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
     if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
     const resolvedStatus = status || "DRAFT";
+    // An institute-scoped admin's course is always scoped to their own institute — never
+    // client-suppliable, same "auto-scope, never trust the client" convention as
+    // tests.js/talentPools.js. An unscoped (platform-level) admin's course stays global
+    // (instituteId: null) unless they explicitly opt one in via the body — matching Test's own
+    // POST / convention for the same platform-level-only escape hatch.
+    const instituteId = req.requesterInstituteId || req.body.instituteId || null;
+    if (!req.requesterInstituteId && req.body.instituteId) {
+      const institute = await prisma.institute.findUnique({ where: { id: req.body.instituteId }, select: { id: true } });
+      if (!institute) return res.status(400).json({ error: "Selected institute was not found" });
+    }
     const course = await prisma.course.create({
       data: {
         slug, name, description: description || null, order: Number(order) || 0,
-        status: resolvedStatus, isActive: resolvedStatus === "PUBLISHED" || !!isActive,
+        status: resolvedStatus, isActive: resolvedStatus === "PUBLISHED" || !!isActive, instituteId,
         ...extractCourseMetadata(req.body),
       },
     });
     if (prerequisiteCourseIds !== undefined) await setCoursePrerequisites(course.id, prerequisiteCourseIds);
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId,
       details: { entity: "course", operation: "create", courseId: course.id, name: course.name, slug: course.slug, status: course.status },
     });
     res.json(course);
@@ -936,8 +959,13 @@ router.post("/courses", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async
   }
 });
 
-router.patch("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const existing = await prisma.course.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!existing) return res.status(404).json({ error: "Course not found" });
+    if (!ownsLmsInstitute(req, existing.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
 
     if (status !== undefined && status === "PUBLISHED") {
@@ -953,6 +981,9 @@ router.patch("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
         ...(order !== undefined ? { order: Number(order) } : {}),
         ...(status !== undefined ? { status, isActive: status === "PUBLISHED" } : (isActive !== undefined ? { isActive: !!isActive } : {})),
         ...extractCourseMetadata(req.body),
+        // instituteId (ownership) is deliberately never writable here — spec: "must not change
+        // ownership of another institute's resources," and an institute-scoped admin should never
+        // be able to hand their own course to a different institute either.
       },
     });
     if (prerequisiteCourseIds !== undefined) await setCoursePrerequisites(course.id, prerequisiteCourseIds);
@@ -962,7 +993,7 @@ router.patch("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
     else if (isActive !== undefined) operation = isActive ? "activate" : "deactivate";
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId,
       details: { entity: "course", operation, courseId: course.id, name: course.name, status: course.status, changedFields: Object.keys(req.body) },
     });
     res.json(course);
@@ -973,10 +1004,13 @@ router.patch("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
   }
 });
 
-router.delete("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return res.status(404).json({ error: "Course not found" });
+    if (!ownsLmsInstitute(req, course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
 
     // Certificate.course is Restrict, not Cascade — a course that has already issued
     // certificates to students must not have them silently destroyed by deleting the course.
@@ -990,7 +1024,7 @@ router.delete("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
     await prisma.course.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: course.instituteId,
       details: { entity: "course", operation: "delete", courseId: course.id, name: course.name },
     });
     res.json({ success: true });
@@ -1013,6 +1047,10 @@ async function assertPublishedAndScoped(req, res, courseId) {
   const course = await prisma.course.findUnique({ where: { id: courseId } });
   if (!course) { res.status(404).json({ error: "Course not found" }); return null; }
   if (course.status !== "PUBLISHED") { res.status(400).json({ error: "Only Published courses can be assigned" }); return null; }
+  // Assigning visibility for a course is itself a management action on that course — an institute-
+  // scoped admin must never be able to grant their own institute access to a DIFFERENT institute's
+  // private course, only to their own or a global one.
+  if (!ownsLmsInstitute(req, course.instituteId)) { res.status(403).json({ error: "You can only manage courses under your own institute" }); return null; }
   return course;
 }
 
@@ -1035,7 +1073,12 @@ async function assertAssignmentScope(req, res, instituteIds, academicGroupIds) {
   return true;
 }
 
-router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const course = await prisma.course.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+  if (!course) return res.status(404).json({ error: "Course not found" });
+  if (!ownsLmsInstitute(req, course.instituteId)) {
+    return res.status(403).json({ error: "You can only view assignments for courses under your own institute" });
+  }
   const [instituteRows, groupRows] = await Promise.all([
     prisma.courseInstituteAssignment.findMany({ where: { courseId: req.params.id }, include: { institute: { select: { id: true, name: true } } } }),
     prisma.courseAcademicGroupAssignment.findMany({ where: { courseId: req.params.id }, include: { academicGroup: { select: { id: true, batch: true, section: true, institute: { select: { name: true } }, department: { select: { name: true } } } } } }),
@@ -1169,6 +1212,9 @@ router.delete("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SU
     const { instituteIds = [], academicGroupIds = [] } = req.body;
     const course = await prisma.course.findUnique({ where: { id: req.params.id } });
     if (!course) return res.status(404).json({ error: "Course not found" });
+    if (!ownsLmsInstitute(req, course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     if (!(await assertAssignmentScope(req, res, instituteIds, academicGroupIds))) return;
 
     await prisma.$transaction([
@@ -1197,6 +1243,10 @@ router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN", "SUP
     const nonPublished = courses.filter((c) => c.status !== "PUBLISHED");
     if (nonPublished.length) {
       return res.status(400).json({ error: `Only Published courses can be assigned: ${nonPublished.map((c) => c.name).join(", ")}` });
+    }
+    const foreign = courses.filter((c) => !ownsLmsInstitute(req, c.instituteId));
+    if (foreign.length) {
+      return res.status(403).json({ error: `You can only manage courses under your own institute: ${foreign.map((c) => c.name).join(", ")}` });
     }
 
     const instituteRows = courseIds.flatMap((courseId) => instituteIds.map((instituteId) => ({ courseId, instituteId, assignedByUserId: req.user.id, assignedByName: req.user.name })));
@@ -1228,8 +1278,13 @@ router.post("/courses/assignments/bulk", authenticate, requireRole("ADMIN", "SUP
   }
 });
 
-router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const course = await prisma.course.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    if (!ownsLmsInstitute(req, course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, description, order } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const mod = await prisma.courseModule.create({
@@ -1237,7 +1292,7 @@ router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "SUPER_AD
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: course.instituteId,
       details: { entity: "module", operation: "create", moduleId: mod.id, courseId: req.params.id, title: mod.title },
     });
     res.json(mod);
@@ -1247,8 +1302,13 @@ router.post("/courses/:id/modules", authenticate, requireRole("ADMIN", "SUPER_AD
   }
 });
 
-router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, description, order, isActive } = req.body;
     const mod = await prisma.courseModule.update({
       where: { id: req.params.id },
@@ -1261,7 +1321,7 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: moduleInstituteId,
       details: {
         entity: "module",
         operation: isActive !== undefined ? (isActive ? "activate" : "deactivate") : "edit",
@@ -1275,10 +1335,13 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
   }
 });
 
-router.delete("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const mod = await prisma.courseModule.findUnique({ where: { id: req.params.id } });
+    const mod = await prisma.courseModule.findUnique({ where: { id: req.params.id }, include: { course: { select: { instituteId: true } } } });
     if (!mod) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, mod.course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     // Same rationale as the Chapter delete guard just above: Lesson->module, Chapter->module, and
     // ModuleCodingTest->module/->chapter are all onDelete:Cascade, so deleting a module would
     // otherwise silently wipe every lesson/level under it plus all student progress and coding
@@ -1300,7 +1363,7 @@ router.delete("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
     await prisma.courseModule.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: mod.course.instituteId,
       details: { entity: "module", operation: "delete", moduleId: mod.id, courseId: mod.courseId, title: mod.title },
     });
     res.json({ success: true });
@@ -1329,8 +1392,13 @@ router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_AD
   }
 });
 
-router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, description, order, isActive, countsTowardCertificate } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const chapter = await prisma.chapter.create({
@@ -1343,7 +1411,7 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_A
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: moduleInstituteId,
       details: { entity: "chapter", operation: "create", chapterId: chapter.id, moduleId: chapter.moduleId, title: chapter.title },
     });
     res.json(chapter);
@@ -1368,8 +1436,13 @@ router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_AD
   }
 });
 
-router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const chapterInstituteId = await resolveChapterCourseInstituteId(req.params.id);
+    if (chapterInstituteId === undefined) return res.status(404).json({ error: "Chapter not found" });
+    if (!ownsLmsInstitute(req, chapterInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, description, order, isActive, countsTowardCertificate } = req.body;
     const chapter = await prisma.chapter.update({
       where: { id: req.params.id },
@@ -1383,7 +1456,7 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: chapterInstituteId,
       details: { entity: "chapter", operation: "edit", chapterId: chapter.id, title: chapter.title, changedFields: Object.keys(req.body) },
     });
     res.json(chapter);
@@ -1393,10 +1466,13 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
   }
 });
 
-router.delete("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
+    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id }, include: { module: { select: { course: { select: { instituteId: true } } } } } });
     if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    if (!ownsLmsInstitute(req, chapter.module.course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     // Lesson->chapter and ModuleCodingTest->chapter are both onDelete:Cascade in schema.prisma,
     // which in turn cascades to LessonProgress and ModuleCodingAttempt — a chapter delete would
     // otherwise silently destroy real student completion/attempt data with no FK-violation error
@@ -1414,7 +1490,7 @@ router.delete("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN")
     await prisma.chapter.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: chapter.module.course.instituteId,
       details: { entity: "chapter", operation: "delete", chapterId: chapter.id, moduleId: chapter.moduleId, title: chapter.title },
     });
     res.json({ success: true });
@@ -1424,8 +1500,13 @@ router.delete("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN")
   }
 });
 
-router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const lesson = await prisma.lesson.create({
@@ -1439,7 +1520,7 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_AD
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: moduleInstituteId,
       details: { entity: "lesson", operation: "create", lessonId: lesson.id, moduleId: lesson.moduleId, title: lesson.title },
     });
     res.json(lesson);
@@ -1453,10 +1534,13 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_AD
 // chapterId set. moduleId is denormalized from the chapter's own module so every existing
 // moduleId-keyed query (isModuleNowComplete, LessonProgress counting, etc.) keeps working
 // unchanged for chapter-scoped topics too.
-router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id } });
+    const chapter = await prisma.chapter.findUnique({ where: { id: req.params.id }, include: { module: { select: { course: { select: { instituteId: true } } } } } });
     if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    if (!ownsLmsInstitute(req, chapter.module.course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { title, content, blocks, videoUrl, pdfUrl, externalLinks, order, estimatedMinutes, isModuleTest, isActive } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const lesson = await prisma.lesson.create({
@@ -1470,7 +1554,7 @@ router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_A
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: chapter.module.course.instituteId,
       details: { entity: "lesson", operation: "create", lessonId: lesson.id, moduleId: lesson.moduleId, chapterId: lesson.chapterId, title: lesson.title },
     });
     res.json(lesson);
@@ -1480,8 +1564,13 @@ router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_A
   }
 });
 
-router.patch("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const lessonInstituteId = await resolveLessonCourseInstituteId(req.params.id);
+    if (lessonInstituteId === undefined) return res.status(404).json({ error: "Lesson not found" });
+    if (!ownsLmsInstitute(req, lessonInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     // content/blocks are deliberately NOT accepted here anymore — they now move exclusively
     // through the versions API below (POST /lessons/:id/versions -> .../publish), so a student
     // never sees anything that hasn't gone through Draft -> Review -> Publish. Everything else
@@ -1503,7 +1592,7 @@ router.patch("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
     });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: lessonInstituteId,
       details: { entity: "lesson", operation: "edit", lessonId: lesson.id, title: lesson.title, changedFields: Object.keys(req.body) },
     });
     res.json(lesson);
@@ -1522,10 +1611,13 @@ router.patch("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), 
 // Version history, newest first. Lazily synthesizes "Version 1 / PUBLISHED" from the lesson's
 // current content/blocks on first read if no version rows exist yet — no bulk migration script
 // needed, and it's safe because it only ever creates a version that already matches what's live.
-router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    if (!ownsLmsInstitute(req, await resolveLessonCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     let versions = await prisma.lessonContentVersion.findMany({ where: { lessonId: lesson.id }, orderBy: { versionNumber: "desc" } });
     if (versions.length === 0) {
       const seed = await prisma.lessonContentVersion.create({
@@ -1546,10 +1638,13 @@ router.get("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_AD
 
 // Creates a new draft, or updates the lesson's existing open draft if one is already in progress
 // (upsert-by-latest-DRAFT — avoids spawning a new draft row on every autosave-style edit).
-router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    if (!ownsLmsInstitute(req, await resolveLessonCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const { content, blocks, changeSummary } = req.body;
     const openDraft = await prisma.lessonContentVersion.findFirst({
       where: { lessonId: lesson.id, status: { in: ["DRAFT", "IN_REVIEW"] } },
@@ -1583,10 +1678,13 @@ router.post("/lessons/:id/versions", authenticate, requireRole("ADMIN", "SUPER_A
 });
 
 // Edits an existing draft in place, or moves it DRAFT -> IN_REVIEW.
-router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const version = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
     if (!version || version.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
+    if (!ownsLmsInstitute(req, await resolveLessonCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     if (version.status === "PUBLISHED" || version.status === "ARCHIVED") {
       return res.status(409).json({ error: "Cannot edit a published or archived version — start a new draft instead" });
     }
@@ -1610,10 +1708,13 @@ router.patch("/lessons/:id/versions/:versionId", authenticate, requireRole("ADMI
 // Publishes a DRAFT/IN_REVIEW version: copies content/blocks onto the live Lesson row (the only
 // place that ever happens), archives whatever was PUBLISHED before (never deleted), marks this
 // one PUBLISHED. This is the sole write path that changes what a student can read.
-router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const version = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
     if (!version || version.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
+    if (!ownsLmsInstitute(req, await resolveLessonCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     if (version.status === "PUBLISHED") return res.status(409).json({ error: "This version is already published" });
     if (!version.changeSummary) return res.status(400).json({ error: "A change summary is required before publishing" });
     const [, , published] = await prisma.$transaction([
@@ -1638,10 +1739,13 @@ router.post("/lessons/:id/versions/:versionId/publish", authenticate, requireRol
 // Restores an old (ARCHIVED or PUBLISHED) version by creating a NEW version row copying its
 // content, then publishing that new row immediately. Never resurrects/renumbers the old version
 // — "Restore Version 2" produces Version 4, keeping full history intact.
-router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const source = await prisma.lessonContentVersion.findUnique({ where: { id: req.params.versionId } });
     if (!source || source.lessonId !== req.params.id) return res.status(404).json({ error: "Version not found" });
+    if (!ownsLmsInstitute(req, await resolveLessonCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const last = await prisma.lessonContentVersion.findFirst({ where: { lessonId: source.lessonId }, orderBy: { versionNumber: "desc" } });
     const nextNumber = (last?.versionNumber || 0) + 1;
     const restored = await prisma.lessonContentVersion.create({
@@ -1669,10 +1773,14 @@ router.post("/lessons/:id/versions/:versionId/restore", authenticate, requireRol
   }
 });
 
-router.delete("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    const lessonInstituteId = await resolveLessonCourseInstituteId(req.params.id);
+    if (!ownsLmsInstitute(req, lessonInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     // Lesson->LessonProgress is onDelete:Cascade — same rationale as the chapter/module guards
     // above: block rather than silently erase a student's completion record for this lesson.
     const progressCount = await prisma.lessonProgress.count({ where: { lessonId: lesson.id } });
@@ -1684,7 +1792,7 @@ router.delete("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
     await prisma.lesson.delete({ where: { id: req.params.id } });
     await logAudit({
       req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
-      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: lessonInstituteId,
       details: { entity: "lesson", operation: "delete", lessonId: lesson.id, moduleId: lesson.moduleId, title: lesson.title },
     });
     res.json({ success: true });
@@ -1694,8 +1802,11 @@ router.delete("/lessons/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
   }
 });
 
-router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    if (!ownsLmsInstitute(req, await resolveLessonCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const {
       type, prompt, options, correctAnswer, explanation, starterCode, testCases, language, order,
       title, tags, estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat,
@@ -1747,7 +1858,7 @@ router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN", "SUPER_
   }
 });
 
-router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
     const {
       type, prompt, options, correctAnswer, explanation, starterCode, testCases, language, order,
@@ -1757,6 +1868,9 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
     } = req.body;
     const existing = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Practice question not found" });
+    if (!ownsLmsInstitute(req, await resolvePracticeQuestionCourseInstituteId(req.params.id))) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     const effectiveType = type !== undefined ? type : existing.type;
 
     let resolvedData = {};
@@ -1825,8 +1939,13 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
   }
 });
 
-router.delete("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
+    const instituteId = await resolvePracticeQuestionCourseInstituteId(req.params.id);
+    if (instituteId === undefined) return res.status(404).json({ error: "Practice question not found" });
+    if (!ownsLmsInstitute(req, instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
     await prisma.practiceQuestion.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
