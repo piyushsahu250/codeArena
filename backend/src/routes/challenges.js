@@ -659,15 +659,21 @@ router.post("/admin/daily", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
 // the toggle route above; only an empty slot can be hard-deleted.
 router.delete("/admin/daily/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.dailyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
-    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const existing = await prisma.dailyChallenge.findUnique({
+      where: { id: req.params.id },
+      select: { instituteId: true, date: true, question: { select: { title: true, description: true } } },
+    });
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "This Daily Challenge has already been removed or was not found." });
+    const challengeLabel = existing.question?.title || (existing.question?.description || "").slice(0, 60);
     const submissionCount = await prisma.dailyChallengeSubmission.count({ where: { dailyChallengeId: req.params.id } });
     if (submissionCount > 0) {
       await prisma.dailyChallenge.update({ where: { id: req.params.id }, data: { isActive: false } });
-      await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_ARCHIVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "DAILY", id: req.params.id, submissionCount } });
+      await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_ARCHIVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId, details: { type: "DAILY", id: req.params.id, title: challengeLabel, submissionCount } });
       return res.status(409).json({ error: `This challenge has ${submissionCount} student submission(s) and was deactivated instead of deleted.`, archived: true });
     }
     await prisma.dailyChallenge.delete({ where: { id: req.params.id } });
+    // Same previously-missing audit trail gap as DELETE /admin/weekly/:id above.
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_REMOVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId, details: { type: "DAILY", id: req.params.id, title: challengeLabel, date: existing.date } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -807,15 +813,27 @@ router.post("/admin/weekly", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
 
 router.delete("/admin/weekly/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const existing = await prisma.weeklyChallenge.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
-    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "Scheduled challenge not found" });
+    const existing = await prisma.weeklyChallenge.findUnique({
+      where: { id: req.params.id },
+      select: { instituteId: true, weekStart: true, question: { select: { title: true, description: true } } },
+    });
+    // Two admins (or a double-click) racing to remove the same row: the second request finds
+    // nothing here and gets a clean 404 rather than a partial/duplicate operation — no separate
+    // "already removed" check is needed since this SELECT is itself the only source of truth the
+    // DELETE below acts on.
+    if (!existing || !ownsChallengeRow(req, existing)) return res.status(404).json({ error: "This Weekly Challenge has already been removed or was not found." });
+    const challengeLabel = existing.question?.title || (existing.question?.description || "").slice(0, 60);
     const submissionCount = await prisma.weeklyChallengeSubmission.count({ where: { weeklyChallengeId: req.params.id } });
     if (submissionCount > 0) {
       await prisma.weeklyChallenge.update({ where: { id: req.params.id }, data: { isActive: false } });
-      await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_ARCHIVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, details: { type: "WEEKLY", id: req.params.id, submissionCount } });
+      await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_ARCHIVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId, details: { type: "WEEKLY", id: req.params.id, title: challengeLabel, submissionCount } });
       return res.status(409).json({ error: `This challenge has ${submissionCount} student submission(s) and was deactivated instead of deleted.`, archived: true });
     }
     await prisma.weeklyChallenge.delete({ where: { id: req.params.id } });
+    // Previously missing entirely — a successful hard-delete left no audit trail at all (only the
+    // "archived instead of deleted" branch above logged anything), so there was no record of who
+    // removed a Weekly Challenge or when.
+    await logAudit({ req, action: AUDIT_ACTIONS.CHALLENGE_REMOVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: existing.instituteId, details: { type: "WEEKLY", id: req.params.id, title: challengeLabel, weekStart: existing.weekStart } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);

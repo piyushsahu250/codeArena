@@ -258,24 +258,34 @@ function ScheduleList({ rows, kind, isAdmin, onDeleted, onChanged }) {
   const [analyticsOpenId, setAnalyticsOpenId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  // Double-click / duplicate-request protection — mirrors the togglingId/duplicatingId pattern
+  // already used for the two sibling actions below; Remove previously had no such guard.
+  const [removingId, setRemovingId] = useState(null);
 
   async function remove(row) {
     const ok = await confirmDialog({
-      title: "Remove this scheduled challenge?",
-      message: `This unschedules "${row.question.title || row.question.description.slice(0, 60)}". If students have already submitted, it will be deactivated instead of deleted.`,
-      confirmLabel: "Remove",
+      title: `Remove this ${kind === "weekly" ? "weekly" : "daily"} challenge?`,
+      message: `This will remove "${row.question.title || row.question.description.slice(0, 60)}" from the active ${kind === "weekly" ? "weekly" : "daily"} challenge schedule. Existing student submissions/results will not be deleted — if students have already submitted, the challenge is deactivated instead of deleted.`,
+      confirmLabel: "Remove Challenge",
       danger: true,
     });
     if (!ok) return;
+    setRemovingId(row.id);
     try {
       await api.delete(`/challenges/admin/${kind}/${row.id}`);
-      toast.success("Removed.");
+      toast.success(`${kind === "weekly" ? "Weekly" : "Daily"} Challenge removed successfully.`);
       onDeleted();
     } catch (err) {
-      const msg = err.response?.data?.error || "Failed to remove";
+      const msg = err.response?.data?.error || "Unable to remove the challenge. Please try again.";
+      console.error("Failed to remove scheduled challenge:", err);
       if (err.response?.status === 409) toast.info(msg, 6000);
       else toast.error(msg);
+      // Still refetch even on failure — this is a server truth refetch (not an optimistic local
+      // removal), so it can never make a failed delete appear to have succeeded; it just re-syncs
+      // in case e.g. the 409 archive-instead-of-delete branch DID change isActive server-side.
       onDeleted();
+    } finally {
+      setRemovingId(null);
     }
   }
 
@@ -350,7 +360,9 @@ function ScheduleList({ rows, kind, isAdmin, onDeleted, onChanged }) {
                       <button className="btn btn-ghost" style={{ padding: 6 }} title="Preview" onClick={() => setPreviewRow(r)}><Eye size={14} /></button>
                       <button className="btn btn-ghost" style={{ padding: 6 }} title="Analytics" onClick={() => setAnalyticsOpenId(analyticsOpenId === r.id ? null : r.id)}><BarChart3 size={14} /></button>
                       <button className="btn btn-ghost" style={{ padding: 6 }} disabled={duplicatingId === r.id} title="Duplicate question" onClick={() => duplicate(r)}><Copy size={14} /></button>
-                      <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => remove(r)}>Remove</button>
+                      <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} disabled={removingId === r.id} onClick={() => remove(r)}>
+                        {removingId === r.id ? "Removing…" : "Remove"}
+                      </button>
                     </td>
                   )}
                 </tr>
@@ -422,7 +434,13 @@ function ChallengeSchedule({ kind, isAdmin }) {
 
 export default function ChallengeAdmin() {
   const { user } = useAuth();
-  const isAdmin = user.role === "ADMIN";
+  // Root cause of "Remove Weekly Challenge doesn't work": this previously matched only the
+  // literal legacy "ADMIN" role, hiding the entire admin toolbar (Remove/Toggle/Duplicate/
+  // Schedule) from every real SUPER_ADMIN and INSTITUTE_ADMIN account — even though the backend's
+  // own requireRole lists in routes/challenges.js already permit all three roles on every admin
+  // route, including DELETE /admin/weekly/:id. Same role-list-omission bug class already found
+  // and fixed in tests.js, ResultManagement.jsx, and TalentPools.jsx this session.
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user.role);
   const [tab, setTab] = useState("daily");
 
   return (
