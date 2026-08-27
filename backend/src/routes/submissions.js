@@ -130,8 +130,10 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
     const { attemptId, questionId, language, code, seq: rawSeq } = req.body;
     // Client-supplied monotonic counter (see Submission.codeSavedSeq's schema comment) -- defaults
     // to Date.now() so callers that predate this field (or omit it) still get a real, increasing
-    // value rather than always losing the staleness race against 0.
-    const seq = Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now();
+    // value rather than always losing the staleness race against 0. Converted to BigInt (the
+    // column's actual type — see its schema comment for why a plain Int always overflowed here);
+    // Math.trunc guards against BigInt() throwing on a non-integer if a malformed rawSeq is sent.
+    const seq = BigInt(Math.trunc(Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now()));
 
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },

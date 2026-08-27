@@ -1026,7 +1026,16 @@ model Submission {
   // server time regardless of which one was typed first. The autosave route only applies an
   // incoming write when its seq is >= the currently stored one, so a late-arriving older draft can
   // never clobber newer code.
-  codeSavedSeq Int         @default(0)
+  //
+  // BigInt, not Int: this was declared Int (32-bit, max ~2.1 billion) while every caller has
+  // always sent Date.now() (current millisecond epoch values are ~1.7 trillion, 13 digits) —
+  // meaning every single autosave write has been failing with a Postgres "Unable to fit integer
+  // value ... into an INT4" error since this field was introduced, silently 500ing on every
+  // periodic/interval, question-switch, and beforeunload autosave call. Confirmed live via a real
+  // autosave request against production (2026-08-27) — this is the actual root cause of "the
+  // Coding Assessment autosubmit issue": autosubmit grades whatever was last successfully saved,
+  // and nothing was ever successfully saved through this path.
+  codeSavedSeq BigInt      @default(0)
 
   // One row per attempt+question — enforced at the DB level so autosave's upsert can never
   // race into two rows for the same question (which previously risked the grader picking the
@@ -1701,7 +1710,7 @@ model ModuleCodingSubmission {
   verdict     String   @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
   timeMs      Int? // max execution time across judged test cases
   memoryKb    Int? // max memory usage across judged test cases
-  codeSavedSeq Int     @default(0) // see Submission.codeSavedSeq's comment -- same client-monotonic-counter guard against autosave request reordering
+  codeSavedSeq BigInt  @default(0) // see Submission.codeSavedSeq's comment -- same client-monotonic-counter guard against autosave request reordering, and the same Int->BigInt overflow-fix reasoning (Date.now() never fits in a 32-bit Int)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

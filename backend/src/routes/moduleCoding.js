@@ -340,7 +340,10 @@ router.post("/attempts/:attemptId/autosave", authenticate, requireRole("STUDENT"
 
     const { questionId, language, code, seq: rawSeq } = req.body;
     if (!isAssignedQuestion(attempt, questionId)) return res.status(403).json({ error: "This question is not part of your assessment" });
-    const seq = Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now();
+    // BigInt, not Number — see ModuleCodingSubmission.codeSavedSeq's schema comment: this column
+    // was Int (32-bit) while every caller has always sent Date.now(), which overflows a 32-bit
+    // Int on every call. Math.trunc guards BigInt() against throwing on a non-integer rawSeq.
+    const seq = BigInt(Math.trunc(Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : Date.now()));
     // Atomic upsert on the (attemptId, questionId) unique constraint — see submissions.js's
     // /autosave for why a findFirst-then-create/update pattern here is a real race hazard.
     //
@@ -1091,6 +1094,9 @@ router.get("/admin/attempts/:attemptId", authenticate, requireRole("ADMIN", "SUP
   if (req.requesterInstituteId && attempt.student.instituteId !== req.requesterInstituteId) {
     return res.status(404).json({ error: "Attempt not found" });
   }
+  // codeSavedSeq is a BigInt (see ModuleCodingSubmission.codeSavedSeq's schema comment) — must
+  // never reach res.json() raw, or JSON.stringify throws.
+  attempt.submissions = attempt.submissions.map(({ codeSavedSeq, ...rest }) => rest);
   res.json(attempt);
 });
 

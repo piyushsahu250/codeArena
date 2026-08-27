@@ -1,4 +1,13 @@
 require("dotenv").config();
+// Global safety net, not a substitute for excluding internal-only fields (like Submission/
+// ModuleCodingSubmission.codeSavedSeq) from client-facing responses at the route level — Express's
+// res.json() throws "Do not know how to serialize a BigInt" on any raw BigInt value, which would
+// 500 an otherwise-successful request over a field the client never needed. Confirmed root cause
+// of a real production bug (2026-08-27): codeSavedSeq was declared Int (32-bit) while every
+// caller always sent Date.now() (~1.7 trillion, 13 digits), overflowing on every autosave write;
+// fixed by widening it to BigInt, which makes this polyfill necessary wherever a query forgets to
+// strip it. Any BigInt column added in the future degrades to a JSON string instead of crashing.
+BigInt.prototype.toJSON = function () { return this.toString(); };
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");

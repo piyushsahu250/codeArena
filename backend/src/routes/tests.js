@@ -934,8 +934,12 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
       }
     }
     // Include already-saved submissions (auto-saved MCQ answers, locked coding submissions)
-    // so a page refresh mid-test restores exactly where the candidate left off.
-    const submissions = await prisma.submission.findMany({ where: { attemptId: attempt.id } });
+    // so a page refresh mid-test restores exactly where the candidate left off. codeSavedSeq is
+    // stripped before this ever reaches res.json() below — it's a BigInt column (see its schema
+    // comment), and JSON.stringify throws on a raw BigInt; nothing on the frontend needs this
+    // internal ordering guard anyway.
+    const submissions = (await prisma.submission.findMany({ where: { attemptId: attempt.id } }))
+      .map(({ codeSavedSeq, ...rest }) => rest);
     // serverTime lets the client compute its own clock's offset from the server's — the deadline
     // timer then measures against (Date.now() + offset) instead of raw Date.now(), so a student
     // whose device clock is skewed doesn't get auto-submitted early or late relative to real time.
@@ -1083,6 +1087,8 @@ router.get("/:id/my-result", authenticate, requireRole("STUDENT"), async (req, r
       include: { submissions: true },
     });
     if (!attempt) return res.status(404).json({ error: "You have not attempted this test" });
+    // codeSavedSeq is a BigInt (see its schema comment) — must never reach res.json() below raw.
+    if (attempt.submissions) attempt.submissions = attempt.submissions.map(({ codeSavedSeq, ...rest }) => rest);
     if (attempt.status === "IN_PROGRESS") return res.status(403).json({ error: "Test not yet submitted" });
     if (!test.showResults) {
       return res.json({ status: attempt.status, showResults: false });
