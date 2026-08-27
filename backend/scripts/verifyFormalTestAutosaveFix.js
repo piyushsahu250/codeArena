@@ -35,7 +35,7 @@ async function main() {
     const test = await prisma.test.create({
       data: {
         title: "Autosave Check Test", durationMin: 30, startTime: new Date(Date.now() - 60_000), endTime: new Date(Date.now() + 3_600_000),
-        createdById: user.id, questions: { create: [{ questionId, order: 0 }] },
+        isPublished: true, createdById: user.id, questions: { create: [{ questionId, order: 0 }] },
       },
     });
     testId = test.id;
