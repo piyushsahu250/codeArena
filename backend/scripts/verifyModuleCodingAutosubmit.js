@@ -161,6 +161,10 @@ async function main() {
       await prisma.moduleCodingSubmission.deleteMany({ where: { attempt: { moduleCodingTestId: testId } } }).catch(() => {});
       await prisma.moduleCodingAttempt.deleteMany({ where: { moduleCodingTestId: testId } }).catch(() => {});
     }
+    // A passing attempt can legitimately issue a real CODING_ASSESSMENT certificate (confirmed
+    // during this script's own development run) — Certificate.courseId/studentId are RESTRICT,
+    // not Cascade, so the course/student deletes below would otherwise fail outright.
+    if (courseId) await prisma.certificate.deleteMany({ where: { courseId } }).catch(() => {});
     if (questionId) { await prisma.testCase.deleteMany({ where: { questionId } }).catch(() => {}); await prisma.question.delete({ where: { id: questionId } }).catch(() => {}); }
     if (testId) await prisma.moduleCodingTest.delete({ where: { id: testId } }).catch(() => {});
     if (lessonId) { await prisma.lessonProgress.deleteMany({ where: { lessonId } }).catch(() => {}); await prisma.lesson.delete({ where: { id: lessonId } }).catch(() => {}); }
