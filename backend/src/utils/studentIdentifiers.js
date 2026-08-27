@@ -85,6 +85,62 @@ function compareRollNumbers(a, b) {
   return String(a?.name || "").localeCompare(String(b?.name || ""));
 }
 
+// --- Same-group collision checks + the concurrency lock guarding them ---
+// Previously duplicated between routes/users.js (the admin-facing create/edit paths) and
+// routes/profile.js (the student self-service path) as two separately-written, functionally-
+// similar-but-not-identical implementations — consolidated here so there is exactly one real
+// definition of "does this Roll Number collide within this Academic Group," used everywhere a
+// Roll Number can be set (admin single-create, admin edit, bulk-upload, and student self-edit).
+const prisma = require("../prisma");
+
+// `client` defaults to the module-level `prisma` (every pre-existing call site keeps working
+// unchanged) but accepts a transaction client (`tx`) too — see withRollNumberLock below, which
+// passes one so the read happens *inside* the same advisory-locked transaction as the write that
+// follows it, closing the check-then-create race a plain pre-check can't.
+async function fetchTakenRollNumbers(academicGroupId, excludeUserId, client = prisma) {
+  if (!academicGroupId) return new Set();
+  const rows = await client.user.findMany({
+    where: { academicGroupId, role: "STUDENT", rollNumber: { not: null }, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
+    select: { rollNumber: true },
+  });
+  return new Set(rows.map((r) => r.rollNumber));
+}
+
+// Used only when a Roll Number is manually typed/edited (not the auto-derive path) — a same-group
+// collision is a real mistake, so it's rejected outright with a specific error rather than
+// silently resolved, per the platform's error-message-quality standard.
+async function findRollNumberClash(academicGroupId, rollNumber, excludeUserId, client = prisma) {
+  if (!academicGroupId || !rollNumber) return null;
+  const clash = await client.user.findFirst({
+    where: { academicGroupId, role: "STUDENT", rollNumber, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
+    select: { name: true },
+  });
+  return clash?.name || null;
+}
+
+// Closes the real concurrent-request gap this feature's spec describes: two requests could
+// otherwise both pass their pre-check (neither sees the other's not-yet-committed row) and both
+// succeed — there is deliberately no DB-level unique constraint on (academicGroupId, rollNumber)
+// yet (see schema.prisma's User.rollNumber comment: pre-existing production conflicts must be
+// resolved by an admin first, per this feature's own explicit "do not auto-rename" requirement,
+// before that constraint can be safely added). A Postgres transaction-scoped advisory lock, keyed
+// on the whole *academic group* (not one specific roll number) via hashtextextended (64-bit,
+// negligible collision risk vs. hashtext's 32-bit), gives the same real mutual-exclusion guarantee
+// in the meantime — group-scoped rather than number-scoped is deliberate: the auto-derive path
+// (resolveRollNumberAvoidingCollisions) doesn't know its target number until it has already read
+// what's taken, so two concurrent auto-derives for the *same* group must be serialized entirely,
+// not just when they happen to land on the same candidate. A second transaction targeting the
+// identical group simply blocks until the first commits or rolls back, at which point its own
+// re-check (run inside `fn`, using the same `tx`) correctly sees whatever the first just did. A
+// lock on a *different* group never contends with this one.
+async function withRollNumberLock(academicGroupId, fn) {
+  if (!academicGroupId) return fn(prisma); // no group to serialize within (e.g. no academic group assigned)
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`rollnumber-group:${academicGroupId}`}, 0))`;
+    return fn(tx);
+  });
+}
+
 module.exports = {
   initRollNumberFromRegistration,
   resolveRollNumberAvoidingCollisions,
@@ -93,4 +149,7 @@ module.exports = {
   REGISTRATION_NUMBER_RE,
   ROLL_NUMBER_RE,
   ROLL_NUMBER_MAX_LENGTH,
+  fetchTakenRollNumbers,
+  findRollNumberClash,
+  withRollNumberLock,
 };

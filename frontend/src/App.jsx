@@ -80,6 +80,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForceChangePassword from "./pages/ForceChangePassword";
 import StudentSearch from "./pages/StudentSearch";
+import RollNumberConflicts from "./pages/RollNumberConflicts";
 import LearningHub from "./pages/LearningHub";
 import MyNotes from "./pages/MyNotes";
 import CourseOverview from "./pages/CourseOverview";
@@ -361,6 +362,7 @@ export default function App() {
           <Route path="/admin/monitoring" element={<Protected roles={["ADMIN"]}><SystemMonitoring /></Protected>} />
           <Route path="/admin/students" element={<Protected roles={["ADMIN"]}><StudentSearch basePath="/admin" /></Protected>} />
           <Route path="/admin/students/:id" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/admin" /></Suspense></Protected>} />
+          <Route path="/admin/roll-number-conflicts" element={<Protected roles={["ADMIN"]}><RollNumberConflicts /></Protected>} />
           <Route path="/admin/staff-clerk" element={<Protected roles={["ADMIN"]}><StaffClerkManagement /></Protected>} />
           <Route path="/admin/staff-clerk/:id" element={<Protected roles={["ADMIN"]}><StaffClerkProfile /></Protected>} />
           <Route path="/admin/companies" element={<Protected roles={["ADMIN"]}><CompanyMaster /></Protected>} />

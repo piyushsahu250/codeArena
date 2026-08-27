@@ -30,6 +30,7 @@ async function auditRollNumberConflicts() {
     select: {
       id: true, name: true, rollNumber: true, registrationNumber: true, academicGroupId: true,
       instituteId: true, batchYear: true, department: true, section: true, createdAt: true,
+      email: true, mobile: true, isActive: true,
     },
     orderBy: { createdAt: "asc" },
   });
@@ -124,7 +125,15 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err) => {
-  console.error("[auditRollNumberConflicts] failed:", err);
-  process.exit(2);
-});
+// Exported so routes/users.js's GET /roll-number-conflicts (the admin-facing dashboard — spec:
+// "provide Admin/Super Admin with a clear conflict-resolution interface") reuses this exact same
+// duplicate-detection logic instead of a second, separately-written definition of "conflict."
+// Only invoked as a CLI script (below) when required directly, never when required as a module.
+module.exports = { auditRollNumberConflicts };
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error("[auditRollNumberConflicts] failed:", err);
+    process.exit(2);
+  });
+}

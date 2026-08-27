@@ -5,7 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion, MOBILE_RE, PINCODE_RE } = require("../utils/studentProfileCompletion");
 const { isValidEmail } = require("../utils/emailValidation");
-const { ROLL_NUMBER_MAX_LENGTH, isValidRollNumber } = require("../utils/studentIdentifiers");
+const { ROLL_NUMBER_MAX_LENGTH, isValidRollNumber, withRollNumberLock, findRollNumberClash } = require("../utils/studentIdentifiers");
 const { generateStudentProfilePdf } = require("../utils/studentProfilePdf");
 const { encryptProfileData, decryptProfile } = require("../utils/piiEncryption");
 
@@ -92,11 +92,12 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     }
     // Roll Number is the classroom number, intentionally not unique platform-wide (duplicates
     // across different Academic Groups are expected by design) — but a collision within the
-    // SAME group (Institute+Batch+Department+Section) IS a real conflict, so it's checked here
-    // the same way users.js's admin-facing routes already do. Previously this route only
-    // trimmed/length-checked the value with no format or uniqueness check at all, which let a
-    // student self-edit into a non-numeric value or a same-group clash that admin-side routes
-    // would have rejected.
+    // SAME group (Institute+Batch+Department+Section) IS a real conflict. findRollNumberClash/
+    // withRollNumberLock (used below, right before the actual write) are the same shared
+    // implementation routes/users.js's admin-facing paths use — previously this route had its own
+    // separate, slightly-different inline copy of this same check, with no concurrency protection
+    // at all; consolidated so there's exactly one real definition, not two to keep in sync.
+    let studentAcademicGroupId = null;
     if ("rollNumber" in userData) {
       userData.rollNumber = String(userData.rollNumber || "").trim() || null;
       if (userData.rollNumber && userData.rollNumber.length > ROLL_NUMBER_MAX_LENGTH) {
@@ -107,13 +108,9 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       }
       if (userData.rollNumber) {
         const self = await prisma.user.findUnique({ where: { id: req.user.id }, select: { academicGroupId: true } });
-        if (self?.academicGroupId) {
-          const clash = await prisma.user.findFirst({
-            where: { academicGroupId: self.academicGroupId, role: "STUDENT", rollNumber: userData.rollNumber, id: { not: req.user.id } },
-            select: { name: true },
-          });
-          if (clash) return res.status(409).json({ error: `Roll Number "${userData.rollNumber}" is already used by ${clash.name} in your Batch/Department/Section — choose a different Roll Number.` });
-        }
+        studentAcademicGroupId = self?.academicGroupId || null;
+        const clash = await findRollNumberClash(studentAcademicGroupId, userData.rollNumber, req.user.id);
+        if (clash) return res.status(409).json({ error: `Roll Number "${userData.rollNumber}" is already used by ${clash} in your Batch/Department/Section — choose a different Roll Number.` });
       }
     }
     // First/Last Name is a UI-only split — joined back into the single User.name field this
@@ -177,14 +174,27 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       console.error("[profile.patchMe] PII encryption failed:", { userId: req.user.id, message: encErr.message });
       return res.status(503).json({ error: "Profile save is temporarily unavailable due to a server configuration issue. Please try again later or contact support." });
     }
-    await prisma.$transaction([
-      ...(Object.keys(userData).length ? [prisma.user.update({ where: { id: req.user.id }, data: userData })] : []),
-      prisma.studentProfile.upsert({
-        where: { studentId: req.user.id },
-        create: { studentId: req.user.id, ...encryptedProfileData },
-        update: encryptedProfileData,
-      }),
-    ]);
+    // Re-checked and written inside the same advisory-locked transaction (see
+    // withRollNumberLock's comment) — the pre-check above gives a fast, friendly error in the
+    // common case, but only this inner check-then-write, both inside the lock, actually closes
+    // the race against a second concurrent request (another student's self-edit, or an admin
+    // action) targeting a Roll Number in this same Academic Group at the same moment.
+    let rollNumberClashError = null;
+    await withRollNumberLock(studentAcademicGroupId, async (tx) => {
+      if (userData.rollNumber) {
+        const clash = await findRollNumberClash(studentAcademicGroupId, userData.rollNumber, req.user.id, tx);
+        if (clash) { rollNumberClashError = `Roll Number "${userData.rollNumber}" is already used by ${clash} in your Batch/Department/Section — choose a different Roll Number.`; return; }
+      }
+      await Promise.all([
+        ...(Object.keys(userData).length ? [tx.user.update({ where: { id: req.user.id }, data: userData })] : []),
+        tx.studentProfile.upsert({
+          where: { studentId: req.user.id },
+          create: { studentId: req.user.id, ...encryptedProfileData },
+          update: encryptedProfileData,
+        }),
+      ]);
+    });
+    if (rollNumberClashError) return res.status(409).json({ error: rollNumberClashError });
 
     const { user: freshUser, studentProfile, resume, documents } = await loadCompletionInputs(req.user.id);
     const completion = computeMandatoryCompletion(freshUser, studentProfile, resume, documents);

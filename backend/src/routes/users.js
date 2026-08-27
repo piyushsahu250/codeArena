@@ -15,7 +15,11 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { deleteAcademicGroupIfEmpty } = require("../utils/academicGroups");
 const cache = require("../utils/cache");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
-const { initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, isValidRollNumber, REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH } = require("../utils/studentIdentifiers");
+const {
+  initRollNumberFromRegistration, resolveRollNumberAvoidingCollisions, compareRollNumbers, isValidRollNumber,
+  REGISTRATION_NUMBER_RE, ROLL_NUMBER_MAX_LENGTH, fetchTakenRollNumbers, findRollNumberClash, withRollNumberLock,
+} = require("../utils/studentIdentifiers");
+const { auditRollNumberConflicts } = require("../../scripts/auditRollNumberConflicts");
 const { mapWithConcurrency } = require("../utils/queue");
 const { isValidEmail, normalizeEmail } = require("../utils/emailValidation");
 const { dbRateLimit } = require("../utils/dbRateLimit");
@@ -118,31 +122,6 @@ async function resolveAcademicGroup({ instituteId, batchYear, departmentName, se
   }
   if (cache) cache.set(key, group);
   return group;
-}
-
-// Roll Number must be unique within one Academic Group (Institute+Batch+Department+Section) but
-// duplicates ARE expected across different groups — so every lookup here is scoped by
-// academicGroupId, never platform-wide (that's Registration Number's job, enforced via the DB's
-// own @@unique([registrationNumber])).
-async function fetchTakenRollNumbers(academicGroupId, excludeUserId) {
-  if (!academicGroupId) return new Set();
-  const rows = await prisma.user.findMany({
-    where: { academicGroupId, role: "STUDENT", rollNumber: { not: null }, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
-    select: { rollNumber: true },
-  });
-  return new Set(rows.map((r) => r.rollNumber));
-}
-
-// Used only when an admin manually types/edits a Roll Number (not the auto-derive path) — a
-// same-group collision is a real human mistake, so it's rejected outright with a specific error
-// rather than silently resolved, per the platform's error-message-quality standard.
-async function findRollNumberClash(academicGroupId, rollNumber, excludeUserId) {
-  if (!academicGroupId || !rollNumber) return null;
-  const clash = await prisma.user.findFirst({
-    where: { academicGroupId, role: "STUDENT", rollNumber, ...(excludeUserId ? { id: { not: excludeUserId } } : {}) },
-    select: { name: true },
-  });
-  return clash?.name || null;
 }
 
 function normalizeHeader(str) {
@@ -445,15 +424,6 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       const dupReg = await prisma.user.findFirst({ where: { registrationNumber: normalizedRegNumber } });
       if (dupReg) return res.status(409).json({ error: `Registration Number "${normalizedRegNumber}" is already registered to another account` });
     }
-    if (role === "STUDENT" && normalizedRollNumber) {
-      // Manually supplied Roll Number: reject a same-group collision outright rather than silently
-      // resolving it — this is an explicit human entry, so a clear error is the correct UX.
-      const clashName = await findRollNumberClash(academicGroup?.id, normalizedRollNumber, null);
-      if (clashName) return res.status(409).json({ error: `Roll Number "${normalizedRollNumber}" is already used by ${clashName} in this Batch/Department/Section — choose a different Roll Number.` });
-    } else if (role === "STUDENT" && normalizedRegNumber) {
-      const taken = await fetchTakenRollNumbers(academicGroup?.id, null);
-      normalizedRollNumber = resolveRollNumberAvoidingCollisions(normalizedRegNumber, taken);
-    }
     if (String(employeeId || "").trim()) {
       const dupEmployee = await prisma.user.findFirst({ where: { instituteId, employeeId: String(employeeId).trim() } });
       if (dupEmployee) return res.status(409).json({ error: `Employee ID "${employeeId}" is already in use at ${institute.name}` });
@@ -461,14 +431,30 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
 
     const generatedPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(generatedPassword, 10);
-    const user = await prisma.user.create({
-      data: {
-        name, email, passwordHash, role, rollNumber: normalizedRollNumber, registrationNumber: normalizedRegNumber, department, mobile, gender,
-        program, batchYear, section, instituteId, academicGroupId: academicGroup?.id || null, mustChangePassword: true,
-        employeeId: employeeId ? String(employeeId).trim() : null, designation: designation ? String(designation).trim() : null,
-      },
-      select: SELECT_FIELDS,
+    // Roll-number resolution (manual-collision check or auto-derive) AND the create itself happen
+    // inside one advisory-locked transaction — see withRollNumberLock's comment for why this
+    // closes the concurrent-create race a plain pre-check-then-create can't.
+    let clashError = null;
+    const user = await withRollNumberLock(academicGroup?.id, async (tx) => {
+      if (role === "STUDENT" && normalizedRollNumber) {
+        // Manually supplied Roll Number: reject a same-group collision outright rather than
+        // silently resolving it — this is an explicit human entry, so a clear error is correct UX.
+        const clashName = await findRollNumberClash(academicGroup?.id, normalizedRollNumber, null, tx);
+        if (clashName) { clashError = `Roll Number "${normalizedRollNumber}" is already used by ${clashName} in this Batch/Department/Section — choose a different Roll Number.`; return null; }
+      } else if (role === "STUDENT" && normalizedRegNumber) {
+        const taken = await fetchTakenRollNumbers(academicGroup?.id, null, tx);
+        normalizedRollNumber = resolveRollNumberAvoidingCollisions(normalizedRegNumber, taken);
+      }
+      return tx.user.create({
+        data: {
+          name, email, passwordHash, role, rollNumber: normalizedRollNumber, registrationNumber: normalizedRegNumber, department, mobile, gender,
+          program, batchYear, section, instituteId, academicGroupId: academicGroup?.id || null, mustChangePassword: true,
+          employeeId: employeeId ? String(employeeId).trim() : null, designation: designation ? String(designation).trim() : null,
+        },
+        select: SELECT_FIELDS,
+      });
     });
+    if (clashError) return res.status(409).json({ error: clashError });
 
     let emailSent = false;
     let emailError = null;
@@ -633,33 +619,14 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
 
     // Roll Number same-group collision check/resolution — runs last, once the student's final
     // target Academic Group (possibly just re-resolved above) and final Registration Number are
-    // both known.
-    if (existing.role === "STUDENT") {
-      const targetAcademicGroupId = data.academicGroupId !== undefined ? data.academicGroupId : existing.academicGroupId;
-      const rollNumberExplicitlyEdited = req.body.rollNumber !== undefined;
-      const prnChanged = data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber;
-      const groupChanged = data.academicGroupId !== undefined && data.academicGroupId !== existing.academicGroupId;
+    // both known. Bundled into the same advisory-locked transaction as the actual update/audit
+    // write below (see withRollNumberLock's comment) so a second concurrent edit/create targeting
+    // this same academic group can't slip a colliding Roll Number in between this check and the
+    // write — the exact race spec section 10 describes.
+    const targetAcademicGroupId = existing.role === "STUDENT"
+      ? (data.academicGroupId !== undefined ? data.academicGroupId : existing.academicGroupId)
+      : null;
 
-      if (rollNumberExplicitlyEdited) {
-        if (data.rollNumber) {
-          const clashName = await findRollNumberClash(targetAcademicGroupId, data.rollNumber, existing.id);
-          if (clashName) return res.status(409).json({ error: `Roll Number "${data.rollNumber}" is already used by ${clashName} in this Batch/Department/Section — choose a different Roll Number.` });
-        }
-      } else if (prnChanged) {
-        const taken = await fetchTakenRollNumbers(targetAcademicGroupId, existing.id);
-        data.rollNumber = resolveRollNumberAvoidingCollisions(data.registrationNumber, taken);
-      } else if (groupChanged && existing.rollNumber) {
-        // Student moved to a different group without touching Roll Number or PRN — only re-derive
-        // if the existing value actually collides with someone already in the NEW group; otherwise
-        // leave it untouched (don't overwrite valid data that doesn't need fixing).
-        const taken = await fetchTakenRollNumbers(targetAcademicGroupId, existing.id);
-        if (taken.has(existing.rollNumber) && existing.registrationNumber) {
-          data.rollNumber = resolveRollNumberAvoidingCollisions(existing.registrationNumber, taken);
-        }
-      }
-    }
-
-    const changedFields = Object.keys(data).filter((f) => String(existing[f] ?? "") !== String(data[f] ?? ""));
     const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
 
     // A pure activate/deactivate toggle (via this same generic edit route — no dedicated route
@@ -672,23 +639,55 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       ? (data.isActive ? "ACCOUNT_ACTIVATED" : "ACCOUNT_DEACTIVATED")
       : existing.role === "STUDENT" ? "STUDENT_PROFILE_UPDATED" : "USER_PROFILE_UPDATED";
 
-    const [updated] = await prisma.$transaction([
-      prisma.user.update({ where: { id: existing.id }, data, select: SELECT_FIELDS }),
-      prisma.auditLog.create({
-        data: {
-          action: auditAction,
-          adminId: req.user.id,
-          adminName: admin?.name || req.user.email,
-          details: {
-            studentId: existing.id,
-            studentName: existing.name,
-            changedFields,
-            before: Object.fromEntries(changedFields.map((f) => [f, existing[f]])),
-            after: Object.fromEntries(changedFields.map((f) => [f, data[f]])),
+    let clashError = null;
+    const updated = await withRollNumberLock(targetAcademicGroupId, async (tx) => {
+      if (existing.role === "STUDENT") {
+        const rollNumberExplicitlyEdited = req.body.rollNumber !== undefined;
+        const prnChanged = data.registrationNumber !== undefined && data.registrationNumber !== existing.registrationNumber;
+        const groupChanged = data.academicGroupId !== undefined && data.academicGroupId !== existing.academicGroupId;
+
+        if (rollNumberExplicitlyEdited) {
+          if (data.rollNumber) {
+            const clashName = await findRollNumberClash(targetAcademicGroupId, data.rollNumber, existing.id, tx);
+            if (clashName) { clashError = `Roll Number "${data.rollNumber}" is already used by ${clashName} in this Batch/Department/Section — choose a different Roll Number.`; return null; }
+          }
+        } else if (prnChanged) {
+          const taken = await fetchTakenRollNumbers(targetAcademicGroupId, existing.id, tx);
+          data.rollNumber = resolveRollNumberAvoidingCollisions(data.registrationNumber, taken);
+        } else if (groupChanged && existing.rollNumber) {
+          // Student moved to a different group without touching Roll Number or PRN — only
+          // re-derive if the existing value actually collides with someone already in the NEW
+          // group; otherwise leave it untouched (don't overwrite valid data that doesn't need fixing).
+          const taken = await fetchTakenRollNumbers(targetAcademicGroupId, existing.id, tx);
+          if (taken.has(existing.rollNumber) && existing.registrationNumber) {
+            data.rollNumber = resolveRollNumberAvoidingCollisions(existing.registrationNumber, taken);
+          }
+        }
+      }
+
+      // changedFields/before/after must reflect the FINAL data (including any rollNumber just
+      // resolved above), so these are computed here, inside the lock, not before it.
+      const finalChangedFields = Object.keys(data).filter((f) => String(existing[f] ?? "") !== String(data[f] ?? ""));
+      const [result] = await Promise.all([
+        tx.user.update({ where: { id: existing.id }, data, select: SELECT_FIELDS }),
+        tx.auditLog.create({
+          data: {
+            action: auditAction,
+            adminId: req.user.id,
+            adminName: admin?.name || req.user.email,
+            details: {
+              studentId: existing.id,
+              studentName: existing.name,
+              changedFields: finalChangedFields,
+              before: Object.fromEntries(finalChangedFields.map((f) => [f, existing[f]])),
+              after: Object.fromEntries(finalChangedFields.map((f) => [f, data[f]])),
+            },
           },
-        },
-      }),
-    ]);
+        }),
+      ]);
+      return result;
+    });
+    if (clashError) return res.status(409).json({ error: clashError });
 
     // If this student just moved to a different academic group, the OLD group may now be empty —
     // an Academic Group is purely auto-derived (see resolveAcademicGroup() above), so once nothing
@@ -904,27 +903,35 @@ router.post("/bulk-upload/confirm", authenticate, requireRole("ADMIN", "SUPER_AD
 
       try {
         const group = await resolveAcademicGroup({ instituteId: institute.id, batchYear: row.batchYear, departmentName: row.department, section: row.section }, groupCache);
-        if (!groupRollNumberCache.has(group.id)) {
-          groupRollNumberCache.set(group.id, await fetchTakenRollNumbers(group.id, null));
-        }
-        const takenInGroup = groupRollNumberCache.get(group.id);
-        const finalRollNumber = resolveRollNumberAvoidingCollisions(row.registrationNumber, takenInGroup);
-        if (finalRollNumber) takenInGroup.add(finalRollNumber);
-        const user = await prisma.user.create({
-          data: {
-            name: row.name, email: row.email, registrationNumber: row.registrationNumber, rollNumber: finalRollNumber || null, passwordHash, role: "STUDENT",
-            mobile: row.mobile || null,
-            department: row.department || null,
-            program: row.program || null,
-            batchYear: row.batchYear || null,
-            section: row.section || null,
-            gender: row.gender || null,
-            isActive: row.isActive,
-            accountStatus: row.isActive ? "ACTIVE" : "INACTIVE",
-            instituteId: institute.id,
-            academicGroupId: group.id,
-            mustChangePassword: true,
-          },
+        // Resolve + create happen inside the same advisory-locked transaction (see
+        // withRollNumberLock's comment) — the in-memory groupRollNumberCache still avoids a fresh
+        // DB read for every row of a large upload targeting the same group (rows in *this* run are
+        // always processed sequentially, one commit at a time, so the cache stays accurate), but
+        // the lock is what actually protects against a DIFFERENT concurrent request (another
+        // admin's single-create, another bulk-upload) targeting this same group at the same time.
+        const user = await withRollNumberLock(group.id, async (tx) => {
+          if (!groupRollNumberCache.has(group.id)) {
+            groupRollNumberCache.set(group.id, await fetchTakenRollNumbers(group.id, null, tx));
+          }
+          const takenInGroup = groupRollNumberCache.get(group.id);
+          const finalRollNumber = resolveRollNumberAvoidingCollisions(row.registrationNumber, takenInGroup);
+          if (finalRollNumber) takenInGroup.add(finalRollNumber);
+          return tx.user.create({
+            data: {
+              name: row.name, email: row.email, registrationNumber: row.registrationNumber, rollNumber: finalRollNumber || null, passwordHash, role: "STUDENT",
+              mobile: row.mobile || null,
+              department: row.department || null,
+              program: row.program || null,
+              batchYear: row.batchYear || null,
+              section: row.section || null,
+              gender: row.gender || null,
+              isActive: row.isActive,
+              accountStatus: row.isActive ? "ACTIVE" : "INACTIVE",
+              instituteId: institute.id,
+              academicGroupId: group.id,
+              mustChangePassword: true,
+            },
+          });
         });
         created.push({ ...user, generatedPassword });
       } catch (err) {
@@ -1182,6 +1189,59 @@ const CLERK_AUDIT_ACTIONS = [
   AUDIT_ACTIONS.DOCUMENT_UPLOADED, AUDIT_ACTIONS.DOCUMENT_UPDATED, AUDIT_ACTIONS.DOCUMENT_VERIFIED, AUDIT_ACTIONS.DOCUMENT_DELETED,
   AUDIT_ACTIONS.PLACEMENT_OFFER_VERIFIED, AUDIT_ACTIONS.PLACEMENT_ELIGIBILITY_CHANGED,
 ];
+
+// ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN: the Roll Number Conflicts dashboard — spec: "provide Admin/
+// Super Admin with a clear conflict-resolution interface." Reuses auditRollNumberConflicts()
+// (scripts/auditRollNumberConflicts.js, a pre-existing read-only CLI audit tool) as the single
+// source of truth for what counts as a conflict, rather than a second, separately-written
+// definition — that script was previously reachable only via a server shell, which an Institute
+// Admin has no access to; this exposes the same data as a real, paginated, institute-scoped
+// in-app page. Deliberately READ-ONLY and does not resolve anything itself: per this feature's own
+// explicit "do not auto-rename" requirement, resolution is a human decision made through the
+// existing PATCH /users/:id edit flow (EditStudentProfileModal.jsx, opened directly from a
+// conflict row) on whichever student the admin decides should change.
+router.get("/roll-number-conflicts", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+
+    const { duplicates } = await auditRollNumberConflicts();
+    // Institute-scoped admins only ever see conflicts inside their own institute — never trusted
+    // from any client-supplied filter, derived the same way attachRequesterInstitute scopes every
+    // other route in this file. Every student row in a duplicate group carries the same
+    // instituteId (they're all in the same AcademicGroup, which belongs to exactly one institute).
+    const scoped = req.requesterInstituteId
+      ? duplicates.filter((d) => d.students[0]?.instituteId === req.requesterInstituteId)
+      : duplicates;
+
+    const total = scoped.length;
+    const pageRows = scoped.slice((page - 1) * pageSize, page * pageSize);
+    const groupIds = [...new Set(pageRows.map((d) => d.groupId))];
+    const groups = await prisma.academicGroup.findMany({
+      where: { id: { in: groupIds } },
+      select: { id: true, batch: true, section: true, institute: { select: { id: true, name: true } }, department: { select: { name: true } } },
+    });
+    const groupById = new Map(groups.map((g) => [g.id, g]));
+
+    const conflicts = pageRows.map((d) => {
+      const group = groupById.get(d.groupId);
+      return {
+        academicGroupId: d.groupId,
+        rollNumber: d.rollNumber,
+        institute: group?.institute || null,
+        batch: group?.batch || null,
+        branch: group?.department?.name || null,
+        section: group?.section || null,
+        students: d.students,
+      };
+    });
+
+    res.json({ conflicts, page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load roll number conflicts" });
+  }
+});
 
 // ADMIN/STAFF/CLERK: general-purpose, searchable/filterable/exportable audit trail — the
 // enterprise spec's requirement over and above the narrow password-reset-only view above.

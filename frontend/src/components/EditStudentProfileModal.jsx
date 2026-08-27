@@ -6,6 +6,12 @@ import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
 const REGISTRATION_NUMBER_RE = /^[A-Za-z0-9]{9,12}$/;
+// Matches studentIdentifiers.js's ROLL_NUMBER_RE exactly — a Roll Number is always exactly 3
+// numeric digits ("001", never "1" or "01" or "1A"), the platform's one consistent representation
+// everywhere it's stored/displayed. Was previously only checked for max-length here, so a value
+// like "1" passed frontend validation and only failed on save (backend-caught, no data-integrity
+// risk, just a confusing two-step error instead of catching it immediately).
+const ROLL_NUMBER_RE = /^\d{3}$/;
 
 // The one student-profile edit form used everywhere a manager can edit a student — originally
 // local to StudentPerformance.jsx, extracted so StudentSearch.jsx's hierarchical browse view can
@@ -86,7 +92,7 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
     if (!isValidEmail(normalizedEmail)) return setError("Please enter a valid email address");
     if (form.mobile.trim() && !MOBILE_RE.test(form.mobile.trim())) return setError("Please enter a valid mobile number");
     if (form.registrationNumber.trim() && !REGISTRATION_NUMBER_RE.test(form.registrationNumber.trim())) return setError("Registration Number (PRN) must be 9-12 alphanumeric characters");
-    if (form.rollNumber.trim().length > 3) return setError("Roll Number cannot exceed 3 characters");
+    if (form.rollNumber.trim() && !ROLL_NUMBER_RE.test(form.rollNumber.trim())) return setError("Roll Number must be exactly 3 digits (e.g. \"001\")");
 
     if (!(await confirmSensitiveChanges(normalizedEmail))) return;
 
