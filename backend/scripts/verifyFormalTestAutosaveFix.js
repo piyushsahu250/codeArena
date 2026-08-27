@@ -49,11 +49,11 @@ async function main() {
     console.log("\n=== Formal Test: autosave with a real Date.now() seq (the exact overflow case) ===");
     const autosaveRes = await fetch(`${API_BASE}/submissions/autosave`, {
       method: "POST", headers,
-      body: JSON.stringify({ attemptId: startBody.attemptId, questionId, language: "python", code: "a,b=map(int,input().split())\nprint(a+b)", seq: Date.now() }),
+      body: JSON.stringify({ attemptId: startBody.id, questionId, language: "python", code: "a,b=map(int,input().split())\nprint(a+b)", seq: Date.now() }),
     });
     check("Autosave succeeds (200, not the INT4-overflow 500)", autosaveRes.status === 200, `got ${autosaveRes.status}: ${JSON.stringify(await j(autosaveRes))}`);
 
-    const rawSubmission = await prisma.submission.findUnique({ where: { attemptId_questionId: { attemptId: startBody.attemptId, questionId } } });
+    const rawSubmission = await prisma.submission.findUnique({ where: { attemptId_questionId: { attemptId: startBody.id, questionId } } });
     check("codeSavedSeq stored as a real BigInt matching Date.now()'s magnitude", typeof rawSubmission?.codeSavedSeq === "bigint" && rawSubmission.codeSavedSeq > 1_000_000_000_000n, String(rawSubmission?.codeSavedSeq));
 
     console.log("\n=== Formal Test: resume (start again) returns the autosaved code, no crash, no codeSavedSeq leak ===");
@@ -65,8 +65,8 @@ async function main() {
     check("Resume response never leaks codeSavedSeq", restoredSub && !("codeSavedSeq" in restoredSub), JSON.stringify(restoredSub));
 
     console.log("\n=== Formal Test: submit-code (explicit) + my-result never leaks codeSavedSeq ===");
-    await fetch(`${API_BASE}/submissions/submit-code`, { method: "POST", headers, body: JSON.stringify({ attemptId: startBody.attemptId, questionId, language: "python", code: "a,b=map(int,input().split())\nprint(a+b)" }) });
-    const finalizeRes = await fetch(`${API_BASE}/submissions/finalize/${startBody.attemptId}`, { method: "POST", headers, body: JSON.stringify({}) });
+    await fetch(`${API_BASE}/submissions/submit-code`, { method: "POST", headers, body: JSON.stringify({ attemptId: startBody.id, questionId, language: "python", code: "a,b=map(int,input().split())\nprint(a+b)" }) });
+    const finalizeRes = await fetch(`${API_BASE}/submissions/finalize/${startBody.id}`, { method: "POST", headers, body: JSON.stringify({}) });
     check("Manual finalize succeeds (200)", finalizeRes.status === 200, `got ${finalizeRes.status}: ${JSON.stringify(await j(finalizeRes))}`);
     const myResultRes = await fetch(`${API_BASE}/tests/${testId}/my-result`, { headers });
     const myResultBody = await j(myResultRes);
