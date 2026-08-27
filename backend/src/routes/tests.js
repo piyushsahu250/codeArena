@@ -510,7 +510,16 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
 // class; staff/admin see full assignment detail — institute, class, batch year, headcount,
 // creator — scoped to their own institute unless they're platform-level) ---
 router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
-  const isStaff = req.user.role === "ADMIN" || req.user.role === "STAFF";
+  // Every role that can create/manage a test (see this file's POST "/" / PATCH "/:id" etc.
+  // requireRole lists) must also be treated as staff here — SUPER_ADMIN and INSTITUTE_ADMIN were
+  // missing from this check, which silently routed them into the STUDENT branch below instead.
+  // A STUDENT branch requires isPublished:true plus a matching academicGroupId/classId — fields an
+  // Institute Admin's own user row never has — so an Institute Admin who created a test could not
+  // see it in their own test list, and opening it directly returned 404 "Test not found" even
+  // though they were the creator. Confirmed live against production data (2026-08-27): two tests
+  // created by an INSTITUTE_ADMIN account were invisible to that same account for exactly this
+  // reason.
+  const isStaff = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"].includes(req.user.role);
 
   // Filtered DB-side (not "load every test on the platform, then filter in JS") — this list used
   // to fetch every Test row plus its full class/academicGroup/institute/department relation tree
@@ -664,7 +673,16 @@ router.get("/staff-directory", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
 // --- Get single test detail (questions without hidden test cases, and without
 // correctAnswer/explanation, for students — those would leak the answer key) ---
 router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
-  const isStaff = req.user.role === "ADMIN" || req.user.role === "STAFF";
+  // Every role that can create/manage a test (see this file's POST "/" / PATCH "/:id" etc.
+  // requireRole lists) must also be treated as staff here — SUPER_ADMIN and INSTITUTE_ADMIN were
+  // missing from this check, which silently routed them into the STUDENT branch below instead.
+  // A STUDENT branch requires isPublished:true plus a matching academicGroupId/classId — fields an
+  // Institute Admin's own user row never has — so an Institute Admin who created a test could not
+  // see it in their own test list, and opening it directly returned 404 "Test not found" even
+  // though they were the creator. Confirmed live against production data (2026-08-27): two tests
+  // created by an INSTITUTE_ADMIN account were invisible to that same account for exactly this
+  // reason.
+  const isStaff = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"].includes(req.user.role);
   const test = await prisma.test.findUnique({
     where: { id: req.params.id },
     include: {
