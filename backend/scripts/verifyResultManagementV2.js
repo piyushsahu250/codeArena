@@ -14,10 +14,15 @@ function check(label, condition, detail) {
   else { console.log(`  [FAIL] ${label}${detail ? ` (${detail})` : ""}`); fail++; }
 }
 
+// Guaranteed-unique-within-this-run counter — Date.now() alone collides when two students are
+// created in the same millisecond (confirmed live: a plain timestamp-plus-slice(0,12) truncated
+// away the very digits that would have told two students apart).
+let regNoCounter = 0;
 async function mkUser(role, instituteId, academicGroupId) {
   const email = `resultmgmt-check-${role.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.invalid`;
   const passwordHash = await bcrypt.hash("Temp1234!Check", 10);
-  const registrationNumber = role === "STUDENT" ? `RMCHK${Date.now()}${Math.floor(Math.random() * 1000)}`.slice(0, 12) : undefined;
+  regNoCounter++;
+  const registrationNumber = role === "STUDENT" ? `R${Date.now().toString(36)}${regNoCounter}`.slice(0, 12) : undefined;
   const user = await prisma.user.create({ data: { name: `RM Check ${role}`, email, passwordHash, role, instituteId, academicGroupId, registrationNumber } });
   const token = await createSession({ user, req: { headers: {} }, singleSessionOnly: false });
   const jti = jwt.decode(token).jti;
