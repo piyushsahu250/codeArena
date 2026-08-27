@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import { useConfirm } from "../context/ConfirmContext";
 
 const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginBottom: 4 };
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 };
 
 export default function FeatureManagement() {
+  const confirm = useConfirm();
   const [institutes, setInstitutes] = useState([]);
   const [search, setSearch] = useState("");
   const [instituteId, setInstituteId] = useState("");
@@ -71,6 +73,17 @@ export default function FeatureManagement() {
   }
 
   async function toggleFeature(featureKey, enabled) {
+    if (!enabled) {
+      const feature = features.find((f) => f.key === featureKey);
+      const ok = await confirm({
+        title: `Disable ${feature?.label || featureKey} for this institute?`,
+        message: "Students will no longer be able to access the feature. Existing data will not be deleted. The feature can be enabled again later.",
+        confirmLabel: "Disable Feature",
+        cancelLabel: "Cancel",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     setPendingWarning(null);
     // Optimistic update — the admin action itself is a single click and should feel instant;
     // reverted below if the request fails.
@@ -185,6 +198,7 @@ export default function FeatureManagement() {
                     <div key={f.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8 }}>
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{f.label}</div>
+                        {f.description && <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{f.description}</div>}
                         {f.updatedAt && (
                           <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>
                             Last changed {new Date(f.updatedAt).toLocaleString()}{f.updatedByName ? ` by ${f.updatedByName}` : ""}

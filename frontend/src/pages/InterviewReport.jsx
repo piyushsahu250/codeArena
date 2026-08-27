@@ -4,6 +4,7 @@ import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import useAiStatus from "../hooks/useAiStatus";
+import { useFeatures } from "../context/FeatureContext";
 import "./interviewPrep.css";
 
 const SCORE_LABELS = {
@@ -13,6 +14,7 @@ const SCORE_LABELS = {
 
 export default function InterviewReport() {
   const aiAvailable = useAiStatus();
+  const { isFeatureEnabled } = useFeatures();
   const { id } = useParams();
   const location = useLocation();
   const [report, setReport] = useState(location.state?.report || null);
@@ -294,7 +296,7 @@ export default function InterviewReport() {
 
         <div style={{ display: "flex", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
           <Link to="/interview" className="btn btn-primary">Practice Again</Link>
-          <Link to="/interview/history" className="btn btn-ghost">View History</Link>
+          {isFeatureEnabled("interview_history") && <Link to="/interview/history" className="btn btn-ghost">View History</Link>}
           <button className="btn btn-ghost" onClick={downloadReportPdf} disabled={downloading}>
             {downloading ? "Preparing…" : "⬇ Download Detailed Report (PDF)"}
           </button>

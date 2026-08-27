@@ -9,7 +9,7 @@ const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", 
 // read as <Protected roles={[...]}><FeatureProtected featureKey="..."><Page /></FeatureProtected></Protected>.
 // This is a UX convenience, not the security boundary — the real enforcement is requireFeature()
 // on the backend route; a user could disable JS and still get a 403 from the API.
-export default function FeatureProtected({ featureKey, children }) {
+export default function FeatureProtected({ featureKey, featureLabel, children }) {
   const { user } = useAuth();
   const { isFeatureEnabled, loaded } = useFeatures();
 
@@ -20,7 +20,7 @@ export default function FeatureProtected({ featureKey, children }) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: 24 }}>
         <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
-          <p style={{ fontSize: 16 }}>This feature is currently unavailable for your institute.</p>
+          <p style={{ fontSize: 16 }}>{featureLabel ? `${featureLabel} is currently unavailable for your institute.` : "This feature is currently unavailable for your institute."}</p>
           <a href={HOME_BY_ROLE[user?.role] || "/"} className="btn btn-primary" style={{ marginTop: 16, display: "inline-block" }}>
             Go to Dashboard
           </a>

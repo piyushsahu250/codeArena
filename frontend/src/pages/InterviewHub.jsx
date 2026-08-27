@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import api from "../api";
 import { useTheme } from "../context/ThemeContext";
+import { useFeatures } from "../context/FeatureContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import "./interviewPrep.css";
@@ -40,6 +41,7 @@ const JOB_ROLES = ["Java Developer", "Full Stack Developer", "Backend Developer"
 export default function InterviewHub() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isFeatureEnabled } = useFeatures();
   const [summary, setSummary] = useState(null);
   const { theme } = useTheme();
   const dark = theme === "dark";
@@ -138,7 +140,7 @@ export default function InterviewHub() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Link to="/interview/companies" className="btn btn-ghost">Browse Companies</Link>
-            <Link to="/interview/history" className="btn btn-ghost">History</Link>
+            {isFeatureEnabled("interview_history") && <Link to="/interview/history" className="btn btn-ghost">History</Link>}
             <Link to="/interview/leaderboard" className="btn btn-ghost">Leaderboard</Link>
             <Link to="/interview/progress" className="btn btn-ghost">Progress</Link>
             <Link to="/interview/certificate" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><GraduationCap size={14} /> Certificate</Link>

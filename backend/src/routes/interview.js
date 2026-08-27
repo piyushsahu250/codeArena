@@ -502,7 +502,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
   }
 });
 
-router.get("/sessions", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/sessions", authenticate, requireRole("STUDENT"), requireFeature("interview_history"), async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = 10;

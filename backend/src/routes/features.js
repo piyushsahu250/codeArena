@@ -57,6 +57,7 @@ router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADM
         key: f.key,
         label: f.label,
         category: f.category,
+        description: f.description || null,
         dependsOn: f.dependsOn || null,
         enabled: row ? row.enabled : true, // Section 12 Option A default
         updatedAt: row ? row.updatedAt : null,

@@ -8,6 +8,7 @@ import { compressImageToDataUrl } from "../utils/imageCompression";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useFeatures } from "../context/FeatureContext";
 
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6 };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
@@ -78,6 +79,8 @@ const EMPTY_DOCUMENT = { documentType: "", label: "", documentLink: "" };
 export default function StudentProfile() {
   const { user, updateUser } = useAuth();
   const toast = useToast();
+  const { isFeatureEnabled } = useFeatures();
+  const resumeBuilderEnabled = isFeatureEnabled("resume_builder");
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("personal");
   const [form, setForm] = useState(EMPTY_PERSONAL);
@@ -571,14 +574,19 @@ export default function StudentProfile() {
               ) : (
                 <span style={{ color: "var(--ink-dim)" }}>Not added yet.</span>
               )}
-              {" — "}
-              <Link to="/resume" onClick={confirmDiscardIfDirty}>Add or edit in Resume Builder</Link>
+              {resumeBuilderEnabled && (
+                <>
+                  {" — "}
+                  <Link to="/resume" onClick={confirmDiscardIfDirty}>Add or edit in Resume Builder</Link>
+                </>
+              )}
             </p>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>
             <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, marginBottom: 10 }}>
               At least one education record (SSLC, HSC, Diploma, Degree, etc.) is required — this is part of your
-              institutional academic record. It also appears automatically in your <Link to="/resume" onClick={confirmDiscardIfDirty}>Resume Builder</Link>.
+              institutional academic record.
+              {resumeBuilderEnabled && <> It also appears automatically in your <Link to="/resume" onClick={confirmDiscardIfDirty}>Resume Builder</Link>.</>}
             </p>
 
             <div style={{ display: "grid", gap: 8 }}>
@@ -622,7 +630,9 @@ export default function StudentProfile() {
           <form onSubmit={saveSkills} className="card" style={{ padding: 20, marginTop: 16 }}>
             <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
               Hackathons, certifications, online courses, internships, GitHub, key skills, technology stack, and languages
-              are managed in your <Link to="/resume" onClick={confirmDiscardIfDirty}>Resume Builder</Link> — reused here rather than duplicated. Add your
+              {resumeBuilderEnabled
+                ? <> are managed in your <Link to="/resume" onClick={confirmDiscardIfDirty}>Resume Builder</Link> — reused here rather than duplicated.</>
+                : " are managed elsewhere."} Add your
               competitive-programming and assessment handles below.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>

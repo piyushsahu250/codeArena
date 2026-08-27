@@ -29,6 +29,8 @@ const FEATURE_CATALOG = [
   { key: "ai_draftview", label: "AI DraftView", category: "AI", dependsOn: "ai_mock_interview" },
   { key: "certificates", label: "Certificates", category: "Certificates" },
   { key: "export_center", label: "Export Center", category: "Reports" },
+  { key: "resume_builder", label: "Resume Builder", category: "Career Features", description: "Create and optimize professional resumes." },
+  { key: "interview_history", label: "Interview History", category: "Career Features", description: "View previous mock interview sessions and results." },
 ];
 
 const FEATURE_KEYS = FEATURE_CATALOG.map((f) => f.key);

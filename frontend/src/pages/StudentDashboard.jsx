@@ -483,7 +483,9 @@ function QuickActions({ learningResumeId, style }) {
       )}
       <Link to="/dashboard/performance" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><LineChart size={15} /> My Performance</Link>
       <Link to="/achievements" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Trophy size={15} /> Achievements</Link>
-      <Link to="/resume" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><FileText size={15} /> Resume Builder</Link>
+      {isFeatureEnabled("resume_builder") && (
+        <Link to="/resume" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><FileText size={15} /> Resume Builder</Link>
+      )}
       {isFeatureEnabled("ai_mock_interview") && (
         <Link to="/interview" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Mic size={15} /> AI Mock Interview</Link>
       )}

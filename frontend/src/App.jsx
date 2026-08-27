@@ -250,7 +250,7 @@ export default function App() {
           <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><DailyChallenge /></FeatureProtected></Protected>} />
           <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><WeeklyChallenge /></FeatureProtected></Protected>} />
           <Route path="/company-tests" element={<Protected roles={["STUDENT"]}><CompanyTests /></Protected>} />
-          <Route path="/resume" element={<Protected roles={["STUDENT"]}><ResumeBuilder /></Protected>} />
+          <Route path="/resume" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="resume_builder" featureLabel="Resume Builder"><ResumeBuilder /></FeatureProtected></Protected>} />
           <Route path="/readiness" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="readiness_test"><ReadinessHub /></FeatureProtected></Protected>} />
           <Route
             path="/readiness/take/:assessmentId"
@@ -278,7 +278,7 @@ export default function App() {
             }
           />
           <Route path="/interview/report/:id" element={<Protected roles={["STUDENT"]}><InterviewReport /></Protected>} />
-          <Route path="/interview/history" element={<Protected roles={["STUDENT"]}><InterviewHistory /></Protected>} />
+          <Route path="/interview/history" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="interview_history" featureLabel="Interview History"><InterviewHistory /></FeatureProtected></Protected>} />
           <Route path="/interview/leaderboard" element={<Protected roles={["STUDENT"]}><InterviewLeaderboard /></Protected>} />
           <Route path="/interview/progress" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><InterviewProgress /></Suspense></Protected>} />
           <Route path="/interview/certificate" element={<Protected roles={["STUDENT"]}><InterviewCertificate /></Protected>} />

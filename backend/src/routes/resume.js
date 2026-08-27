@@ -15,6 +15,7 @@ const { sendAiError } = require("../utils/aiErrors");
 const { ROLE_KEYWORDS, analyzeForRole } = require("../utils/resumeJobRoles");
 const { checkResumeFacts } = require("../utils/resumeFactCheck");
 const { computeJobMatch } = require("../utils/resumeJobMatch");
+const { requireFeature } = require("../middleware/featureGate");
 const { cached } = require("../utils/cache");
 
 const router = express.Router();
@@ -72,7 +73,7 @@ async function saveVersion(resumeId, resumeSnapshot) {
 
 // STUDENT: fetch (auto-creating an empty draft on first call) their own resume, plus computed
 // completion status and any admin feedback notes left on it.
-router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     // upsert, not findUnique-then-create: the two-step check-then-act version raced under real
     // concurrent load (confirmed live 2026-08-25 — 20 concurrent first-view requests for a
@@ -94,7 +95,7 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
 // section array). The frontend sends only what changed; whole-array sections are replaced
 // wholesale (add/edit/delete within a section all happen client-side, then the full array is
 // saved), matching "save the whole resume as one draft" rather than per-item CRUD endpoints.
-router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.patch("/me", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const data = {};
     for (const f of ALLOWED_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f];
@@ -148,6 +149,7 @@ router.post(
   "/me/upload",
   authenticate,
   requireRole("STUDENT"),
+  requireFeature("resume_builder"),
   (req, res, next) => {
     upload.single("file")(req, res, (err) => {
       if (err) {
@@ -228,7 +230,7 @@ router.post(
 // the same Restore mechanism as everything else — "Clear All Resume Data" / "Delete Uploaded
 // Resume" are the same operation under the hood, since no separate uploaded file is ever stored
 // to delete in the first place (only ever the extracted structured data).
-router.post("/me/clear-all", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/me/clear-all", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const existing = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!existing) return res.status(404).json({ error: "No resume found" });
@@ -263,7 +265,7 @@ const CLEARABLE_SECTIONS = {
 
 // STUDENT: clear just one section (e.g. "start Projects over from scratch") without touching
 // anything else — same undo-via-version-history safety net as clear-all.
-router.post("/me/clear-section", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/me/clear-section", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const data = CLEARABLE_SECTIONS[req.body.section];
     if (!data) return res.status(400).json({ error: "Unknown or non-clearable section" });
@@ -290,7 +292,7 @@ router.post("/me/clear-section", authenticate, requireRole("STUDENT"), async (re
 // must keep working even when AI isn't configured, since it predates the AI integration). The
 // response's `source` field tells the frontend which path produced the suggestion so it can be
 // honest about it rather than always implying a real AI rewrite happened.
-router.post("/me/improve", authenticate, requireRole("STUDENT"), attachRequesterInstitute, improveLimiter, async (req, res) => {
+router.post("/me/improve", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("resume_builder"), improveLimiter, async (req, res) => {
   try {
     const { text, section } = req.body;
     if (!text || !String(text).trim()) return res.status(400).json({ error: "text is required" });
@@ -338,7 +340,7 @@ router.post("/me/improve", authenticate, requireRole("STUDENT"), attachRequester
 // completion/ATS scoring above rather than replacing it (that heuristic system stays the
 // always-available default; this is an optional richer pass on top, same graceful-degradation
 // posture as every other AI feature on this platform). Read-only — never saves anything.
-router.post("/me/ai-review", authenticate, requireRole("STUDENT"), attachRequesterInstitute, aiReviewLimiter, async (req, res) => {
+router.post("/me/ai-review", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("resume_builder"), aiReviewLimiter, async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — build one first" });
@@ -358,12 +360,12 @@ router.post("/me/ai-review", authenticate, requireRole("STUDENT"), attachRequest
   }
 });
 
-router.get("/job-roles", authenticate, requireRole("STUDENT"), (req, res) => {
+router.get("/job-roles", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), (req, res) => {
   res.json(Object.keys(ROLE_KEYWORDS));
 });
 
 // STUDENT: set (or clear) the target job role, returning the keyword-gap analysis for it.
-router.patch("/me/target-role", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.patch("/me/target-role", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const role = req.body.role || null;
     if (role && !ROLE_KEYWORDS[role]) return res.status(400).json({ error: "Unknown role" });
@@ -379,7 +381,7 @@ router.patch("/me/target-role", authenticate, requireRole("STUDENT"), async (req
   }
 });
 
-router.get("/me/role-analysis", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/role-analysis", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
@@ -395,7 +397,7 @@ router.get("/me/role-analysis", authenticate, requireRole("STUDENT"), async (req
 });
 
 // STUDENT: version history — list, fetch one (for viewing/comparing), and restore.
-router.get("/me/versions", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/versions", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.json([]);
@@ -410,7 +412,7 @@ router.get("/me/versions", authenticate, requireRole("STUDENT"), async (req, res
   }
 });
 
-router.get("/me/versions/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/versions/:id", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found" });
@@ -423,7 +425,7 @@ router.get("/me/versions/:id", authenticate, requireRole("STUDENT"), async (req,
   }
 });
 
-router.get("/me/versions/:id/pdf", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/versions/:id/pdf", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found" });
@@ -439,7 +441,7 @@ router.get("/me/versions/:id/pdf", authenticate, requireRole("STUDENT"), async (
 });
 
 // Delete one saved version — does not touch the active resume or any other version.
-router.delete("/me/versions/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.delete("/me/versions/:id", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found" });
@@ -455,7 +457,7 @@ router.delete("/me/versions/:id", authenticate, requireRole("STUDENT"), async (r
 
 // Clear every saved version for this student's resume — the active resume itself is untouched
 // (ResumeVersion is a separate table; deleting rows here never affects the Resume record).
-router.delete("/me/versions", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.delete("/me/versions", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found" });
@@ -467,7 +469,7 @@ router.delete("/me/versions", authenticate, requireRole("STUDENT"), async (req, 
   }
 });
 
-router.post("/me/versions/:id/restore", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/me/versions/:id/restore", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found" });
@@ -488,7 +490,7 @@ router.post("/me/versions/:id/restore", authenticate, requireRole("STUDENT"), as
   }
 });
 
-router.get("/me/docx", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/docx", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
@@ -505,7 +507,7 @@ router.get("/me/docx", authenticate, requireRole("STUDENT"), async (req, res) =>
 // STUDENT: fill in whichever fields/sections are still empty using platform data (profile,
 // class/institute, solved-language skills, course certificates, gamification badges). Never
 // overwrites something the student has already filled in themselves.
-router.post("/me/autofill", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/me/autofill", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const auto = await buildAutofillData(req.user.id);
     if (!auto) return res.status(404).json({ error: "Student not found" });
@@ -533,7 +535,7 @@ router.post("/me/autofill", authenticate, requireRole("STUDENT"), async (req, re
 });
 
 // STUDENT: recompute the ATS score on demand ("regenerate after making improvements").
-router.get("/me/ats-score", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/ats-score", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
@@ -548,7 +550,7 @@ router.get("/me/ats-score", authenticate, requireRole("STUDENT"), async (req, re
 // call) and stateless — the job description text is never persisted, so nothing here needs a
 // schema change; the same resume + same JD text + same engine version always produces the same
 // result. Never modifies the resume itself.
-router.post("/me/job-match", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.post("/me/job-match", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const jobDescriptionText = String(req.body.jobDescriptionText || "").trim();
     if (!jobDescriptionText) return res.status(400).json({ error: "Paste a job description first." });
@@ -567,7 +569,7 @@ router.post("/me/job-match", authenticate, requireRole("STUDENT"), async (req, r
 // STUDENT: deterministic consistency/fact-check pass (overlapping dates, duplicate skills,
 // invalid contact/URL formats, etc.) — read-only, never modifies the resume; surfaces warnings
 // for the student to review and fix themselves via the normal editor.
-router.get("/me/fact-check", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/fact-check", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
@@ -578,7 +580,7 @@ router.get("/me/fact-check", authenticate, requireRole("STUDENT"), async (req, r
   }
 });
 
-router.get("/me/pdf", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/me/pdf", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
   try {
     const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
     if (!resume) return res.status(404).json({ error: "No resume found — save your resume first" });
