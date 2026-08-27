@@ -408,7 +408,11 @@ model Test {
   unitRef      Unit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
   unitId       String?
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  // @default(now()) alongside @updatedAt lets `prisma db push` backfill existing rows with a
+  // concrete value instead of refusing to add a required column with no default (this blocked
+  // the first deploy attempt of this field against the 23 real Test rows already in production —
+  // @updatedAt alone still auto-bumps it on every future write same as before).
+  updatedAt    DateTime @default(now()) @updatedAt
   // Optimistic-concurrency guard (spec: "protect against two staff members editing the same test
   // simultaneously") — incremented on every PATCH /:id; a client must send back the version it
   // last read, and a mismatch means someone else saved first. No schema change needed to add this
