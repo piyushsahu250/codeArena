@@ -27,7 +27,10 @@ export function ConfirmProvider({ children }) {
         <div className="ca-modal-overlay" onClick={() => handle(false)}>
           <div className="ca-modal" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: 0 }}>{state.title}</h3>
-            {state.message && <p style={{ marginTop: 10, fontSize: 14, color: "var(--ink-dim)", lineHeight: 1.5 }}>{state.message}</p>}
+            {/* whiteSpace: pre-wrap so a caller's \n-separated lines (e.g. an old->new value list)
+                actually render as separate lines instead of collapsing into one run of text — a
+                plain single-line message is completely unaffected by this. */}
+            {state.message && <p style={{ marginTop: 10, fontSize: 14, color: "var(--ink-dim)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{state.message}</p>}
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
               <button className="btn btn-ghost" onClick={() => handle(false)}>{state.cancelLabel}</button>
               <button

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 import { isValidEmail, normalizeEmail } from "../utils/emailValidation";
 
 const MOBILE_RE = /^\+?[0-9]{10,15}$/;
@@ -12,22 +13,28 @@ const REGISTRATION_NUMBER_RE = /^[A-Za-z0-9]{9,12}$/;
 // duplicating it or forcing a detour through the full dashboard just to fix one field.
 export default function EditStudentProfileModal({ studentId, onClose, onSaved }) {
   const toast = useToast();
+  const confirmDialog = useConfirm();
   const [form, setForm] = useState(null);
+  const [original, setOriginal] = useState(null); // snapshot as loaded — diffed against on save to build the confirmation message
   const [institutes, setInstitutes] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState(null);
 
   useEffect(() => {
     api.get(`/users/${studentId}`).then((res) => {
       const u = res.data;
-      setForm({
+      const initial = {
         name: u.name || "", email: u.email || "", mobile: u.mobile || "", gender: u.gender || "",
         rollNumber: u.rollNumber || "", registrationNumber: u.registrationNumber || "",
         instituteId: u.institute?.id || "",
         department: u.department || "", program: u.program || "",
         batchYear: u.batchYear || "", section: u.section || "",
         isActive: u.isActive !== false, profilePhotoUrl: u.profilePhotoUrl || "",
-      });
+      };
+      setForm(initial);
+      setOriginal({ ...initial, emailVerified: u.emailVerified, pendingEmail: u.pendingEmail || null });
     });
     api.get("/institutes").then((res) => setInstitutes(res.data));
   }, [studentId]);
@@ -44,22 +51,75 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
     reader.readAsDataURL(file);
   }
 
+  // Sensitive-identity fields — spec: these get an explicit old->new confirmation step before
+  // saving, PRN doubly so ("this is a sensitive academic identifier..."), rather than saving
+  // silently on submit like the rest of the form.
+  async function confirmSensitiveChanges(normalizedEmail) {
+    const changes = [];
+    if (normalizedEmail !== original.email) changes.push({ label: "Email", old: original.email || "(none)", next: normalizedEmail });
+    if (form.mobile.trim() !== (original.mobile || "")) changes.push({ label: "Mobile Number", old: original.mobile || "(none)", next: form.mobile.trim() || "(none)" });
+    if (form.registrationNumber.trim() !== (original.registrationNumber || "")) {
+      changes.push({ label: "Registration Number (PRN)", old: original.registrationNumber || "(none)", next: form.registrationNumber.trim() || "(none)" });
+    }
+    if (changes.length === 0) return true;
+
+    const isPrnChange = changes.some((c) => c.label.startsWith("Registration"));
+    const message = [
+      ...changes.map((c) => `${c.label}: "${c.old}" → "${c.next}"`),
+      isPrnChange ? "\nThis is a sensitive academic identifier. Changing it may affect how the student is identified across the platform — their existing test attempts, results, attendance, LMS progress, submissions, and certificates all stay attached to their account and will not be lost." : null,
+      changes.some((c) => c.label === "Email") ? "\nThe new email will be marked unverified until confirmed." : null,
+    ].filter(Boolean).join("\n");
+
+    return confirmDialog({
+      title: changes.length === 1 ? `Update student ${changes[0].label.toLowerCase()}?` : "Update sensitive student details?",
+      message,
+      confirmLabel: "Confirm Update",
+      cancelLabel: "Cancel",
+      danger: isPrnChange,
+    });
+  }
+
   async function handleSave(e) {
     e.preventDefault();
     setError("");
-    if (!isValidEmail(normalizeEmail(form.email))) return setError("Please enter a valid email address");
+    const normalizedEmail = normalizeEmail(form.email);
+    if (!isValidEmail(normalizedEmail)) return setError("Please enter a valid email address");
     if (form.mobile.trim() && !MOBILE_RE.test(form.mobile.trim())) return setError("Please enter a valid mobile number");
     if (form.registrationNumber.trim() && !REGISTRATION_NUMBER_RE.test(form.registrationNumber.trim())) return setError("Registration Number (PRN) must be 9-12 alphanumeric characters");
     if (form.rollNumber.trim().length > 3) return setError("Roll Number cannot exceed 3 characters");
+
+    if (!(await confirmSensitiveChanges(normalizedEmail))) return;
+
     setSaving(true);
     try {
-      await api.patch(`/users/${studentId}`, form);
+      await api.patch(`/users/${studentId}`, { ...form, email: normalizedEmail });
       onSaved();
     } catch (err) {
       setError(err.response?.data?.error || "Failed to update profile");
       toast.error(err.response?.data?.error || "Failed to update profile");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function resetPassword() {
+    const ok = await confirmDialog({
+      title: "Reset Password",
+      message: `Generate a new, unique password for ${form?.name || "this student"} and email it to them? They will be required to set a new password on next login.`,
+      confirmLabel: "Reset Password",
+      danger: true,
+    });
+    if (!ok) return;
+    setResetting(true);
+    setResetResult(null);
+    try {
+      const { data } = await api.post(`/users/${studentId}/reset-password`, { sendEmail: true });
+      setResetResult({ emailSent: data.emailSent, emailError: data.emailError });
+      toast.success(data.emailSent ? "New password emailed to the student." : "Password reset, but the email failed to send.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to reset password");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -75,18 +135,24 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
           <p className="mono" style={{ color: "var(--ink-dim)", marginTop: 16 }}>Loading…</p>
         ) : (
           <form onSubmit={handleSave} style={{ marginTop: 16 }}>
+            <div style={sectionHeaderStyle}>Personal Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={labelStyle}>Full Name</label>
                 <input style={inputStyle} required value={form.name} onChange={updateField("name")} />
               </div>
               <div>
-                <label style={labelStyle}>Email Address</label>
-                <input style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
-              </div>
-              <div>
                 <label style={labelStyle}>Mobile Number</label>
                 <input style={inputStyle} value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStyle}>Email Address</label>
+                <input style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
+                {original?.pendingEmail && (
+                  <p style={{ fontSize: 11, color: "var(--ink-dim)", margin: "4px 0 0" }}>
+                    A self-service change to <strong>{original.pendingEmail}</strong> is still awaiting the student's own verification click — editing here replaces that pending request.
+                  </p>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Gender (optional)</label>
@@ -98,6 +164,18 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
                   <option value="Prefer not to say">Prefer not to say</option>
                 </select>
               </div>
+            </div>
+
+            <label style={labelStyle}>Profile Photo (optional)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {form.profilePhotoUrl && (
+                <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
+              )}
+              <input type="file" accept="image/*" onChange={handlePhotoChange} />
+            </div>
+
+            <div style={sectionHeaderStyle}>Academic Information</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={labelStyle}>Registration Number (PRN)</label>
                 <input style={inputStyle} maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
@@ -114,7 +192,7 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Department</label>
+                <label style={labelStyle}>Department (Branch)</label>
                 <input style={inputStyle} value={form.department} onChange={updateField("department")} />
               </div>
               <div>
@@ -129,6 +207,10 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
                 <label style={labelStyle}>Section</label>
                 <input style={inputStyle} value={form.section} onChange={updateField("section")} />
               </div>
+            </div>
+
+            <div style={sectionHeaderStyle}>Account Information</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
               <div>
                 <label style={labelStyle}>Student Status</label>
                 <select style={inputStyle} value={form.isActive ? "active" : "inactive"} onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}>
@@ -136,14 +218,32 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-            </div>
-
-            <label style={labelStyle}>Profile Photo (optional)</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              {form.profilePhotoUrl && (
-                <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
-              )}
-              <input type="file" accept="image/*" onChange={handlePhotoChange} />
+              <div>
+                <label style={labelStyle}>Email Verification</label>
+                <div style={{ padding: "10px 0", fontSize: 13 }}>
+                  <span className="badge" style={{ background: original?.emailVerified ? "var(--success-bg, #e6f7ee)" : "var(--warn-bg, #fff8e1)", color: original?.emailVerified ? "var(--mint)" : "var(--amber-dark, #8a6d00)" }}>
+                    {original?.emailVerified ? "Verified" : "Not verified"}
+                  </span>
+                  {/* This platform's admin-edit flow marks a changed email unverified immediately
+                      (see PATCH /users/:id) but has no admin-triggered "send verification email"
+                      action — only the student's own self-service PATCH /me flow sends one, via a
+                      pendingEmail token. Documented here rather than implying a control exists. */}
+                  {!original?.emailVerified && (
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "var(--ink-dim)" }}>No admin action to re-send verification — the student verifies from their own account.</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={labelStyle}>Password</label>
+                <button type="button" className="btn btn-ghost" disabled={resetting} onClick={resetPassword}>
+                  {resetting ? "Resetting…" : "Reset Password"}
+                </button>
+                {resetResult && (
+                  <p style={{ fontSize: 12, marginTop: 6, color: resetResult.emailSent ? "var(--mint)" : "var(--rust)" }}>
+                    {resetResult.emailSent ? "New password emailed to the student." : `Password reset, but the email failed to send${resetResult.emailError ? `: ${resetResult.emailError}` : "."}`}
+                  </p>
+                )}
+              </div>
             </div>
 
             {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
@@ -160,3 +260,4 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
 
 const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, marginTop: 10, marginBottom: 4 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14, fontFamily: "var(--font-body)" };
+const sectionHeaderStyle = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink-dim)", marginTop: 22, marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid var(--line)" };

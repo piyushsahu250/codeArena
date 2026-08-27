@@ -43,8 +43,26 @@ export default function StudentSearch({ basePath }) {
   const confirmDialog = useConfirm();
   const toast = useToast();
   const { user } = useAuth();
-  const canRegenerate = user?.role === "ADMIN"; // matches the backend's ADMIN-only bulk-regenerate-password route
-  const canEditProfile = user?.role === "ADMIN"; // matches the backend's ADMIN-only PATCH /users/:id
+  // Root cause of "Admin can't edit student PRN/email/mobile": this matched only the literal
+  // legacy "ADMIN" role, hiding the Edit Profile button (and password-reset) from every real
+  // SUPER_ADMIN/INSTITUTE_ADMIN account — the stale comments even claimed the backend was
+  // ADMIN-only, but POST /users/bulk-regenerate-password and PATCH /users/:id have both always
+  // accepted SUPER_ADMIN/INSTITUTE_ADMIN too. Same role-list-omission bug class found repeatedly
+  // elsewhere this session (tests.js, ResultManagement.jsx, TalentPools.jsx, ChallengeAdmin.jsx).
+  // STAFF/CLERK are deliberately still excluded here — the backend's own requireRole list on both
+  // routes excludes them too, matching spec section 3's "don't automatically give Staff the same
+  // permissions as Institute Admin."
+  const canRegenerate = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  const canEditProfile = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  // Distinct from the two checks above: this gates the institute-picker UI, shown only to a
+  // platform-level/unscoped admin (SUPER_ADMIN is the current role name for that; legacy "ADMIN"
+  // rows are the same capability under the old name — see App.jsx's Protected comment). An
+  // INSTITUTE_ADMIN or STAFF is already auto-scoped to their own institute server-side and must
+  // NOT get this picker. Previously literal "ADMIN" only, so a real SUPER_ADMIN account got no
+  // picker at all and silently browsed every institute's data unfiltered — spec section 1's own
+  // explicit requirement ("Super Admin must be able to select the correct institute before
+  // editing students") was broken for exactly this reason.
+  const isPlatformLevelAdmin = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
   const persisted = loadPersisted(basePath);
   const [q, setQ] = useState(persisted.q || "");
   const [results, setResults] = useState(persisted.results ?? null);
@@ -92,7 +110,7 @@ export default function StudentSearch({ basePath }) {
   }, []);
 
   useEffect(() => {
-    if (user?.role === "ADMIN") api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
+    if (isPlatformLevelAdmin) api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => {});
   }, [user?.role]);
 
   useEffect(() => {
@@ -100,7 +118,7 @@ export default function StudentSearch({ basePath }) {
   }, []);
 
   function loadGroups() {
-    if (user?.role === "ADMIN" && !browseInstituteId) {
+    if (isPlatformLevelAdmin && !browseInstituteId) {
       setGroups([]);
       setGroupsError("");
       return;
@@ -108,7 +126,7 @@ export default function StudentSearch({ basePath }) {
     setGroupsLoading(true);
     setGroupsError("");
     api
-      .get("/academic-groups", user?.role === "ADMIN" ? { params: { instituteId: browseInstituteId } } : {})
+      .get("/academic-groups", isPlatformLevelAdmin ? { params: { instituteId: browseInstituteId } } : {})
       .then((res) => setGroups(res.data))
       .catch((err) => {
         setGroups([]);
@@ -285,7 +303,7 @@ export default function StudentSearch({ basePath }) {
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Or browse by Institute · Department · Section</div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
-            {user?.role === "ADMIN" && (
+            {isPlatformLevelAdmin && (
               <div style={{ flex: "1 1 180px" }}>
                 <label style={labelStyle}>Institute</label>
                 <select
@@ -304,7 +322,7 @@ export default function StudentSearch({ basePath }) {
                 style={inputStyle}
                 value={browseDepartmentId}
                 onChange={(e) => { setBrowseDepartmentId(e.target.value); setBrowseSection(""); }}
-                disabled={(user?.role === "ADMIN" && !browseInstituteId) || groupsLoading || !!groupsError}
+                disabled={(isPlatformLevelAdmin && !browseInstituteId) || groupsLoading || !!groupsError}
               >
                 <option value="">
                   {groupsLoading ? "Loading departments…" : groupsError ? "Failed to load — see below" : departments.length === 0 ? "No departments found" : "Select department…"}

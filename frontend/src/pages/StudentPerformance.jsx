@@ -27,7 +27,10 @@ export default function StudentPerformance({ basePath }) {
   const confirmDialog = useConfirm();
   const studentId = paramId || user.id;
   const isManager = !!basePath;
-  const canEditProfile = isManager && user.role === "ADMIN";
+  // Same fix as StudentSearch.jsx's canEditProfile — see its comment for the full root-cause
+  // explanation (matched only literal "ADMIN", hiding this from real SUPER_ADMIN/INSTITUTE_ADMIN
+  // accounts even though PATCH /users/:id has always accepted both).
+  const canEditProfile = isManager && ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user.role);
 
   const [perf, setPerf] = useState(null);
   const [error, setError] = useState("");
