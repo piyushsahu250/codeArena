@@ -10,8 +10,11 @@ const { cached } = require("./cache");
 // accordingly — the conventional scheme for a printed marksheet.
 async function computeExaminationStats(examinationId) {
   return cached(`resultExamStats:${examinationId}`, 60 * 1000, async () => {
+    // PRESENT only — an Absent/Exempted/Not Appeared entry has no real mark (its obtainedMarks is
+    // a non-null placeholder, see resultManagement.js's computeResult) and must never be ranked
+    // against or averaged in with students who actually sat the exam.
     const entries = await prisma.resultEntry.findMany({
-      where: { examinationId },
+      where: { examinationId, status: "PRESENT" },
       select: { studentId: true, obtainedMarks: true },
       orderBy: { obtainedMarks: "desc" },
     });

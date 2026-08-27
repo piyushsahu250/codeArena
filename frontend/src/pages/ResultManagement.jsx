@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
@@ -8,7 +8,9 @@ import { useAuth } from "../context/AuthContext";
 
 const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 };
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 };
-const STATUS_COLORS = { DRAFT: "var(--ink-dim)", PUBLISHED: "var(--mint)", UNPUBLISHED: "var(--rust)" };
+const STATUS_COLORS = { DRAFT: "var(--ink-dim)", IN_REVIEW: "var(--amber-dark)", READY_TO_PUBLISH: "var(--amber-dark)", PUBLISHED: "var(--mint)", UNPUBLISHED: "var(--rust)", ARCHIVED: "var(--ink-dim)" };
+const STATUS_LABELS = { DRAFT: "Draft", IN_REVIEW: "In Review", READY_TO_PUBLISH: "Ready to Publish", PUBLISHED: "Published", UNPUBLISHED: "Unpublished", ARCHIVED: "Archived" };
+const MARK_STATUS_OPTIONS = [["PRESENT", "Present"], ["ABSENT", "Absent"], ["EXEMPTED", "Exempted"], ["NOT_APPEARED", "Not Appeared"]];
 
 const EMPTY_FORM = {
   title: "", description: "", instituteId: "", batch: "", divisions: "", semester: "", examDate: "", publishDate: "",
@@ -23,8 +25,15 @@ const EMPTY_FORM = {
 // exams, entirely independent of the online Test/ModuleCodingTest engines.
 export default function ResultManagement() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  // Matches the backend's own role lists on the create/edit/delete/publish routes exactly
+  // (requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN") in resultManagement.js) — this was
+  // previously "ADMIN" only, which silently hid every admin-only action (New Examination,
+  // Publish/Unpublish, Delete) from Institute Admin and Super Admin accounts, the same class of
+  // bug found and fixed in tests.js's GET /tests this session.
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const backTo = user?.role === "CLERK" ? "/clerk" : user?.role === "STAFF" ? "/staff" : "/admin";
+  const [dashboard, setDashboard] = useState(null);
+  useEffect(() => { api.get("/results/admin/dashboard").then((res) => setDashboard(res.data)).catch(() => setDashboard(null)); }, []);
 
   const [exams, setExams] = useState([]);
   const [error, setError] = useState("");
@@ -116,13 +125,25 @@ export default function ResultManagement() {
 
         {!selected && (
           <>
-            <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap", alignItems: "center" }}>
+            {dashboard && (
+              <div className="card" style={{ padding: 16, marginTop: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--ink-dim)", marginBottom: 8 }}>Dashboard</div>
+                <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                  <Stat label="Total Exams" value={dashboard.totalExams} />
+                  <Stat label="Draft" value={dashboard.draft} />
+                  <Stat label="In Review" value={dashboard.inReview} />
+                  <Stat label="Ready to Publish" value={dashboard.readyToPublish} />
+                  <Stat label="Published" value={dashboard.published} />
+                  <Stat label="Archived" value={dashboard.archived} />
+                  <Stat label="Students Evaluated" value={dashboard.studentsEvaluated} />
+                </div>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap", alignItems: "center" }}>
               <input style={{ ...inputStyle, maxWidth: 260 }} placeholder="Search by title…" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} />
-              <select style={{ ...inputStyle, maxWidth: 160 }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <select style={{ ...inputStyle, maxWidth: 180 }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="">All Statuses</option>
-                <option value="DRAFT">Draft</option>
-                <option value="PUBLISHED">Published</option>
-                <option value="UNPUBLISHED">Unpublished</option>
+                {Object.entries(STATUS_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
               </select>
               {isAdmin && (
                 <button className="btn btn-primary" style={{ marginLeft: "auto" }} onClick={() => setCreating((c) => !c)}>
@@ -267,7 +288,7 @@ export default function ResultManagement() {
                       <td style={{ padding: "10px 12px" }}>{new Date(exam.examDate).toLocaleDateString()}</td>
                       <td style={{ padding: "10px 12px" }}>{exam._count?.entries ?? 0}</td>
                       <td style={{ padding: "10px 12px" }}>
-                        <span style={{ color: STATUS_COLORS[exam.status], fontWeight: 700 }}>{exam.status}</span>
+                        <span style={{ color: STATUS_COLORS[exam.status], fontWeight: 700 }}>{STATUS_LABELS[exam.status] || exam.status}</span>
                       </td>
                       <td style={{ padding: "10px 12px" }}>
                         {isAdmin && (
@@ -316,6 +337,15 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   const [publishing, setPublishing] = useState(false);
   const [academicGroups, setAcademicGroups] = useState([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [markStatus, setMarkStatus] = useState("PRESENT");
+  const [publishCheck, setPublishCheck] = useState(null);
+  const [transitioning, setTransitioning] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [bulkPreview, setBulkPreview] = useState(null);
+  const [bulkCommitting, setBulkCommitting] = useState(false);
+  const [historyEntryId, setHistoryEntryId] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   function loadExam() {
     api.get(`/results/admin/examinations/${examId}`).then((res) => setExam(res.data)).catch((err) => setError(err.response?.data?.error || "Failed to load examination"));
@@ -326,7 +356,25 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   useEffect(() => { loadExam(); loadEntries(); }, [examId]);
   useEffect(() => {
     api.get("/results/admin/analytics", { params: { examinationId: examId } }).then((res) => setAnalytics(res.data)).catch(() => setAnalytics(null));
+    api.get(`/results/admin/examinations/${examId}/publish-check`).then((res) => setPublishCheck(res.data)).catch(() => setPublishCheck(null));
   }, [examId, entries.length]);
+
+  // Every workflow move (submit-for-review, mark-ready, send-back-to-draft, archive, unarchive)
+  // is the same shape: PATCH one sub-route, reload, show any error. One handler for all five so
+  // the buttons below stay simple.
+  async function transition(action, confirmMessage) {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+    setTransitioning(true);
+    setError("");
+    try {
+      await api.patch(`/results/admin/examinations/${examId}/${action}`);
+      loadExam();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to update status");
+    } finally {
+      setTransitioning(false);
+    }
+  }
 
   // Scoped to this examination's own institute — an exam always belongs to exactly one institute
   // already (exam.institute.name is shown above), so the "Select Institute" step of the template
@@ -345,18 +393,33 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   }, [studentQuery]);
 
   async function saveEntry() {
-    if (!selectedStudent || !marks) return;
+    if (!selectedStudent || (markStatus === "PRESENT" && !marks)) return;
+    if (exam.status === "PUBLISHED" && !correctionReason.trim()) {
+      setError("A reason is required to correct a published result.");
+      return;
+    }
     setSavingEntry(true);
     setError("");
     try {
-      await api.post(`/results/admin/examinations/${examId}/entries`, { studentId: selectedStudent.id, obtainedMarks: Number(marks), grade: grade || undefined, remarks: remarks || undefined });
-      setSelectedStudent(null); setStudentQuery(""); setMarks(""); setGrade(""); setRemarks(""); setAddingEntry(false);
+      await api.post(`/results/admin/examinations/${examId}/entries`, {
+        studentId: selectedStudent.id, status: markStatus,
+        obtainedMarks: markStatus === "PRESENT" ? Number(marks) : undefined,
+        grade: grade || undefined, remarks: remarks || undefined, reason: correctionReason || undefined,
+      });
+      setSelectedStudent(null); setStudentQuery(""); setMarks(""); setGrade(""); setRemarks(""); setMarkStatus("PRESENT"); setCorrectionReason(""); setAddingEntry(false);
       loadEntries();
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to save entry");
+      if (err.response?.status === 409) setError("This result was modified by another user. Please refresh before saving.");
+      else setError(err.response?.data?.error || "Failed to save entry");
     } finally {
       setSavingEntry(false);
     }
+  }
+
+  function loadHistory(entryId) {
+    if (historyEntryId === entryId) { setHistoryEntryId(null); return; }
+    setHistoryEntryId(entryId);
+    api.get(`/results/admin/examinations/${examId}/entries/${entryId}/history`).then((res) => setHistory(res.data)).catch(() => setHistory([]));
   }
 
   async function removeEntry(entryId) {
@@ -412,27 +475,62 @@ function ExamDetail({ examId, isAdmin, onBack }) {
     window.URL.revokeObjectURL(url);
   }
 
-  async function uploadBulk(e) {
+  // Preview -> Validate -> Confirm Import (spec section 7): selecting a file always runs a dry
+  // run first (no `commit` flag) — nothing is written until the admin reviews the buckets below
+  // and explicitly clicks Confirm Import, which resubmits the SAME file with commit:true.
+  async function previewBulk(e) {
     const file = e.target.files[0];
     if (!file) return;
+    setBulkFile(file);
     setBulkUploading(true);
     setBulkSummary(null);
+    setBulkPreview(null);
     try {
       const fd = new FormData();
       fd.append("file", file);
       const { data } = await api.post(`/results/admin/examinations/${examId}/bulk-import`, fd, { headers: { "Content-Type": "multipart/form-data" } });
-      setBulkSummary(data);
-      loadEntries();
+      setBulkPreview(data);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to import file");
+      setError(err.response?.data?.error || "Failed to validate file");
     } finally {
       setBulkUploading(false);
       e.target.value = "";
     }
   }
 
+  async function confirmBulkImport() {
+    if (!bulkFile) return;
+    setBulkCommitting(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", bulkFile);
+      const { data } = await api.post(`/results/admin/examinations/${examId}/bulk-import?commit=true`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setBulkSummary(data);
+      setBulkPreview(null);
+      setBulkFile(null);
+      loadEntries();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to import file");
+    } finally {
+      setBulkCommitting(false);
+    }
+  }
+
+  function cancelBulkPreview() {
+    setBulkPreview(null);
+    setBulkFile(null);
+  }
+
   async function publish() {
-    if (!confirm("Publish this examination? Students with an entry will be notified immediately.")) return;
+    const summaryLines = publishCheck
+      ? [
+          `${publishCheck.marksEnteredCount} student(s) have marks entered.`,
+          publishCheck.missingCount ? `${publishCheck.missingCount} student(s) are missing marks.` : null,
+          publishCheck.absentCount ? `${publishCheck.absentCount} absent, ${publishCheck.exemptedCount} exempted, ${publishCheck.notAppearedCount} not appeared.` : null,
+          ...publishCheck.warnings.map((w) => `⚠ ${w.message}`),
+        ].filter(Boolean).join("\n")
+      : "";
+    if (!confirm(`Publish this result?\n\nThis will make the result visible to eligible students.\n\n${summaryLines}`)) return;
     setPublishing(true);
     setError("");
     try {
@@ -490,7 +588,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
               {exam.institute?.name}{exam.batch ? ` · ${exam.batch}` : ""} · {new Date(exam.examDate).toLocaleDateString()}
             </div>
           </div>
-          <span style={{ color: STATUS_COLORS[exam.status], fontWeight: 700 }}>{exam.status}</span>
+          <span style={{ color: STATUS_COLORS[exam.status], fontWeight: 700 }}>{STATUS_LABELS[exam.status] || exam.status}</span>
         </div>
 
         <div style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" }}>
@@ -501,11 +599,29 @@ function ExamDetail({ examId, isAdmin, onBack }) {
 
         {isAdmin && (
           <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-            {exam.status !== "PUBLISHED" && (
-              <button className="btn btn-primary" onClick={publish} disabled={publishing}>{publishing ? "Publishing…" : "Publish Results"}</button>
+            {exam.status === "DRAFT" && (
+              <button className="btn btn-ghost" onClick={() => transition("submit-for-review", "Submit this examination for review?")} disabled={transitioning}>Submit for Review</button>
+            )}
+            {exam.status === "IN_REVIEW" && (
+              <>
+                <button className="btn btn-ghost" onClick={() => transition("mark-ready", "Mark this examination Ready to Publish?")} disabled={transitioning}>Mark Ready to Publish</button>
+                <button className="btn btn-ghost" onClick={() => transition("send-back-to-draft", "Send this examination back to Draft?")} disabled={transitioning}>Send Back to Draft</button>
+              </>
+            )}
+            {exam.status === "READY_TO_PUBLISH" && (
+              <button className="btn btn-ghost" onClick={() => transition("send-back-to-draft", "Send this examination back to Draft?")} disabled={transitioning}>Send Back to Draft</button>
+            )}
+            {exam.status !== "PUBLISHED" && exam.status !== "ARCHIVED" && (
+              <button className="btn btn-primary" onClick={publish} disabled={publishing || (publishCheck && !publishCheck.canPublish)}>{publishing ? "Publishing…" : "Publish Result"}</button>
             )}
             {exam.status === "PUBLISHED" && (
               <button className="btn btn-ghost" onClick={unpublish}>Unpublish</button>
+            )}
+            {(exam.status === "PUBLISHED" || exam.status === "UNPUBLISHED") && (
+              <button className="btn btn-ghost" onClick={() => transition("archive", "Archive this examination? It will be moved out of active workflows but kept for records.")} disabled={transitioning}>Archive</button>
+            )}
+            {exam.status === "ARCHIVED" && (
+              <button className="btn btn-ghost" onClick={() => transition("unarchive", "Restore this examination from the archive?")} disabled={transitioning}>Unarchive</button>
             )}
           </div>
         )}
@@ -513,11 +629,39 @@ function ExamDetail({ examId, isAdmin, onBack }) {
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}
       </div>
 
+      {publishCheck && exam.status !== "PUBLISHED" && exam.status !== "ARCHIVED" && (
+        <div className="card" style={{ padding: 20, marginTop: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Review Before Publish</div>
+          <div style={{ display: "flex", gap: 24, marginTop: 10, flexWrap: "wrap" }}>
+            <Stat label="Marks Entered" value={publishCheck.marksEnteredCount} />
+            {publishCheck.missingCount != null && <Stat label="Missing Marks" value={publishCheck.missingCount} />}
+            <Stat label="Passed" value={publishCheck.passedCount} />
+            <Stat label="Failed" value={publishCheck.failedCount} />
+            <Stat label="Absent" value={publishCheck.absentCount} />
+            <Stat label="Exempted" value={publishCheck.exemptedCount} />
+            <Stat label="Not Appeared" value={publishCheck.notAppearedCount} />
+            <Stat label="Average" value={publishCheck.averageMarks} />
+            <Stat label="Highest" value={publishCheck.highestMarks} />
+            <Stat label="Lowest" value={publishCheck.lowestMarks} />
+          </div>
+          {publishCheck.warnings.length > 0 && (
+            <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+              {publishCheck.warnings.map((w, i) => (
+                <div key={i} style={{ fontSize: 13, color: w.level === "error" ? "var(--rust)" : "var(--amber-dark)" }}>⚠ {w.message}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {analytics && (
         <div className="card" style={{ padding: 20, marginTop: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Analytics</div>
           <div style={{ display: "flex", gap: 24, marginTop: 10, flexWrap: "wrap" }}>
             <Stat label="Appeared" value={analytics.studentsAppeared} />
+            <Stat label="Absent" value={analytics.studentsAbsent} />
+            <Stat label="Exempted" value={analytics.studentsExempted} />
+            <Stat label="Not Appeared" value={analytics.studentsNotAppeared} />
             <Stat label="Passed" value={analytics.studentsPassed} />
             <Stat label="Failed" value={analytics.studentsFailed} />
             <Stat label="Pass %" value={`${analytics.passPercent}%`} />
@@ -561,21 +705,33 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 ))}
               </div>
             )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, marginTop: 10, alignItems: "end" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginTop: 10, alignItems: "end" }}>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select style={inputStyle} value={markStatus} onChange={(e) => setMarkStatus(e.target.value)}>
+                  {MARK_STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
               <div>
                 <label style={labelStyle}>Marks Obtained</label>
-                <input type="number" min="0" max={exam.totalMarks} style={inputStyle} value={marks} onChange={(e) => setMarks(e.target.value)} />
+                <input type="number" min="0" max={exam.totalMarks} style={inputStyle} value={marks} onChange={(e) => setMarks(e.target.value)} disabled={markStatus !== "PRESENT"} placeholder={markStatus !== "PRESENT" ? "No mark — " + markStatus.toLowerCase() : undefined} />
               </div>
               <div>
                 <label style={labelStyle}>Grade (Optional)</label>
-                <input style={inputStyle} value={grade} onChange={(e) => setGrade(e.target.value)} />
+                <input style={inputStyle} value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Auto if configured" />
               </div>
-              <button className="btn btn-primary" disabled={!selectedStudent || !marks || savingEntry} onClick={saveEntry}>{savingEntry ? "Saving…" : "Save"}</button>
+              <button className="btn btn-primary" disabled={!selectedStudent || (markStatus === "PRESENT" && !marks) || savingEntry} onClick={saveEntry}>{savingEntry ? "Saving…" : "Save"}</button>
             </div>
             <div style={{ marginTop: 10 }}>
               <label style={labelStyle}>Remarks (Optional)</label>
               <input style={inputStyle} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder='e.g. "Excellent performance"' />
             </div>
+            {exam.status === "PUBLISHED" && (
+              <div style={{ marginTop: 10 }}>
+                <label style={labelStyle}>Reason for Correction (required — this examination is already published)</label>
+                <input style={inputStyle} value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} placeholder='e.g. "Correction after re-verification"' />
+              </div>
+            )}
           </div>
         )}
 
@@ -584,8 +740,10 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
               Select an Academic Group to download a template pre-filled with every student in that group —
               Institute Name, Student Name, and Registration Number (PRN) are filled in for you; just enter{" "}
-              <strong>Marks Obtained</strong> and re-upload the same file. Students are matched by Registration
-              Number only — Student Name is shown for verification and Roll Number is never used for matching.
+              <strong>Marks Obtained</strong> (and optionally Status — Present/Absent/Exempted/Not Appeared) and
+              re-upload the same file. Students are matched by Registration Number only — Student Name is shown
+              for verification and Roll Number is never used for matching. Uploading only VALIDATES the file —
+              nothing is saved until you review the results below and click Confirm Import.
             </p>
 
             <div style={{ maxWidth: 320, marginTop: 10 }}>
@@ -603,11 +761,32 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 Download Template
               </button>
               <label className="btn btn-primary" style={{ fontSize: 12, cursor: "pointer" }}>
-                {bulkUploading ? "Uploading…" : "Upload File"}
-                <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={uploadBulk} disabled={bulkUploading} />
+                {bulkUploading ? "Validating…" : "Choose File to Preview"}
+                <input type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={previewBulk} disabled={bulkUploading} />
               </label>
             </div>
             <UploadProgressBar active={bulkUploading} />
+
+            {bulkPreview && (
+              <div style={{ marginTop: 12, padding: 12, border: "1px solid var(--amber-dark)", borderRadius: 8, background: "rgba(200,150,0,0.06)" }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>Preview — nothing has been saved yet</div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>
+                  Valid rows: <strong style={{ color: "var(--mint)" }}>{bulkPreview.imported.length}</strong> ·
+                  {" "}Invalid PRNs: <strong>{bulkPreview.invalidRegistrationNumber.length}</strong> ·
+                  {" "}Invalid Institute Names: <strong>{bulkPreview.invalidInstitute.length}</strong> ·
+                  {" "}Duplicate Records: <strong>{bulkPreview.duplicate.length}</strong> ·
+                  {" "}Failed Rows: <strong>{bulkPreview.failed.length}</strong> ·
+                  {" "}Total Rows: <strong>{bulkPreview.totalRows}</strong>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button className="btn btn-primary" onClick={confirmBulkImport} disabled={bulkCommitting || bulkPreview.imported.length === 0}>
+                    {bulkCommitting ? "Importing…" : `Confirm Import (${bulkPreview.imported.length} row(s))`}
+                  </button>
+                  <button className="btn btn-ghost" onClick={cancelBulkPreview} disabled={bulkCommitting}>Cancel</button>
+                </div>
+              </div>
+            )}
+
             {bulkSummary && (
               <div style={{ marginTop: 12, fontSize: 12 }}>
                 <div>
@@ -649,6 +828,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 <th style={{ padding: "8px 10px" }}>Student</th>
                 <th style={{ padding: "8px 10px" }}>Registration No. (PRN)</th>
                 <th style={{ padding: "8px 10px" }}>Department</th>
+                <th style={{ padding: "8px 10px" }}>Status</th>
                 <th style={{ padding: "8px 10px" }}>Marks</th>
                 <th style={{ padding: "8px 10px" }}>%</th>
                 <th style={{ padding: "8px 10px" }}>Result</th>
@@ -659,30 +839,57 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             </thead>
             <tbody>
               {entries.map((en) => (
-                <tr key={en.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
-                  <td className="mono" style={{ padding: "8px 10px" }}>{en.rollNumber || "—"}</td>
-                  <td style={{ padding: "8px 10px" }}>{en.studentName}</td>
-                  <td className="mono" style={{ padding: "8px 10px" }}>{en.registrationNumber || "—"}</td>
-                  <td style={{ padding: "8px 10px" }}>{en.department || "—"}</td>
-                  <td style={{ padding: "8px 10px" }}>{en.obtainedMarks} / {exam.totalMarks}</td>
-                  <td style={{ padding: "8px 10px" }}>{en.percentage}%</td>
-                  <td style={{ padding: "8px 10px" }}>
-                    <span style={{ color: en.passed ? "var(--mint)" : "var(--rust)", fontWeight: 700 }}>{en.passed ? exam.passLabel : exam.failLabel}</span>
-                  </td>
-                  <td style={{ padding: "8px 10px", maxWidth: 160 }}>{en.remarks || "—"}</td>
-                  <td className="mono" style={{ padding: "8px 10px", fontSize: 11 }}>{en.verificationCode || "—"}</td>
-                  <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
-                    <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={() => previewMarksheet(en.id)}>
-                      Preview
-                    </button>
-                    {exam.canEdit && (
-                      <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => removeEntry(en.id)}>Remove</button>
-                    )}
-                  </td>
-                </tr>
+                <Fragment key={en.id}>
+                  <tr style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
+                    <td className="mono" style={{ padding: "8px 10px" }}>{en.rollNumber || "—"}</td>
+                    <td style={{ padding: "8px 10px" }}>{en.studentName}</td>
+                    <td className="mono" style={{ padding: "8px 10px" }}>{en.registrationNumber || "—"}</td>
+                    <td style={{ padding: "8px 10px" }}>{en.department || "—"}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      {en.status === "PRESENT" ? <span style={{ color: "var(--mint)" }}>Present</span> : <span style={{ color: "var(--amber-dark)" }}>{MARK_STATUS_OPTIONS.find(([v]) => v === en.status)?.[1] || en.status}</span>}
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>{en.status === "PRESENT" ? `${en.obtainedMarks} / ${exam.totalMarks}` : "—"}</td>
+                    <td style={{ padding: "8px 10px" }}>{en.status === "PRESENT" ? `${en.percentage}%` : "—"}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      {en.status === "PRESENT"
+                        ? <span style={{ color: en.passed ? "var(--mint)" : "var(--rust)", fontWeight: 700 }}>{en.passed ? exam.passLabel : exam.failLabel}</span>
+                        : <span style={{ color: "var(--ink-dim)" }}>—</span>}
+                    </td>
+                    <td style={{ padding: "8px 10px", maxWidth: 160 }}>{en.remarks || "—"}</td>
+                    <td className="mono" style={{ padding: "8px 10px", fontSize: 11 }}>{en.verificationCode || "—"}</td>
+                    <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                      <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={() => previewMarksheet(en.id)}>
+                        Preview
+                      </button>
+                      <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={() => loadHistory(en.id)}>
+                        {historyEntryId === en.id ? "Hide History" : "History"}
+                      </button>
+                      {exam.canEdit && (
+                        <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => removeEntry(en.id)}>Remove</button>
+                      )}
+                    </td>
+                  </tr>
+                  {historyEntryId === en.id && (
+                    <tr>
+                      <td colSpan={10} style={{ padding: "8px 16px", background: "var(--paper)" }}>
+                        {history.length === 0
+                          ? <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>No changes recorded for this entry yet.</span>
+                          : (
+                            <div style={{ display: "grid", gap: 4 }}>
+                              {history.map((h) => (
+                                <div key={h.id} className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                                  {new Date(h.createdAt).toLocaleString()} — {h.field}: {h.oldValue ?? "—"} → {h.newValue ?? "—"} — by {h.changedByName} — "{h.reason}"
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
               {entries.length === 0 && (
-                <tr><td colSpan={9} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>No entries yet.</td></tr>
+                <tr><td colSpan={10} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }}>No entries yet.</td></tr>
               )}
             </tbody>
           </table>

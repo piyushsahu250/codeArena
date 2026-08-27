@@ -134,6 +134,7 @@ model Institute {
   dailyChallenges  DailyChallenge[]
   weeklyChallenges WeeklyChallenge[]
   resultExaminations ResultExamination[]
+  resultGradeBands ResultGradeBand[]
   tests            Test[]
   readinessSubjects ReadinessSubject[]
   interviewQuestions InterviewQuestion[]
@@ -2806,15 +2807,35 @@ model AcademicGroup {
 // Institute/Department/Notification wholesale rather than duplicating any of it.
 // ===================================================================
 
+// IN_REVIEW / READY_TO_PUBLISH are new intermediate workflow states (added for the Result
+// Management workflow spec) sitting between DRAFT and PUBLISHED — an exam moves through them in
+// order, never skipping backward except an explicit "send back to draft" action. UNPUBLISHED is
+// unchanged (existing semantics: "was published, pulled back"); ARCHIVED is new and distinct —
+// an admin's deliberate "done, keep for records" end state, never entered automatically.
 enum ResultExaminationStatus {
   DRAFT
+  IN_REVIEW
+  READY_TO_PUBLISH
   PUBLISHED
   UNPUBLISHED
+  ARCHIVED
 }
 
 enum ResultEntrySource {
   MANUAL
   BULK_IMPORT
+}
+
+// Applies to both ResultEntry (an exam with no per-subject breakdown) and ResultSubjectMark (one
+// subject within a multi-subject exam) — same four states either way. PRESENT is the default so
+// every existing row (created before this enum existed) is implicitly correct with no backfill.
+// Deliberately NOT auto-converting ABSENT to a 0 mark anywhere in the calculation logic (see
+// resultManagement.js's computeResult) — spec section 9 explicitly forbids that assumption.
+enum ResultMarkStatus {
+  PRESENT
+  ABSENT
+  EXEMPTED
+  NOT_APPEARED
 }
 
 model ResultExamination {
@@ -2859,6 +2880,14 @@ model ResultExamination {
   showClassAverage Boolean @default(false)
   showAttendance   Boolean @default(false)
 
+  // Optional expected-roster definition (spec section 10/13: "2 students are missing marks").
+  // This module has no other concept of "who is eligible for this exam" (departments[] above is
+  // explicitly descriptive-only) — when this is left empty, "missing marks" simply can't be
+  // computed and the pre-publish check only reports how many entries exist, not how many are
+  // missing. A plain scalar array (Postgres native array type), not a join table, since this is a
+  // small admin-picked list read as a whole, never queried/filtered by individual group id.
+  academicGroupIds String[] @default([])
+
   createdByAdminId String
   createdByName    String
   publishedAt      DateTime?
@@ -2867,9 +2896,33 @@ model ResultExamination {
 
   departments ResultExaminationDepartment[]
   entries     ResultEntry[]
+  // Optional — an exam with zero ResultSubject rows behaves exactly as before this field existed
+  // (one total mark per student, on ResultEntry itself). Adding one or more subjects is what turns
+  // on the per-subject mark-entry table/marksheet breakdown; existing exams (and any exam that
+  // never needs a subject breakdown) are completely unaffected.
+  subjects    ResultSubject[]
 
   @@index([instituteId])
   @@index([instituteId, status])
+}
+
+// One row per subject within a multi-subject exam (spec section 4: "Mathematics, Programming,
+// Computer Networks, Artificial Intelligence" under one "Mid Semester Examination"). Optional by
+// design — see the comment on ResultExamination.subjects above.
+model ResultSubject {
+  id            String            @id @default(uuid())
+  examination   ResultExamination @relation(fields: [examinationId], references: [id], onDelete: Cascade)
+  examinationId String
+  name          String
+  maxMarks      Float
+  passingMarks  Float?
+  order         Int               @default(0)
+  createdAt     DateTime          @default(now())
+
+  marks ResultSubjectMark[]
+
+  @@unique([examinationId, name])
+  @@index([examinationId])
 }
 
 // Purely descriptive/filter tagging on the exam (which departments it broadly covers, for
@@ -2900,13 +2953,25 @@ model ResultEntry {
   student       User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId     String
 
+  // Present/Absent/Exempted/Not Appeared (spec section 9) — for an exam with NO subject breakdown,
+  // this is the whole story; for a multi-subject exam this is left PRESENT (the aggregate/overall
+  // row's own status is not meaningful once subjects exist — see ResultSubjectMark.status instead).
+  status        ResultMarkStatus  @default(PRESENT)
   obtainedMarks Float
   percentage    Float
   passed        Boolean
+  // Auto-computed from the institute's ResultGradeBand configuration when one exists (see
+  // utils/resultGrading.js); falls back to this being a plain admin-entered string when the
+  // institute has no configured grading scale — same "never fabricate the institute's actual
+  // grading policy" reasoning as before, now satisfied by *asking* the institute to configure one
+  // instead of leaving grade permanently manual-only.
   grade         String?
   // Admin-entered only, never derived from percentage — same "never fabricate the institute's
   // grading/assessment policy" reasoning as `grade` above.
   remarks       String?
+  // Optimistic-concurrency guard (spec section 24): incremented on every update; a client must
+  // send back the version it last read, and a mismatch means someone else saved first.
+  version       Int               @default(0)
 
   // Public marksheet-verification ID (format: MS-<year>-<instituteCode>-<random>, generated by
   // utils/resultCode.js — mirrors Certificate.certificateCode). Nullable: existing rows created
@@ -2920,9 +2985,73 @@ model ResultEntry {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
+  subjectMarks ResultSubjectMark[]
+  history      ResultEntryHistory[]
+
   @@unique([examinationId, studentId])
   @@index([studentId])
   @@index([examinationId])
+}
+
+// One row per (ResultEntry, ResultSubject) — a student's mark in one subject of a multi-subject
+// exam. obtainedMarks is null exactly when status isn't PRESENT (spec: "do not force marks for
+// every student" — an absent/exempted student has no mark to enter, not a fabricated 0).
+model ResultSubjectMark {
+  id            String           @id @default(uuid())
+  entry         ResultEntry      @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId       String
+  subject       ResultSubject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId     String
+  status        ResultMarkStatus @default(PRESENT)
+  obtainedMarks Float?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([entryId, subjectId])
+  @@index([entryId])
+  @@index([subjectId])
+}
+
+// Institute-configurable grading scale (spec section 11/12: "must be configurable according to
+// institute requirements", "backend must be the source of truth"). Absence of any row for an
+// institute means "no configured scale" — grade stays the existing plain admin-entered field on
+// ResultEntry, exactly the pre-existing behavior; this table only ever ADDS an auto-compute option,
+// never removes the manual fallback.
+model ResultGradeBand {
+  id          String    @id @default(uuid())
+  institute   Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  instituteId String
+  grade       String
+  minPercent  Float
+  maxPercent  Float
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([instituteId])
+  @@index([instituteId, minPercent])
+}
+
+// Correction audit trail (spec sections 15/16) — a PUBLISHED entry's marks/status/grade/remarks
+// must never be silently overwritten; every change after publication (and, for simplicity, every
+// change at all) writes one row here BEFORE the update is applied. Never deleted (spec: "Do not
+// delete audit history"). subjectId is null when the change was to the overall/aggregate entry
+// fields rather than one specific subject's mark.
+model ResultEntryHistory {
+  id               String      @id @default(uuid())
+  entry            ResultEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entryId          String
+  subjectId        String?
+  field            String
+  oldValue         String?
+  newValue         String?
+  changedByAdminId String
+  changedByName    String
+  reason           String
+  createdAt        DateTime    @default(now())
+
+  @@index([entryId])
+  @@index([entryId, createdAt])
 }
 
 // Admin-managed: which single staff member owns attendance for a division (Class). One division =

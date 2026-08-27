@@ -82,14 +82,21 @@ async function generateMarksheetPdf(data, res) {
   doc.y = cardTop + cardHeight + 16;
 
   // ---- Result summary stat cards ------------------------------------------
-  const resultLabel = entry.passed ? examination.passLabel : examination.failLabel;
-  const resultColor = entry.passed ? ACCENT : RUST;
-  const stats = [
-    { label: "Obtained / Total", value: `${entry.obtainedMarks} / ${examination.totalMarks}` },
-    { label: "Percentage", value: `${Math.round(entry.percentage * 100) / 100}%` },
-    { label: "Grade", value: entry.grade || "—" },
-    { label: "Result", value: resultLabel, color: resultColor },
-  ];
+  // Absent/Exempted/Not Appeared (spec section 9): the entry's obtainedMarks/percentage/passed
+  // are placeholder values in that case (see resultManagement.js's computeResult) — this must
+  // show the actual attendance status, never a fabricated score or Pass/Fail.
+  const isPresent = entry.status === "PRESENT" || entry.status === undefined; // undefined = a pre-this-feature caller, treat as present
+  const STATUS_LABELS = { ABSENT: "Absent", EXEMPTED: "Exempted", NOT_APPEARED: "Not Appeared" };
+  const resultLabel = isPresent ? (entry.passed ? examination.passLabel : examination.failLabel) : STATUS_LABELS[entry.status];
+  const resultColor = isPresent ? (entry.passed ? ACCENT : RUST) : MUTED;
+  const stats = isPresent
+    ? [
+        { label: "Obtained / Total", value: `${entry.obtainedMarks} / ${examination.totalMarks}` },
+        { label: "Percentage", value: `${Math.round(entry.percentage * 100) / 100}%` },
+        { label: "Grade", value: entry.grade || "—" },
+        { label: "Result", value: resultLabel, color: resultColor },
+      ]
+    : [{ label: "Result", value: resultLabel, color: resultColor }];
   if (typeof rank === "number") stats.push({ label: "Rank", value: totalStudents ? `${rank} of ${totalStudents}` : String(rank) });
   if (typeof classAverage === "number") stats.push({ label: "Class Average", value: `${classAverage}` });
   if (typeof attendancePercent === "number") stats.push({ label: "Attendance", value: `${attendancePercent}%` });
@@ -114,16 +121,28 @@ async function generateMarksheetPdf(data, res) {
     doc.text(col.label, cx + 8, tableTop + 6, { width: col.width - 16, align: col.align || "left" });
     cx += col.width;
   }
-  const rowTop = tableTop + 22;
-  doc.rect(left, rowTop, contentWidth, 24).stroke(LINE);
-  cx = left;
+  // Multi-subject exams (spec section 4) get one row per ResultSubject; an exam with no subjects
+  // configured falls back to the original single "whole exam as one row" behavior unchanged.
+  const subjectRows = Array.isArray(entry.subjectMarks) && entry.subjectMarks.length
+    ? entry.subjectMarks.map((m) => [
+        m.subject?.name || "—", String(m.subject?.maxMarks ?? "—"),
+        m.status === "PRESENT" ? String(m.obtainedMarks ?? "—") : "—",
+        m.status === "PRESENT" ? "—" : (STATUS_LABELS[m.status] || m.status),
+      ])
+    : [[examination.title, String(examination.totalMarks), isPresent ? String(entry.obtainedMarks) : "—", resultLabel]];
+
+  let rowTop = tableTop + 22;
   doc.font("Helvetica").fontSize(10).fillColor(INK);
-  const rowValues = [examination.title, String(examination.totalMarks), String(entry.obtainedMarks), resultLabel];
-  for (let i = 0; i < cols.length; i++) {
-    doc.text(rowValues[i], cx + 8, rowTop + 7, { width: cols[i].width - 16, align: cols[i].align || "left" });
-    cx += cols[i].width;
+  for (const rowValues of subjectRows) {
+    doc.rect(left, rowTop, contentWidth, 24).stroke(LINE);
+    cx = left;
+    for (let i = 0; i < cols.length; i++) {
+      doc.text(rowValues[i], cx + 8, rowTop + 7, { width: cols[i].width - 16, align: cols[i].align || "left" });
+      cx += cols[i].width;
+    }
+    rowTop += 24;
   }
-  doc.y = rowTop + 24 + 16;
+  doc.y = rowTop + 16;
 
   // ---- Remarks (admin-entered only — never fabricated) ---------------------
   if (entry.remarks) {
