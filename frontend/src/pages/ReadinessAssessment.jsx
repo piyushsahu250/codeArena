@@ -89,14 +89,29 @@ export default function ReadinessAssessment() {
     return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
   }
 
+  // Recovery path for the server's own deadline check on POST /answer (new — see readiness.js's
+  // readinessDeadlineOf) rejecting a save because time is genuinely up. Normally the client's own
+  // countdown below reaches 0 first and calls finalize(true) on its own; this only matters when
+  // that path somehow didn't run yet (a backgrounded tab throttling the interval is the realistic
+  // case) — without it, a student in that narrow window would just see a rejected save and stay
+  // stuck on the assessment with no way to reach their (already-locked-in-server-side) result.
+  function isDeadlinePassedError(err) {
+    return err.response?.status === 403 && /time is up/i.test(err.response?.data?.error || "");
+  }
+
   async function saveQuizAnswer(questionId, selected) {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], selected, skipped: false } }));
     setSaving(true);
     try {
       const res = await api.post(`/readiness/assessments/${assessmentId}/answer`, { questionId, selectedOptions: selected, skipped: false });
       setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], selected, skipped: false, score: res.data.answer.score, isCorrect: res.data.answer.isCorrect } }));
-    } catch {
-      toast.error("Failed to save your answer — try again.");
+    } catch (err) {
+      // Was a bare generic message regardless of cause -- now matches saveCodeAnswer's existing
+      // pattern of surfacing the server's actual reason (e.g. the new server-side deadline check:
+      // "Time is up for this assessment" reads very differently from a transient save failure, and
+      // the student should see which one actually happened).
+      toast.error(err.response?.data?.error || "Failed to save your answer — try again.");
+      if (isDeadlinePassedError(err) && !autoFinalizedRef.current) { autoFinalizedRef.current = true; finalize(true); }
     } finally {
       setSaving(false);
     }
@@ -119,6 +134,7 @@ export default function ReadinessAssessment() {
       toast.success(`Saved — scored ${res.data.answer.score}%`);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to save your answer — try again.");
+      if (isDeadlinePassedError(err) && !autoFinalizedRef.current) { autoFinalizedRef.current = true; finalize(true); }
     } finally {
       setSaving(false);
     }

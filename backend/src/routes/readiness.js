@@ -64,6 +64,20 @@ async function assertReadinessAssignmentScope(req, res, academicGroupIds) {
   return true;
 }
 
+// Server-side source of truth for when an assessment's answers stop being acceptable -- mirrors
+// submissions.js's deadlineOf() for Formal Tests exactly (same startedAt+durationMin shape).
+// Previously this had no equivalent anywhere in this file: durationMin was stored on the
+// ReadinessAssessment at creation but never once compared against Date.now() by POST
+// /assessments/:id/answer or POST /assessments/:id/finalize -- the actual time limit lived only in
+// ReadinessAssessment.jsx's client-side countdown. A student whose client timer/auto-finalize call
+// never fired (closed tab, tampered devtools, a backgrounded browser throttling the interval) could
+// keep calling POST /answer to save/improve answers indefinitely past the configured duration, and
+// the server accepted every one of them -- exactly the "gained extra time by changing device time
+// or otherwise not letting the client timer act" scenario this kind of check exists to close.
+function readinessDeadlineOf(assessment) {
+  return new Date(assessment.startedAt).getTime() + assessment.durationMin * 60 * 1000;
+}
+
 // Builds the "Institute · Batch · Department · Section · Program" line every generated readiness
 // report/export must carry (spec section 16) — resolved live off the student's current
 // institute/academicGroup/program rather than a stored snapshot, per ResultEntry's own documented
@@ -379,12 +393,15 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
     }
 
     // Server-side attempt cap — a resumed in-progress attempt (handled above) never counts against
-    // this, only genuinely COMPLETED ones do, so a student can always finish an attempt already in
-    // progress even after hitting the limit. Counted fresh from the DB on every call, never trusted
-    // from any client-supplied attempt number.
+    // this, so a student can always finish an attempt already in progress even after hitting the
+    // limit. Counted fresh from the DB on every call, never trusted from any client-supplied
+    // attempt number. Counts EXPIRED alongside COMPLETED -- an attempt the student let run out the
+    // clock on (now that readinessDeadlineOf() above is actually enforced) still consumed one of
+    // their allotted attempts; counting COMPLETED only would let a student get unlimited attempts
+    // by deliberately never finishing one in time.
     if (subject.maxAttempts != null) {
       const completedCount = await prisma.readinessAssessment.count({
-        where: { studentId: req.user.id, subjectId, assessmentMode, status: "COMPLETED" },
+        where: { studentId: req.user.id, subjectId, assessmentMode, status: { in: ["COMPLETED", "EXPIRED"] } },
       });
       if (completedCount >= subject.maxAttempts) {
         return res.status(403).json({ error: `You've used all ${subject.maxAttempts} attempt${subject.maxAttempts === 1 ? "" : "s"} for this assessment.`, maxAttemptsReached: true, maxAttempts: subject.maxAttempts, attemptsUsed: completedCount });
@@ -408,7 +425,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
     const createAssessment = () => prisma.$transaction(async (tx) => {
       if (subject.maxAttempts != null) {
         const recount = await tx.readinessAssessment.count({
-          where: { studentId: req.user.id, subjectId, assessmentMode, status: "COMPLETED" },
+          where: { studentId: req.user.id, subjectId, assessmentMode, status: { in: ["COMPLETED", "EXPIRED"] } },
         });
         if (recount >= subject.maxAttempts) {
           const err = new Error("Attempt cap reached");
@@ -480,6 +497,9 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
     const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id } });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
     if (assessment.status !== "IN_PROGRESS") return res.status(400).json({ error: "This assessment is already finalized" });
+    // Server-side deadline enforcement (see readinessDeadlineOf's own comment for why this was
+    // missing) -- rejects a save attempted after time is up rather than silently accepting it.
+    if (Date.now() > readinessDeadlineOf(assessment)) return res.status(403).json({ error: "Time is up for this assessment" });
 
     const { questionId, answerText, code, language, selectedOptions, skipped, timeTakenSec } = req.body;
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
@@ -516,9 +536,15 @@ router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), a
     const answersWithQuestions = answers.map((a) => ({ ...a, question: questions.find((q) => q.id === a.questionId) || {} }));
 
     const built = buildReadinessReport(answersWithQuestions, assessment.subject);
+    // Distinguishes a submission the server's own clock confirms was on time from one accepted
+    // only because it's finalize's job to always be able to close out an attempt (matches
+    // tests.js's identical "finalize is never blocked by the deadline" reasoning -- a legitimately
+    // in-flight submission at the moment time ran out must still go through) -- EXPIRED vs
+    // COMPLETED was already in the schema's documented status vocabulary but nothing ever set it.
+    const isLate = Date.now() > readinessDeadlineOf(assessment);
 
     const [updatedAssessment, report] = await prisma.$transaction([
-      prisma.readinessAssessment.update({ where: { id: assessment.id }, data: { status: "COMPLETED", submittedAt: new Date() } }),
+      prisma.readinessAssessment.update({ where: { id: assessment.id }, data: { status: isLate ? "EXPIRED" : "COMPLETED", submittedAt: new Date() } }),
       prisma.readinessReport.upsert({
         where: { assessmentId: assessment.id },
         update: built,
@@ -606,7 +632,10 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = 10;
-    const where = { studentId: req.user.id, status: "COMPLETED", ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}) };
+    // Includes EXPIRED alongside COMPLETED -- an assessment that timed out still has a real,
+    // scored report (finalize builds one either way, see readinessDeadlineOf's comment), so hiding
+    // it from the student's own history would just look like the attempt vanished.
+    const where = { studentId: req.user.id, status: { in: ["COMPLETED", "EXPIRED"] }, ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}) };
     const [assessments, total] = await Promise.all([
       prisma.readinessAssessment.findMany({
         where, include: { report: true, subject: { select: { id: true, name: true } } },
@@ -622,7 +651,7 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
     let trend = null;
     if (page === 1) {
       const all = await prisma.readinessAssessment.findMany({
-        where: { studentId: req.user.id, status: "COMPLETED" },
+        where: { studentId: req.user.id, status: { in: ["COMPLETED", "EXPIRED"] } },
         select: { submittedAt: true, subject: { select: { name: true } }, report: { select: { overallScore: true } } },
         orderBy: { submittedAt: "asc" },
       });
