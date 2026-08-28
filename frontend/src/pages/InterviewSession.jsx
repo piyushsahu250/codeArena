@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL, performExpiredRedirect } from "../api";
-import { Mic, Square } from "lucide-react";
+import { Mic, Square, Move } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
 import { useTheme } from "../context/ThemeContext";
 import Navbar from "../components/Navbar";
@@ -62,6 +62,15 @@ export default function InterviewSession() {
   const [maxViolations, setMaxViolations] = useState(3);
   const [violationWarning, setViolationWarning] = useState(null);
   const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
+  // Self-view proctoring video position, draggable — was a hardcoded position:fixed bottom-right
+  // corner with no way to move it, which on mobile sits directly on top of the "Next"/"Submit
+  // Interview" button below (that button is also bottom-right-anchored — see the flex row near
+  // the end of this component), making it untappable. null = use the CSS default (bottom-right);
+  // once dragged, an explicit {top,left} pixel position overrides it. Pointer Events (not separate
+  // mouse/touch handlers) so the same code drags correctly with a mouse OR a finger.
+  const [videoPos, setVideoPos] = useState(null);
+  const draggingVideoRef = useRef(false);
+  const videoDragOffsetRef = useRef({ x: 0, y: 0 });
   const recognitionRef = useRef(null);
   const finalizedRef = useRef(false);
   // Set synchronously as the FIRST statement of advanceRound() (before any await, including the
@@ -512,6 +521,36 @@ export default function InterviewSession() {
     }
   }
 
+  // Drag the self-view proctoring video anywhere on screen — see videoPos's declaration comment
+  // for why this exists (fixed bottom-right previously blocked the Submit/Next button on mobile,
+  // with no way to move it out of the way). All three handlers are wired directly onto the video
+  // element (not a separate ref/window listener) — setPointerCapture on pointerdown means the
+  // SAME element keeps receiving pointermove/pointerup for the rest of this gesture even once the
+  // finger/cursor moves outside its small 140x105 bounds, so e.currentTarget is reliably the video
+  // element throughout, whether the input is a mouse or a touch.
+  function startVideoDrag(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    videoDragOffsetRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    draggingVideoRef.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+  function onVideoDragMove(e) {
+    if (!draggingVideoRef.current) return;
+    const w = e.currentTarget.offsetWidth || 140;
+    const h = e.currentTarget.offsetHeight || 105;
+    // Clamped to the viewport so a fast drag can never leave the video partially or fully
+    // off-screen (and therefore un-draggable again without a page refresh).
+    const left = Math.min(Math.max(0, e.clientX - videoDragOffsetRef.current.x), window.innerWidth - w);
+    const top = Math.min(Math.max(0, e.clientY - videoDragOffsetRef.current.y), window.innerHeight - h);
+    setVideoPos({ left, top });
+  }
+  function endVideoDrag(e) {
+    if (!draggingVideoRef.current) return;
+    draggingVideoRef.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  }
+
   function toggleRecording() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -560,11 +599,38 @@ export default function InterviewSession() {
           </div>
         </div>
 
-        <video ref={proctor.videoRef} autoPlay muted playsInline style={{
-          position: "fixed", bottom: 16, right: 16, width: 140, height: 105, borderRadius: 8,
-          objectFit: "cover", background: "#000", zIndex: 50,
-          border: proctor.faceStatus !== "OK" ? "3px solid var(--rust)" : "2px solid var(--ip-accent)",
-        }} />
+        <div
+          style={{
+            position: "fixed",
+            ...(videoPos ? { top: videoPos.top, left: videoPos.left } : { bottom: 16, right: 16 }),
+            width: 140, height: 105, zIndex: 50,
+          }}
+        >
+          <video
+            ref={proctor.videoRef} autoPlay muted playsInline
+            onPointerDown={startVideoDrag} onPointerMove={onVideoDragMove} onPointerUp={endVideoDrag} onPointerCancel={endVideoDrag}
+            title="Drag to move"
+            style={{
+              width: "100%", height: "100%", borderRadius: 8,
+              objectFit: "cover", background: "#000",
+              border: proctor.faceStatus !== "OK" ? "3px solid var(--rust)" : "2px solid var(--ip-accent)",
+              cursor: "move", touchAction: "none",
+            }}
+          />
+          {/* Visual drag affordance -- a hover-only cursor: move (above) tells desktop users this
+              moves, but touch users get no hover state at all, so without a visible icon a mobile
+              user has no way to discover the video can be dragged out of the way of the Next/Submit
+              button (the user's exact bug report: "cannot move video"). pointerEvents: none so this
+              overlay never steals the drag gesture from the video element underneath it. */}
+          <div
+            style={{
+              position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.55)",
+              borderRadius: 6, padding: 3, display: "flex", pointerEvents: "none",
+            }}
+          >
+            <Move size={13} color="#fff" />
+          </div>
+        </div>
 
         {proctor.faceStatus === "MISSING" && (
           <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
