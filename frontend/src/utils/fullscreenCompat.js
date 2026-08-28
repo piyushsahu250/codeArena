@@ -30,6 +30,17 @@ export function exitFullscreenCompat() {
   return Promise.resolve(fn.call(document));
 }
 
+// Capability check (does this browser have ANY usable Fullscreen API at all), distinct from
+// requestFullscreenCompat's actual runtime request -- used by preflight/capability screens (e.g.
+// ReadinessChecklist.jsx) that need to warn "this browser doesn't support fullscreen" BEFORE the
+// student even starts. Checking only the standard `requestFullscreen` (as this used to) incorrectly
+// told a Safari-<16.4-class browser fullscreen was unsupported, when it actually is via the
+// prefixed API this checks too.
+export function supportsFullscreen() {
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen);
+}
+
 export function getFullscreenElement() {
   return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || null;
 }

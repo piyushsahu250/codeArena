@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../api";
+import { supportsFullscreen } from "../utils/fullscreenCompat";
 
 // Two layers, matching what a browser can and can't actually promise:
 //   1. Live, browser-verified checks (camera/mic/face, internet reachability, fullscreen support,
@@ -18,7 +19,7 @@ const SLOW_PING_THRESHOLD_MS = 1200;
 function checkBrowserSupport() {
   const missing = [];
   if (!navigator.mediaDevices?.getUserMedia) missing.push("camera/microphone access");
-  if (!document.documentElement.requestFullscreen) missing.push("fullscreen mode");
+  if (!supportsFullscreen()) missing.push("fullscreen mode");
   if (!window.AudioContext && !window.webkitAudioContext) missing.push("audio monitoring");
   return { ok: missing.length === 0, missing };
 }
@@ -60,7 +61,7 @@ export default function ReadinessChecklist({ proctor, requireWebcam, requireMicr
   const cameraOk = !requireWebcam || (proctor.mediaGranted && proctor.cameraStatus === "OK" && proctor.faceStatus === "OK");
   const micOk = !requireMicrophone || (proctor.mediaGranted && proctor.micStatus === "OK");
   const internetOk = pingStatus === "ok" || pingStatus === "slow";
-  const fullscreenOk = !requireFullscreen || !!document.documentElement.requestFullscreen;
+  const fullscreenOk = !requireFullscreen || supportsFullscreen();
   const allMandatoryReady = browserSupport.ok && internetOk && fullscreenOk && cameraOk && micOk && attestPower && attestClosedOthers;
 
   useEffect(() => {

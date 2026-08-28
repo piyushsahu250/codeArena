@@ -14,6 +14,7 @@ import MathText from "../components/MathText";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
+import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const JUDGE_TIMEOUT_MS = 20000;
@@ -234,7 +235,7 @@ export default function InterviewSession() {
         finalizedRef.current = true;
         setPhase("terminated");
         proctor.stopMedia();
-        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
       } else if (res.penalized) {
         const msg = `Warning ${res.violationCount}/${res.maxViolations}: ${VIOLATION_LABEL[type] || type}. The interview will be terminated if this continues.`;
         setViolationWarning(msg);
@@ -254,7 +255,10 @@ export default function InterviewSession() {
   });
 
   async function begin() {
-    try { await document.documentElement.requestFullscreen?.(); } catch { /* best-effort */ }
+    // Routed through proctor.requestFullscreen() (fullscreenCompat.js) -- vendor-prefixed
+    // fallback + diagnostic logging for free, and keeps proctor.fullscreenOk in sync from the
+    // very first entry attempt.
+    await proctor.requestFullscreen();
     setPhase("active");
   }
 
@@ -474,7 +478,7 @@ export default function InterviewSession() {
       if (res.completed) {
         finalizedRef.current = true;
         proctor.stopMedia();
-        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
         navigate(`/interview/report/${id}`, { state: { report: res.report } });
         return;
       }
@@ -511,7 +515,7 @@ export default function InterviewSession() {
         return;
       }
       proctor.stopMedia();
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
       navigate(`/interview/report/${id}`, { state: { report: res.report, recommendedLearning: res.recommendedLearning } });
     } catch (err) {
       finalizedRef.current = false;
@@ -663,6 +667,18 @@ export default function InterviewSession() {
         {violationWarning && (
           <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
             ⚠ {violationWarning}
+          </div>
+        )}
+        {/* Persistent (unlike violationWarning above) -- see ModuleCodingAssessment.jsx's
+            identical banner for the full reasoning: a fullscreen rejection here was previously a
+            completely silent no-op, which is exactly what "tab-switch-and-return doesn't restore
+            fullscreen" looks like from the outside. */}
+        {!proctor.fullscreenOk && (
+          <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8, display: "flex", justifyContent: "center", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>⚠ Fullscreen isn't active. Your browser may not support it, or the request was blocked.</span>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", background: "#fff", color: "#1C1B18" }} onClick={() => proctor.requestFullscreen()}>
+              Enter Fullscreen
+            </button>
           </div>
         )}
 

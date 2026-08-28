@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
+import { requestFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -61,22 +62,41 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     [active]
   );
 
+  // fullscreenOk mirrors TestTaking.jsx's own state of the same name — true until an actual
+  // request settles and we know otherwise, so a consumer can show an honest "fullscreen isn't
+  // active" banner instead of silently proceeding as if it were (or reading document.fullscreen-
+  // Element directly during render, which doesn't trigger a re-render when it changes).
+  const [fullscreenOk, setFullscreenOk] = useState(true);
+
+  // Tries the vendor-prefixed Fullscreen API variants too (see fullscreenCompat.js) — the
+  // un-prefixed call alone silently no-ops on any browser that only exposes a prefixed version
+  // (notably Safari <16.4), which is exactly what made a tab-switch-and-return never actually
+  // restore fullscreen there with zero trace of why. Previously an entirely silent .catch(() =>
+  // {}) — now logs the real rejection reason and updates fullscreenOk so it's visible, not just
+  // diagnosable in the console.
   const requestFullscreen = useCallback(() => {
-    return document.documentElement.requestFullscreen?.().catch(() => {});
+    return requestFullscreenCompat()
+      .catch((err) => console.warn("[proctoring] requestFullscreen failed:", err))
+      .finally(() => setFullscreenOk(!!getFullscreenElement()));
   }, []);
 
   // Fullscreen-exit detection — immediately attempts to re-enter; browsers that block
-  // programmatic re-entry without a fresh gesture will silently no-op it.
+  // programmatic re-entry without a fresh gesture will silently no-op it. Registered via
+  // onFullscreenChange so the vendor-prefixed change events are covered too, not just the
+  // standard one — without this, a browser that only fires e.g. webkitfullscreenchange never
+  // triggered this handler at all, so exiting fullscreen there was never even detected, let alone
+  // auto-recovered from.
   useEffect(() => {
     if (!active || !requireFullscreen) return;
     function handleChange() {
-      if (!document.fullscreenElement) {
+      const isFs = !!getFullscreenElement();
+      setFullscreenOk(isFs);
+      if (!isFs) {
         report("FULLSCREEN_EXIT");
         requestFullscreen();
       }
     }
-    document.addEventListener("fullscreenchange", handleChange);
-    return () => document.removeEventListener("fullscreenchange", handleChange);
+    return onFullscreenChange(handleChange);
   }, [active, requireFullscreen, report, requestFullscreen]);
 
   // Tab switch / window blur.
@@ -85,7 +105,7 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     function handleVisibility() {
       if (document.hidden) {
         report("TAB_SWITCH");
-      } else if (requireFullscreen && !document.fullscreenElement) {
+      } else if (requireFullscreen && !getFullscreenElement()) {
         requestFullscreen();
       }
     }
@@ -516,7 +536,7 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   }, []);
 
   return {
-    requestFullscreen,
+    requestFullscreen, fullscreenOk,
     mediaGranted, mediaError, requestingMedia, requestMedia, stopMedia, videoRef: setVideoNode,
     faceStatus, cameraStatus, micStatus, noiseWarning,
   };

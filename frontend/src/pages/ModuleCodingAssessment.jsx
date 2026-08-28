@@ -12,6 +12,7 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
 
@@ -118,7 +119,7 @@ export default function ModuleCodingAssessment() {
         setAutoSubmitted(true);
         setAutoSubmitReasonMsg(VIOLATION_LABEL[type] || "a proctoring violation");
         proctor.stopMedia();
-        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
       } else {
         const msg = `Warning ${data.violationCount}/${data.maxViolations}: ${VIOLATION_LABEL[type] || type}. The assessment will auto-submit if this continues.`;
         setViolationWarning(msg);
@@ -142,7 +143,11 @@ export default function ModuleCodingAssessment() {
     setPhase("starting");
     try {
       if (status?.test?.requireFullscreen !== false) {
-        try { await document.documentElement.requestFullscreen?.(); } catch { /* best-effort */ }
+        // Routed through proctor.requestFullscreen() (fullscreenCompat.js) instead of a raw
+        // document.documentElement.requestFullscreen?.() call -- gets the vendor-prefixed fallback
+        // and diagnostic logging for free, and keeps fullscreenOk in sync from the very first
+        // entry attempt, not just later re-entries.
+        await proctor.requestFullscreen();
       }
       const { data } = await api.post(`/module-coding/module/${moduleId}/start`);
       setAttemptId(data.attemptId);
@@ -462,7 +467,7 @@ export default function ModuleCodingAssessment() {
     if (!data) {
       finalizingRef.current = false;
       setFinalizing(false);
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
       console.error("[finalize] failed after 3 attempts:", lastErr);
       setPhase("finalize-failed");
       return;
@@ -478,7 +483,7 @@ export default function ModuleCodingAssessment() {
       return;
     }
     finalizedRef.current = true;
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
     proctor.stopMedia();
     setResult(data);
     notify(data.gamification);
@@ -726,6 +731,25 @@ export default function ModuleCodingAssessment() {
       {violationWarning && (
         <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "12px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }}>
           ⚠ {violationWarning}
+        </div>
+      )}
+
+      {/* Persistent (unlike violationWarning above, which auto-dismisses) so a fullscreen
+          rejection that never resolves -- a browser only exposing a vendor-prefixed API that
+          somehow still failed, or a platform with no Fullscreen API for non-<video> elements at
+          all -- stays honestly visible instead of silently proceeding as if it were active. This
+          is exactly the "tab-switch-and-return doesn't restore fullscreen" symptom: previously
+          every rejection here was a completely silent no-op with no trace and no student-facing
+          indication at all. Tab-switch/violation monitoring keeps working regardless either way. */}
+      {status?.test?.requireFullscreen !== false && !proctor.fullscreenOk && (
+        <div
+          className="mono"
+          style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 700, display: "flex", justifyContent: "center", alignItems: "center", gap: 12, flexWrap: "wrap" }}
+        >
+          <span>⚠ Fullscreen isn't active. Your browser may not support it, or the request was blocked — tab-switch monitoring is still active regardless.</span>
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", background: "#fff", color: "#1C1B18" }} onClick={() => proctor.requestFullscreen()}>
+            Enter Fullscreen
+          </button>
         </div>
       )}
 
