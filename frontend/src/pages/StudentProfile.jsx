@@ -46,7 +46,7 @@ const DECLINE_REASONS = [
 ];
 
 const EMPTY_PERSONAL = {
-  firstName: "", lastName: "", mobile: "", gender: "", profilePhotoUrl: "", rollNumber: "",
+  firstName: "", lastName: "", mobile: "", gender: "", profilePhotoUrl: "", rollNumber: "", linkedinUrl: "",
   personalEmail: "", dob: "", address: "", state: "", district: "", pincode: "",
   fatherName: "", fatherContact: "", motherName: "", motherContact: "", shortDescription: "",
 };
@@ -128,7 +128,7 @@ export default function StudentProfile() {
       const nextForm = {
         firstName: first || "", lastName: rest.join(" ") || "",
         mobile: u.mobile || "", gender: u.gender || "", profilePhotoUrl: u.profilePhotoUrl || "",
-        rollNumber: u.rollNumber || "",
+        rollNumber: u.rollNumber || "", linkedinUrl: u.linkedinUrl || "",
         personalEmail: p?.personalEmail || "", dob: p?.dob ? p.dob.slice(0, 10) : "",
         address: p?.address || "", state: p?.state || "", district: p?.district || "", pincode: p?.pincode || "",
         fatherName: p?.fatherName || "", fatherContact: p?.fatherContact || "",
@@ -204,7 +204,7 @@ export default function StudentProfile() {
     try {
       const res = await api.patch("/profile/me", form);
       toast.success("Personal Academic & Info saved.");
-      updateUser({ profileComplete: res.data.completion.unlocked, name: res.data.user.name, mobile: res.data.user.mobile, gender: res.data.user.gender, profilePhotoUrl: res.data.user.profilePhotoUrl });
+      updateUser({ profileComplete: res.data.completion.unlocked, name: res.data.user.name, mobile: res.data.user.mobile, gender: res.data.user.gender, profilePhotoUrl: res.data.user.profilePhotoUrl, linkedinUrl: res.data.user.linkedinUrl });
       load();
     } catch (err) {
       const msg = saveErrorMessage(err, "Failed to save. Please check the fields below.");
@@ -567,20 +567,11 @@ export default function StudentProfile() {
               />
             </div>
 
-            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>LinkedIn</div>
-            <p style={{ fontSize: 13, marginTop: 4 }}>
-              {data?.linkedin ? (
-                <a href={data.linkedin} target="_blank" rel="noopener noreferrer">{data.linkedin}</a>
-              ) : (
-                <span style={{ color: "var(--ink-dim)" }}>Not added yet.</span>
-              )}
-              {resumeBuilderEnabled && (
-                <>
-                  {" — "}
-                  <Link to="/resume" onClick={confirmDiscardIfDirty}>Add or edit in Resume Builder</Link>
-                </>
-              )}
-            </p>
+            <label style={labelStyle}>LinkedIn Profile URL</label>
+            <input
+              style={inputStyle} type="url" placeholder="https://linkedin.com/in/yourname"
+              value={form.linkedinUrl} onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })}
+            />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Career History &amp; Education</div>
             <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4, marginBottom: 10 }}>

@@ -15,7 +15,15 @@ const router = express.Router();
 // admin-only PATCH /users/:id allowlist (no registrationNumber/instituteId/isActive). Roll Number
 // IS student-editable — it's the classroom number, not the permanent unique Registration Number
 // (PRN), which stays admin-only.
-const STUDENT_EDITABLE_USER_FIELDS = ["mobile", "gender", "profilePhotoUrl", "rollNumber"];
+// linkedinUrl added so a student can set it directly from StudentProfile.jsx's own LinkedIn
+// section — previously that section only ever displayed Resume.linkedin (Resume Builder-owned,
+// requireFeature("resume_builder")-gated) with no independent way to set it from Profile itself.
+// Writes to the account-level User.linkedinUrl field (same field/validation PATCH /me/account
+// already uses for every other role) rather than Resume.linkedin, so it works regardless of
+// whether Resume Builder is enabled for the student's institute. StudentProfile.jsx displays
+// whichever of the two is set (preferring this one), so a value already saved via Resume Builder
+// before this existed still shows correctly.
+const STUDENT_EDITABLE_USER_FIELDS = ["mobile", "gender", "profilePhotoUrl", "rollNumber", "linkedinUrl"];
 const STUDENT_PROFILE_FIELDS = [
   "personalEmail", "dob", "address", "state", "district", "pincode",
   "fatherName", "fatherContact", "motherName", "motherContact", "shortDescription",
@@ -48,12 +56,16 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
         id: user.id, name: user.name, email: user.email, mobile: user.mobile,
         gender: user.gender, profilePhotoUrl: user.profilePhotoUrl,
         rollNumber: user.rollNumber, registrationNumber: user.registrationNumber,
+        linkedinUrl: user.linkedinUrl,
         institute: user.institute,
       },
       profile: studentProfile,
       hasResume: !!(resume?.fullName && resume?.email),
       educationCount: Array.isArray(resume?.education) ? resume.education.length : 0,
-      linkedin: resume?.linkedin || null,
+      // Prefer the account-level field (directly editable right on this page, see
+      // STUDENT_EDITABLE_USER_FIELDS's comment) -- falls back to whatever was set via Resume
+      // Builder before this existed, so an already-saved value never appears to disappear.
+      linkedin: user.linkedinUrl || resume?.linkedin || null,
       completion,
     });
   } catch (err) {
@@ -76,6 +88,11 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     }
     if (userData.mobile && !MOBILE_RE.test(userData.mobile)) {
       return res.status(400).json({ error: "Enter a valid mobile number" });
+    }
+    // Same format check PATCH /me/account already enforces for every other role — just a URL,
+    // nothing else required.
+    if (userData.linkedinUrl && !/^https:\/\/([a-z]{2,3}\.)?linkedin\.com\/.+/i.test(userData.linkedinUrl)) {
+      return res.status(400).json({ error: "Enter a valid LinkedIn profile URL (must start with https://linkedin.com/)." });
     }
     // Client-side (FileUpload.jsx) already validates type/size before encoding, but the server
     // must be the actual source of truth: reject anything that isn't a genuine image data URL
@@ -217,7 +234,7 @@ router.patch("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
     res.json({
       success: true,
       completion,
-      user: { id: freshUser.id, name: freshUser.name, mobile: freshUser.mobile, gender: freshUser.gender, profilePhotoUrl: freshUser.profilePhotoUrl, rollNumber: freshUser.rollNumber, registrationNumber: freshUser.registrationNumber },
+      user: { id: freshUser.id, name: freshUser.name, mobile: freshUser.mobile, gender: freshUser.gender, profilePhotoUrl: freshUser.profilePhotoUrl, rollNumber: freshUser.rollNumber, registrationNumber: freshUser.registrationNumber, linkedinUrl: freshUser.linkedinUrl },
       profile: decryptProfile(await prisma.studentProfile.findUnique({ where: { studentId: req.user.id } })),
     });
   } catch (err) {
