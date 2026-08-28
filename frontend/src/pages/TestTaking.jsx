@@ -11,6 +11,8 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
+import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { checkOtherTabsOpen } from "../utils/tabPresence";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -189,6 +191,14 @@ export default function TestTaking() {
   // keep their own dedicated screens below, unchanged) -- previously this path had NO confirmation
   // screen at all and silently navigated to the dashboard, which is exactly the gap spec #31 calls out.
   const [submittedInfo, setSubmittedInfo] = useState(null);
+  // True until we've actually attempted fullscreen and found it's NOT active while required --
+  // starts true so nothing flashes a false warning before beginTest() has run.
+  const [fullscreenOk, setFullscreenOk] = useState(true);
+  // "Other CodeArena tabs open" pre-start check (see utils/tabPresence.js). null = not checked
+  // yet, true = other tab(s) detected (blocks Begin), false = none detected (or the browser can't
+  // support the check at all, treated the same as "can't confirm a problem" -- never blocks).
+  const [otherTabsDetected, setOtherTabsDetected] = useState(null);
+  const [checkingTabs, setCheckingTabs] = useState(false);
 
   // Load basic test info up front so we can show a "Begin Test" screen
   // (fullscreen must be requested from a direct click, not on page load).
@@ -198,6 +208,22 @@ export default function TestTaking() {
       .then((res) => setTestMeta(res.data))
       .catch((err) => setMetaError(err.response?.data?.error || "Could not load this test"));
   }, [testId]);
+
+  // "Other CodeArena tabs open" check, run once as soon as the pre-start screen is reachable, and
+  // re-run on demand via the "Recheck" button once the student has closed other tabs. See
+  // utils/tabPresence.js's own header comment for exactly what this can and can't detect --
+  // other same-origin tabs only, never arbitrary tabs of other sites (no web API exposes that).
+  function recheckOtherTabs() {
+    setCheckingTabs(true);
+    checkOtherTabsOpen().then(({ supported, otherTabCount }) => {
+      setOtherTabsDetected(supported ? otherTabCount > 0 : false);
+      setCheckingTabs(false);
+    });
+  }
+  useEffect(() => {
+    recheckOtherTabs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function requestMedia() {
     setRequestingMedia(true);
@@ -430,14 +456,32 @@ export default function TestTaking() {
   }
 
   async function beginTest() {
+    // Defensive guard -- the Begin button is already disabled while otherTabsDetected is true, so
+    // this should be unreachable in practice. Checked synchronously (no await before it) so it
+    // can never race past the button's own disabled state, and specifically does NOT re-run the
+    // async tab check here: doing so would consume the click's user-gesture window before the
+    // requestFullscreen() call below ever ran, which browsers require to happen synchronously in
+    // direct response to the click.
+    if (otherTabsDetected) return;
     setStarting(true);
-    // Request fullscreen synchronously in response to the click, before any awaits.
+    // Request fullscreen synchronously in response to the click, before any awaits. Tries the
+    // vendor-prefixed Fullscreen API variants too (see fullscreenCompat.js) -- the un-prefixed
+    // call alone silently no-ops on any browser that only exposes a prefixed version.
     if (testMeta?.requireFullscreen !== false) {
       try {
-        await document.documentElement.requestFullscreen?.();
-      } catch {
-        // Fullscreen can be denied/unsupported — proceed with the test regardless.
+        await requestFullscreenCompat();
+      } catch (err) {
+        // Fullscreen can be genuinely denied/unsupported (e.g. iOS Safari never supports it for
+        // non-<video> elements) -- proceed with the test regardless, but log why so a rejection
+        // is diagnosable instead of invisible. setFullscreenOk below is what actually surfaces
+        // this honestly to the student, not this log line.
+        console.warn("[exam] requestFullscreen failed:", err);
       }
+      // Checked right after the request settles (success or failure) -- this is what the
+      // "Fullscreen isn't active" banner and the fullscreenchange effect below both key off of,
+      // instead of each reading document.fullscreenElement directly during render (a plain DOM
+      // read like that doesn't trigger a re-render when the browser's fullscreen state changes).
+      setFullscreenOk(!!getFullscreenElement());
     }
     try {
       const startRes = await api.post(`/tests/${testId}/start`);
@@ -610,7 +654,7 @@ export default function TestTaking() {
         if (data.autoSubmitted) {
           finalizedRef.current = true;
           setAutoSubmitted(true);
-          if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+          if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
           mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
           // No alert() here — a dedicated full-screen message is shown once `autoSubmitted`
           // is true, and native alert()/confirm() dialogs force the browser to exit
@@ -625,7 +669,12 @@ export default function TestTaking() {
           tabWarningTimeoutRef.current = setTimeout(() => setTabWarning(null), 6000);
         }
       })
-      .catch(() => {});
+      // Previously silent -- a violation that failed to even reach the server (network blip,
+      // stale session, unexpected 4xx/5xx) meant the student's action went completely
+      // unrecorded AND unwarned, with nothing in the console to tell a developer why "tab
+      // switching doesn't show a warning" was ever reported. Still fails open for the student
+      // (never blocks them or retries indefinitely mid-exam), just no longer invisible.
+      .catch((err) => console.error("[exam] violation report failed:", err));
   }
 
   // Tab-switch / focus-loss detection. Reporting is unconditional regardless of this test's
@@ -637,8 +686,8 @@ export default function TestTaking() {
     function handleVisibilityChange() {
       if (document.hidden) {
         reportViolation("switching tabs during a test is not allowed");
-      } else if (testMeta?.requireFullscreen !== false && !finalizedRef.current && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
+      } else if (testMeta?.requireFullscreen !== false && !finalizedRef.current && !getFullscreenElement()) {
+        requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
       }
     }
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -647,21 +696,24 @@ export default function TestTaking() {
 
   // Fullscreen-exit detection — immediately attempts to force back into fullscreen. Browsers
   // that block programmatic re-entry without a fresh user gesture will silently no-op the
-  // request; the warning banner's "Resume fullscreen" button is the fallback for that case.
-  // Skipped entirely when this test doesn't require fullscreen.
+  // request; the warning banner's "Resume fullscreen" button (driven by fullscreenOk, kept in
+  // sync right here) is the fallback for that case. Skipped entirely when this test doesn't
+  // require fullscreen. Registered via onFullscreenChange so the vendor-prefixed change events
+  // (Safari/older browsers) are covered too, not just the standard one.
   useEffect(() => {
     if (!started || testMeta?.requireFullscreen === false) return;
     function handleFullscreenChange() {
-      if (!document.fullscreenElement && !finalizedRef.current) {
+      const active = !!getFullscreenElement();
+      setFullscreenOk(active);
+      if (!active && !finalizedRef.current) {
         reportViolation("exiting fullscreen during a test is not allowed");
-        document.documentElement.requestFullscreen?.().catch(() => {});
-      } else if (document.fullscreenElement) {
+        requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+      } else if (active) {
         clearTimeout(tabWarningTimeoutRef.current);
         setTabWarning(null);
       }
     }
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    return onFullscreenChange(handleFullscreenChange);
   }, [started]);
 
   // Android system-level assistant overlays (e.g. "Circle to Search", triggered by a long-press
@@ -1110,7 +1162,7 @@ export default function TestTaking() {
       finalizingRef.current = false;
       setFinalizing(false);
       setFinalizeFailed(true);
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
       console.error("[finalize] failed after 3 attempts:", lastErr);
       return;
     }
@@ -1126,7 +1178,7 @@ export default function TestTaking() {
       return;
     }
     finalizedRef.current = true;
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     notify(data.gamification);
     finalizingRef.current = false;
@@ -1142,10 +1194,11 @@ export default function TestTaking() {
 
   async function resumeFullscreen() {
     try {
-      await document.documentElement.requestFullscreen?.();
+      await requestFullscreenCompat();
+      setFullscreenOk(!!getFullscreenElement());
       setTabWarning(null);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn("[exam] manual resumeFullscreen failed:", err);
     }
   }
 
@@ -1259,7 +1312,7 @@ export default function TestTaking() {
     const questionCount = testMeta.questions?.length || 0;
     const maxMarks = (testMeta.questions || []).reduce((sum, tq) => sum + (tq.question?.points || 0), 0);
     const questionTypes = [...new Set((testMeta.questions || []).map((tq) => tq.question?.questionType).filter(Boolean))];
-    const canBegin = (!needsMedia || mediaGranted) && !attendanceBlocked && instructionsAcked;
+    const canBegin = (!needsMedia || mediaGranted) && !attendanceBlocked && instructionsAcked && !otherTabsDetected;
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
         <div className="card" style={{ padding: 32, maxWidth: 520, width: "100%", textAlign: "center" }}>
@@ -1310,6 +1363,22 @@ export default function TestTaking() {
           {attendanceBlocked && (
             <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--rust)", borderRadius: 10, background: "rgba(220,38,38,0.08)" }}>
               <p style={{ fontSize: 13, color: "var(--rust)", fontWeight: 600 }}>{attendanceMessage}</p>
+            </div>
+          )}
+
+          {/* "Other tabs open" check -- see utils/tabPresence.js for exactly what this can honestly
+              detect (other CodeArena tabs, via BroadcastChannel) and what it can't (any tab of any
+              other site -- no web API exposes that, so this never claims to). otherTabsDetected is
+              only ever true/false once checked; null (still checking, or unsupported browser) never
+              blocks Begin on its own. */}
+          {otherTabsDetected === true && (
+            <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--rust)", borderRadius: 10, background: "rgba(220,38,38,0.08)", textAlign: "left" }}>
+              <p style={{ fontSize: 13, color: "var(--rust)", fontWeight: 600 }}>
+                Another CodeArena tab is open in this browser. Please close it before starting this assessment.
+              </p>
+              <button className="btn btn-ghost" style={{ marginTop: 10, fontSize: 12, padding: "5px 10px" }} onClick={recheckOtherTabs} disabled={checkingTabs}>
+                {checkingTabs ? "Checking…" : "I've closed it — Recheck"}
+              </button>
             </div>
           )}
 
@@ -1450,16 +1519,16 @@ export default function TestTaking() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             {!isMobile && (
               <>
-                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowQuestionPanel((v) => !v)}>
+                <button className="exam-header-btn" onClick={() => setShowQuestionPanel((v) => !v)}>
                   {showQuestionPanel ? "Hide questions" : "Show questions"}
                 </button>
-                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowResultsPanel((v) => !v)}>
+                <button className="exam-header-btn" onClick={() => setShowResultsPanel((v) => !v)}>
                   {showResultsPanel ? "Hide results" : "Show results"}
                 </button>
-                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={toggleMaximizeEditor}>
+                <button className="exam-header-btn" onClick={toggleMaximizeEditor}>
                   {!showQuestionPanel && !showResultsPanel ? "⛶ Restore layout" : "⛶ Maximize editor"}
                 </button>
-                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={resetLayout} title="Reset panel sizes to default">
+                <button className="exam-header-btn" onClick={resetLayout} title="Reset panel sizes to default">
                   ↺ Reset layout
                 </button>
               </>
@@ -1492,6 +1561,26 @@ export default function TestTaking() {
       )}
       {!isOffline && reconnectPhase === "saved" && (
         <div className="exam-network-banner restored">✓ All answers saved</div>
+      )}
+
+      {/* Persistent (not auto-dismissing, unlike tabWarning above) so a fullscreen rejection that
+          never resolves -- e.g. iOS Safari, which has no Fullscreen API for non-<video> elements
+          at all -- stays honestly visible for the whole exam instead of silently claiming
+          fullscreen protection is active when it isn't (spec: never falsely claim fullscreen is
+          active). Tab-switch/violation monitoring keeps working regardless either way. */}
+      {test.requireFullscreen && !fullscreenOk && !tabWarning && (
+        <div
+          style={{
+            background: "var(--warning-bg)", color: "var(--amber-dark)", padding: "10px 24px", fontSize: 13, fontWeight: 700,
+            display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap",
+          }}
+          className="mono"
+        >
+          <span>⚠ Fullscreen isn't active. Your browser may not support it, or the request was blocked — tab-switch monitoring is still active regardless.</span>
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", background: "#fff", color: "#1C1B18" }} onClick={resumeFullscreen}>
+            Enter Fullscreen
+          </button>
+        </div>
       )}
 
       {test.requireWebcam && (
@@ -1543,7 +1632,7 @@ export default function TestTaking() {
           className="mono"
         >
           <span>⚠ {tabWarning}</span>
-          {test.requireFullscreen && !document.fullscreenElement && (
+          {test.requireFullscreen && !fullscreenOk && (
             <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", background: "#fff", color: "#1C1B18" }} onClick={resumeFullscreen}>
               Resume fullscreen
             </button>

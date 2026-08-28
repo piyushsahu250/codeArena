@@ -544,6 +544,25 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   color: var(--chalk);
   flex-shrink: 0;
 }
+/* The 4 layout-toggle buttons (Hide questions/Hide results/Maximize editor/Reset layout) sit
+   directly on the dark exam-header background -- .btn-ghost's default border/text colors
+   (--line/--ink) are light-mode tokens meant for a light card, so on this dark bar they rendered
+   as barely-legible dark-on-dark. Mirrors the existing .ca-topbar-icon-btn treatment used for the
+   same "light control on the dark app header" situation elsewhere in the app. */
+.exam-header-btn {
+  background: transparent;
+  border: 1px solid rgba(244,239,227,0.28);
+  color: var(--chalk);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.exam-header-btn:hover { background: rgba(244,239,227,0.1); border-color: rgba(244,239,227,0.45); }
+
 .exam-brand {
   font-family: var(--font-display);
   font-weight: 700;

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
+import { announceTabPresence } from "./utils/tabPresence";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { GamificationProvider } from "./context/GamificationContext";
@@ -188,6 +189,11 @@ function Home() {
 }
 
 export default function App() {
+  // Announces this tab's presence on a same-origin BroadcastChannel for the whole app lifetime, so
+  // TestTaking's pre-start "other tabs open?" check (see utils/tabPresence.js) can detect a
+  // Dashboard/LMS/etc. tab open elsewhere, not just another exam tab. A no-op cleanup on browsers
+  // without BroadcastChannel, so this is always safe to mount unconditionally.
+  useEffect(() => announceTabPresence(), []);
   return (
     <ThemeProvider>
     <ToastProvider>

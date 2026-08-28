@@ -16,9 +16,17 @@ export const CODE_LANGUAGES = [
 // (e.g. functionHarness.js excludes C whenever the signature uses array types, since there's no
 // shared array+length convention across the other 4) — picking an unsupported one fails at judge
 // time with a confusing "signature isn't available in X" error instead of never being offered.
-// STDIO-mode questions (or any question authored before this map existed) accept any language, so
-// an empty/missing map falls back to the full list rather than hiding the picker entirely.
+// STDIO-mode questions (or any question authored before this map existed) accept any language --
+// the student's program is a complete, self-contained program either way, so there's no
+// per-language driver/harness dependency to restrict against. This was previously implemented as
+// "restrict only when the map isn't empty," which doesn't actually check evaluationType at all --
+// a STDIO question that only happens to have ONE language's starter authored (a very common case:
+// staff write a JS starter and move on, since STDIO doesn't strictly need one per language) was
+// incorrectly treated exactly like a genuinely-restricted FUNCTION-mode question, hiding the other
+// 4 languages the compiler fully supports for it. Only FUNCTION mode has the real constraint this
+// filter exists for.
 export function supportedLanguages(question) {
+  if (!question || question.evaluationType !== "FUNCTION") return CODE_LANGUAGES;
   const keys = question?.starterCodeByLanguage && typeof question.starterCodeByLanguage === "object"
     ? Object.keys(question.starterCodeByLanguage)
     : [];
