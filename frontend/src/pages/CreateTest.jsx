@@ -74,6 +74,16 @@ export default function CreateTest() {
   // the real authorization boundary).
   const [testOwnerId, setTestOwnerId] = useState(null);
   const [shares, setShares] = useState([]); // [{ staffId, staff: { id, name } }]
+  // Create-mode sharing picks (edit mode keeps its existing shares/syncShares -- see that
+  // section's own comment for why: an EXISTING test's sharing already applies live, per pick, via
+  // its own dedicated section below, unchanged). This is a separate, deferred-to-Save selection
+  // used only while creating a brand-new test, where there's no test id yet to call
+  // POST /tests/:id/shares against. Root cause this closes: the "Shared With" section was
+  // previously only ever rendered when isEdit is true, so a newly-created test had genuinely no
+  // way to be shared with staff in the same flow that created it -- an admin had to separately
+  // navigate to Manage Tests, find the just-created test, and open Edit before any sharing UI
+  // existed at all. Applied right after creation succeeds, the same way talentPoolIds already is.
+  const [shareStaffIds, setShareStaffIds] = useState([]);
   const [subjectId, setSubjectId] = useState(null);
   const [unitId, setUnitId] = useState(null);
   // Optimistic-concurrency guard (spec: "protect against two staff members editing the same test
@@ -96,8 +106,8 @@ export default function CreateTest() {
   // separate boolean per field.
   const savedSnapshotRef = useRef(null);
   const currentSnapshot = useMemo(
-    () => JSON.stringify({ form, selected, subjectId, unitId, academicGroupIds, talentPoolIds, groupType, instituteId }),
-    [form, selected, subjectId, unitId, academicGroupIds, talentPoolIds, groupType, instituteId]
+    () => JSON.stringify({ form, selected, subjectId, unitId, academicGroupIds, talentPoolIds, groupType, instituteId, shareStaffIds }),
+    [form, selected, subjectId, unitId, academicGroupIds, talentPoolIds, groupType, instituteId, shareStaffIds]
   );
   const isDirty = savedSnapshotRef.current !== null && currentSnapshot !== savedSnapshotRef.current;
 
@@ -296,6 +306,16 @@ export default function CreateTest() {
       } else {
         const { data: created } = await api.post("/tests", payload);
         testId = created.id;
+        // Apply whatever staff were picked in the create-mode Shared With section (see
+        // shareStaffIds's own declaration comment) -- edit mode already applies its shares live,
+        // per pick, so this only ever fires for a brand-new test.
+        if (shareStaffIds.length) {
+          try {
+            await api.post(`/tests/${testId}/shares`, { staffIds: shareStaffIds });
+          } catch (shareErr) {
+            alert(shareErr.response?.data?.error || "Test created, but sharing it with the selected staff failed — share it from the Edit screen.");
+          }
+        }
       }
 
       const desiredPoolIds = groupType === "TALENT_POOL" ? talentPoolIds : [];
@@ -553,7 +573,12 @@ export default function CreateTest() {
             </div>
           )}
 
-          {isEdit && (user.role === "ADMIN" || testOwnerId === user.id) && (
+          {/* Matches the backend's actual POST/DELETE /tests/:id/shares authorization (ADMIN,
+              SUPER_ADMIN, and INSTITUTE_ADMIN may all manage sharing on any test in their
+              institute regardless of who created it -- only STAFF is creator-restricted) --
+              previously ADMIN-only here, which incorrectly hid this whole section from a Super
+              Admin or Institute Admin managing a test they didn't personally create themselves. */}
+          {isEdit && (["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user.role) || testOwnerId === user.id) && (
             <>
               <div style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Shared With</div>
               <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
@@ -578,6 +603,28 @@ export default function CreateTest() {
               )}
               <div style={{ marginTop: 8 }}>
                 <StaffPicker value={shares.map((s) => s.staffId)} onChange={syncShares} />
+              </div>
+            </>
+          )}
+
+          {/* Create-mode equivalent -- see shareStaffIds's own declaration comment for the root
+              cause this closes. Every role that can reach this form at all (POST /tests's own
+              requireRole list) is also allowed to share the test they're about to create, since
+              they're unconditionally its creator -- no testOwnerId/role gate needed here the way
+              the edit-mode section above needs one. Deferred to the Save button, exactly like
+              Talent Pool assignment above, rather than applied immediately (there's no test id to
+              apply it against until the test actually exists). */}
+          {!isEdit && (
+            <>
+              <div style={{ marginTop: 24, fontWeight: 700, fontSize: 14 }}>Share With</div>
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+                Private by default — only you (and Admins at your institute) can see and manage this test once
+                created. Optionally check staff members below so they can view/manage it too — applied the moment
+                you create the test; you can add or remove more later from its Edit screen.
+                {shareStaffIds.length > 0 && ` ${shareStaffIds.length} staff member${shareStaffIds.length === 1 ? "" : "s"} selected.`}
+              </p>
+              <div style={{ marginTop: 8 }}>
+                <StaffPicker value={shareStaffIds} onChange={setShareStaffIds} />
               </div>
             </>
           )}
