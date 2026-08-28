@@ -77,9 +77,16 @@ async function main() {
 
     // ---- 2. Auto-derive race: two students, no explicit roll number, same PRN-derived suffix ----
     console.log("\n=== Concurrent auto-derive race (both PRNs end in the same 3 digits) ===");
+    // Deliberately distinct prefixes — the counter sits right after a single fixed letter so it
+    // always survives the 9-char prefix slice (C and D must never collide as full PRNs; that would
+    // just be a duplicate-registration-number rejection, not the roll-number race this test
+    // targets) — with an identical trailing "777" suffix, which is what actually exercises the
+    // auto-derive collision path.
     const sharedSuffix = "777";
-    const regC = `${freshRegNo().slice(0, 9)}${sharedSuffix}`;
-    const regD = `${freshRegNo().slice(0, 9)}${sharedSuffix}`;
+    counter++;
+    const regC = (`C${counter}${Date.now().toString(36)}`.slice(0, 9)).padEnd(9, "0") + sharedSuffix;
+    counter++;
+    const regD = (`D${counter}${Date.now().toString(36)}`.slice(0, 9)).padEnd(9, "0") + sharedSuffix;
     const bodyC = { name: "Race Student C", email: `rollintegrity-race-c-${Date.now()}@example.invalid`, role: "STUDENT", registrationNumber: regC, mobile: "9876500003", batchYear: testBatch, department: "RollCheckDept", section: "A", instituteId: instA.id };
     const bodyD = { name: "Race Student D", email: `rollintegrity-race-d-${Date.now()}@example.invalid`, role: "STUDENT", registrationNumber: regD, mobile: "9876500004", batchYear: testBatch, department: "RollCheckDept", section: "A", instituteId: instA.id };
     const [raceResC, raceResD] = await Promise.all([
