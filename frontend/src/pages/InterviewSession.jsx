@@ -723,7 +723,10 @@ export default function InterviewSession() {
 
           {q.category === "CODING" && (
             <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
+              {/* flexWrap+gap matches DailyChallenge.jsx/WeeklyChallenge.jsx's identical row --
+                  without it, the language picker and Run/Submit buttons sit on one unwrapped line
+                  and get squeezed/cut off on a narrow mobile screen (this page was missing it). */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
                 <select className="ip-select" value={draft.language} onChange={(e) => handleLanguageChange(e.target.value)}>
                   {supportedLanguages(q).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                 </select>
