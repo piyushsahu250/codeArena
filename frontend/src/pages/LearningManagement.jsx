@@ -17,16 +17,18 @@ const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginTop: 10, display: "block" };
 
 // Content management for the Learning Module: drill down Course -> Module -> Lesson -> Practice
-// Questions, all in one page since each level is a thin CRUD list. Admin gets full read/write;
-// Staff gets the exact same navigable tree read-only (every panel below gates its own
-// create/edit/delete/publish/reorder/import controls on isAdmin) with one exception — Reset
-// Attempts inside CodingAttemptsPanel stays enabled for Staff, own institute only. This is one
-// shared tree rather than a separate Staff screen so there's no duplicate browsing workflow to
-// maintain; the backend enforces the same split (every mutating route is ADMIN-only, every GET
-// route in this module is ADMIN+STAFF, except the reset route which is ADMIN+STAFF by design).
+// Questions, all in one page since each level is a thin CRUD list. Admin/Super Admin/Institute
+// Admin get full read/write (Institute Admin scoped server-side to their own institute's courses —
+// see utils/lmsOwnership.js); Staff gets the exact same navigable tree read-only (every panel
+// below gates its own create/edit/delete/publish/reorder/import controls on isAdmin) with one
+// exception — Reset Attempts inside CodingAttemptsPanel stays enabled for Staff, own institute
+// only. This is one shared tree rather than a separate Staff screen so there's no duplicate
+// browsing workflow to maintain; the backend enforces the same split (every mutating route accepts
+// ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN, every GET route in this module additionally accepts STAFF,
+// except the reset route which is ADMIN+STAFF by design).
 export default function LearningManagement() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
@@ -257,7 +259,7 @@ const EMPTY_COURSE_FORM = {
 // file. The isAdmin check below is redundant defense-in-depth, not a Staff-visibility gate.
 function CoursePanel({ courses, onSelect, onRefresh }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const confirmDialog = useConfirm();
   const toast = useToast();
   const navigate = useNavigate();
@@ -479,12 +481,13 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
   );
 }
 
-// This panel (like the rest of the Admin content-management tree) only ever renders for ADMIN —
-// see LearningManagement()'s role branch. Module create/edit/delete is gated by isAdmin below
-// purely as defense-in-depth, matching the ADMIN-only backend routes.
+// This panel (like the rest of the Admin content-management tree) renders for every role that
+// reaches this page, Staff included (see LearningManagement()'s top comment) — Module create/
+// edit/delete is gated by isAdmin below purely as defense-in-depth, matching the backend routes
+// (ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN can write, STAFF is read-only).
 function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapters, onRefresh }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const confirmDialog = useConfirm();
   const toast = useToast();
   const [form, setForm] = useState({ title: "", description: "", order: modules.length });
@@ -571,7 +574,7 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
 
 function LessonPanel({ mod, onSelect, onRefresh }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [form, setForm] = useState({ title: "", estimatedMinutes: 10, order: mod.lessons.length });
   const [saving, setSaving] = useState(false);
 
@@ -642,7 +645,7 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
 // the CMS needs the real content to edit, which /learning/courses/:slug intentionally omits.
 function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [full, setFull] = useState(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -708,11 +711,11 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
 // Draft -> Review -> Publish for a Lesson's content/blocks. Lesson.content only ever changes at
 // the moment of Publish/Restore (see backend/src/routes/learning.js's /versions routes) — this
 // panel never PATCHes /lessons/:id with content, so nothing a student can read changes until an
-// Admin explicitly publishes. ADMIN-only; Staff sees a read-only history list, matching the rest
-// of this page's existing RBAC pattern.
+// Admin/Super Admin/Institute Admin explicitly publishes. Staff sees a read-only history list,
+// matching the rest of this page's existing RBAC pattern.
 function ContentVersionPanel({ lessonId, onPublished }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [versions, setVersions] = useState(null);
   const [draftText, setDraftText] = useState("");
   const [summary, setSummary] = useState("");
@@ -830,7 +833,7 @@ const EMPTY_Q = {
 
 function PracticeQuestionsPanel({ lesson, onRefresh }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_Q);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
@@ -1004,11 +1007,15 @@ const EMPTY_TEST_FORM = {
 };
 
 // Staff gets read-only access to the whole panel (Settings tab included, fields disabled) except
-// there's nothing to create if no assessment exists yet — only Admin sees the create form. Create/
-// edit/delete stay ADMIN-only, matching the backend RBAC restriction.
+// there's nothing to create if no assessment exists yet — only Admin/Super Admin/Institute Admin
+// see the create form. Create/edit/delete accept all three of those roles, matching the backend
+// RBAC (Institute Admin scoped server-side to their own institute's courses — see
+// backend/src/utils/lmsOwnership.js). Was previously ADMIN-only here — a real bug that hid every
+// Coding Assessment setting (passing score, time limit, attempts, proctoring) from real Super
+// Admin/Institute Admin accounts even though the backend already accepted them.
 function CodingTestPanel({ moduleId }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [test, setTest] = useState(undefined); // undefined = loading, null = not configured yet
   const [form, setForm] = useState(EMPTY_TEST_FORM);
   const [saving, setSaving] = useState(false);
@@ -1186,11 +1193,11 @@ const CODING_LANGS = [
   { id: "javascript", label: "JavaScript" },
 ];
 
-// Question pool CRUD (add/edit/delete/bulk-import) is ADMIN-only, matching the backend RBAC
-// restriction — Staff see the pool read-only.
+// Question pool CRUD (add/edit/delete/bulk-import) accepts ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN,
+// matching the backend RBAC — Staff see the pool read-only.
 function CodingQuestionsPanel({ testId, questions, onRefresh }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY_CODING_Q);
   const [saving, setSaving] = useState(false);
@@ -1469,7 +1476,7 @@ const ATTEMPT_STATUS_COLORS = {
 // both already fetch `test` with `title`/`maxAttempts` in scope.
 function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const confirmDialog = useConfirm();
   const toast = useToast();
   const [attempts, setAttempts] = useState(null);
@@ -1648,7 +1655,7 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
 
 function ChapterListPanel({ moduleId, onSelect }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [chapters, setChapters] = useState(null);
   const [form, setForm] = useState({ title: "", description: "" });
   const [saving, setSaving] = useState(false);
@@ -1740,7 +1747,7 @@ function ChapterListPanel({ moduleId, onSelect }) {
 
 function ChapterDetailPanel({ chapter, onBack }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [tab, setTab] = useState("levels");
   const [form, setForm] = useState({
     title: chapter.title, description: chapter.description || "",
@@ -1799,7 +1806,7 @@ function ChapterDetailPanel({ chapter, onBack }) {
 
 function ChapterTopicsPanel({ chapterId }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [topics, setTopics] = useState(null);
   const [topicId, setTopicId] = useState(null);
   const [form, setForm] = useState({ title: "", estimatedMinutes: 10 });
@@ -1883,7 +1890,7 @@ function ChapterTopicsPanel({ chapterId }) {
 // "quiz" block in TopicBlockEditor below references specific question ids from here by id.
 function TopicDetailPanel({ topicId, onBack }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [full, setFull] = useState(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -2114,7 +2121,7 @@ function TableBlockEditor({ block, onChange }) {
 
 function ChapterLevelsPanel({ chapterId }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [levels, setLevels] = useState(null);
   const [levelId, setLevelId] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -2171,7 +2178,7 @@ function ChapterLevelsPanel({ chapterId }) {
 // generic GET /admin/tests/:id route, since a chapter-scoped Level has no moduleId to key off).
 function LevelPanel({ levelId, onBack }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [test, setTest] = useState(undefined);
   const [form, setForm] = useState(EMPTY_TEST_FORM);
   const [saving, setSaving] = useState(false);
