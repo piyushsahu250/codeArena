@@ -336,8 +336,15 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     const innerCmd = enforceLimits
       ? `${enforceMemory ? `ulimit -v ${memoryLimitKb}; ` : ""}ulimit -u ${MAX_PROCESSES}; ulimit -t ${cpuSeconds}; ${execTail}`
       : execTail;
+    // "bash", not "sh" -- /bin/sh on this (Debian) image resolves to dash, whose ulimit builtin
+    // does not implement -u (process count / RLIMIT_NPROC; POSIX doesn't standardize it, dash
+    // never added it). Confirmed live against production: dash silently prints "ulimit: Illegal
+    // option -u" and carries on (no `set -e` here), which meant RLIMIT_NPROC -- the actual
+    // fork-bomb guard -- was never being applied at all, for every language, the whole time. bash
+    // is already present in this image and supports the exact same ulimit -v/-u/-t flags this
+    // command string was written for.
     const wrappedArgs = enforceLimits || DROP_PRIVILEGES
-      ? ["-v", "-o", statsFile, "sh", "-c", innerCmd, cmd, ...args]
+      ? ["-v", "-o", statsFile, "bash", "-c", innerCmd, cmd, ...args]
       : ["-v", "-o", statsFile, cmd, ...args];
     const timeArgs = networkDenied ? ["-n", "/usr/bin/time", ...wrappedArgs] : wrappedArgs;
     const timeCmd = networkDenied ? "unshare" : "/usr/bin/time";
@@ -525,12 +532,18 @@ async function prepare(language, code) {
     ok: true,
     async execute(input, timeLimitMs, memoryLimitKb = MEMORY_LIMIT_KB) {
       const { cmd, args } = runner.run(file, tmpDir, memoryLimitKb);
-      // The OS-level ulimit -v (virtual memory) is skipped for Java: the JVM reserves virtual
-      // address space (metaspace, thread stacks, JIT code cache) well beyond this budget just to
-      // start up, regardless of the student's code, which made every single Java run fail with a
-      // generic "Runtime Error" — the -Xmx flag on the java command above is Java's real memory
-      // guard instead, enforced by the JVM itself rather than the OS.
-      const result = await spawnWithTimeout(cmd, args, { cwd: tmpDir, timeout: timeLimitMs }, input, timeLimitMs, { enforceLimits: true, enforceMemory: language !== "java", memoryLimitKb });
+      // The OS-level ulimit -v (virtual memory) is skipped for Java AND JavaScript: both reserve
+      // virtual address space well beyond this budget just to start their engine, regardless of
+      // the student's code -- Java's JVM (metaspace, thread stacks, JIT code cache; -Xmx above is
+      // its real memory guard instead) and, identically, Node's V8 engine (its JIT "CodeRange" and
+      // initial heap reservation). Confirmed live against production: every JavaScript submission
+      // was crashing with "Fatal process OOM in Failed to reserve virtual memory for CodeRange"
+      // before the student's code ever ran, at the platform's default 256MB ulimit -v -- V8 asks
+      // for far more virtual address space than that just to boot, even though the actual resident
+      // memory it goes on to use is tiny. Real enforcement for both now comes from the same place:
+      // the peak-RSS measurement spawnWithTimeout already takes via `/usr/bin/time -v`
+      // (memoryKb below), which is what MLE classification is actually based on.
+      const result = await spawnWithTimeout(cmd, args, { cwd: tmpDir, timeout: timeLimitMs }, input, timeLimitMs, { enforceLimits: true, enforceMemory: !["java", "javascript"].includes(language), memoryLimitKb });
       if (!result.ok) return result;
       return { ok: true, stdout: result.stdout.trim(), timeMs: result.timeMs, memoryKb: result.memoryKb };
     },
