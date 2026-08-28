@@ -1370,6 +1370,20 @@ export default function TestTaking() {
 
   const progressPct = questions.length ? ((activeIdx + 1) / questions.length) * 100 : 0;
 
+  // The mobile branch already clamps the results panel to a sane max (220px) so it can never
+  // crowd out the actual question/editor content -- desktop never did, which meant a short
+  // browser window (a small laptop, or just a non-maximized window under ~650px tall) could
+  // squeeze the MCQ options or code editor down to a sliver behind the results panel's fixed
+  // 220px default (confirmed live against production: at 450px viewport height, the options area
+  // was mechanically scrollable but only 48px of it -- about one line -- was ever visible).
+  // Recomputed on every render (the 1s timer tick already forces one, so this tracks a live
+  // window resize without a dedicated listener) rather than a fixed number, so it self-corrects
+  // instead of only being right at whatever height the page happened to load at.
+  const cappedResultsPanelHeight = Math.min(
+    resultsPanelHeight,
+    Math.max(60, (typeof window !== "undefined" ? window.innerHeight : 900) - 460)
+  );
+
   // Shared between the desktop right-rail palette and the mobile bottom sheet -- one definition
   // of what the grid looks like, so the two surfaces can never drift out of sync with each other.
   function renderPaletteBody(closeOnSelect) {
@@ -1705,7 +1719,7 @@ export default function TestTaking() {
           {!isMobile && (
             <div onMouseDown={startResize("results")} className="ca-resize-handle" style={{ height: 6, cursor: "row-resize", background: "var(--line)", flexShrink: 0 }} title="Drag to resize" />
           )}
-          <div style={{ height: isMobile ? Math.min(resultsPanelHeight, 220) : resultsPanelHeight, overflowY: "auto", padding: 16, background: "var(--paper)", flexShrink: 0 }}>
+          <div style={{ height: isMobile ? Math.min(resultsPanelHeight, 220) : cappedResultsPanelHeight, overflowY: "auto", padding: 16, background: "var(--paper)", flexShrink: 0 }}>
             {submitResultMsg && !running && (
               <div
                 className="mono"
