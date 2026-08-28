@@ -533,6 +533,191 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 .ca-toast.success { border-left-color: var(--mint); }
 .ca-toast.error { border-left-color: var(--rust); }
 
+/* ===================== Assessment Mode (TestTaking.jsx) =====================
+   Premium exam UI. Reuses the platform's existing tokens (--slate-900/--chalk/--amber/--rust/
+   --mint/--line/--card-bg) rather than introducing a second palette -- an exam should look like a
+   more focused version of CodeArena, not a different product. Purely visual/structural; none of
+   this touches the timer/autosave/proctoring/submission logic living in TestTaking.jsx itself. */
+
+.exam-header {
+  background: var(--slate-900);
+  color: var(--chalk);
+  flex-shrink: 0;
+}
+.exam-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--amber);
+  opacity: 0.9;
+}
+.exam-progress-track {
+  height: 4px;
+  background: var(--slate-700);
+  overflow: hidden;
+}
+.exam-progress-fill {
+  height: 100%;
+  background: var(--amber);
+  transition: width 0.25s ease;
+}
+
+/* Timer -- three explicit visual states. Color alone never carries the meaning (spec: no
+   color-only status indicators) -- each state also gets a distinct label/icon at the call site. */
+.exam-timer {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-radius: 8px;
+  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.exam-timer-normal { background: rgba(244,239,227,0.08); color: var(--chalk); }
+.exam-timer-warning { background: rgba(232,163,61,0.18); color: var(--amber); }
+.exam-timer-critical { background: rgba(192,83,59,0.22); color: #FF8B73; animation: exam-timer-pulse 1.4s ease-in-out infinite; }
+@keyframes exam-timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exam-timer-critical { animation: none; }
+}
+
+/* Autosave status pill -- same three states as the spec's Saving.../Saved ✓/Saving Failed. */
+.exam-save-pill {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.exam-save-pill.saving { background: var(--warning-bg); color: var(--amber-dark); }
+.exam-save-pill.saved { background: var(--success-bg); color: var(--mint); }
+.exam-save-pill.failed { background: var(--danger-bg); color: var(--rust); }
+
+/* Question palette -- numbered grid, desktop right rail / mobile bottom sheet. */
+.exam-palette-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.exam-palette-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.exam-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 8px;
+}
+.exam-palette-cell {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1.5px solid var(--line);
+  background: var(--card-bg, #fff);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.12s ease;
+}
+.exam-palette-cell:hover { transform: translateY(-1px); }
+.exam-palette-cell.current { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
+.exam-palette-cell.answered { background: var(--success-bg); border-color: var(--mint); color: var(--mint); }
+.exam-palette-cell.review { background: #F1EBFB; border-color: #8b5cf6; color: #8b5cf6; }
+.exam-palette-cell.wrong { background: var(--danger-bg); border-color: var(--rust); color: var(--rust); }
+:root[data-theme="dark"] .exam-palette-cell.review { background: #2A2140; }
+.exam-palette-cell-flag {
+  position: absolute; top: -4px; right: -4px; width: 13px; height: 13px; border-radius: 50%;
+  background: #8b5cf6; color: #fff; font-size: 8px; display: flex; align-items: center; justify-content: center;
+}
+
+/* Mobile: the palette collapses to a small "Question 8 of 30 ▾" trigger and opens as a bottom
+   sheet on demand, rather than permanently consuming screen space (spec explicit requirement). */
+.exam-palette-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--card-bg, #fff);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.exam-palette-sheet-backdrop {
+  position: fixed; inset: 0; background: rgba(11,42,30,0.45); z-index: 200;
+}
+.exam-palette-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 201;
+  background: var(--card-bg, #fff);
+  border-radius: 16px 16px 0 0;
+  padding: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  animation: exam-sheet-up 0.2s ease;
+}
+@keyframes exam-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exam-palette-sheet { animation: none; }
+}
+
+/* MCQ options -- large, touch-friendly, lettered badge. */
+.exam-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.exam-option:hover { border-color: var(--amber-dark); }
+.exam-option.selected { border-color: var(--mint); background: var(--success-bg); }
+.exam-option-badge {
+  flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 700; font-size: 13px;
+  background: var(--paper); border: 1.5px solid var(--line); color: var(--ink-dim);
+}
+.exam-option.selected .exam-option-badge { background: var(--mint); border-color: var(--mint); color: #fff; }
+
+/* Network status banner -- spec #12: never claim "Saved" until the server actually confirmed it. */
+.exam-network-banner {
+  padding: 8px 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.exam-network-banner.offline { background: var(--danger-bg); color: var(--rust); }
+.exam-network-banner.reconnecting { background: var(--warning-bg); color: var(--amber-dark); }
+.exam-network-banner.restored { background: var(--success-bg); color: var(--mint); }
+
 /* ===================== Confirm dialog ===================== */
 .ca-modal-overlay {
   position: fixed; inset: 0; background: rgba(11,42,30,0.45); z-index: 400;

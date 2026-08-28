@@ -76,6 +76,14 @@ export default function MathText({ text }) {
           const raw = seg.displayMode ? `$$${seg.value}$$` : `$${seg.value}$`;
           return <Fragment key={i}>{raw}</Fragment>;
         }
+        // Block-mode equations (matrices, wide fraction chains, long derivations) can render wider
+        // than a narrow phone screen -- KaTeX has no built-in reflow for that, so without this the
+        // overflow either gets silently clipped or forces the whole page to scroll sideways. Inline
+        // math never needs this (it's just a span inside running text, no wider than one symbol/
+        // fraction at a time) so the wrapper is display-mode only.
+        if (seg.displayMode) {
+          return <span key={i} style={{ display: "block", overflowX: "auto", maxWidth: "100%" }} dangerouslySetInnerHTML={{ __html: html }} />;
+        }
         return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />;
       })}
     </>

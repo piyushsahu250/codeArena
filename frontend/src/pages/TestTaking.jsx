@@ -36,6 +36,41 @@ function loadLayout() {
   }
 }
 
+// One shared "the exam has ended" screen, used for every terminal state (failed-to-confirm,
+// time-expired, violation-auto-submitted, and a successful manual submit) so a student sees the
+// same premium, consistent layout regardless of which of those four ways the exam actually ended
+// -- rather than four independently-styled cards. Purely presentational: which state fires which
+// message is still decided entirely by the existing state machine in TestTaking() above.
+function AssessmentEndCard({ tone = "neutral", title, message, details, primaryLabel, onPrimary, primaryDisabled, secondaryLabel, onSecondary }) {
+  const toneColor = tone === "danger" ? "var(--rust)" : tone === "success" ? "var(--mint)" : "var(--ink)";
+  const icon = tone === "danger" ? "⚠" : tone === "success" ? "✓" : "⏳";
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24, background: "var(--paper)" }}>
+      <div className="card" style={{ padding: 36, maxWidth: 460, width: "100%", textAlign: "center" }}>
+        <div className="exam-brand">CodeArena</div>
+        <div style={{ fontSize: 36, margin: "10px 0 4px", color: toneColor }}>{icon}</div>
+        <h2 style={{ fontSize: 19, color: toneColor }}>{title}</h2>
+        {message && <p style={{ fontSize: 14, color: "var(--ink-dim)", marginTop: 8, lineHeight: 1.6 }}>{message}</p>}
+        {details && (
+          <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 18, textAlign: "left", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 8, padding: 12, display: "grid", gap: 4 }}>
+            {details}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 22, flexWrap: "wrap" }}>
+          {secondaryLabel && (
+            <button className="btn btn-ghost" onClick={onSecondary}>{secondaryLabel}</button>
+          )}
+          {primaryLabel && (
+            <button className="btn btn-primary" onClick={onPrimary} disabled={primaryDisabled}>
+              {primaryLabel}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TestTaking() {
   const { id: testId } = useParams();
   const navigate = useNavigate();
@@ -138,6 +173,22 @@ export default function TestTaking() {
   const justSavedTimeoutRef = useRef(null);
 
   const [markedForReview, setMarkedForReview] = useState({});
+
+  // Premium exam-mode UI state -- purely presentational/navigational, layered on top of the
+  // existing timer/autosave/proctoring/submission machinery above without changing any of it.
+  const [showMobilePalette, setShowMobilePalette] = useState(false); // bottom-sheet open/closed
+  const [showSubmitReview, setShowSubmitReview] = useState(false); // pre-submit review modal
+  const [instructionsAcked, setInstructionsAcked] = useState(false); // "I have read and understood" gate on the start screen
+  // Distinct from saveFailed (a save that reached the server and was rejected/errored) -- this is
+  // "no network at all," detected via the browser's own online/offline events, per spec: never
+  // claim "Saved" while genuinely offline, and say so explicitly rather than going silent.
+  const [isOffline, setIsOffline] = useState(() => (typeof navigator !== "undefined" && "onLine" in navigator ? !navigator.onLine : false));
+  const [reconnectPhase, setReconnectPhase] = useState(null); // null | "syncing" | "saved" -- transient banner shown right after connectivity returns
+  const reconnectPhaseTimeoutRef = useRef(null);
+  // Set once a manual Submit succeeds (the auto-submit-on-time-up and violation-auto-submit paths
+  // keep their own dedicated screens below, unchanged) -- previously this path had NO confirmation
+  // screen at all and silently navigated to the dashboard, which is exactly the gap spec #31 calls out.
+  const [submittedInfo, setSubmittedInfo] = useState(null);
 
   // Load basic test info up front so we can show a "Begin Test" screen
   // (fullscreen must be requested from a direct click, not on page load).
@@ -728,6 +779,47 @@ export default function TestTaking() {
     return h > 0 ? `${String(h).padStart(2, "0")}:${mm}:${ss}` : `${mm}:${ss}`;
   }, [secondsLeft]);
 
+  // Three explicit timer states per spec: normal (>10min), warning (<10min), critical (<2min).
+  // Purely a display concern -- secondsLeft itself, and the auto-submit it drives above, are
+  // untouched.
+  const timerTone = secondsLeft == null ? "normal" : secondsLeft < 120 ? "critical" : secondsLeft < 600 ? "warning" : "normal";
+
+  // One shared definition of "answered," reused by the palette dots, the counts in the header/
+  // review modal, and the "jump to first unanswered/marked" actions -- avoids the palette and the
+  // review screen silently disagreeing about what counts as answered. Coding/SQL "answered" means
+  // the question has been opened at least once (matches the existing amber "In Progress" dot
+  // convention below) rather than inspecting code content, since starter code is never truly empty
+  // and the backend already (re-)grades whatever's saved at finalize time regardless.
+  function questionStatus(q) {
+    const isCoding = q.questionType === "CODING" || q.questionType === "SQL";
+    const a = answers[q.id];
+    const answered = isCoding ? !!visited[q.id] : (a?.selected || []).length > 0;
+    return { answered, marked: !!markedForReview[q.id] };
+  }
+
+  const examCounts = useMemo(() => {
+    let answeredCount = 0;
+    let reviewCount = 0;
+    for (const tq of questions) {
+      const s = questionStatus(tq.question);
+      if (s.answered) answeredCount++;
+      if (s.marked) reviewCount++;
+    }
+    return { answeredCount, unansweredCount: questions.length - answeredCount, reviewCount };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questions, answers, visited, markedForReview]);
+
+  function jumpToFirstUnanswered() {
+    const idx = questions.findIndex((tq) => !questionStatus(tq.question).answered);
+    if (idx >= 0) setActiveIdx(idx);
+    setShowSubmitReview(false);
+  }
+  function jumpToFirstMarked() {
+    const idx = questions.findIndex((tq) => questionStatus(tq.question).marked);
+    if (idx >= 0) setActiveIdx(idx);
+    setShowSubmitReview(false);
+  }
+
   function setLanguage(language) {
     if (!current) return;
     // Restores whatever was already typed in this language for this question, if anything —
@@ -873,12 +965,33 @@ export default function TestTaking() {
 
   useEffect(() => {
     function onOnline() {
+      setIsOffline(false);
       if (finalizedRef.current) return;
-      if (pendingAutoSaveRef.current) flushAutoSave();
-      if (pendingCodeAutoSaveRef.current) flushCodeAutoSave();
+      const pending = [];
+      if (pendingAutoSaveRef.current) pending.push(flushAutoSave());
+      if (pendingCodeAutoSaveRef.current) pending.push(flushCodeAutoSave());
+      // Only show the "syncing → saved" sequence when there was actually something to sync --
+      // otherwise a student who briefly lost and regained connectivity mid-read (no unsaved
+      // changes at all) would see a "saving" banner for nothing.
+      if (pending.length === 0) return;
+      setReconnectPhase("syncing");
+      Promise.all(pending).finally(() => {
+        setReconnectPhase("saved");
+        clearTimeout(reconnectPhaseTimeoutRef.current);
+        reconnectPhaseTimeoutRef.current = setTimeout(() => setReconnectPhase(null), 2500);
+      });
+    }
+    function onOffline() {
+      setIsOffline(true);
+      setReconnectPhase(null);
     }
     window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      clearTimeout(reconnectPhaseTimeoutRef.current);
+    };
   }, []);
 
   function toggleMarkForReview() {
@@ -1022,7 +1135,9 @@ export default function TestTaking() {
       setTimeExpired(true);
       return;
     }
-    navigate("/dashboard");
+    // Manual submit succeeded -- show the "Assessment Submitted" confirmation screen (spec #31)
+    // instead of silently navigating away, which is what this path did before.
+    setSubmittedInfo({ id: data.id, submittedAt: data.submittedAt });
   }
 
   async function resumeFullscreen() {
@@ -1062,55 +1177,71 @@ export default function TestTaking() {
 
   if (finalizeFailed) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
-          <p style={{ fontSize: 16, color: "var(--rust)" }}>
-            We couldn't confirm your submission was received — your test has <strong>not</strong> been marked as submitted. Please check your internet connection and try again. Do not close this page.
-          </p>
-          <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={finalizing} onClick={() => finalizeAndExit(true, lastFinalizeReasonRef.current)}>
-            {finalizing ? "Retrying…" : "Retry submission"}
-          </button>
-        </div>
-      </div>
+      <AssessmentEndCard
+        tone="danger"
+        title="Submission not confirmed"
+        message="We couldn't confirm your submission was received — your test has not been marked as submitted. Please check your internet connection and try again. Do not close this page."
+        primaryLabel={finalizing ? "Retrying…" : "Retry submission"}
+        primaryDisabled={finalizing}
+        onPrimary={() => finalizeAndExit(true, lastFinalizeReasonRef.current)}
+      />
     );
   }
 
   if (timeExpired) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
-          <p style={{ fontSize: 16, color: "var(--rust)" }}>Time is up. Your test has been submitted automatically.</p>
-          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => navigate("/dashboard")}>
-            Back to dashboard
-          </button>
-        </div>
-      </div>
+      <AssessmentEndCard
+        tone="danger"
+        title="Time's up"
+        message="Your assessment reached its time limit and was submitted automatically. Your latest saved answers were included."
+        primaryLabel="Back to dashboard"
+        onPrimary={() => navigate("/dashboard")}
+      />
     );
   }
 
   if (autoSubmitted) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
-          <p style={{ fontSize: 16, color: "var(--rust)" }}>
-            Your test was automatically submitted after repeated integrity violations (leaving the test window,
-            exiting fullscreen, your camera/microphone being turned off, or no face being detected in frame).
-          </p>
-          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => navigate("/dashboard")}>
-            Back to dashboard
-          </button>
-        </div>
-      </div>
+      <AssessmentEndCard
+        tone="danger"
+        title="Assessment auto-submitted"
+        message="Your assessment was automatically submitted after repeated integrity violations (leaving the test window, exiting fullscreen, your camera/microphone being turned off, or no face being detected in frame)."
+        primaryLabel="Back to dashboard"
+        onPrimary={() => navigate("/dashboard")}
+      />
+    );
+  }
+
+  if (submittedInfo) {
+    const canViewResult = test?.showResults !== false;
+    return (
+      <AssessmentEndCard
+        tone="success"
+        title="Assessment Submitted"
+        message="Your assessment has been successfully submitted. You cannot modify your answers anymore."
+        details={
+          <>
+            <div>Assessment: {test?.title}</div>
+            <div>Submission ID: {submittedInfo.id}</div>
+            {submittedInfo.submittedAt && <div>Submitted: {new Date(submittedInfo.submittedAt).toLocaleString()}</div>}
+            <div>{canViewResult ? "Your result is available now." : "Your submission is being evaluated — results will be released per your institute's schedule."}</div>
+          </>
+        }
+        primaryLabel={canViewResult ? "View Result" : "Back to dashboard"}
+        onPrimary={() => navigate(canViewResult ? `/test/${testId}/result` : "/dashboard")}
+        secondaryLabel={canViewResult ? "Back to dashboard" : null}
+        onSecondary={() => navigate("/dashboard")}
+      />
     );
   }
 
   if (finalizing) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
-          <p className="mono" style={{ fontSize: 15 }}>⏳ Grading your test — this can take a few seconds for coding questions. Please don't close this tab.</p>
-        </div>
-      </div>
+      <AssessmentEndCard
+        tone="neutral"
+        title="Grading your assessment"
+        message="This can take a few seconds for coding questions. Please don't close this tab."
+      />
     );
   }
 
@@ -1125,24 +1256,56 @@ export default function TestTaking() {
     const attendanceMessage = testMeta.attendanceStatus === "ABSENT"
       ? "You have been marked absent for this test and cannot start it."
       : "Attendance has not yet been marked for this test. Please contact your faculty.";
+    const questionCount = testMeta.questions?.length || 0;
+    const maxMarks = (testMeta.questions || []).reduce((sum, tq) => sum + (tq.question?.points || 0), 0);
+    const questionTypes = [...new Set((testMeta.questions || []).map((tq) => tq.question?.questionType).filter(Boolean))];
+    const canBegin = (!needsMedia || mediaGranted) && !attendanceBlocked && instructionsAcked;
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-        <div className="card" style={{ padding: 32, maxWidth: 480, textAlign: "center" }}>
-          <span className="badge" style={{ background: "var(--amber)" }}>Official Test — graded, one attempt unless permitted by admin/staff</span>
+        <div className="card" style={{ padding: 32, maxWidth: 520, width: "100%", textAlign: "center" }}>
+          <div className="exam-brand">CodeArena Assessment</div>
+          <span className="badge" style={{ background: "var(--amber)", marginTop: 10 }}>Official Test — graded, one attempt unless permitted by admin/staff</span>
           <h2 style={{ marginTop: 10 }}>{testMeta.title}</h2>
-          {testMeta.description && <p style={{ color: "var(--ink-dim)", marginTop: 8 }}>{testMeta.description}</p>}
-          <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 16 }}>
-            {testMeta.questions?.length || 0} questions · {testMeta.durationMin} minutes
-          </p>
-          <p style={{ fontSize: 13, marginTop: 20 }}>
-            {needsFullscreen && `This test runs in fullscreen${needsMedia ? ` with your ${mediaLabel} on for the full duration` : ""}. `}
-            {needsWebcam && "Your face must stay visible in frame. "}
-            Switching tabs{needsFullscreen ? ", exiting fullscreen," : ""}
-            {needsMedia ? ` disabling your ${mediaLabel},` : ""}
-            {needsWebcam ? " or moving out of camera view" : ""} is tracked and will auto-submit your test after {MAX_TAB_VIOLATIONS} violations. You get
-            one continuous {testMeta.durationMin}-minute timer for the whole test — answer any question in any
-            order, and change your answers freely until you submit or time runs out.
-          </p>
+          {testMeta.description && <p style={{ color: "var(--ink-dim)", marginTop: 8, fontSize: 13.5 }}>{testMeta.description}</p>}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10, marginTop: 20 }}>
+            {[
+              ["Duration", `${testMeta.durationMin} min`],
+              ["Questions", String(questionCount)],
+              ["Max. Marks", String(maxMarks)],
+              ["Attempts", "1"],
+            ].map(([label, value]) => (
+              <div key={label} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "10px 8px" }}>
+                <div className="mono" style={{ fontSize: 10, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+                <div className="mono" style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>{value}</div>
+              </div>
+            ))}
+          </div>
+          {questionTypes.length > 0 && (
+            <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 10 }}>
+              Question types: {questionTypes.join(", ")}
+            </p>
+          )}
+
+          <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--line)", borderRadius: 10, textAlign: "left" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 8 }}>IMPORTANT INSTRUCTIONS</div>
+            <ul style={{ fontSize: 13, lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
+              {needsFullscreen && (
+                <li>This test runs in fullscreen{needsMedia ? ` with your ${mediaLabel} on for the full duration` : ""}.</li>
+              )}
+              {needsWebcam && <li>Your face must stay visible in the camera frame at all times.</li>}
+              <li>
+                Switching tabs{needsFullscreen ? ", exiting fullscreen," : ""}
+                {needsMedia ? ` disabling your ${mediaLabel},` : ""}
+                {needsWebcam ? " or moving out of camera view" : ""} is tracked and will auto-submit your test after {MAX_TAB_VIOLATIONS} violations.
+              </li>
+              <li>
+                You get one continuous {testMeta.durationMin}-minute timer for the whole test — answer any question in any
+                order, and change your answers freely until you submit or time runs out.
+              </li>
+              <li>Answers are saved automatically as you work. You cannot edit anything once you submit.</li>
+            </ul>
+          </div>
 
           {attendanceBlocked && (
             <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--rust)", borderRadius: 10, background: "rgba(220,38,38,0.08)" }}>
@@ -1180,13 +1343,23 @@ export default function TestTaking() {
             </div>
           )}
 
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 18, fontSize: 12.5, textAlign: "left", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={instructionsAcked}
+              onChange={(e) => setInstructionsAcked(e.target.checked)}
+              style={{ marginTop: 2, flexShrink: 0 }}
+            />
+            I have read and understood the instructions.
+          </label>
+
           <button
             className="btn btn-primary"
-            style={{ marginTop: 20, padding: "12px 24px", opacity: (!needsMedia || mediaGranted) && !attendanceBlocked ? 1 : 0.4 }}
+            style={{ marginTop: 14, padding: "12px 24px", opacity: canBegin ? 1 : 0.4 }}
             onClick={beginTest}
-            disabled={starting || attendanceBlocked || (needsMedia && !mediaGranted)}
+            disabled={starting || !canBegin}
           >
-            {starting ? "Starting…" : needsFullscreen ? "Begin Test (Fullscreen)" : "Begin Test"}
+            {starting ? "Starting…" : needsFullscreen ? "Begin Assessment (Fullscreen)" : "Begin Assessment"}
           </button>
         </div>
       </div>
@@ -1195,36 +1368,117 @@ export default function TestTaking() {
 
   if (!test) return <div style={{ padding: 48 }} className="mono">Loading test…</div>;
 
+  const progressPct = questions.length ? ((activeIdx + 1) / questions.length) * 100 : 0;
+
+  // Shared between the desktop right-rail palette and the mobile bottom sheet -- one definition
+  // of what the grid looks like, so the two surfaces can never drift out of sync with each other.
+  function renderPaletteBody(closeOnSelect) {
+    return (
+      <>
+        <div className="exam-palette-legend" style={{ marginBottom: 14 }}>
+          <span><span className="exam-palette-legend-dot" style={{ background: "var(--mint)" }} />Answered</span>
+          <span><span className="exam-palette-legend-dot" style={{ background: "var(--ink-dim)" }} />Not answered</span>
+          <span><span className="exam-palette-legend-dot" style={{ background: "#8b5cf6" }} />Marked for review</span>
+          <span><span className="exam-palette-legend-dot" style={{ background: "var(--rust)" }} />Failed (coding)</span>
+        </div>
+        <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 12, display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <span>Answered: <strong style={{ color: "var(--mint)" }}>{examCounts.answeredCount}</strong></span>
+          <span>Unanswered: <strong>{examCounts.unansweredCount}</strong></span>
+          <span>Review: <strong style={{ color: "#8b5cf6" }}>{examCounts.reviewCount}</strong></span>
+        </div>
+        <div className="exam-palette-grid">
+          {questions.map((tq, idx) => {
+            const q = tq.question;
+            const isCoding = q.questionType === "CODING" || q.questionType === "SQL";
+            const { answered, marked } = questionStatus(q);
+            const verdict = isCoding ? codeVerdicts[q.id] : null;
+            const wrong = verdict && verdict.verdict !== "ACCEPTED";
+            const classes = ["exam-palette-cell"];
+            if (idx === activeIdx) classes.push("current");
+            else if (marked) classes.push("review");
+            else if (wrong) classes.push("wrong");
+            else if (answered) classes.push("answered");
+            return (
+              <button
+                key={tq.id}
+                className={classes.join(" ")}
+                onClick={() => {
+                  setActiveIdx(idx);
+                  if (closeOnSelect) setShowMobilePalette(false);
+                }}
+                aria-label={`Question ${idx + 1}, ${answered ? "answered" : "not answered"}${marked ? ", marked for review" : ""}${idx === activeIdx ? ", current question" : ""}`}
+                aria-current={idx === activeIdx ? "true" : undefined}
+              >
+                {idx + 1}
+                {marked && <span className="exam-palette-cell-flag" aria-hidden="true">⚑</span>}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Top bar */}
-      <div style={{ background: "var(--slate-900)", color: "var(--chalk)", padding: isMobile ? "10px 12px" : "12px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: isMobile ? "1 1 100%" : "0 1 auto" }}>
-          <strong>{test.title}</strong>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          {!isMobile && (
-            <>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowQuestionPanel((v) => !v)}>
-                {showQuestionPanel ? "Hide questions" : "Show questions"}
-              </button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowResultsPanel((v) => !v)}>
-                {showResultsPanel ? "Hide results" : "Show results"}
-              </button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={toggleMaximizeEditor}>
-                {!showQuestionPanel && !showResultsPanel ? "⛶ Restore layout" : "⛶ Maximize editor"}
-              </button>
-              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={resetLayout} title="Reset panel sizes to default">
-                ↺ Reset layout
-              </button>
-            </>
-          )}
-          <div className="mono" style={{ fontSize: isMobile ? 16 : 20, color: secondsLeft < 300 ? "var(--rust)" : "var(--amber)" }}>
-            {timeLabel} <span style={{ opacity: 0.6 }}>▊</span>
+      {/* Exam header -- CodeArena wordmark, test name, question progress, timer, autosave status,
+          Submit. Kept compact per spec: one row of controls plus a 4px progress bar, not a whole
+          extra header section. */}
+      <div className="exam-header">
+        <div style={{ padding: isMobile ? "8px 12px" : "10px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <div style={{ minWidth: 0, flex: isMobile ? "1 1 100%" : "0 1 auto" }}>
+            <div className="exam-brand">CodeArena Assessment</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
+              <strong style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isMobile ? "100%" : 320 }}>{test.title}</strong>
+              <span className="mono" style={{ fontSize: 11.5, opacity: 0.75 }}>Question {activeIdx + 1} of {questions.length}</span>
+            </div>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {!isMobile && (
+              <>
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowQuestionPanel((v) => !v)}>
+                  {showQuestionPanel ? "Hide questions" : "Show questions"}
+                </button>
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowResultsPanel((v) => !v)}>
+                  {showResultsPanel ? "Hide results" : "Show results"}
+                </button>
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={toggleMaximizeEditor}>
+                  {!showQuestionPanel && !showResultsPanel ? "⛶ Restore layout" : "⛶ Maximize editor"}
+                </button>
+                <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={resetLayout} title="Reset panel sizes to default">
+                  ↺ Reset layout
+                </button>
+              </>
+            )}
+            <span className={`exam-save-pill ${savingAnswer ? "saving" : saveFailed ? "failed" : "saved"}`}>
+              {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : "Autosaved ✓"}
+            </span>
+            <span
+              className={`exam-timer exam-timer-${timerTone}`}
+              role="timer"
+              aria-label={`Time remaining ${timeLabel}${timerTone === "critical" ? ", critical, less than two minutes left" : timerTone === "warning" ? ", warning, less than ten minutes left" : ""}`}
+            >
+              ⏱ {timeLabel}
+            </span>
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowSubmitReview(true)}>Submit Test</button>
         </div>
-        <button className="btn btn-primary" onClick={() => finalizeAndExit(false)}>Submit Test</button>
+        <div className="exam-progress-track">
+          <div className="exam-progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
       </div>
+
+      {isOffline && (
+        <div className="exam-network-banner offline">
+          ⚠ Connection interrupted. Your recent answers are being preserved locally.
+        </div>
+      )}
+      {!isOffline && reconnectPhase === "syncing" && (
+        <div className="exam-network-banner reconnecting">Connection restored. Syncing answers…</div>
+      )}
+      {!isOffline && reconnectPhase === "saved" && (
+        <div className="exam-network-banner restored">✓ All answers saved</div>
+      )}
 
       {test.requireWebcam && (
         <video
@@ -1284,70 +1538,16 @@ export default function TestTaking() {
       )}
 
       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", flex: 1, overflow: isMobile ? "auto" : "hidden" }}>
-        {/* Question navigator */}
-        <div
-          style={
-            isMobile
-              ? { width: "100%", borderBottom: "1px solid var(--line)", padding: "10px 12px", display: "flex", gap: 8, overflowX: "auto", flexShrink: 0 }
-              : { width: 220, borderRight: "1px solid var(--line)", padding: 16, overflowY: "auto" }
-          }
-        >
-          {!isMobile && (
-            <>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>QUESTIONS</div>
-              <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 10 }}>
-                Question {activeIdx + 1} of {questions.length}
-              </div>
-            </>
-          )}
-          {questions.map((tq, idx) => {
-            const q = tq.question;
-            const a = answers[q.id];
-            const isCoding = q.questionType === "CODING" || q.questionType === "SQL";
-            const marked = !!markedForReview[q.id];
-            let dotColor;
-            let statusLabel;
-            if (isCoding) {
-              const dot = codingDotStatus(q, codeVerdicts, visited);
-              dotColor = dot.color;
-              statusLabel = dot.label;
-            } else {
-              const answered = (a?.selected || []).length > 0;
-              dotColor = answered ? "var(--mint)" : "var(--ink-dim)";
-              statusLabel = answered ? "Answered" : "Unanswered";
-            }
-            if (marked) {
-              dotColor = "#8b5cf6";
-              statusLabel = `⚑ ${statusLabel}`;
-            }
-            return (
-              <button
-                key={tq.id}
-                onClick={() => setActiveIdx(idx)}
-                style={{
-                  display: isMobile ? "inline-block" : "block",
-                  width: isMobile ? "auto" : "100%",
-                  minWidth: isMobile ? 150 : undefined,
-                  flexShrink: isMobile ? 0 : undefined,
-                  textAlign: "left",
-                  padding: "10px 12px",
-                  marginBottom: isMobile ? 0 : 6,
-                  borderRadius: 8,
-                  border: idx === activeIdx ? "1px solid var(--amber)" : "1px solid var(--line)",
-                  background: idx === activeIdx ? "var(--warning-bg)" : "var(--card-bg)",
-                  color: idx === activeIdx ? "var(--amber-dark)" : "var(--ink)",
-                  fontSize: 13,
-                }}
-              >
-                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: dotColor, marginRight: 6 }} />
-                Q{idx + 1}. {tq.question.title || "(untitled)"}
-                <span style={{ display: "block", fontSize: 11, marginTop: 2, marginLeft: 14, color: dotColor }} className="mono">
-                  {statusLabel}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Mobile: a compact trigger opens the palette as a bottom sheet on demand, instead of
+            permanently consuming a strip of screen height (spec explicit requirement). */}
+        {isMobile && (
+          <button className="exam-palette-trigger" onClick={() => setShowMobilePalette(true)}>
+            <span>Question {activeIdx + 1} of {questions.length}</span>
+            <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+              {examCounts.answeredCount} answered · {examCounts.reviewCount} for review ▾
+            </span>
+          </button>
+        )}
 
         {/* Question description */}
         {showQuestionPanel && (
@@ -1380,9 +1580,15 @@ export default function TestTaking() {
                   <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(-1)} disabled={activeIdx === 0}>
                     ◀ Previous
                   </button>
-                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(1)} disabled={activeIdx === questions.length - 1}>
-                    Next ▶
-                  </button>
+                  {activeIdx === questions.length - 1 ? (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowSubmitReview(true)}>
+                      Review &amp; Submit ▶
+                    </button>
+                  ) : (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(1)}>
+                      Next ▶
+                    </button>
+                  )}
                   {!isMobile && (
                     <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
                       {isMulti ? "Select all that apply" : "Select one answer"}
@@ -1390,8 +1596,8 @@ export default function TestTaking() {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <span className="mono" style={{ fontSize: 12, color: savingAnswer ? "var(--amber-dark)" : saveFailed ? "var(--rust)" : "var(--mint)", minWidth: 90, textAlign: "right" }}>
-                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : justSaved ? "✓ Saved" : ""}
+                  <span className={`exam-save-pill ${savingAnswer ? "saving" : saveFailed ? "failed" : "saved"}`}>
+                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : "Autosaved ✓"}
                   </span>
                   <button
                     className="btn btn-ghost"
@@ -1406,21 +1612,22 @@ export default function TestTaking() {
                 Your selection is saved automatically — change it any time before you submit the whole test.
               </p>
               <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
-                {(current.options || []).map((opt, idx) => (
-                  <label
-                    key={idx}
-                    className="card"
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}
-                  >
-                    <input
-                      type={isMulti ? "checkbox" : "radio"}
-                      name="quiz-option"
-                      checked={(answer?.selected || []).includes(idx)}
-                      onChange={() => toggleOption(idx)}
-                    />
-                    <span style={{ fontSize: 14 }}><MathText text={opt} /></span>
-                  </label>
-                ))}
+                {(current.options || []).map((opt, idx) => {
+                  const selected = (answer?.selected || []).includes(idx);
+                  return (
+                    <label key={idx} className={`exam-option${selected ? " selected" : ""}`}>
+                      <span className="exam-option-badge" aria-hidden="true">{String.fromCharCode(65 + idx)}</span>
+                      <input
+                        type={isMulti ? "checkbox" : "radio"}
+                        name="quiz-option"
+                        checked={selected}
+                        onChange={() => toggleOption(idx)}
+                        className="ca-sr-only"
+                      />
+                      <span style={{ fontSize: 14.5 }}><MathText text={opt} /></span>
+                    </label>
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -1430,9 +1637,15 @@ export default function TestTaking() {
                   <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(-1)} disabled={activeIdx === 0}>
                     ◀ Previous
                   </button>
-                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(1)} disabled={activeIdx === questions.length - 1}>
-                    Next ▶
-                  </button>
+                  {activeIdx === questions.length - 1 ? (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowSubmitReview(true)}>
+                      Review &amp; Submit ▶
+                    </button>
+                  ) : (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(1)}>
+                      Next ▶
+                    </button>
+                  )}
                   {isSql ? (
                     <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", padding: "6px 10px" }}>SQL</span>
                   ) : (
@@ -1442,8 +1655,8 @@ export default function TestTaking() {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <span className="mono" style={{ fontSize: 12, color: savingAnswer ? "var(--amber-dark)" : saveFailed ? "var(--rust)" : "var(--mint)", minWidth: 90, textAlign: "right" }}>
-                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : justSaved ? "✓ Saved" : ""}
+                  <span className={`exam-save-pill ${savingAnswer ? "saving" : saveFailed ? "failed" : "saved"}`}>
+                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : "Autosaved ✓"}
                   </span>
                   <button
                     className="btn btn-ghost"
@@ -1526,6 +1739,86 @@ export default function TestTaking() {
           </>
           )}
         </div>
+
+        {/* Desktop: question palette as a fixed-width right rail, independent of the resizable
+            question/editor/results panels -- spec explicit: palette on the right on desktop. */}
+        {!isMobile && (
+          <div style={{ width: 240, borderLeft: "1px solid var(--line)", padding: 16, overflowY: "auto", flexShrink: 0 }}>
+            {renderPaletteBody(false)}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile: the same palette as a bottom sheet, opened on demand from the trigger bar above. */}
+      {isMobile && showMobilePalette && (
+        <>
+          <div className="exam-palette-sheet-backdrop" onClick={() => setShowMobilePalette(false)} />
+          <div className="exam-palette-sheet" role="dialog" aria-label="Question navigator">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <strong style={{ fontSize: 14 }}>Questions</strong>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setShowMobilePalette(false)}>Close</button>
+            </div>
+            {renderPaletteBody(true)}
+          </div>
+        </>
+      )}
+
+      {showSubmitReview && (
+        <SubmitReviewModal
+          counts={examCounts}
+          timeLabel={timeLabel}
+          finalizing={finalizing}
+          onReviewUnanswered={jumpToFirstUnanswered}
+          onReviewMarked={jumpToFirstMarked}
+          onCancel={() => setShowSubmitReview(false)}
+          onSubmit={() => {
+            setShowSubmitReview(false);
+            finalizeAndExit(true, null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Pre-submit review screen (spec #27/#28 -- the two sections describe the same moment, one modal
+// serves both) -- replaces the native window.confirm() that used to gate the manual Submit button.
+// Purely a confirmation UI: the actual submit call is still finalizeAndExit, unchanged.
+function SubmitReviewModal({ counts, timeLabel, finalizing, onReviewUnanswered, onReviewMarked, onCancel, onSubmit }) {
+  return (
+    <div className="ca-modal-overlay" onClick={onCancel}>
+      <div className="ca-modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ margin: 0 }}>Submit Assessment?</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 16 }}>
+          <div style={{ textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "var(--success-bg)" }}>
+            <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: "var(--mint)" }}>{counts.answeredCount}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Answered</div>
+          </div>
+          <div style={{ textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "var(--paper)", border: "1px solid var(--line)" }}>
+            <div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{counts.unansweredCount}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Unanswered</div>
+          </div>
+          <div style={{ textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "#F1EBFB" }}>
+            <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: "#8b5cf6" }}>{counts.reviewCount}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>For Review</div>
+          </div>
+        </div>
+        <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 14 }}>Time remaining: {timeLabel}</p>
+        <p style={{ fontSize: 13, marginTop: 10, color: "var(--rust)", fontWeight: 600 }}>You cannot edit answers after submission.</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 18 }}>
+          {counts.unansweredCount > 0 && (
+            <button className="btn btn-ghost" style={{ fontSize: 12.5 }} onClick={onReviewUnanswered}>Review Unanswered</button>
+          )}
+          {counts.reviewCount > 0 && (
+            <button className="btn btn-ghost" style={{ fontSize: 12.5 }} onClick={onReviewMarked}>Review Marked</button>
+          )}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary" onClick={onSubmit} disabled={finalizing}>
+            {finalizing ? "Submitting…" : "Submit Assessment"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1551,13 +1844,4 @@ function describeVerdict(data) {
   return `${label} — ${data.passedCases ?? 0}/${data.totalCases ?? 0} hidden test cases passed.`;
 }
 
-// Drives the navigator's colored status dot for a CODING/SQL question — Gray (never opened),
-// Yellow (opened but never Submitted, or code written/Run only), Green (Submitted, Accepted),
-// Red (Submitted, any other verdict: wrong answer, compile/runtime error, TLE, MLE).
-function codingDotStatus(question, verdicts, visitedMap) {
-  const v = verdicts[question.id];
-  if (v) return v.verdict === "ACCEPTED" ? { color: "var(--mint)", label: "Accepted" } : { color: "var(--rust)", label: VERDICT_LABEL[v.verdict] || "Failed" };
-  if (visitedMap[question.id]) return { color: "var(--amber)", label: "In Progress" };
-  return { color: "var(--ink-dim)", label: "Not Visited" };
-}
 
