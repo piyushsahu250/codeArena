@@ -614,7 +614,17 @@ export default function ReadinessSubjects() {
                               {p.question.title || p.question.description?.slice(0, 60) || "(untitled)"}
                             </span>
                             <span className="badge" style={{ fontSize: 10 }}>{TYPE_LABELS[p.question.questionType] || p.question.questionType}</span>
-                            {p.question.btlLevel && <span className="mono" style={{ fontSize: 10, color: "var(--ink-dim)" }}>BTL-{p.question.btlLevel}</span>}
+                            {p.question.btlLevel ? (
+                              <span className="mono" style={{ fontSize: 10, color: "var(--ink-dim)" }}>BTL-{p.question.btlLevel}</span>
+                            ) : (
+                              // Same warning as SelectFromQuestionBank.jsx's picker -- a question can end
+                              // up in a curated pool with no BTL level (e.g. added before it was
+                              // classified, or classification removed later) and would otherwise sit here
+                              // looking "curated" while being invisible to every assessment mode.
+                              <span className="badge" style={{ fontSize: 10, background: "var(--amber, #b8860b)", color: "#fff" }} title="No BTL level set -- this question will never be selected for a Readiness assessment until it's classified.">
+                                ⚠ No BTL
+                              </span>
+                            )}
                             {!viewOnly && (
                               <button type="button" className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => removeFromPool(p.questionId)}>Remove</button>
                             )}
