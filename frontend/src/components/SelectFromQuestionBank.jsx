@@ -98,7 +98,17 @@ export default function SelectFromQuestionBank({ excludeIds = [], onAdd, onClose
                     {r.title || r.description?.slice(0, 60) || "(untitled)"}
                   </span>
                   <span className="badge" style={{ fontSize: 10 }}>{TYPE_LABELS[r.questionType] || r.questionType}</span>
-                  {r.btlLevel && <span className="mono" style={{ fontSize: 10, color: "var(--ink-dim)" }}>BTL-{r.btlLevel}</span>}
+                  {r.btlLevel ? (
+                    <span className="mono" style={{ fontSize: 10, color: "var(--ink-dim)" }}>BTL-{r.btlLevel}</span>
+                  ) : (
+                    // A question with no BTL level is invisible to every Readiness assessment mode
+                    // (buildAssessmentBlueprint filters strictly by btlLevel) -- flagged here so a
+                    // staff member doesn't curate a pool full of questions that can never actually
+                    // be selected, only to find out later from a separate Check Coverage click.
+                    <span className="badge" style={{ fontSize: 10, background: "var(--amber, #b8860b)", color: "#fff" }} title="No BTL level set -- this question will never be selected for a Readiness assessment until it's classified.">
+                      ⚠ No BTL
+                    </span>
+                  )}
                 </label>
               ))}
             </div>
