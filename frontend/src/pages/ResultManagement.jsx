@@ -4,6 +4,7 @@ import api from "../api";
 import Navbar from "../components/Navbar";
 import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import { useAuth } from "../context/AuthContext";
 
 const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 };
@@ -16,6 +17,9 @@ const EMPTY_FORM = {
   title: "", description: "", instituteId: "", batch: "", divisions: "", semester: "", examDate: "", publishDate: "",
   totalMarks: "", passingMarks: "", passingPercent: "", passLabel: "Pass", failLabel: "Fail",
   allowPdfDownload: true, showRank: false, showClassAverage: false, showAttendance: false, visibility: "SAVE_DRAFT",
+  // Spec section 1: "select either Academic Groups or Talent Pool", then the specific groups/pools
+  // this exam was conducted for — mirrors CreateTest.jsx's identical groupSelectionMode convention.
+  groupSelectionMode: "ACADEMIC", academicGroupIds: [], talentPoolIds: [],
 };
 
 // Admin (full: create/edit/publish/unpublish/delete examinations) and Staff/Clerk (institute-
@@ -46,6 +50,8 @@ export default function ResultManagement() {
   const [departments, setDepartments] = useState([]);
   const [formDeptIds, setFormDeptIds] = useState([]);
   const [institutes, setInstitutes] = useState([]);
+  const [academicGroups, setAcademicGroups] = useState([]);
+  const [talentPools, setTalentPools] = useState([]);
 
   function loadExams() {
     api.get("/results/admin/examinations", { params: { status: statusFilter || undefined, search: searchFilter.trim() || undefined } })
@@ -64,12 +70,25 @@ export default function ResultManagement() {
   useEffect(() => {
     if (isAdmin) api.get("/institutes").then((res) => setInstitutes(res.data)).catch(() => setInstitutes([]));
   }, [isAdmin]);
+  useEffect(() => {
+    if (isAdmin) {
+      api.get("/academic-groups").then((res) => setAcademicGroups(res.data)).catch(() => setAcademicGroups([]));
+      api.get("/talent-pools").then((res) => setTalentPools(res.data)).catch(() => setTalentPools([]));
+    }
+  }, [isAdmin]);
 
   async function createExam(e) {
     e.preventDefault();
     if (!form.title.trim() || !form.examDate || !form.totalMarks) return;
     if (!form.passingMarks && !form.passingPercent) {
       setError("Provide either Passing Marks or Passing Percentage");
+      return;
+    }
+    // Spec section 1: pick Academic Groups or Talent Pool, then at least one specific group/pool
+    // — mirrored client-side (the backend enforces this too) so the error surfaces immediately
+    // instead of round-tripping to the server first.
+    if (form.groupSelectionMode === "TALENT_POOL" ? form.talentPoolIds.length === 0 : form.academicGroupIds.length === 0) {
+      setError(form.groupSelectionMode === "TALENT_POOL" ? "Select at least one Talent Pool" : "Select at least one Academic Group");
       return;
     }
     setSaving(true);
@@ -187,7 +206,7 @@ export default function ResultManagement() {
                 </div>
                 {departments.length > 0 && (
                   <div>
-                    <label style={labelStyle}>Department(s)</label>
+                    <label style={labelStyle}>Department(s) (Optional, descriptive/filter tag only)</label>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {departments.map((d) => (
                         <label key={d.id} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, border: "1px solid var(--line)", borderRadius: 6, padding: "4px 8px" }}>
@@ -197,6 +216,45 @@ export default function ResultManagement() {
                     </div>
                   </div>
                 )}
+
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Who was this examination for?</div>
+                  <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
+                    Pick a Batch, then the specific Academic Group(s) — or a Talent Pool instead. Only the groups
+                    you select here get associated with this examination (used for the bulk-upload template and
+                    export group filters below).
+                  </p>
+                  <div style={{ display: "flex", gap: 14, fontSize: 13, marginTop: 8 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="radio" name="groupSelectionMode" checked={form.groupSelectionMode === "ACADEMIC"} onChange={() => setForm((f) => ({ ...f, groupSelectionMode: "ACADEMIC" }))} /> Academic Groups
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="radio" name="groupSelectionMode" checked={form.groupSelectionMode === "TALENT_POOL"} onChange={() => setForm((f) => ({ ...f, groupSelectionMode: "TALENT_POOL" }))} /> Talent Pool
+                    </label>
+                  </div>
+                  {form.groupSelectionMode === "ACADEMIC" ? (
+                    academicGroups.length > 0 ? (
+                      <div style={{ marginTop: 10 }}>
+                        <AcademicGroupPicker multi groups={academicGroups} value={form.academicGroupIds} onChange={(ids) => setForm((f) => ({ ...f, academicGroupIds: ids }))} />
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>No academic groups found yet.</p>
+                    )
+                  ) : talentPools.length > 0 ? (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                      {talentPools.map((p) => (
+                        <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, border: "1px solid var(--line)", borderRadius: 6, padding: "4px 8px" }}>
+                          <input
+                            type="checkbox" checked={form.talentPoolIds.includes(p.id)}
+                            onChange={() => setForm((f) => ({ ...f, talentPoolIds: f.talentPoolIds.includes(p.id) ? f.talentPoolIds.filter((i) => i !== p.id) : [...f.talentPoolIds, p.id] }))}
+                          /> {p.name}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>No Talent Pools exist yet — create one from the Talent Pools admin page first.</p>
+                  )}
+                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
                     <label style={labelStyle}>Examination Date</label>
@@ -319,6 +377,9 @@ export default function ResultManagement() {
 }
 
 function ExamDetail({ examId, isAdmin, onBack }) {
+  // Unfreeze is INSTITUTE_ADMIN-only per spec (see resultManagement.js's PATCH .../unfreeze) —
+  // isAdmin lumps ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN together, so this needs the exact role.
+  const { user } = useAuth();
   const [exam, setExam] = useState(null);
   const [entries, setEntries] = useState([]);
   const [error, setError] = useState("");
@@ -346,6 +407,23 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   const [historyEntryId, setHistoryEntryId] = useState(null);
   const [history, setHistory] = useState([]);
   const [correctionReason, setCorrectionReason] = useState("");
+  // Freeze/Unfreeze (spec section 3) — independent of the publish workflow buttons above.
+  const [freezing, setFreezing] = useState(false);
+  // Limited editing (spec section 6) — only non-critical fields (Title/Description here); the
+  // backend itself is what actually enforces which fields stay editable once entries exist, this
+  // is just the corresponding UI.
+  const [editingExam, setEditingExam] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [savingExamEdit, setSavingExamEdit] = useState(false);
+  // Configurable result tags (spec section 5).
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [remarkBands, setRemarkBands] = useState(null);
+  const [savingBands, setSavingBands] = useState(false);
+  // Export group selection (spec section 7).
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportGroupIds, setExportGroupIds] = useState([]);
+  const [exporting, setExporting] = useState(false);
 
   function loadExam() {
     api.get(`/results/admin/examinations/${examId}`).then((res) => setExam(res.data)).catch((err) => setError(err.response?.data?.error || "Failed to load examination"));
@@ -394,6 +472,13 @@ function ExamDetail({ examId, isAdmin, onBack }) {
 
   async function saveEntry() {
     if (!selectedStudent || (markStatus === "PRESENT" && !marks)) return;
+    // Spec section 2: "The system should prevent saving/submitting the entry if EX is selected
+    // without a remark" — mirrored client-side (the backend enforces this too, via
+    // exemptionRemarkError() in resultManagement.js).
+    if (markStatus === "EXEMPTED" && !remarks.trim()) {
+      setError("A remark is required when status is Exempted (e.g. Placed, Medical).");
+      return;
+    }
     if (exam.status === "PUBLISHED" && !correctionReason.trim()) {
       setError("A reason is required to correct a published result.");
       return;
@@ -434,10 +519,10 @@ function ExamDetail({ examId, isAdmin, onBack }) {
 
   async function downloadTemplate() {
     try {
-      const res = await api.get(`/results/admin/examinations/${examId}/bulk-template`, {
-        params: selectedGroupId ? { academicGroupId: selectedGroupId } : {},
-        responseType: "blob",
-      });
+      const params = exam.groupSelectionMode === "TALENT_POOL"
+        ? (selectedGroupId ? { poolId: selectedGroupId } : {})
+        : (selectedGroupId ? { academicGroupId: selectedGroupId } : {});
+      const res = await api.get(`/results/admin/examinations/${examId}/bulk-template`, { params, responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url; link.download = "result-bulk-import-template.xlsx";
@@ -554,6 +639,92 @@ function ExamDetail({ examId, isAdmin, onBack }) {
     }
   }
 
+  async function freezeMarks() {
+    if (!confirm("Freeze this examination's marks? No one — including Admins — will be able to edit them until an Institute Admin unfreezes.")) return;
+    setFreezing(true);
+    setError("");
+    try {
+      await api.patch(`/results/admin/examinations/${examId}/freeze`);
+      loadExam();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to freeze marks");
+    } finally {
+      setFreezing(false);
+    }
+  }
+
+  async function unfreezeMarks() {
+    if (!confirm("Unfreeze this examination's marks? Editing will be allowed again per normal permissions.")) return;
+    setFreezing(true);
+    setError("");
+    try {
+      await api.patch(`/results/admin/examinations/${examId}/unfreeze`);
+      loadExam();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to unfreeze marks");
+    } finally {
+      setFreezing(false);
+    }
+  }
+
+  function startEditExam() {
+    setEditTitle(exam.title);
+    setEditDescription(exam.description || "");
+    setEditingExam(true);
+  }
+
+  async function saveExamEdit() {
+    if (!editTitle.trim()) return;
+    setSavingExamEdit(true);
+    setError("");
+    try {
+      await api.patch(`/results/admin/examinations/${examId}`, { title: editTitle.trim(), description: editDescription.trim() || null });
+      setEditingExam(false);
+      loadExam();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to update examination");
+    } finally {
+      setSavingExamEdit(false);
+    }
+  }
+
+  function openTagsPanel() {
+    if (tagsOpen) { setTagsOpen(false); return; }
+    setTagsOpen(true);
+    api.get(`/results/admin/examinations/${examId}/remark-bands`)
+      .then((res) => setRemarkBands(res.data.length ? res.data : [{ label: "", minPercent: "", maxPercent: "", minMarks: "", maxMarks: "" }]))
+      .catch(() => setRemarkBands([{ label: "", minPercent: "", maxPercent: "", minMarks: "", maxMarks: "" }]));
+  }
+
+  function addBand() {
+    setRemarkBands((bands) => [...bands, { label: "", minPercent: "", maxPercent: "", minMarks: "", maxMarks: "" }]);
+  }
+  function updateBand(i, field, value) {
+    setRemarkBands((bands) => bands.map((b, idx) => (idx === i ? { ...b, [field]: value } : b)));
+  }
+  function removeBand(i) {
+    setRemarkBands((bands) => bands.filter((_, idx) => idx !== i));
+  }
+
+  async function saveBands() {
+    setSavingBands(true);
+    setError("");
+    try {
+      const bands = remarkBands.filter((b) => b.label.trim());
+      await api.put(`/results/admin/examinations/${examId}/remark-bands`, { bands });
+      setTagsOpen(false);
+      loadEntries();
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to save result tags");
+    } finally {
+      setSavingBands(false);
+    }
+  }
+
+  function toggleExportGroup(id) {
+    setExportGroupIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
+  }
+
   async function previewMarksheet(entryId) {
     try {
       const res = await api.get(`/results/admin/examinations/${examId}/entries/${entryId}/marksheet.pdf`, { responseType: "blob" });
@@ -564,13 +735,25 @@ function ExamDetail({ examId, isAdmin, onBack }) {
     }
   }
 
+  // Spec section 7: "select group(s)... export data only for the selected groups." An empty
+  // selection means "every group" (unchanged, pre-existing behavior) — exportGroupIds is only
+  // sent when the admin has actually narrowed it down to specific groups.
   async function exportEntries() {
-    const res = await api.get("/results/admin/export", { params: { examinationId: examId, format: "xlsx" }, responseType: "blob" });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const link = document.createElement("a");
-    link.href = url; link.download = `results-${examId}.xlsx`;
-    document.body.appendChild(link); link.click(); link.remove();
-    window.URL.revokeObjectURL(url);
+    setExporting(true);
+    try {
+      const res = await api.get("/results/admin/export", {
+        params: { examinationId: examId, format: "xlsx", academicGroupIds: exportGroupIds.length ? exportGroupIds.join(",") : undefined },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url; link.download = `results-${examId}.xlsx`;
+      document.body.appendChild(link); link.click(); link.remove();
+      window.URL.revokeObjectURL(url);
+      setExportOpen(false);
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (!exam) return <p style={{ marginTop: 24, color: "var(--ink-dim)" }}>Loading…</p>;
@@ -581,12 +764,43 @@ function ExamDetail({ examId, isAdmin, onBack }) {
 
       <div className="card" style={{ padding: 20, marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>{exam.title}</div>
-            {exam.description && <div style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>{exam.description}</div>}
-            <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
-              {exam.institute?.name}{exam.batch ? ` · ${exam.batch}` : ""} · {new Date(exam.examDate).toLocaleDateString()}
-            </div>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            {editingExam ? (
+              <div style={{ display: "grid", gap: 8, maxWidth: 480 }}>
+                <div>
+                  <label style={labelStyle}>Examination Title</label>
+                  <input style={inputStyle} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Description</label>
+                  <textarea style={{ ...inputStyle, minHeight: 50 }} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={saveExamEdit} disabled={savingExamEdit || !editTitle.trim()}>{savingExamEdit ? "Saving…" : "Save"}</button>
+                  <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setEditingExam(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ fontWeight: 700, fontSize: 18 }}>{exam.title}</div>
+                  {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={startEditExam}>Edit</button>}
+                  {exam.marksFrozen && <span className="badge" style={{ background: "var(--rust)" }}>🔒 Marks Frozen</span>}
+                </div>
+                {exam.description && <div style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>{exam.description}</div>}
+                <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
+                  {exam.institute?.name}{exam.batch ? ` · ${exam.batch}` : ""} · {new Date(exam.examDate).toLocaleDateString()}
+                  {exam.groupSelectionMode === "TALENT_POOL"
+                    ? (exam.talentPools?.length ? ` · Talent Pool: ${exam.talentPools.map((tp) => tp.pool.name).join(", ")}` : "")
+                    : (exam.academicGroupIds?.length ? ` · ${exam.academicGroupIds.length} academic group(s) associated` : "")}
+                </div>
+                {exam.marksFrozen && exam.frozenByName && (
+                  <div style={{ fontSize: 11, color: "var(--rust)", marginTop: 4 }}>
+                    Frozen by {exam.frozenByName} on {new Date(exam.frozenAt).toLocaleString()}
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <span style={{ color: STATUS_COLORS[exam.status], fontWeight: 700 }}>{STATUS_LABELS[exam.status] || exam.status}</span>
         </div>
@@ -622,6 +836,51 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             )}
             {exam.status === "ARCHIVED" && (
               <button className="btn btn-ghost" onClick={() => transition("unarchive", "Restore this examination from the archive?")} disabled={transitioning}>Unarchive</button>
+            )}
+            {/* Freeze/Unfreeze (spec section 3) -- deliberately independent of the publish workflow
+                buttons above; freezing is never required to publish and publishing never implies
+                frozen, so these are always shown regardless of exam.status. */}
+            {!exam.marksFrozen && exam.canEdit && (
+              <button className="btn btn-ghost" style={{ color: "var(--rust)" }} onClick={freezeMarks} disabled={freezing}>{freezing ? "Freezing…" : "🔒 Freeze Marks"}</button>
+            )}
+            {exam.marksFrozen && user?.role === "INSTITUTE_ADMIN" && (
+              <button className="btn btn-ghost" onClick={unfreezeMarks} disabled={freezing}>{freezing ? "Unfreezing…" : "🔓 Unfreeze Marks"}</button>
+            )}
+            {exam.marksFrozen && user?.role !== "INSTITUTE_ADMIN" && (
+              <span style={{ fontSize: 12, color: "var(--ink-dim)", alignSelf: "center" }}>Only an Institute Admin can unfreeze this examination.</span>
+            )}
+            <button className="btn btn-ghost" onClick={openTagsPanel}>{tagsOpen ? "Close Result Tags" : "Configure Result Tags"}</button>
+          </div>
+        )}
+
+        {tagsOpen && (
+          <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--line)", borderRadius: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Result Remarks / Tags</div>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+              Beyond {exam.passLabel}/{exam.failLabel}, define score bands with their own tag — e.g. "Topper" at
+              90%+, "Needs Improvement" at 40% or below. Set either a percentage range or a marks range per tag,
+              not both. Leave empty to keep using just {exam.passLabel}/{exam.failLabel}.
+            </p>
+            {remarkBands === null ? (
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>Loading…</p>
+            ) : (
+              <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                {remarkBands.map((b, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <input style={{ ...inputStyle, flex: "1 1 140px" }} placeholder="Tag label, e.g. Topper" value={b.label} onChange={(e) => updateBand(i, "label", e.target.value)} />
+                    <input style={{ ...inputStyle, flex: "0 1 100px" }} type="number" placeholder="Min %" value={b.minPercent} onChange={(e) => updateBand(i, "minPercent", e.target.value)} />
+                    <input style={{ ...inputStyle, flex: "0 1 100px" }} type="number" placeholder="Max %" value={b.maxPercent} onChange={(e) => updateBand(i, "maxPercent", e.target.value)} />
+                    <span style={{ fontSize: 11, color: "var(--ink-dim)" }}>or</span>
+                    <input style={{ ...inputStyle, flex: "0 1 100px" }} type="number" placeholder="Min marks" value={b.minMarks} onChange={(e) => updateBand(i, "minMarks", e.target.value)} />
+                    <input style={{ ...inputStyle, flex: "0 1 100px" }} type="number" placeholder="Max marks" value={b.maxMarks} onChange={(e) => updateBand(i, "maxMarks", e.target.value)} />
+                    <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--rust)" }} onClick={() => removeBand(i)}>Remove</button>
+                  </div>
+                ))}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={addBand}>+ Add Tag</button>
+                  <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={saveBands} disabled={savingBands}>{savingBands ? "Saving…" : "Save Tags"}</button>
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -682,13 +941,39 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setBulkOpen((b) => !b)}>{bulkOpen ? "Close Bulk Upload" : "Bulk Excel Upload"}</button>
               </>
             )}
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={exportEntries}>Export</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setExportOpen((v) => !v)}>{exportOpen ? "Close Export" : "Export"}</button>
           </div>
         </div>
 
+        {exportOpen && (
+          <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--line)", borderRadius: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Export — select group(s)</div>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
+              Leave everything unchecked to export every group. Check one or more of this examination's associated
+              Academic Groups to export only their students.
+            </p>
+            {exam.groupSelectionMode === "ACADEMIC" && academicGroups.length > 0 ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                {academicGroups.filter((g) => exam.academicGroupIds?.includes(g.id)).map((g) => (
+                  <label key={g.id} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, border: "1px solid var(--line)", borderRadius: 6, padding: "4px 8px" }}>
+                    <input type="checkbox" checked={exportGroupIds.includes(g.id)} onChange={() => toggleExportGroup(g.id)} /> {g.batch} · {g.department?.name} · {g.section}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
+                {exam.groupSelectionMode === "TALENT_POOL" ? "This examination is Talent-Pool-based — export includes all its entries." : "No specific groups associated — export includes all entries."}
+              </p>
+            )}
+            <button className="btn btn-primary" style={{ fontSize: 12, marginTop: 10 }} onClick={exportEntries} disabled={exporting}>
+              {exporting ? "Exporting…" : exportGroupIds.length ? `Export ${exportGroupIds.length} Selected Group(s)` : "Export All"}
+            </button>
+          </div>
+        )}
+
         {!exam.canEdit && (
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
-            This examination is {exam.status.toLowerCase()} — only an Admin can update its results now.
+            {exam.marksFrozen ? "This examination's marks are frozen — only an Institute Admin can unfreeze them before further edits." : `This examination is ${exam.status.toLowerCase()} — only an Admin can update its results now.`}
           </p>
         )}
 
@@ -720,11 +1005,15 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                 <label style={labelStyle}>Grade (Optional)</label>
                 <input style={inputStyle} value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Auto if configured" />
               </div>
-              <button className="btn btn-primary" disabled={!selectedStudent || (markStatus === "PRESENT" && !marks) || savingEntry} onClick={saveEntry}>{savingEntry ? "Saving…" : "Save"}</button>
+              <button className="btn btn-primary" disabled={!selectedStudent || (markStatus === "PRESENT" && !marks) || (markStatus === "EXEMPTED" && !remarks.trim()) || savingEntry} onClick={saveEntry}>{savingEntry ? "Saving…" : "Save"}</button>
             </div>
             <div style={{ marginTop: 10 }}>
-              <label style={labelStyle}>Remarks (Optional)</label>
-              <input style={inputStyle} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder='e.g. "Excellent performance"' />
+              <label style={labelStyle}>{markStatus === "EXEMPTED" ? "Remarks (required — reason for exemption)" : "Remarks (Optional)"}</label>
+              <input
+                style={{ ...inputStyle, borderColor: markStatus === "EXEMPTED" && !remarks.trim() ? "var(--rust)" : undefined }}
+                value={remarks} onChange={(e) => setRemarks(e.target.value)}
+                placeholder={markStatus === "EXEMPTED" ? 'e.g. "Placed", "Medical"' : 'e.g. "Excellent performance"'}
+              />
             </div>
             {exam.status === "PUBLISHED" && (
               <div style={{ marginTop: 10 }}>
@@ -738,22 +1027,32 @@ function ExamDetail({ examId, isAdmin, onBack }) {
         {bulkOpen && (
           <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--line)", borderRadius: 8 }}>
             <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
-              Select an Academic Group to download a template pre-filled with every student in that group —
+              Select {exam.groupSelectionMode === "TALENT_POOL" ? "the Talent Pool" : "an Academic Group"} associated
+              with this examination to download a template pre-filled with every student in it —
               Institute Name, Student Name, and Registration Number (PRN) are filled in for you; just enter{" "}
-              <strong>Marks Obtained</strong> (and optionally Status — Present/Absent/Exempted/Not Appeared) and
-              re-upload the same file. Students are matched by Registration Number only — Student Name is shown
-              for verification and Roll Number is never used for matching. Uploading only VALIDATES the file —
-              nothing is saved until you review the results below and click Confirm Import.
+              <strong>Marks Obtained</strong> (and optionally Status — Present/Absent/Exempted/Not Appeared). If
+              Status is Exempted, the <strong>Remarks</strong> column is required (e.g. "Placed", "Medical") — the
+              row is rejected on import without one. Then re-upload the same file. Students are matched by
+              Registration Number only — Student Name is shown for verification and Roll Number is never used for
+              matching. Uploading only VALIDATES the file — nothing is saved until you review the results below and
+              click Confirm Import.
             </p>
 
             <div style={{ maxWidth: 320, marginTop: 10 }}>
-              <label style={labelStyle}>Academic Group</label>
-              <select style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
-                <option value="">Select a batch/department/section…</option>
-                {academicGroups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.batch} · {g.department?.name} · {g.section} ({g._count?.users ?? 0} students)</option>
-                ))}
-              </select>
+              <label style={labelStyle}>{exam.groupSelectionMode === "TALENT_POOL" ? "Talent Pool" : "Academic Group"}</label>
+              {exam.groupSelectionMode === "TALENT_POOL" ? (
+                <select style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                  <option value="">Select…</option>
+                  {(exam.talentPools || []).map((tp) => <option key={tp.poolId} value={tp.poolId}>{tp.pool.name}</option>)}
+                </select>
+              ) : (
+                <select style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                  <option value="">Select a batch/department/section…</option>
+                  {academicGroups.filter((g) => !exam.academicGroupIds?.length || exam.academicGroupIds.includes(g.id)).map((g) => (
+                    <option key={g.id} value={g.id}>{g.batch} · {g.department?.name} · {g.section} ({g._count?.users ?? 0} students)</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
@@ -851,9 +1150,12 @@ function ExamDetail({ examId, isAdmin, onBack }) {
                     <td style={{ padding: "8px 10px" }}>{en.status === "PRESENT" ? `${en.obtainedMarks} / ${exam.totalMarks}` : "—"}</td>
                     <td style={{ padding: "8px 10px" }}>{en.status === "PRESENT" ? `${en.percentage}%` : "—"}</td>
                     <td style={{ padding: "8px 10px" }}>
-                      {en.status === "PRESENT"
-                        ? <span style={{ color: en.passed ? "var(--mint)" : "var(--rust)", fontWeight: 700 }}>{en.passed ? exam.passLabel : exam.failLabel}</span>
-                        : <span style={{ color: "var(--ink-dim)" }}>—</span>}
+                      {en.status === "PRESENT" ? (
+                        <>
+                          <span style={{ color: en.passed ? "var(--mint)" : "var(--rust)", fontWeight: 700 }}>{en.passed ? exam.passLabel : exam.failLabel}</span>
+                          {en.resultTag && <span className="badge" style={{ marginLeft: 6, background: "var(--amber)", fontSize: 10 }}>{en.resultTag}</span>}
+                        </>
+                      ) : <span style={{ color: "var(--ink-dim)" }}>—</span>}
                     </td>
                     <td style={{ padding: "8px 10px", maxWidth: 160 }}>{en.remarks || "—"}</td>
                     <td className="mono" style={{ padding: "8px 10px", fontSize: 11 }}>{en.verificationCode || "—"}</td>

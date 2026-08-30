@@ -539,6 +539,7 @@ model TalentPool {
   testAssignments  TalentPoolTest[]
   interviewConfigs TalentPoolInterviewConfig[]
   attendanceOwners StaffClassAssignment[] @relation("TalentPoolAttendanceOwners")
+  resultExaminations ResultExaminationTalentPool[]
 
   @@index([isActive])
 }
@@ -2915,13 +2916,39 @@ model ResultExamination {
   showClassAverage Boolean @default(false)
   showAttendance   Boolean @default(false)
 
-  // Optional expected-roster definition (spec section 10/13: "2 students are missing marks").
-  // This module has no other concept of "who is eligible for this exam" (departments[] above is
-  // explicitly descriptive-only) — when this is left empty, "missing marks" simply can't be
-  // computed and the pre-publish check only reports how many entries exist, not how many are
-  // missing. A plain scalar array (Postgres native array type), not a join table, since this is a
-  // small admin-picked list read as a whole, never queried/filtered by individual group id.
+  // Which of the two mutually-exclusive roster sources academicGroupIds/talentPools below actually
+  // apply — mirrors CreateTest.jsx's identical groupType ("ACADEMIC" | "TALENT_POOL") convention
+  // for Test, reused here rather than inventing a second selection model. "ACADEMIC" (the default,
+  // and the only mode any pre-existing exam can have) reads academicGroupIds; "TALENT_POOL" reads
+  // the talentPools join table instead. Batch is still the single free-text field above — picking
+  // one batch first, then Academic Groups vs Talent Pool, then the specific groups/pools, is a
+  // create-flow UI sequence (see ResultManagement.jsx), not something that needs its own schema
+  // field beyond this mode flag.
+  groupSelectionMode String @default("ACADEMIC")
+
+  // Expected-roster definition (spec section 1: "only the groups selected during examination
+  // creation should be associated with that examination", spec section 10/13: "2 students are
+  // missing marks"). Originally purely optional/informational; now the real, enforced association
+  // when groupSelectionMode is "ACADEMIC" and this is non-empty — the bulk-import template (spec
+  // section 4) and export group-picker (spec section 7) both scope their group choices to this
+  // list. Still backward-compatible by construction: an existing exam predating this feature has
+  // this empty, which (unchanged) means "no fixed roster, missing-marks can't be computed" and the
+  // template/export group-pickers simply show no groups to restrict to — never "leaks" into
+  // treating an unscoped legacy exam as open to every group platform-wide. A plain scalar array
+  // (Postgres native array type), not a join table, since this is a small admin-picked list read
+  // as a whole, never queried/filtered by individual group id.
   academicGroupIds String[] @default([])
+
+  // Freeze/unfreeze (spec section 3) — independent of `status` above: freezing is never required
+  // to publish, and publishing never implies frozen. While frozen, canEditEntries() (see
+  // resultManagement.js) blocks every entry-mutating route for every role, including Admin/Super
+  // Admin — only an explicit unfreeze (INSTITUTE_ADMIN-only, per spec) lifts it. frozenByAdminId/
+  // frozenByName mirror createdByAdminId/createdByName's plain-denormalized-name convention rather
+  // than relying on a join for a value that's almost always just displayed, never queried by.
+  marksFrozen      Boolean   @default(false)
+  frozenAt         DateTime?
+  frozenByAdminId  String?
+  frozenByName     String?
 
   createdByAdminId String
   createdByName    String
@@ -2931,6 +2958,14 @@ model ResultExamination {
 
   departments ResultExaminationDepartment[]
   entries     ResultEntry[]
+  talentPools ResultExaminationTalentPool[]
+  // Configurable result remarks/tags (spec section 5) — zero rows means the pre-existing plain
+  // passLabel/failLabel two-tag behavior is completely unchanged (see resultTagging.js); one or
+  // more rows switches a PRESENT entry's tag to whichever band its percentage/marks falls into
+  // instead. Scoped per-examination (not institute-wide like ResultGradeBand) since the spec's own
+  // worked example ("Topper" at >=90%, "Needs Improvement" at <=40%) is exam-specific wording an
+  // exam maker configures per exam, not a standing institute policy.
+  remarkBands ResultRemarkBand[]
   // Optional — an exam with zero ResultSubject rows behaves exactly as before this field existed
   // (one total mark per student, on ResultEntry itself). Adding one or more subjects is what turns
   // on the per-subject mark-entry table/marksheet breakdown; existing exams (and any exam that
@@ -2975,6 +3010,21 @@ model ResultExaminationDepartment {
   @@unique([examinationId, departmentId])
 }
 
+// Talent-Pool roster source for an exam whose groupSelectionMode is "TALENT_POOL" (spec section 1)
+// — mirrors TalentPoolTest's exact shape (poolId/examinationId, unique pair, indexed on the
+// examination side) rather than inventing a second pool-membership pattern for this module.
+model ResultExaminationTalentPool {
+  id            String            @id @default(uuid())
+  pool          TalentPool        @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  poolId        String
+  examination   ResultExamination @relation(fields: [examinationId], references: [id], onDelete: Cascade)
+  examinationId String
+  assignedAt    DateTime          @default(now())
+
+  @@unique([poolId, examinationId])
+  @@index([examinationId])
+}
+
 // One row per student per examination. percentage/passed are computed at write time (on create,
 // on entry edit, and on every entry when the exam's totalMarks/passingMarks/passingPercent
 // changes) — never recalculated live on every read, the same materialized-computed-value posture
@@ -3002,8 +3052,17 @@ model ResultEntry {
   // instead of leaving grade permanently manual-only.
   grade         String?
   // Admin-entered only, never derived from percentage — same "never fabricate the institute's
-  // grading/assessment policy" reasoning as `grade` above.
+  // grading/assessment policy" reasoning as `grade` above. This is also where the mandatory
+  // exemption reason lives when status is EXEMPTED (spec section 2 — "Placed"/"Medical"/etc.),
+  // enforced at write time in resultManagement.js, not by a schema-level NOT NULL (status-
+  // conditional requirements aren't expressible as a plain column constraint here).
   remarks       String?
+  // Computed result tag from the exam's configured ResultRemarkBand rows (spec section 5) — null
+  // whenever the exam has zero bands configured (falls back to passLabel/failLabel display
+  // entirely client-side) or the entry isn't PRESENT (an absent/exempted/not-appeared entry has no
+  // marks-based tag to compute). Recomputed alongside grade every time obtainedMarks or the exam's
+  // bands change — same materialized-at-write-time posture as grade/percentage/passed above.
+  resultTag     String?
   // Optimistic-concurrency guard (spec section 24): incremented on every update; a client must
   // send back the version it last read, and a mismatch means someone else saved first.
   version       Int               @default(0)
@@ -3065,6 +3124,30 @@ model ResultGradeBand {
 
   @@index([instituteId])
   @@index([instituteId, minPercent])
+}
+
+// Configurable result remarks/tags (spec section 5) — per-examination, unlike ResultGradeBand's
+// institute-wide scope, since the exam maker configures exam-specific wording ("Topper" at a
+// >=90% threshold makes sense for one exam's grading philosophy and not necessarily another's).
+// Same shape convention as ResultGradeBand (label + range + order) but supports EITHER a percent
+// range OR a raw-marks range per band (spec: "based on marks, percentage, or ranges") — exactly
+// one of the two pairs is set per band, never both; resultTagging.js validates this at save time.
+// Bands are evaluated top-down by `order`; the first band whose range contains the entry's
+// percentage/marks wins. Zero rows for an exam (the default, and every pre-existing exam) means
+// the plain passLabel/failLabel two-tag behavior on ResultExamination is completely unchanged.
+model ResultRemarkBand {
+  id            String            @id @default(uuid())
+  examination   ResultExamination @relation(fields: [examinationId], references: [id], onDelete: Cascade)
+  examinationId String
+  label         String
+  minPercent    Float?
+  maxPercent    Float?
+  minMarks      Float?
+  maxMarks      Float?
+  order         Int               @default(0)
+  createdAt     DateTime          @default(now())
+
+  @@index([examinationId])
 }
 
 // Correction audit trail (spec sections 15/16) — a PUBLISHED entry's marks/status/grade/remarks

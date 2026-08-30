@@ -13,6 +13,7 @@ const { buildMarksheetData } = require("../utils/resultMarksheetData");
 const { generateMarksheetCode } = require("../utils/resultCode");
 const { notifyResultPublished } = require("../utils/notifications");
 const { computeGrade, invalidateGradeCache } = require("../utils/resultGrading");
+const { computeResultTag, invalidateTagCache, validateRemarkBands } = require("../utils/resultTagging");
 const QRCode = require("qrcode");
 
 const router = express.Router();
@@ -48,11 +49,32 @@ function computeResult(obtainedMarks, exam, status = "PRESENT") {
   return { percentage: Math.round(percentage * 100) / 100, passed };
 }
 
-// ADMIN can always edit entries. STAFF/CLERK can only "assist in data preparation" — manual entry
-// or bulk import — while the exam is still Draft or In Review; once it moves to Ready to Publish
-// (a deliberate "frozen, about to go out" checkpoint) or beyond, only Admin may touch entries
-// (matches the spec's explicit "Update Results" being an Admin-only publication action).
+// Spec section 2: "The system should prevent saving/submitting the entry if EX is selected
+// without a remark." Applies wherever a status is accepted — manual entry, manual edit, and
+// bulk-import rows all call this same check so the rule can never drift between the three entry
+// paths. The remark itself is open-ended free text (spec: "Placed", "Medical", "any other valid
+// reason") — this only enforces that *something* was entered, never a fixed vocabulary.
+function exemptionRemarkError(status, remarks) {
+  if (status === "EXEMPTED" && (!remarks || !String(remarks).trim())) {
+    return "A remark is required when status is Exempted (e.g. Placed, Medical).";
+  }
+  return null;
+}
+
+// marksFrozen (spec section 3) is checked FIRST and blocks absolutely everyone, including Admin/
+// Super Admin/Institute Admin — a freeze is meaningless if the very roles it's usually invoked
+// against can just keep editing through it. It's also fully independent of `status`: an exam can
+// be frozen while still a Draft, or published-and-unfrozen, or any other combination — freezing is
+// never a prerequisite for publishing (spec: "Freezing marks must not be mandatory for
+// publishing"). Only an explicit unfreeze (see PATCH .../unfreeze, INSTITUTE_ADMIN-only) clears it.
+//
+// Below that: ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN can always edit entries. STAFF/CLERK can only
+// "assist in data preparation" — manual entry or bulk import — while the exam is still Draft or In
+// Review; once it moves to Ready to Publish (a deliberate "about to go out" checkpoint) or beyond,
+// only Admin-tier roles may touch entries (matches the spec's explicit "Update Results" being an
+// Admin-only publication action).
 function canEditEntries(examination, user) {
+  if (examination.marksFrozen) return false;
   if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTITUTE_ADMIN") return true;
   if ((user.role === "STAFF" || user.role === "CLERK") && (examination.status === "DRAFT" || examination.status === "IN_REVIEW")) return true;
   return false;
@@ -87,7 +109,11 @@ function checkVersion(existingEntry, requestBody) {
 async function loadExaminationScoped(req, res, id) {
   const examination = await prisma.resultExamination.findUnique({
     where: { id },
-    include: { departments: { include: { department: { select: { id: true, name: true } } } }, institute: { select: { id: true, name: true, code: true, logoUrl: true, marksheetSignatories: true } } },
+    include: {
+      departments: { include: { department: { select: { id: true, name: true } } } },
+      institute: { select: { id: true, name: true, code: true, logoUrl: true, marksheetSignatories: true } },
+      talentPools: { include: { pool: { select: { id: true, name: true } } } },
+    },
   });
   if (!examination) { res.status(404).json({ error: "Examination not found" }); return null; }
   if (req.requesterInstituteId && examination.instituteId !== req.requesterInstituteId) {
@@ -112,6 +138,7 @@ function serializeEntry(entry) {
     percentage: entry.percentage,
     passed: entry.passed,
     grade: entry.grade,
+    resultTag: entry.resultTag,
     remarks: entry.remarks,
     verificationCode: entry.verificationCode,
     source: entry.source,
@@ -273,11 +300,22 @@ router.get("/verify/:code", async (req, res) => {
 // Admin: examination CRUD + publish lifecycle
 // ============================================================
 
-const EXAM_FIELDS = ["title", "description", "batch", "divisions", "semester", "examDate", "publishDate", "totalMarks", "passingMarks", "passingPercent", "passLabel", "failLabel", "allowPdfDownload", "showRank", "showClassAverage", "showAttendance", "academicGroupIds"];
+const EXAM_FIELDS = ["title", "description", "batch", "divisions", "semester", "examDate", "publishDate", "totalMarks", "passingMarks", "passingPercent", "passLabel", "failLabel", "allowPdfDownload", "showRank", "showClassAverage", "showAttendance", "academicGroupIds", "groupSelectionMode"];
+// Fields that, once at least one ResultEntry exists, could silently orphan or mismatch already-
+// entered marks if changed out from under them (spec section 6: "restrict changes to fields that
+// could negatively affect already-entered marks, student associations, uploaded data, or
+// published results... not editable after creation, or require confirmation"). This platform
+// chooses "not editable" over a confirmation flow for these two specifically — reshuffling which
+// groups/pool an exam is FOR after real students already have entries has no safe automatic
+// reconciliation (unlike totalMarks/passingMarks, which the transactional recompute below already
+// handles safely and remains freely editable). totalMarks/passingMarks/passingPercent are
+// deliberately NOT in this list for that reason.
+const GROUP_ASSOCIATION_FIELDS = ["academicGroupIds", "groupSelectionMode"];
 function pickExamData(body) {
   const data = {};
   for (const key of EXAM_FIELDS) if (body[key] !== undefined) data[key] = body[key];
   if (data.academicGroupIds !== undefined) data.academicGroupIds = Array.isArray(data.academicGroupIds) ? data.academicGroupIds : [];
+  if (data.groupSelectionMode !== undefined && !["ACADEMIC", "TALENT_POOL"].includes(data.groupSelectionMode)) data.groupSelectionMode = "ACADEMIC";
   if (data.totalMarks !== undefined) data.totalMarks = Number(data.totalMarks);
   if (data.passingMarks !== undefined) data.passingMarks = data.passingMarks === null || data.passingMarks === "" ? null : Number(data.passingMarks);
   if (data.passingPercent !== undefined) data.passingPercent = data.passingPercent === null || data.passingPercent === "" ? null : Number(data.passingPercent);
@@ -318,7 +356,7 @@ router.get("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADMI
 
 router.post("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const { instituteId, departmentIds, visibility } = req.body;
+    const { instituteId, departmentIds, visibility, talentPoolIds } = req.body;
     const effectiveInstituteId = req.requesterInstituteId || instituteId;
     if (!effectiveInstituteId) return res.status(400).json({ error: "Institute is required" });
 
@@ -328,6 +366,21 @@ router.post("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADM
     if (!data.totalMarks || data.totalMarks <= 0) return res.status(400).json({ error: "Total marks must be greater than 0" });
     if (data.passingMarks == null && data.passingPercent == null) {
       return res.status(400).json({ error: "Provide either Passing Marks or Passing Percentage" });
+    }
+    // Spec section 1: "select either Academic Groups or Talent Pool" — one or the other, and at
+    // least one specific group/pool, not a wide-open exam with neither ever chosen.
+    if (data.groupSelectionMode === "TALENT_POOL") {
+      if (!Array.isArray(talentPoolIds) || talentPoolIds.length === 0) {
+        return res.status(400).json({ error: "Select at least one Talent Pool" });
+      }
+    } else if (!data.academicGroupIds || data.academicGroupIds.length === 0) {
+      return res.status(400).json({ error: "Select at least one Academic Group" });
+    }
+    if (data.groupSelectionMode === "TALENT_POOL" && Array.isArray(talentPoolIds) && talentPoolIds.length) {
+      const pools = await prisma.talentPool.findMany({ where: { id: { in: talentPoolIds } }, include: { institutes: true } });
+      if (pools.length !== talentPoolIds.length) return res.status(400).json({ error: "One or more selected Talent Pools were not found" });
+      const outOfScope = pools.some((p) => p.institutes.length > 0 && !p.institutes.some((i) => i.instituteId === effectiveInstituteId));
+      if (outOfScope) return res.status(400).json({ error: "One or more selected Talent Pools are not available to this institute" });
     }
 
     const status = visibility === "PUBLISH_NOW" ? "PUBLISHED" : "DRAFT"; // PUBLISH_LATER and SAVE_DRAFT both start as Draft — Publish Later just records a target date, admin still clicks Publish
@@ -342,8 +395,11 @@ router.post("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADM
         departments: Array.isArray(departmentIds) && departmentIds.length
           ? { create: departmentIds.map((departmentId) => ({ departmentId })) }
           : undefined,
+        talentPools: data.groupSelectionMode === "TALENT_POOL" && Array.isArray(talentPoolIds) && talentPoolIds.length
+          ? { create: talentPoolIds.map((poolId) => ({ poolId })) }
+          : undefined,
       },
-      include: { departments: { include: { department: { select: { id: true, name: true } } } } },
+      include: { departments: { include: { department: { select: { id: true, name: true } } } }, talentPools: { include: { pool: { select: { id: true, name: true } } } } },
     });
 
     await logAudit({
@@ -378,10 +434,23 @@ router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPE
     if (!existing) return;
 
     const data = pickExamData(req.body);
+    const { departmentIds, talentPoolIds } = req.body;
+
+    // Spec section 6: batch/group/pool association is a "critical field that could cause data
+    // inconsistency" once real student entries already reference this exam — reshuffling which
+    // groups/pool it's FOR at that point has no safe automatic reconciliation the way
+    // totalMarks/passingMarks's transactional recompute below does, so this is the "not editable
+    // after creation" branch of the spec's either/or, not the "require confirmation" branch.
+    const changingGroupAssociation = GROUP_ASSOCIATION_FIELDS.some((k) => data[k] !== undefined) || talentPoolIds !== undefined;
+    if (changingGroupAssociation) {
+      const entryCount = await prisma.resultEntry.count({ where: { examinationId: req.params.id } });
+      if (entryCount > 0) {
+        return res.status(400).json({ error: "This examination already has student marks entered, so its Batch/Academic Group/Talent Pool association can no longer be changed." });
+      }
+    }
+
     const thresholdsChanged = ["totalMarks", "passingMarks", "passingPercent"].some((k) => data[k] !== undefined);
     const nextExam = { ...existing, ...data };
-
-    const { departmentIds } = req.body;
 
     // examinationUpdate + one update-op per entry are batched into a single prisma.$transaction
     // array rather than an interactive tx callback with a sequential for-await loop: Prisma
@@ -394,17 +463,31 @@ router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPE
         ...(Array.isArray(departmentIds)
           ? { departments: { deleteMany: {}, create: departmentIds.map((departmentId) => ({ departmentId })) } }
           : {}),
+        ...(Array.isArray(talentPoolIds)
+          ? { talentPools: { deleteMany: {}, create: talentPoolIds.map((poolId) => ({ poolId })) } }
+          : {}),
       },
-      include: { departments: { include: { department: { select: { id: true, name: true } } } } },
+      include: { departments: { include: { department: { select: { id: true, name: true } } } }, talentPools: { include: { pool: { select: { id: true, name: true } } } } },
     });
 
     let entryUpdates = [];
     if (thresholdsChanged) {
-      const entries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id }, select: { id: true, obtainedMarks: true } });
-      entryUpdates = entries.map((entry) => {
-        const { percentage, passed } = computeResult(entry.obtainedMarks, nextExam);
-        return prisma.resultEntry.update({ where: { id: entry.id }, data: { percentage, passed } });
-      });
+      const entries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id }, select: { id: true, obtainedMarks: true, status: true } });
+      // Every async lookup (grade/tag) is resolved FIRST, outside the transaction array — Prisma's
+      // batched-transaction shape (prisma.$transaction([op1, op2, ...])) requires each element to
+      // be an un-awaited PrismaPromise it can pipeline together; awaiting inside this map would
+      // instead resolve each update individually and immediately, defeating the one-transaction
+      // batching this whole approach exists for (see this function's own opening comment).
+      const recomputed = await Promise.all(entries.map(async (entry) => {
+        const { percentage, passed } = computeResult(entry.obtainedMarks, nextExam, entry.status);
+        const autoGrade = entry.status === "PRESENT" ? await computeGrade(nextExam.instituteId, percentage) : null;
+        const resultTag = entry.status === "PRESENT" ? await computeResultTag(req.params.id, entry.obtainedMarks, percentage) : null;
+        return { id: entry.id, percentage, passed, autoGrade, resultTag };
+      }));
+      entryUpdates = recomputed.map((r) => prisma.resultEntry.update({
+        where: { id: r.id },
+        data: { percentage: r.percentage, passed: r.passed, ...(r.autoGrade ? { grade: r.autoGrade } : {}), resultTag: r.resultTag },
+      }));
     }
 
     const [updated] = await prisma.$transaction([examinationUpdate, ...entryUpdates]);
@@ -479,6 +562,59 @@ router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to publish examination" });
+  }
+});
+
+// Freeze/Unfreeze (spec section 3) — independent of the publish workflow entirely; see
+// canEditEntries()'s own comment for exactly what freezing blocks. Freeze itself is available to
+// the same Admin-tier roles that can already edit entries (spec: "Admin and Staff should be able
+// to add, edit, or update marks according to their existing permissions... Marks should support a
+// Freeze functionality"); unfreeze is deliberately narrower -- INSTITUTE_ADMIN only, per spec:
+// "Once marks are frozen, only the Institute Admin should be able to unfreeze them." A bare ADMIN/
+// SUPER_ADMIN (platform-level, no institute of their own) is excluded from unfreeze on purpose --
+// the spec names the institute-scoped role specifically, not "any admin-tier role."
+router.patch("/admin/examinations/:id/freeze", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const existing = await loadExaminationScoped(req, res, req.params.id);
+    if (!existing) return;
+    if (!canEditEntries(existing, req.user)) {
+      return res.status(403).json({ error: "You don't have permission to freeze this examination's marks" });
+    }
+    if (existing.marksFrozen) return res.status(400).json({ error: "Marks are already frozen" });
+
+    const examination = await prisma.resultExamination.update({
+      where: { id: req.params.id },
+      data: { marksFrozen: true, frozenAt: new Date(), frozenByAdminId: req.user.id, frozenByName: req.user.name },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.RESULT_MARKS_FROZEN, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: existing.instituteId, details: { examinationId: examination.id, title: examination.title },
+    });
+    res.json(examination);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to freeze marks" });
+  }
+});
+
+router.patch("/admin/examinations/:id/unfreeze", authenticate, requireRole("INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const existing = await loadExaminationScoped(req, res, req.params.id);
+    if (!existing) return;
+    if (!existing.marksFrozen) return res.status(400).json({ error: "Marks aren't frozen" });
+
+    const examination = await prisma.resultExamination.update({
+      where: { id: req.params.id },
+      data: { marksFrozen: false, frozenAt: null, frozenByAdminId: null, frozenByName: null },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.RESULT_MARKS_UNFROZEN, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: existing.instituteId, details: { examinationId: examination.id, title: examination.title },
+    });
+    res.json(examination);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to unfreeze marks" });
   }
 });
 
@@ -705,10 +841,11 @@ router.post("/admin/examinations/:id/entries/:entryId/subject-marks", authentica
       const overallStatus = anyPresent ? "PRESENT" : (allMarks[0]?.status || "PRESENT");
       const { percentage, passed } = computeResult(totalObtained, examination, overallStatus);
       const autoGrade = overallStatus === "PRESENT" ? await computeGrade(examination.instituteId, percentage) : null;
+      const resultTag = overallStatus === "PRESENT" ? await computeResultTag(req.params.id, totalObtained, percentage) : null;
 
       return tx.resultEntry.update({
         where: { id: entry.id },
-        data: { obtainedMarks: totalObtained, status: overallStatus, percentage, passed, grade: autoGrade, version: { increment: 1 } },
+        data: { obtainedMarks: totalObtained, status: overallStatus, percentage, passed, grade: autoGrade, resultTag, version: { increment: 1 } },
         include: { student: { select: STUDENT_SELECT }, ...SUBJECT_MARKS_INCLUDE },
       });
     });
@@ -792,6 +929,75 @@ router.put("/admin/grade-scale", authenticate, requireRole("ADMIN", "SUPER_ADMIN
 });
 
 // ============================================================
+// Configurable result remarks/tags (spec section 5) — per-examination, not institute-wide (see
+// ResultRemarkBand's own schema comment for why). Same read/replace-all-on-save shape as
+// grade-scale above, but scoped to one examinationId instead of instituteId, and gated by
+// canEditEntries() (marks frozen or the exam past its editable status blocks this too) since
+// changing an exam's tag configuration is a form of editing its results, not a separate
+// institute-wide setting anyone can touch regardless of the exam's own state.
+// ============================================================
+
+router.get("/admin/examinations/:id/remark-bands", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const examination = await loadExaminationScoped(req, res, req.params.id);
+    if (!examination) return;
+    const bands = await prisma.resultRemarkBand.findMany({ where: { examinationId: req.params.id }, orderBy: { order: "asc" } });
+    res.json(bands);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load result tags" });
+  }
+});
+
+router.put("/admin/examinations/:id/remark-bands", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const examination = await loadExaminationScoped(req, res, req.params.id);
+    if (!examination) return;
+    if (!canEditEntries(examination, req.user)) {
+      return res.status(403).json({ error: "This examination's result tags can no longer be configured" });
+    }
+
+    const bands = Array.isArray(req.body.bands) ? req.body.bands : [];
+    const validationErr = validateRemarkBands(bands);
+    if (validationErr) return res.status(400).json({ error: validationErr });
+
+    await prisma.$transaction([
+      prisma.resultRemarkBand.deleteMany({ where: { examinationId: req.params.id } }),
+      ...bands.map((b, i) => prisma.resultRemarkBand.create({
+        data: {
+          examinationId: req.params.id, label: b.label.trim(), order: i,
+          minPercent: b.minPercent != null && b.minPercent !== "" ? Number(b.minPercent) : null,
+          maxPercent: b.maxPercent != null && b.maxPercent !== "" ? Number(b.maxPercent) : null,
+          minMarks: b.minMarks != null && b.minMarks !== "" ? Number(b.minMarks) : null,
+          maxMarks: b.maxMarks != null && b.maxMarks !== "" ? Number(b.maxMarks) : null,
+        },
+      })),
+    ]);
+    invalidateTagCache(req.params.id);
+
+    // Retag every existing PRESENT entry against the new bands, same "no manual recalculation
+    // required" posture as editing totalMarks/passingMarks above — a tag-configuration change
+    // must not require the exam maker to re-save every single entry by hand for the new bands to
+    // actually apply to results already entered.
+    const entries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id, status: "PRESENT" }, select: { id: true, obtainedMarks: true, percentage: true } });
+    await Promise.all(entries.map(async (e) => {
+      const resultTag = await computeResultTag(req.params.id, e.obtainedMarks, e.percentage);
+      return prisma.resultEntry.update({ where: { id: e.id }, data: { resultTag } });
+    }));
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.RESULT_REMARK_BANDS_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: examination.instituteId, details: { examinationId: req.params.id, bandCount: bands.length },
+    });
+    const saved = await prisma.resultRemarkBand.findMany({ where: { examinationId: req.params.id }, orderBy: { order: "asc" } });
+    res.json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save result tags" });
+  }
+});
+
+// ============================================================
 // Admin+Staff+Clerk: entries (manual entry + read), gated by canEditEntries()
 // ============================================================
 
@@ -823,6 +1029,9 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
     const status = ["PRESENT", "ABSENT", "EXEMPTED", "NOT_APPEARED"].includes(req.body.status) ? req.body.status : "PRESENT";
     if (!studentId) return res.status(400).json({ error: "studentId is required" });
 
+    const exemptionErr = exemptionRemarkError(status, remarks);
+    if (exemptionErr) return res.status(400).json({ error: exemptionErr });
+
     let marks = 0;
     if (status === "PRESENT") {
       marks = Number(obtainedMarks);
@@ -842,6 +1051,7 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
     const { percentage, passed } = computeResult(marks, examination, status);
     const autoGrade = status === "PRESENT" ? await computeGrade(examination.instituteId, percentage) : null;
     const finalGrade = grade !== undefined && grade !== "" ? grade : autoGrade;
+    const resultTag = status === "PRESENT" ? await computeResultTag(req.params.id, marks, percentage) : null;
     const verificationCode = await generateMarksheetCode({ instituteCode: examination.institute?.code });
 
     const existing = await prisma.resultEntry.findUnique({ where: { examinationId_studentId: { examinationId: req.params.id, studentId } } });
@@ -863,8 +1073,8 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
       }
       return tx.resultEntry.upsert({
         where: { examinationId_studentId: { examinationId: req.params.id, studentId } },
-        update: { obtainedMarks: marks, status, percentage, passed, grade: finalGrade || null, remarks: remarks || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL", version: { increment: 1 } },
-        create: { examinationId: req.params.id, studentId, obtainedMarks: marks, status, percentage, passed, grade: finalGrade || null, remarks: remarks || null, verificationCode, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL" },
+        update: { obtainedMarks: marks, status, percentage, passed, grade: finalGrade || null, resultTag, remarks: remarks || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL", version: { increment: 1 } },
+        create: { examinationId: req.params.id, studentId, obtainedMarks: marks, status, percentage, passed, grade: finalGrade || null, resultTag, remarks: remarks || null, verificationCode, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "MANUAL" },
         include: { student: { select: STUDENT_SELECT }, ...SUBJECT_MARKS_INCLUDE },
       });
     });
@@ -907,6 +1117,9 @@ router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRo
       data.grade = nextGrade;
     }
     if (req.body.remarks !== undefined) data.remarks = req.body.remarks || null;
+    const effectiveRemarks = req.body.remarks !== undefined ? req.body.remarks : existingEntry.remarks;
+    const exemptionErr = exemptionRemarkError(status, effectiveRemarks);
+    if (exemptionErr) return res.status(400).json({ error: exemptionErr });
 
     let marks = existingEntry.obtainedMarks;
     if (status === "PRESENT" && req.body.obtainedMarks !== undefined) {
@@ -918,7 +1131,8 @@ router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRo
     }
     if (marks !== existingEntry.obtainedMarks) changes.push({ field: "obtainedMarks", oldValue: existingEntry.obtainedMarks, newValue: marks });
     const { percentage, passed } = computeResult(marks, examination, status);
-    Object.assign(data, { obtainedMarks: marks, percentage, passed });
+    const resultTag = status === "PRESENT" ? await computeResultTag(req.params.id, marks, percentage) : null;
+    Object.assign(data, { obtainedMarks: marks, percentage, passed, resultTag });
 
     if (examination.status === "PUBLISHED" && changes.length && !req.body.reason) {
       return res.status(400).json({ error: "A reason is required to correct a published result." });
@@ -1049,6 +1263,9 @@ const BULK_IMPORT_FIELD_ALIASES = {
   // Optional — a blank/unrecognized value defaults to PRESENT, so every existing template/file
   // that predates this column keeps working exactly as before.
   status: ["status", "attendance", "attendance status"],
+  // Optional — spec section 2/4: mandatory only when Status is Exempted (enforced in the row loop
+  // below, via exemptionRemarkError()), open-ended free text otherwise ("Placed", "Medical", etc).
+  remarks: ["remarks", "remark", "exemption remark", "exemption reason", "reason"],
 };
 const BULK_STATUS_VALUES = { present: "PRESENT", absent: "ABSENT", exempted: "EXEMPTED", "not appeared": "NOT_APPEARED", "notappeared": "NOT_APPEARED" };
 function normalizeBulkStatus(raw) {
@@ -1068,22 +1285,25 @@ function buildBulkImportHeaderMap(headers) {
   return map;
 }
 
-// academicGroupId is optional for backward compatibility (any existing caller that doesn't pass
-// one still gets the old single-sample-row template), but the admin UI always passes one now —
-// the whole point of this route is to pre-fill the template with a real roster instead of making
-// the admin build their own student list.
+// academicGroupId/poolId is optional for backward compatibility (any existing caller that doesn't
+// pass one still gets the old single-sample-row template), but the admin UI always passes one now
+// — the whole point of this route is to pre-fill the template with a real roster instead of making
+// the admin build their own student list. Spec section 4: "The template must contain only the
+// groups that were selected/associated when the examination was created" — the requested
+// academicGroupId/poolId must actually be one of this exam's own associated groups/pools, not any
+// group platform-wide, which is what a bare "does this group exist" check (the previous behavior)
+// would have allowed.
 router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const examination = await loadExaminationScoped(req, res, req.params.id);
     if (!examination) return;
-    const headers = ["Institute Name", "Student Name", "Registration Number (PRN)", "Marks Obtained", "Status (Present/Absent/Exempted/Not Appeared)"];
+    const headers = ["Institute Name", "Student Name", "Registration Number (PRN)", "Marks Obtained", "Status (Present/Absent/Exempted/Not Appeared)", "Remarks (required if Exempted)"];
 
     let dataRows;
-    const { academicGroupId } = req.query;
+    const { academicGroupId, poolId } = req.query;
     if (academicGroupId) {
-      const group = await prisma.academicGroup.findUnique({ where: { id: academicGroupId }, select: { instituteId: true } });
-      if (!group || group.instituteId !== examination.instituteId) {
-        return res.status(400).json({ error: "That Academic Group doesn't belong to this examination's institute." });
+      if (examination.groupSelectionMode !== "ACADEMIC" || !examination.academicGroupIds.includes(academicGroupId)) {
+        return res.status(400).json({ error: "That Academic Group isn't associated with this examination." });
       }
       const students = await prisma.user.findMany({
         where: { role: "STUDENT", academicGroupId },
@@ -1091,11 +1311,25 @@ router.get("/admin/examinations/:id/bulk-template", authenticate, requireRole("A
         orderBy: { name: "asc" },
       });
       if (students.length === 0) return res.status(400).json({ error: "That Academic Group has no students yet." });
-      // Marks Obtained/Status left blank — this is what the admin fills in before re-uploading.
-      // Blank Status defaults to Present on import, so leaving it blank for everyone is normal.
-      dataRows = students.map((s) => [examination.institute.name, s.name, s.registrationNumber || "", "", ""]);
+      // Marks Obtained/Status/Remarks left blank — this is what the admin fills in before
+      // re-uploading. Blank Status defaults to Present on import, so leaving it blank for
+      // everyone is normal.
+      dataRows = students.map((s) => [examination.institute.name, s.name, s.registrationNumber || "", "", "", ""]);
+    } else if (poolId) {
+      if (examination.groupSelectionMode !== "TALENT_POOL" || !examination.talentPools.some((tp) => tp.poolId === poolId)) {
+        return res.status(400).json({ error: "That Talent Pool isn't associated with this examination." });
+      }
+      const members = await prisma.talentPoolMember.findMany({
+        where: { poolId },
+        include: { student: { select: { name: true, registrationNumber: true, instituteId: true } } },
+      });
+      const students = members.map((m) => m.student).filter((s) => s.instituteId === examination.instituteId);
+      if (students.length === 0) return res.status(400).json({ error: "That Talent Pool has no students from this institute yet." });
+      dataRows = students
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => [examination.institute.name, s.name, s.registrationNumber || "", "", "", ""]);
     } else {
-      dataRows = [[examination.institute.name, "", "2024COMP001", Math.round(examination.totalMarks * 0.8), "Present"]];
+      dataRows = [[examination.institute.name, "", "2024COMP001", Math.round(examination.totalMarks * 0.8), "Present", ""]];
     }
 
     const sheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
@@ -1170,11 +1404,17 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
       const registrationNumberRaw = String(row[headerMap.registrationNumber] || "").trim();
       const marksRaw = row[headerMap.obtainedMarks];
       const status = headerMap.status ? normalizeBulkStatus(row[headerMap.status]) : "PRESENT";
+      const remarksRaw = headerMap.remarks ? String(row[headerMap.remarks] || "").trim() : "";
       if (!instituteNameRaw && !registrationNumberRaw && marksRaw === "") continue; // skip fully blank rows
 
       try {
         if (!instituteNameRaw || !registrationNumberRaw) {
           failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: "Institute Name and Registration Number (PRN) are both required." });
+          continue;
+        }
+        const exemptionErr = exemptionRemarkError(status, remarksRaw);
+        if (exemptionErr) {
+          failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: exemptionErr });
           continue;
         }
         const institute = instituteByName.get(instituteNameRaw.toLowerCase());
@@ -1225,16 +1465,17 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
         // to be exactly what DOES happen on the follow-up commit call with the same file.
         if (commit) {
           const autoGrade = status === "PRESENT" ? await computeGrade(examination.instituteId, percentage) : null;
+          const resultTag = status === "PRESENT" ? await computeResultTag(req.params.id, marks, percentage) : null;
           if (isUpdate) {
             await prisma.resultEntry.update({
               where: { examinationId_studentId: { examinationId: req.params.id, studentId: student.id } },
-              data: { obtainedMarks: marks, status, percentage, passed, grade: autoGrade, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT", version: { increment: 1 } },
+              data: { obtainedMarks: marks, status, percentage, passed, grade: autoGrade, resultTag, remarks: remarksRaw || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT", version: { increment: 1 } },
             });
           } else {
             const verificationCode = await generateMarksheetCode({ instituteCode: institute.code });
             await prisma.resultEntry.create({
               data: {
-                examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, status, percentage, passed, grade: autoGrade, verificationCode,
+                examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, status, percentage, passed, grade: autoGrade, resultTag, remarks: remarksRaw || null, verificationCode,
                 enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
               },
             });
@@ -1275,7 +1516,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
 // aggregate) and search/export (paginated/capped) below, so all three routes can never disagree
 // about what's in scope.
 function buildEntryWhere(req) {
-  const { examinationId, batch, departmentId, division, dateFrom, dateTo, instituteId } = req.query;
+  const { examinationId, batch, departmentId, division, dateFrom, dateTo, instituteId, academicGroupIds } = req.query;
   const examWhere = {};
   if (req.requesterInstituteId) examWhere.instituteId = req.requesterInstituteId;
   else if (instituteId) examWhere.instituteId = instituteId;
@@ -1288,7 +1529,15 @@ function buildEntryWhere(req) {
   }
 
   const entryWhere = { examination: examWhere };
-  if (departmentId || division) {
+  // academicGroupIds (spec section 7: "select single or multiple groups... export data only for
+  // the selected groups") — a comma-separated list of real AcademicGroup ids, matched directly
+  // against the student's own academicGroupId. Precise, real multi-select; takes priority over the
+  // looser departmentId/division combo below when both are somehow present (never both from the
+  // UI in practice — this is the new export/search group-picker's own dedicated filter).
+  const groupIdList = typeof academicGroupIds === "string" ? academicGroupIds.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  if (groupIdList.length) {
+    entryWhere.student = { academicGroupId: { in: groupIdList } };
+  } else if (departmentId || division) {
     entryWhere.student = { academicGroup: { ...(departmentId ? { departmentId } : {}), ...(division ? { section: division } : {}) } };
   }
   return entryWhere;
