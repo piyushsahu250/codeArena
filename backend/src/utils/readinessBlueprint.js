@@ -144,7 +144,13 @@ async function buildAssessmentBlueprint({ subject, assessmentMode, questionCount
     if (target <= 0) { actual[levelStr] = 0; continue; }
     const level = Number(levelStr);
     const already = new Set(items.map((q) => q.id));
-    const levelWhere = { ...baseWhere, btlLevel: level, id: { notIn: [...excludeIds, ...already] } };
+    // Merge into baseWhere.id rather than replacing it -- when a curated pool exists, baseWhere.id
+    // is already `{ in: poolIds }` (see subjectQuestionWhere above); a plain `{...baseWhere, id: {
+    // notIn: [...] } }` spread would silently clobber that `in` restriction with this `notIn` one
+    // (same object key, last write wins), letting ANY institute-eligible question leak into a
+    // subject that was deliberately curated down to an explicit pool. Prisma accepts `in`/`notIn`
+    // together on one field filter, so spreading the existing id-filter first keeps both.
+    const levelWhere = { ...baseWhere, btlLevel: level, id: { ...(baseWhere.id || {}), notIn: [...excludeIds, ...already] } };
 
     // testCases included so CODING/SQL questions carry their sample cases straight through to the
     // student-facing payload (routes/readiness.js's sanitizeQuestionForStudent filters out hidden
@@ -154,7 +160,7 @@ async function buildAssessmentBlueprint({ subject, assessmentMode, questionCount
       // Drop the anti-repeat exclusion first, same fallback ordering as interview.js's pickQuestions
       // — a repeat question is a smaller compromise than an under-filled BTL level.
       usedFallback = true;
-      pool = await prisma.question.findMany({ where: { ...baseWhere, btlLevel: level, id: { notIn: [...already] } }, include: { testCases: true } });
+      pool = await prisma.question.findMany({ where: { ...baseWhere, btlLevel: level, id: { ...(baseWhere.id || {}), notIn: [...already] } }, include: { testCases: true } });
     }
 
     const picked = spreadAcrossTopics(pool, target);

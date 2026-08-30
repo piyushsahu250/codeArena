@@ -502,16 +502,26 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
     if (Date.now() > readinessDeadlineOf(assessment)) return res.status(403).json({ error: "Time is up for this assessment" });
 
     const { questionId, answerText, code, language, selectedOptions, skipped, timeTakenSec } = req.body;
+    // Every question in this assessment already has a readinessAnswer row pre-created (skipped:
+    // true) at POST /assessments time -- this route is only ever supposed to UPDATE one of those.
+    // Without this check, a client could submit any questionId at all (someone else's institute's
+    // question bank included, since gradeReadinessAnswer/prisma.question.findUnique below apply no
+    // institute or status scoping of their own) and the upsert's `create` branch would silently
+    // grade it and add it to this assessment's answer set -- effectively a free-form grading oracle
+    // for any question in the entire platform, plus a way to pollute one's own BTL/topic report
+    // with content the blueprint never actually assigned. Confirmed live and fixed here.
+    const existingAnswer = await prisma.readinessAnswer.findUnique({ where: { assessmentId_questionId: { assessmentId: assessment.id, questionId } } });
+    if (!existingAnswer) return res.status(403).json({ error: "This question is not part of your assessment" });
+
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 
     const { score, isCorrect } = await gradeReadinessAnswer(question, { answerText, code, language, selectedOptions, skipped });
 
     const normalizedOptions = Array.isArray(selectedOptions) ? selectedOptions : null;
-    const answer = await prisma.readinessAnswer.upsert({
+    const answer = await prisma.readinessAnswer.update({
       where: { assessmentId_questionId: { assessmentId: assessment.id, questionId } },
-      update: { answerText: answerText ?? null, code: code ?? null, language: language ?? null, selectedOptions: normalizedOptions, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
-      create: { assessmentId: assessment.id, questionId, answerText: answerText ?? null, code: code ?? null, language: language ?? null, selectedOptions: normalizedOptions, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
+      data: { answerText: answerText ?? null, code: code ?? null, language: language ?? null, selectedOptions: normalizedOptions, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
     });
     logger.info("READINESS_ANSWER_SAVED", { assessmentId: assessment.id, questionId, questionType: question.questionType, skipped: !!skipped, score });
 
