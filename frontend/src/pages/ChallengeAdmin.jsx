@@ -164,6 +164,18 @@ function ScheduleForm({ kind, onScheduled }) {
         <div style={{ marginTop: 6 }}>
           <QuestionPicker value={question} onChange={setQuestion} />
         </div>
+        {/* Root cause of "no proper option to upload/add questions": this picker could only search
+            questions that already existed in the bank -- there was no path to create one from here
+            at all. Reuses the existing Question Bank pages directly (create form + bulk import
+            live there already) rather than building a second, duplicate question-authoring UI
+            inside Challenge Admin. */}
+        <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
+          Don't see the question you need?{" "}
+          <Link to="/staff/questions/new" target="_blank" rel="noopener noreferrer">+ Create New Question</Link>
+          {" · "}
+          <Link to="/staff/questions" target="_blank" rel="noopener noreferrer">Bulk Upload Questions</Link>
+          {" — opens the Question Bank in a new tab; come back here and search for it once it's saved."}
+        </p>
       </div>
       <button className="btn btn-primary" disabled={saving} onClick={submit} style={{ justifySelf: "start" }}>
         {saving ? "Scheduling…" : "Schedule"}

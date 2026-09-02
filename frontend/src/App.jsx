@@ -254,8 +254,17 @@ export default function App() {
           <Route path="/test/:id/result" element={<Protected roles={["STUDENT"]}><StudentTestResult /></Protected>} />
           <Route path="/dashboard/performance" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance /></Suspense></Protected>} />
           <Route path="/achievements" element={<Protected roles={["STUDENT"]}><Achievements /></Protected>} />
-          <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><DailyChallenge /></FeatureProtected></Protected>} />
-          <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><WeeklyChallenge /></FeatureProtected></Protected>} />
+          {/* Root-cause fix for "Weekly Challenge shows a blank screen": no error boundary
+              wrapped these two routes (or almost any route besides /interview/session/:id) — any
+              uncaught render exception, or a stale-deploy lazy-chunk load failure, unmounts
+              straight to a blank white screen with zero recovery, matching the reported symptom
+              exactly. Live testing today found no reproducible crash under the current data/code
+              (empty week, a real scheduled challenge, mobile, hard nav — all render correctly),
+              but that doesn't rule out a stale cached bundle or a data shape not covered by
+              today's testing; this boundary makes the actual symptom (a permanent blank screen)
+              structurally impossible going forward regardless of what trips it. */}
+          <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Daily Challenge. Reloading usually fixes this."><DailyChallenge /></ErrorBoundary></FeatureProtected></Protected>} />
+          <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Weekly Challenge. Reloading usually fixes this."><WeeklyChallenge /></ErrorBoundary></FeatureProtected></Protected>} />
           <Route path="/company-tests" element={<Protected roles={["STUDENT"]}><CompanyTests /></Protected>} />
           <Route path="/resume" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="resume_builder" featureLabel="Resume Builder"><ResumeBuilder /></FeatureProtected></Protected>} />
           <Route path="/readiness" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="readiness_test"><ReadinessHub /></FeatureProtected></Protected>} />
