@@ -57,6 +57,10 @@ export default function CreateQuestion() {
   // newly-created question is auto-added to that test's curated pool and the staff member is
   // returned straight to the test instead of the general Question Bank list.
   const readinessSubjectId = searchParams.get("readinessSubjectId");
+  // Same deep-link pattern, for Challenge Admin's "+ Create New Question" — "daily" or "weekly".
+  // No pool to add into (Daily/Weekly Challenge just picks one Question directly), so the newly
+  // created question is simply pre-selected back on that page instead.
+  const returnToChallenge = searchParams.get("returnToChallenge");
 
   const [form, setForm] = useState(emptyForm);
   const [testCases, setTestCases] = useState([{ input: "", expected: "", isHidden: false, explanation: "" }]);
@@ -277,6 +281,8 @@ export default function CreateQuestion() {
         if (readinessSubjectId) {
           await api.post(`/readiness/admin/subjects/${readinessSubjectId}/pool`, { questionIds: [created.id] }).catch(() => {});
           navigate(`/staff/readiness-subjects?edit=${readinessSubjectId}`);
+        } else if (returnToChallenge) {
+          navigate(`/staff/challenges?tab=${returnToChallenge}&selectQuestionId=${created.id}`);
         } else {
           navigate("/staff/questions");
         }

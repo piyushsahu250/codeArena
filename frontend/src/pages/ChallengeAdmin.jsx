@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Eye, Copy, BarChart3, X } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -114,12 +114,22 @@ function ScopePicker({ instituteId, academicGroupId, onChange }) {
   );
 }
 
-function ScheduleForm({ kind, onScheduled }) {
+function ScheduleForm({ kind, onScheduled, initialQuestionId }) {
   const toast = useToast();
   const [when, setWhen] = useState(toDateInputValue(new Date()));
   const [question, setQuestion] = useState(null);
   const [scope, setScope] = useState({ instituteId: null, academicGroupId: null });
   const [saving, setSaving] = useState(false);
+
+  // Coming back from "+ Create New Question" (see that link below) — the question the admin just
+  // made is pre-selected here automatically instead of making them switch back and search for it
+  // by name. initialQuestionId is captured once by the parent and never changes, so this only
+  // ever fetches once per mount, not on every render.
+  useEffect(() => {
+    if (!initialQuestionId) return;
+    api.get(`/questions/${initialQuestionId}`).then((res) => setQuestion(res.data)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestionId]);
 
   async function submit() {
     if (!question) return toast.error("Pick a coding question first.");
@@ -168,13 +178,18 @@ function ScheduleForm({ kind, onScheduled }) {
             questions that already existed in the bank -- there was no path to create one from here
             at all. Reuses the existing Question Bank pages directly (create form + bulk import
             live there already) rather than building a second, duplicate question-authoring UI
-            inside Challenge Admin. */}
+            inside Challenge Admin. "+ Create New Question" round-trips in the same tab and comes
+            straight back here with the new question already selected (see the initialQuestionId
+            effect above + CreateQuestion.jsx's returnToChallenge handling) -- no new tab, no
+            manually re-searching for what you just made. Bulk Upload creates many questions at
+            once with no single one to pre-select, so it stays a plain new-tab link to the
+            Question Bank, same as before. */}
         <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
           Don't see the question you need?{" "}
-          <Link to="/staff/questions/new" target="_blank" rel="noopener noreferrer">+ Create New Question</Link>
+          <Link to={`/staff/questions/new?returnToChallenge=${kind}`}>+ Create New Question</Link>
           {" · "}
           <Link to="/staff/questions" target="_blank" rel="noopener noreferrer">Bulk Upload Questions</Link>
-          {" — opens the Question Bank in a new tab; come back here and search for it once it's saved."}
+          {" (opens in a new tab)"}
         </p>
       </div>
       <button className="btn btn-primary" disabled={saving} onClick={submit} style={{ justifySelf: "start" }}>
@@ -391,7 +406,7 @@ function ScheduleList({ rows, kind, isAdmin, onDeleted, onChanged }) {
 
 // Owns its own filter/page/rows state — mounted fresh per tab (daily vs weekly), so switching
 // tabs naturally resets filters instead of needing separate state trees threaded from the parent.
-function ChallengeSchedule({ kind, isAdmin }) {
+function ChallengeSchedule({ kind, isAdmin, initialQuestionId }) {
   const [q, setQ] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [status, setStatus] = useState("");
@@ -411,7 +426,7 @@ function ChallengeSchedule({ kind, isAdmin }) {
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      {isAdmin && <ScheduleForm kind={kind} onScheduled={load} />}
+      {isAdmin && <ScheduleForm kind={kind} onScheduled={load} initialQuestionId={initialQuestionId} />}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input className="input" style={{ flex: 1, minWidth: 200 }} placeholder="Search question title/description…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -453,7 +468,19 @@ export default function ChallengeAdmin() {
   // route, including DELETE /admin/weekly/:id. Same role-list-omission bug class already found
   // and fixed in tests.js, ResultManagement.jsx, and TalentPools.jsx this session.
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user.role);
-  const [tab, setTab] = useState("daily");
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Deep-link from CreateQuestion.jsx's "+ Create New Question" round trip (?tab=daily|weekly&
+  // selectQuestionId=<id>) — captured once into plain state, not re-read from the live
+  // searchParams, so it survives the query string being cleared right below and lands the admin
+  // on the right tab with the question they just made already selected, no manual re-search.
+  const [tab, setTab] = useState(() => (searchParams.get("tab") === "weekly" ? "weekly" : "daily"));
+  const [initialQuestionId] = useState(() => searchParams.get("selectQuestionId") || null);
+  useEffect(() => {
+    if (searchParams.get("tab") || searchParams.get("selectQuestionId")) {
+      setSearchParams((prev) => { prev.delete("tab"); prev.delete("selectQuestionId"); return prev; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
@@ -478,7 +505,9 @@ export default function ChallengeAdmin() {
         </div>
 
         <div style={{ marginTop: 16 }}>
-          {tab === "daily" ? <ChallengeSchedule kind="daily" isAdmin={isAdmin} /> : <ChallengeSchedule kind="weekly" isAdmin={isAdmin} />}
+          {tab === "daily"
+            ? <ChallengeSchedule kind="daily" isAdmin={isAdmin} initialQuestionId={initialQuestionId} />
+            : <ChallengeSchedule kind="weekly" isAdmin={isAdmin} initialQuestionId={initialQuestionId} />}
         </div>
       </div>
     </div>
