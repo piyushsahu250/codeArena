@@ -44,7 +44,12 @@ export default function StaffDashboard() {
   // would just be indistinguishable from "MINE ∪ SHARED" while implying (incorrectly) that it
   // means "every test platform-wide," which is exactly the confusion this whole feature exists to
   // remove. Admin defaults to ALL (their existing institute-wide view); STAFF defaults to MINE.
-  const [scope, setScope] = useState(user.role === "ADMIN" ? "ALL" : "MINE");
+  // "Admin-only" means any admin-tier role, not the literal legacy "ADMIN" string — a SUPER_ADMIN/
+  // INSTITUTE_ADMIN previously defaulted to MINE with no way to reach ALL at all (the tab below was
+  // hidden from them too), so an admin who hadn't personally authored any tests themselves saw an
+  // empty list despite GET /tests already having sent them every test they're allowed to see.
+  const isAdminTier = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user.role);
+  const [scope, setScope] = useState(isAdminTier ? "ALL" : "MINE");
   const [subjectFilter, setSubjectFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [staffOwnerFilter, setStaffOwnerFilter] = useState(""); // Admin only
@@ -248,7 +253,7 @@ export default function StaffDashboard() {
               icon={School}
               label="Academic Groups"
               value={groups.length}
-              onClick={user.role === "ADMIN" ? () => navigate("/admin/academic-groups") : undefined}
+              onClick={isAdminTier ? () => navigate("/admin/academic-groups") : undefined}
             />
             <StatCard icon={GraduationCap} label="Total Students" value={groups.reduce((s, g) => s + (g._count?.users || 0), 0)} onClick={() => navigate("/staff/students")} />
             <StatCard icon={ClipboardList} label="Active Tests" value={tests.filter((t) => statusOf(t).label === "Active").length} onClick={() => goToManageTests("Active")} />
@@ -313,7 +318,7 @@ export default function StaffDashboard() {
           >
             Shared with me
           </button>
-          {user.role === "ADMIN" && (
+          {isAdminTier && (
             <button
               className={scope === "ALL" ? "btn btn-dark" : "btn btn-ghost"}
               onClick={() => setScope("ALL")}
@@ -362,7 +367,7 @@ export default function StaffDashboard() {
             <option value="">All units</option>
             {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
-          {user.role === "ADMIN" && (
+          {isAdminTier && (
             <select style={{ ...inputStyle, flex: "1 1 160px" }} value={staffOwnerFilter} onChange={(e) => setStaffOwnerFilter(e.target.value)}>
               <option value="">All staff</option>
               {staffOwnerOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
@@ -445,7 +450,7 @@ export default function StaffDashboard() {
                     <button className="btn btn-dark" onClick={() => togglePublish(test)}>
                       {test.isPublished ? "Unpublish" : "Publish"}
                     </button>
-                    {user.role === "ADMIN" && (
+                    {isAdminTier && (
                       <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={() => deleteTest(test)}>
                         Delete
                       </button>
