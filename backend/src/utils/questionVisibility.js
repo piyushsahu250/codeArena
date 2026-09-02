@@ -47,7 +47,15 @@ function questionFolderVisibilityWhere(req) {
 // undefined) — same result as before this existed, not a new gap, just not yet wired into every
 // call site of this widely-used function.
 function ownsQuestionRow(req, row) {
-  if (req.requesterInstituteId && row.instituteId !== req.requesterInstituteId) return false;
+  // Bug fixed 2026-09-02: this used a strict `!==` check, rejecting a row the instant its
+  // instituteId didn't exactly match the requester's — including instituteId: null, even though
+  // this file's own header comment (and instituteWhere/questionVisibilityWhere just above, which
+  // every list/search/export route already goes through) explicitly treat null as "legacy/shared,
+  // visible to everyone." Confirmed live: an institute-scoped admin could see a global question in
+  // the Question Bank list, but GET/PATCH/DELETE /questions/:id on that exact row 404'd, because
+  // this single-row check disagreed with the list-view rule it's supposed to mirror. Only reject
+  // when the row actually has a *different* institute — a null one is never a mismatch.
+  if (req.requesterInstituteId && row.instituteId && row.instituteId !== req.requesterInstituteId) return false;
   if (req.user?.role !== "STAFF") return true;
   if (!row.createdById || row.createdById === req.user.id) return true;
   const shares = row.folder?.shares || row.shares;
