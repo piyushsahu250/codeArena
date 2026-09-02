@@ -1794,6 +1794,9 @@ function ChapterDetailPanel({ chapter, onBack }) {
             <input type="checkbox" disabled={!isAdmin} checked={form.countsTowardCertificate} onChange={(e) => setForm({ ...form, countsTowardCertificate: e.target.checked })} />
             Required for the course-wide Coding Assessment certificate
           </label>
+          <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+            ⚠ Only affects this chapter's Levels, which aren't wired up to student assessments yet — has no effect until they are (see the Levels tab).
+          </p>
           {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save chapter"}</button>}
         </form>
       )}
@@ -2151,6 +2154,17 @@ function ChapterLevelsPanel({ chapterId }) {
 
   return (
     <div style={{ marginTop: 16 }}>
+      {/* Confirmed live 2026-09-02: no student-facing route exists anywhere to start or submit an
+          attempt against a Level, regardless of how it's configured here — activating one, or
+          marking it required for the certificate, currently has NO effect on any student. This
+          previously caused a real production incident (an orphaned, empty Level silently made the
+          Java course's Module 2 permanently unpassable for everyone once module-unlock gating
+          started enforcing coding-assessment prerequisites) — module-unlock and certificate logic
+          now both explicitly exclude Levels from gating until this is actually wired up, so
+          nothing is at risk of breaking from configuring one, but nothing is gained yet either. */}
+      <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--warning-bg)", color: "var(--amber-dark)", fontSize: 13, marginBottom: 14 }}>
+        ⚠ Levels aren't wired up to student assessments yet. Configuring or activating a Level here has no effect on any student right now — it will not gate module unlock or the course certificate, and there's currently no way for a student to attempt one. Use the module's own Coding Assessment (Settings tab) for a working gate.
+      </div>
       {isAdmin && <button className="btn btn-primary" disabled={creating} onClick={addLevel}>{creating ? "Adding…" : "+ Add Level"}</button>}
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
         {levels.sort((a, b) => a.order - b.order).map((l, i) => (
@@ -2245,9 +2259,12 @@ function LevelPanel({ levelId, onBack }) {
 
       {tab === "config" && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
+          <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--warning-bg)", color: "var(--amber-dark)", fontSize: 13, marginBottom: 14 }}>
+            ⚠ Not wired up to student assessments yet — this setting currently has no effect on any student.
+          </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <input type="checkbox" disabled={!isAdmin} checked={!!form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-            Active (required to unlock the next module)
+            Active (has no effect until Levels are wired up — see warning above)
           </label>
           <ConfigFields form={form} setForm={setForm} toggleLanguage={toggleLanguage} readOnly={!isAdmin} />
           {isAdmin && (
