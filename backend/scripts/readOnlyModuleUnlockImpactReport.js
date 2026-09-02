@@ -16,8 +16,7 @@ async function main() {
         select: {
           id: true, title: true, order: true,
           lessons: { select: { id: true } },
-          codingTest: { select: { id: true, isActive: true, passingPercent: true } },
-          chapters: { select: { levels: { select: { id: true, isActive: true, passingPercent: true } } } },
+          codingTest: { select: { id: true, isActive: true, passingPercent: true, _count: { select: { questions: true } } } },
         },
       },
     },
@@ -29,9 +28,13 @@ async function main() {
   for (const course of courses) {
     const gatingByModule = new Map(); // moduleId -> [testId,...]
     for (const m of course.modules) {
+      // Must compute gating exactly the way the live enforcement (learningLock.js's
+      // gatingTestIds) does, or this report can flag a student as "affected" by a gate that isn't
+      // actually real (or miss one that is) -- same empty-pool guard, and chapter-scoped Levels
+      // excluded entirely (see learningLock.js's own comment for why: no student-facing route
+      // exists yet to attempt one, populated or not).
       const ids = [];
-      if (m.codingTest?.isActive) ids.push(m.codingTest.id);
-      for (const c of m.chapters) for (const l of c.levels) if (l.isActive) ids.push(l.id);
+      if (m.codingTest?.isActive && m.codingTest._count.questions > 0) ids.push(m.codingTest.id);
       gatingByModule.set(m.id, ids);
     }
     const anyGating = [...gatingByModule.values()].some((ids) => ids.length > 0);

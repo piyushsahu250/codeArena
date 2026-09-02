@@ -352,8 +352,19 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
 // GET /lessons/:id auto-creates an IN_PROGRESS row) still works.
 router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true } } } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+
+    // Backend-authoritative lock check — GET /lessons/:id already refuses to even show the
+    // content of a locked module's lesson (see below), but this write-side route had no
+    // equivalent check at all: a direct POST with a locked module's lessonId silently succeeded,
+    // marked LessonProgress COMPLETED, and even awarded gamification XP, completely bypassing the
+    // sequential-unlock gate. Confirmed live 2026-09-02. Same check as the read route, so a
+    // student can never write progress for content the backend wouldn't let them view.
+    const lockMap = await getModuleLockMap(prisma, req.user.id, lesson.module.courseId);
+    if (lockMap.get(lesson.module.id)?.locked) {
+      return res.status(403).json({ error: "This module is locked. Complete the previous module's coding assessment to unlock it." });
+    }
 
     const { status, bookmarked } = req.body;
     if (status && !["NOT_STARTED", "IN_PROGRESS", "COMPLETED"].includes(status)) {
@@ -415,9 +426,16 @@ router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attac
 // point of a learning-module practice test, unlike the exam submission flow.
 router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), async (req, res) => {
   try {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id } });
+    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true } } } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
     if (!lesson.isModuleTest) return res.status(400).json({ error: "This lesson is not a practice test" });
+
+    // Same backend-authoritative lock check as /lessons/:id/progress just above — a locked
+    // module's practice test must not be directly submittable either.
+    const lockMap = await getModuleLockMap(prisma, req.user.id, lesson.module.courseId);
+    if (lockMap.get(lesson.module.id)?.locked) {
+      return res.status(403).json({ error: "This module is locked. Complete the previous module's coding assessment to unlock it." });
+    }
 
     const questions = await prisma.practiceQuestion.findMany({
       where: { lessonId: lesson.id, type: { not: "CODING" } },
