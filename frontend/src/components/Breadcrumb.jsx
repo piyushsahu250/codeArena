@@ -16,6 +16,15 @@ const SEGMENT_LABELS = {
 
 const DASHBOARD_PATHS = new Set(["/dashboard", "/staff", "/admin"]);
 
+// Segments that are real, meaningful path components (so still worth naming in the trail) but
+// have no listing page of their own at that exact URL — e.g. "/staff/tests" 404s, since staff
+// browse tests from a tab on the Staff Dashboard itself (/staff), never a standalone route; only
+// "/staff/tests/:id/edit|results|preview" exist. Before this fix, clicking the auto-generated
+// "Tests" crumb landed on the 404 page, which renders the logged-OUT marketing nav (no trace of
+// the staff shell) — indistinguishable from actually being signed out even though the session
+// was never touched. Rendered as inert text instead of a dead link.
+const NO_LINK_SEGMENTS = new Set(["tests"]);
+
 // True for opaque ids (UUIDs and similar) — these have no human-readable name available from the
 // URL alone, so they're skipped rather than shown as a raw id. Readable slugs (e.g. course slugs
 // like "java") fall through to the titlecase fallback below instead.
@@ -38,12 +47,12 @@ export default function Breadcrumb() {
   const homePath = user?.role === "ADMIN" ? "/admin" : user?.role === "STAFF" ? "/staff" : "/dashboard";
   const segments = location.pathname.split("/").filter(Boolean);
   let path = "";
-  const crumbs = [{ label: "Dashboard", to: homePath }];
+  const crumbs = [{ label: "Dashboard", to: homePath, linkable: true }];
   for (const seg of segments) {
     path += `/${seg}`;
     if (isOpaqueId(seg)) continue;
     const label = SEGMENT_LABELS[seg] || seg.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    crumbs.push({ label, to: path });
+    crumbs.push({ label, to: path, linkable: !NO_LINK_SEGMENTS.has(seg) });
   }
 
   return (
@@ -55,7 +64,7 @@ export default function Breadcrumb() {
       {crumbs.map((c, i) => (
         <span key={c.to} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {i > 0 && <span style={{ opacity: 0.4 }}>›</span>}
-          {i === crumbs.length - 1 ? (
+          {i === crumbs.length - 1 || !c.linkable ? (
             <span className="ca-crumb-current">{c.label}</span>
           ) : (
             <Link className="ca-crumb-link" to={c.to}>{c.label}</Link>
