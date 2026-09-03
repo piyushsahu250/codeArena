@@ -33,7 +33,15 @@ if [ "$(id -u)" = "0" ]; then
   # own file capabilities (setuid/setgid/chown/fowner/kill, granted via the Dockerfile's setcap)
   # must still take effect on the exec below for the existing per-submission privilege-drop
   # mechanism to keep working — --no-new-privs here would block exactly that.
-  exec setpriv --reuid=10000 --regid=10000 --clear-groups "$0" "$@"
+  #
+  # Uses the absolute path, NOT "$0" — confirmed live this actually matters: Docker's CMD
+  # invokes this as `sh docker-entrypoint.sh` (relative, per WORKDIR /app), so "$0" here is the
+  # bare string "docker-entrypoint.sh" with no slash in it. setpriv execs its target via execvp,
+  # which for a slash-less name means a $PATH search, not "look in cwd" — and $PATH on this image
+  # has no "." in it. That search silently fails, setpriv exits, and the container exits clean
+  # (code 0, no error output) having done nothing past the iptables step — no server ever starts.
+  # The absolute path sidesteps the $PATH search entirely.
+  exec setpriv --reuid=10000 --regid=10000 --clear-groups /app/docker-entrypoint.sh "$@"
 fi
 
 # Everything below this line always runs as `app` (uid 10000), never as root.
