@@ -191,6 +191,14 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
       {stage === "previewed" && preview && (
         <div style={{ marginTop: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 700 }}>Preview</p>
+          {/* One clear, file-level diagnostic instead of burying the real problem in a pile of
+              near-identical per-row errors -- see runQuizBulkImport's structureHint comment for
+              the real upload this was built from. */}
+          {preview.structureHint && (
+            <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 8, background: "var(--warning-bg)", color: "var(--amber-dark)", fontSize: 13 }}>
+              ⚠ {preview.structureHint}
+            </div>
+          )}
           <div style={{ fontSize: 13, marginTop: 4 }}>
             <div>Total rows: <strong>{preview.total}</strong></div>
             <div style={{ color: "var(--mint)" }}>Ready to import: <strong>{preview.createdCount}</strong></div>

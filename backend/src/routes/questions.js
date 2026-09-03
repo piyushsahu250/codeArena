@@ -1470,6 +1470,8 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
   const created = [];
   const skipped = [];
   const errors = [];
+  let unrecognizedTypeCount = 0;
+  let attemptedRowCount = 0; // non-blank rows actually evaluated -- the denominator for structureHint below
   const seenDescriptions = new Set();
   const existingDescriptionsByScope = new Map();
 
@@ -1493,10 +1495,22 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
     const typeRaw = field(row, "questionType");
 
     if (!title && !description && !typeRaw) continue; // blank row
+    attemptedRowCount++;
 
     if (!description) { errors.push({ row: rowNum, reason: "Missing Question Text" }); continue; }
     const questionType = TYPE_ALIASES[normalizeHeader(typeRaw)];
-    if (!questionType) { errors.push({ row: rowNum, reason: `Unrecognized Question Type "${typeRaw}"` }); continue; }
+    if (!questionType) {
+      unrecognizedTypeCount++;
+      // Confirmed live: a user's own spreadsheet (not our template) can have a "Question Type"-
+      // named column whose actual data is really something else (options text, a topic name, etc.)
+      // — the raw cell value dumped in full made a wall of unreadable text out of one bad column
+      // mapping. Truncated here, and the accepted values spelled out, so one row's error is
+      // actually readable; the systemic case (every/most rows wrong the same way -> structureHint
+      // below) is what actually explains what's going on.
+      const shown = typeRaw ? (typeRaw.length > 40 ? `${typeRaw.slice(0, 40)}…` : typeRaw) : "(blank)";
+      errors.push({ row: rowNum, reason: `Unrecognized Question Type "${shown}" — expected MCQ, True/False, or Multiple Select` });
+      continue;
+    }
     if (questionType === "CODING") {
       errors.push({ row: rowNum, reason: "Coding questions use the separate coding-question bulk upload (different template/columns), not this one" });
       continue;
@@ -1575,9 +1589,22 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
   // drift from what the counts above actually say passed.
   const validRows = commit ? undefined : created.map((c) => rows[c.row - 2]);
 
+  // Confirmed live: a real upload where every one of 30 rows failed with "Unrecognized Question
+  // Type" (the actual cell value was clearly Options text, not a type) produced 30 near-identical
+  // giant error lines and no indication of WHY -- the header-name matching found a "Question Type"
+  // column, but that column's data in the user's own file doesn't line up with our template's
+  // column order. One clear, file-level diagnostic here (surfaced as a banner above the per-row
+  // list, not buried in it) turns "30 walls of red text" into one fixable takeaway.
+  let structureHint = null;
+  if (attemptedRowCount >= 3 && unrecognizedTypeCount === attemptedRowCount) {
+    structureHint = "Every row in this file has an unrecognized Question Type. This almost always means your spreadsheet's columns don't match our template's order (e.g. a column is missing, extra, or shifted) rather than 30 individual typos. Download the template below and copy your data into it column-by-column, or reorder your existing columns to match it exactly.";
+  } else if (attemptedRowCount >= 5 && unrecognizedTypeCount / attemptedRowCount >= 0.8) {
+    structureHint = "Most rows in this file have an unrecognized Question Type. Check that your Question Type column only contains MCQ, True/False, or Multiple Select, and that your columns are in the same order as our template.";
+  }
+
   return {
     total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
-    skipped, errors, created, validRows,
+    skipped, errors, created, validRows, structureHint,
   };
 }
 
