@@ -53,9 +53,14 @@ async function computeLearningRecommendations(prisma, studentId) {
   }
 
   // --- Priority 2a: most recent failed Module Coding Assessment attempt ---
+  // ModuleCodingAttempt has no createdAt column (only startedAt/submittedAt) — ordering by
+  // createdAt threw PrismaClientValidationError on every single call, silently caught by the
+  // route's try/catch (see [dashboard/student] recommendations failed in the logs), which meant
+  // this recommendation never once fired for any student. startedAt is the correct "most recent
+  // attempt" ordering field.
   const failedAttempt = await prisma.moduleCodingAttempt.findFirst({
     where: { studentId, passed: false, status: { not: "IN_PROGRESS" } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { startedAt: "desc" },
     include: { moduleCodingTest: { include: { module: { include: { course: true } } }, } },
   });
   if (failedAttempt?.moduleCodingTest?.module?.course) {
