@@ -127,58 +127,20 @@ function checkNetworkDenialAvailable() {
   });
 }
 
-// The real fix for the gap checkNetworkDenialAvailable() above documents: `unshare -n` cannot
-// work under this platform's minimal capability set — creating a new network namespace needs
-// CAP_SYS_ADMIN, a far broader grant than this codebase is willing to make just for that one
-// mechanism (see the Dockerfile's setcap comment). Confirmed live before this existed: a
-// submission running as the `sandbox` uid could make a real outbound HTTP request and get a real
-// response back — network egress was completely unrestricted.
-//
-// Instead of per-execution namespace isolation, this installs ONE kernel-level netfilter rule —
-// DROP every outbound packet whose sending process is SANDBOX_UID — via `iptables -m owner
-// --uid-owner`. It only needs CAP_NET_ADMIN to INSTALL the rule, and only once, at server
-// startup; after that it's enforced by the kernel for every future sandbox-uid packet with zero
-// ongoing capability requirement from the per-submission process itself, unlike `unshare -n`
-// which needs the capability at every single invocation. Idempotent (checks with `-C` before
-// `-A`) so a server restart never stacks duplicate rules. Only relevant when DROP_PRIVILEGES is
-// on — with it off, nothing ever executes as SANDBOX_UID, so there is no sandbox traffic to
-// block, and the main app process (a different uid) is never touched by this rule either way.
-//
-// Never throws and never blocks startup — same graceful-degrade philosophy as
-// checkNetworkDenialAvailable above: if iptables isn't available, or CAP_NET_ADMIN wasn't
-// actually granted at the container level (see deploy-backend.sh's --cap-add=NET_ADMIN), this
-// logs a clear, loud warning and the platform runs exactly as it did before this existed, rather
-// than failing to boot over a hardening measure.
-function setupNetworkIsolation() {
-  return new Promise((resolve) => {
-    if (!DROP_PRIVILEGES) { resolve(false); return; }
-    const rule = ["OUTPUT", "-m", "owner", "--uid-owner", String(SANDBOX_UID), "-j", "DROP"];
-    const onUnavailable = (err) => {
-      console.warn(`judge: iptables unavailable — sandbox (uid ${SANDBOX_UID}) network egress is NOT blocked. ${err ? err.message : ""}`.trim());
-      resolve(false);
-    };
-    const check = spawn("iptables", ["-C", ...rule]);
-    check.on("error", onUnavailable);
-    check.on("close", (checkCode) => {
-      if (checkCode === 0) {
-        console.log("judge: network-isolation iptables rule already present");
-        resolve(true);
-        return;
-      }
-      const add = spawn("iptables", ["-A", ...rule]);
-      add.on("error", onUnavailable);
-      add.on("close", (addCode) => {
-        if (addCode === 0) {
-          console.log(`judge: network-isolation iptables rule installed — outbound traffic from uid ${SANDBOX_UID} (sandbox) is now blocked`);
-          resolve(true);
-        } else {
-          console.warn(`judge: failed to install network-isolation iptables rule (exit ${addCode}) — sandbox network egress is NOT blocked. This usually means the container wasn't started with --cap-add=NET_ADMIN.`);
-          resolve(false);
-        }
-      });
-    });
-  });
-}
+// The real fix for the gap checkNetworkDenialAvailable() above documents (`unshare -n` cannot
+// work under this platform's minimal capability set — it needs CAP_SYS_ADMIN, far broader than
+// this codebase is willing to grant just for that one mechanism) lives in docker-entrypoint.sh,
+// NOT here. It installs one kernel-level netfilter rule — DROP every outbound packet whose
+// sending process is SANDBOX_UID — via `iptables-legacy -m owner --uid-owner`, once, at container
+// startup, while the entrypoint still genuinely holds uid 0. That's a deliberate architecture
+// choice, confirmed necessary by testing this exact approach from inside Node first: neither the
+// nft nor the legacy iptables backend accepts CAP_NET_ADMIN granted via setcap as a substitute for
+// real root in this environment (both fail their respective kernel-level table-init/rule-set
+// checks) — so unlike the other capabilities this file's Dockerfile grants `node` directly, this
+// one cannot be delegated to the long-running, already-unprivileged main process at all. It has to
+// happen once, as literal root, before this container ever drops to `app` — see
+// docker-entrypoint.sh's own comment for the full mechanism (a self re-exec through `setpriv` to
+// drop identity immediately afterward, everything else unchanged).
 
 // Text patterns that show up in stderr when a program actually ran out of the memory budget
 // `ulimit -v` gave it, as opposed to some unrelated crash — used to report a distinct "Memory
@@ -777,4 +739,4 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
   return { passedCases: passed, totalCases: testCases.length, verdict, details, errorSummary, maxTimeMs, maxMemoryKb: maxMemoryKb || null };
 }
 
-module.exports = { judgeSubmission, warmUpCompilers, setupNetworkIsolation };
+module.exports = { judgeSubmission, warmUpCompilers };

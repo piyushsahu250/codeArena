@@ -69,6 +69,18 @@ RUN npx prisma generate
 # (its own separate group, gid 10001) outright.
 RUN chown -R app:app /app && chmod -R 750 /app
 
+# iptables (both the nft and legacy backends) takes an exclusive lock on this file before editing
+# rules — /run itself is root:root 755 in this base image (confirmed: it's a plain image-layer
+# directory here, not a tmpfs remounted at container start, so this persists to runtime), which
+# blocks `app` from ever creating it fresh at runtime even with CAP_NET_ADMIN. Pre-creating it here
+# and handing it to `app` sidesteps that — opening an *existing* file for locking only needs
+# permission on the file itself, not its parent directory. Confirmed live: cap_net_admin alone
+# was NOT sufficient for the nft-backed `iptables` binary (its rule-set generation-id check
+# requires actual uid 0, not just the capability — a real kernel/nftables restriction, not a
+# permissions oversight), so setupNetworkIsolation() in judge.js uses `iptables-legacy` instead,
+# which only needed this lock file fixed.
+RUN touch /run/xtables.lock && chown app:app /run/xtables.lock && chmod 600 /run/xtables.lock
+
 # Grants the `node` binary itself (not the `app` user broadly, and not the whole container via
 # --cap-add) exactly the capabilities judge.js needs: CAP_SETUID/CAP_SETGID to drop its
 # child processes to `sandbox` before executing student code; CAP_CHOWN because judge.js
@@ -90,33 +102,27 @@ RUN chown -R app:app /app && chmod -R 750 /app
 # new at the container level, it just lets a non-root process actually exercise capabilities that
 # were always available to root by default.
 #
-# CAP_NET_ADMIN is different: it is NOT in Docker's default bounding set, so setcap alone is not
-# enough — the container itself must also be started with --cap-add=NET_ADMIN (see
-# deploy-backend.sh), or this capability silently has no effect regardless of what's set here.
-# judge.js's setupNetworkIsolation() uses it once at server startup to install a single iptables
-# OUTPUT rule dropping every packet from the `sandbox` uid — the actual fix for the confirmed live
-# gap that `unshare -n` (network-namespace-per-execution isolation, tried first) cannot work at
-# all under this minimal capability set: creating a new network namespace needs CAP_SYS_ADMIN,
-# which is a far broader capability than this platform is willing to grant just to make that one
-# mechanism work. A uid-based netfilter rule needs only CAP_NET_ADMIN to INSTALL, once, and then
-# enforces at the kernel level for every subsequent `sandbox`-uid packet with zero ongoing
-# capability requirement from the per-submission process itself — narrower, and it doesn't care
-# how many times per second submissions spawn.
-#
 # Must target the real binary, not the /usr/local/bin/node symlink node:20-slim ships —
 # `readlink -f` resolves it, since file capabilities are stored as an xattr on the actual inode and
-# are silently no-ops on a symlink.
-RUN setcap cap_setuid,cap_setgid,cap_chown,cap_fowner,cap_kill,cap_net_admin=+ep "$(readlink -f "$(which node)")"
+# are silently no-ops on a symlink. NOTE: does NOT include cap_net_admin — the network-isolation
+# iptables rule is installed once, as real root, in docker-entrypoint.sh below, before this
+# container ever drops to `app`, so node itself never needs that capability. (It was tried here
+# first via setcap; confirmed live that CAP_NET_ADMIN via file capability alone is NOT sufficient
+# for either the nft or legacy iptables backend in this environment — both require actual uid 0
+# for their respective kernel-level rule-set-generation/table-init checks, a genuine kernel
+# restriction, not a permissions oversight on this platform's part.)
+RUN setcap cap_setuid,cap_setgid,cap_chown,cap_fowner,cap_kill=+ep "$(readlink -f "$(which node)")"
 
-# The main API process runs as this non-root user from here on. It still becomes root-equivalent
-# for exactly the two syscalls above (setuid/setgid) when judge.js drops a child process to
-# `sandbox` — everything else it does (serving HTTP, querying Postgres, reading its own /app) it
-# does as a genuinely unprivileged uid, same as any other Linux service.
-USER app
+# No `USER app` here (deliberately, unlike before) — this container now starts as real root so
+# docker-entrypoint.sh can install the network-isolation iptables rule (see its own comment for
+# why that genuinely needs root in this environment), then drops to `app` itself via `setpriv`
+# before the long-running Node process ever starts. Everything this image's own build steps did
+# above already ran as whatever user was active at each RUN line (root, same as always — this
+# directive only ever affected runtime, never build), so nothing above this line changes.
 
 EXPOSE 4000
-# docker-entrypoint.sh auto-detects whether this container is running as the Render service, a
-# Cloud Run Service revision, or the Cloud Run migration Job, and behaves accordingly — see its
-# header comment. This keeps Render's deploy behavior (migrate-then-start, every boot) completely
-# unchanged while letting Cloud Run split migrations into a once-per-deploy Job.
+# docker-entrypoint.sh now has two jobs where it used to have one: a brief real-root phase to
+# install the network-isolation rule (see its own comment), then drop to `app` via `setpriv`
+# before continuing into its original auto-detect-role logic (Render vs Cloud Run Service vs
+# Cloud Run migration Job) completely unchanged from before.
 CMD ["sh", "docker-entrypoint.sh"]

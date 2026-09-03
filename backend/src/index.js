@@ -244,8 +244,9 @@ app.listen(PORT, () => {
   // the process if it fails.
   const judge = require("./utils/judge");
   judge.warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message));
-  // Installs the sandbox-uid network-egress block once at startup — see setupNetworkIsolation()'s
-  // own comment for the full reasoning. Fire-and-forget, same as the warm-up above: must never
-  // delay startup or crash the process if iptables/the required capability isn't available.
-  judge.setupNetworkIsolation().catch((err) => console.warn("judge network isolation setup failed", err.message));
+  // Network-egress isolation for sandbox-uid submissions is now installed once, as real root,
+  // by docker-entrypoint.sh BEFORE this process ever starts — not from here. Node itself no
+  // longer holds cap_net_admin (see the Dockerfile's setcap comment); that capability delegation
+  // was tried and confirmed live to be insufficient for either iptables backend in this
+  // environment anyway, which is why the mechanism moved to the entrypoint's root phase instead.
 });
