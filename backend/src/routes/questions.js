@@ -12,7 +12,7 @@ const { questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow 
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const { validateQuestionForVerification } = require("../utils/questionValidation");
-const { canStaffUseSubject, resolveSubjectUnitTopic } = require("../utils/subjectAccess");
+const { canStaffUseSubject, resolveSubjectUnitTopic, staffAuthorizedSubjectIds } = require("../utils/subjectAccess");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { cached } = require("../utils/cache");
@@ -198,9 +198,34 @@ async function resolveSubjectUnitTopicByName(req, { subjectName, unitName, topic
   if (!subjectName) return { error: "Subject is required" };
   if (!unitName) return { error: "Unit is required" };
   const institute = req.requesterInstituteId ? { OR: [{ instituteId: req.requesterInstituteId }, { instituteId: null }] } : {};
-  const subject = await prisma.subject.findFirst({ where: { ...institute, name: { equals: subjectName, mode: "insensitive" } } });
-  if (!subject || !(await canStaffUseSubject(req, subject.id))) {
-    return { error: `Subject "${subjectName}" not found or you're not authorized to use it` };
+  // findMany, not findFirst: the same Subject name can legitimately exist twice — once shared
+  // (instituteId null) and once owned by a specific institute (e.g. two different "Java" rows).
+  // findFirst with no orderBy picked whichever one Postgres happened to return first, and if THAT
+  // one wasn't the requester's to use while the other genuinely was, every row in the file failed
+  // with "not found or not authorized" even though a usable "Java" subject existed the whole time.
+  // Try the requester's own institute's copy before the shared one — it's the more specific,
+  // almost-certainly-intended match — and only fall through to the generic error if literally none
+  // of the same-named candidates are usable.
+  const subjectCandidates = await prisma.subject.findMany({
+    where: { ...institute, name: { equals: subjectName, mode: "insensitive" } },
+    orderBy: { instituteId: { sort: "desc", nulls: "last" } }, // requester's own institute (non-null) before the shared (null) one
+  });
+  let subject = null;
+  for (const candidate of subjectCandidates) {
+    if (await canStaffUseSubject(req, candidate.id)) { subject = candidate; break; }
+  }
+  if (!subject) {
+    // Same self-diagnosing-error treatment as the Unit mismatch below: list what this requester
+    // can actually use instead of leaving them to guess-and-retry blind. Scoped to their own
+    // authorized subjects (staffAuthorizedSubjectIds — null/unrestricted for ADMIN-tier roles), so
+    // this never reveals a subject they don't already have access to.
+    const authorizedIds = await staffAuthorizedSubjectIds(req);
+    const availableWhere = authorizedIds ? { ...institute, id: { in: [...authorizedIds] } } : institute;
+    const available = await prisma.subject.findMany({
+      where: availableWhere, select: { name: true }, distinct: ["name"], orderBy: { name: "asc" }, take: 20,
+    });
+    const list = available.map((s) => `"${s.name}"`).join(", ") || "(no subjects configured for you yet)";
+    return { error: `Subject "${subjectName}" not found or you're not authorized to use it. Subjects available to you: ${list}` };
   }
   let unit = await prisma.unit.findFirst({ where: { subjectId: subject.id, name: { equals: unitName, mode: "insensitive" } } });
   if (!unit) {
