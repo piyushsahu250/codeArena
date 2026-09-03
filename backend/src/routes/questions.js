@@ -149,7 +149,23 @@ function normalizeCorrectIndices(raw, options, isMulti) {
     .filter((i) => i >= 0 && i < options.length);
 
   const unique = [...new Set(indices)];
-  return isMulti ? unique : unique.slice(0, 1);
+  if (unique.length > 0) return isMulti ? unique : unique.slice(0, 1);
+
+  // Confirmed live on a real bulk import: this splits on comma AND pipe to support
+  // MULTISELECT's "OptionA, OptionB" convention, but that collides with a perfectly legitimate
+  // single-answer text that itself contains a comma (e.g. "Samkhya, Yoga, Nyaya, Vaisheshika,
+  // Mimamsa, Vedanta" naming a list) -- every comma-fragment then fails to match the full option
+  // text, and the row gets rejected outright. Same failure mode for a correct-answer text that's
+  // purely digits but out of range as an option number (e.g. "25", the actual numeric answer to a
+  // question, mistaken for a 1-based index into a 4-option list). Only reached when the normal
+  // split-based parse found NOTHING at all, so this can never change an already-successful
+  // outcome — it retries the entire raw string, untouched, as one literal answer.
+  if (!Array.isArray(raw)) {
+    const whole = String(raw ?? "").trim();
+    const wholeMatch = whole ? options.findIndex((o) => o.trim().toLowerCase() === whole.toLowerCase()) : -1;
+    if (wholeMatch >= 0) return [wholeMatch];
+  }
+  return unique;
 }
 
 // Bulk-upload counterpart to resolveSubjectUnitTopic (utils/subjectAccess.js) — resolves plain-text Subject/Unit/
