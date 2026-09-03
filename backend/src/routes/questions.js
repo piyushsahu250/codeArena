@@ -168,6 +168,25 @@ function normalizeCorrectIndices(raw, options, isMulti) {
   return unique;
 }
 
+// Real course spreadsheets overwhelmingly label chapters with Roman numerals ("Unit II", "Chapter
+// IV") while whoever actually created the Unit row in the CMS often typed the Arabic form ("Unit
+// 2", "Chapter 4") or vice versa — objectively the same unit, but a bare case-insensitive string
+// match (below) treats them as unrelated and fails EVERY row in the file with the same opaque
+// "does not belong to Subject" error (the exact wall-of-identical-errors pattern that led to
+// runQuizBulkImport's structureHint fix elsewhere in this file). This normalizes only a single
+// whitespace-bounded Roman-numeral token (I-XX — generous for how deep any real course goes) to
+// its Arabic form, so "Unit IV: Data Structures" and "Unit 4: Data Structures" collapse to the same
+// canonical string while every other part of the name (and any name with no numeral at all) is
+// left untouched — it can never coerce two genuinely different units into matching each other.
+const ROMAN_TO_ARABIC = {
+  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10,
+  xi: 11, xii: 12, xiii: 13, xiv: 14, xv: 15, xvi: 16, xvii: 17, xviii: 18, xix: 19, xx: 20,
+};
+function normalizeUnitName(raw) {
+  const s = String(raw ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return s.replace(/\b([ivx]+)\b/g, (m) => (ROMAN_TO_ARABIC[m] != null ? String(ROMAN_TO_ARABIC[m]) : m));
+}
+
 // Bulk-upload counterpart to resolveSubjectUnitTopic (utils/subjectAccess.js) — resolves plain-text Subject/Unit/
 // Topic column values to real rows, enforcing the same authorization + "Unit must belong to
 // Subject" rule (spec section 8's exact rejection example: a Unit named the same as one under a
@@ -183,9 +202,21 @@ async function resolveSubjectUnitTopicByName(req, { subjectName, unitName, topic
   if (!subject || !(await canStaffUseSubject(req, subject.id))) {
     return { error: `Subject "${subjectName}" not found or you're not authorized to use it` };
   }
-  const unit = await prisma.unit.findFirst({ where: { subjectId: subject.id, name: { equals: unitName, mode: "insensitive" } } });
+  let unit = await prisma.unit.findFirst({ where: { subjectId: subject.id, name: { equals: unitName, mode: "insensitive" } } });
   if (!unit) {
-    return { error: `"${unitName}" does not belong to Subject "${subjectName}"` };
+    // Exact match failed — try Roman<->Arabic numeral normalization before giving up. Only
+    // auto-resolved when it's unambiguous (exactly one configured unit normalizes to the same
+    // string); an ambiguous or total miss falls through to an error that lists what's actually
+    // configured, instead of leaving the uploader to guess-and-retry blind.
+    const wantedNormalized = normalizeUnitName(unitName);
+    const candidates = await prisma.unit.findMany({ where: { subjectId: subject.id } });
+    const normalizedMatches = candidates.filter((u) => normalizeUnitName(u.name) === wantedNormalized);
+    if (normalizedMatches.length === 1) {
+      unit = normalizedMatches[0];
+    } else {
+      const available = candidates.map((u) => `"${u.name}"`).join(", ") || "(no units configured for this subject)";
+      return { error: `"${unitName}" does not belong to Subject "${subjectName}". Units configured for this subject: ${available}` };
+    }
   }
   let topicId = null;
   if (topicName) {
