@@ -1016,7 +1016,7 @@ model Submission {
   score        Int         @default(0)
   passedCases  Int         @default(0)
   totalCases   Int         @default(0)
-  verdict      String      @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
+  verdict      String      @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, OLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
   timeMs       Int? // max execution time across judged test cases (coding only)
   memoryKb     Int? // max memory usage across judged test cases (coding only)
   createdAt    DateTime    @default(now())
@@ -1722,7 +1722,7 @@ model ModuleCodingSubmission {
   score       Int      @default(0)
   passedCases Int      @default(0)
   totalCases  Int      @default(0)
-  verdict     String   @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
+  verdict     String   @default("PENDING") // ACCEPTED, PARTIAL, WRONG_ANSWER, TLE, MLE, OLE, RUNTIME_ERROR, COMPILE_ERROR, PENDING
   timeMs      Int? // max execution time across judged test cases
   memoryKb    Int? // max memory usage across judged test cases
   codeSavedSeq BigInt  @default(0) // see Submission.codeSavedSeq's comment -- same client-monotonic-counter guard against autosave request reordering, and the same Int->BigInt overflow-fix reasoning (Date.now() never fits in a 32-bit Int)

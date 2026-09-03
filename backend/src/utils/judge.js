@@ -657,8 +657,12 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
           input: tc.input,
           expected: tc.expected,
           actual: null,
-          verdict: result.timedOut ? "TLE" : result.oom ? "MLE" : "RUNTIME_ERROR",
-          error: summarizeError(language, result.error).message,
+          // outputExceeded was previously unchecked here — it fell through to the generic
+          // RUNTIME_ERROR branch below, indistinguishable from an actual crash even though
+          // spawnWithTimeout already tracks it as its own distinct condition (a fast infinite
+          // print loop killed for flooding output, not a crash or a timeout).
+          verdict: result.timedOut ? "TLE" : result.oom ? "MLE" : result.outputExceeded ? "OLE" : "RUNTIME_ERROR",
+          error: result.outputExceeded ? "Output limit exceeded" : summarizeError(language, result.error).message,
           timeMs: result.timeMs ?? null,
           memoryKb: result.memoryKb ?? null,
         };
@@ -683,7 +687,10 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
 
   let verdict = "ACCEPTED";
   if (passed === 0) {
-    verdict = details.some((d) => d.verdict === "TLE") ? "TLE" : details.some((d) => d.verdict === "MLE") ? "MLE" : "WRONG_ANSWER";
+    verdict = details.some((d) => d.verdict === "TLE") ? "TLE"
+      : details.some((d) => d.verdict === "MLE") ? "MLE"
+      : details.some((d) => d.verdict === "OLE") ? "OLE"
+      : "WRONG_ANSWER";
   } else if (passed < testCases.length) {
     verdict = "PARTIAL";
   }
@@ -700,6 +707,8 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
       errorSummary = { type: "Time Limit Exceeded", line: null, message: "Your program took too long to produce output — the algorithm is likely too slow for the input size; try a more efficient approach.", hint: null };
     } else if (verdict === "MLE") {
       errorSummary = { type: "Memory Limit Exceeded", line: null, message: "Your program used more memory than allowed — check for unbounded data structures, infinite recursion, or unnecessarily large allocations.", hint: null };
+    } else if (verdict === "OLE") {
+      errorSummary = { type: "Output Limit Exceeded", line: null, message: "Your program printed far more output than expected — check for an accidental infinite print loop or unbounded logging.", hint: null };
     } else {
       const errored = details.find((d) => d.verdict === "RUNTIME_ERROR");
       if (errored) {

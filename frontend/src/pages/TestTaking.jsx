@@ -1967,6 +1967,7 @@ const VERDICT_LABEL = {
   RUNTIME_ERROR: "Runtime Error",
   TLE: "Time Limit Exceeded",
   MLE: "Memory Limit Exceeded",
+  OLE: "Output Limit Exceeded",
 };
 
 function describeVerdict(data) {
@@ -1974,7 +1975,7 @@ function describeVerdict(data) {
   if (data.verdict === "ACCEPTED") {
     return `${label} — ${data.passedCases}/${data.totalCases} hidden test cases passed.`;
   }
-  if (["COMPILE_ERROR", "RUNTIME_ERROR", "TLE", "MLE"].includes(data.verdict) && data.errorSummary?.message) {
+  if (["COMPILE_ERROR", "RUNTIME_ERROR", "TLE", "MLE", "OLE"].includes(data.verdict) && data.errorSummary?.message) {
     return `${label}: ${data.errorSummary.message}`;
   }
   return `${label} — ${data.passedCases ?? 0}/${data.totalCases ?? 0} hidden test cases passed.`;
