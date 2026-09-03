@@ -127,7 +127,7 @@ export default function TestResults() {
   return (
     <div>
       <Navbar />
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px 64px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px 64px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0 }}>Leaderboard</h1>
@@ -158,18 +158,18 @@ export default function TestResults() {
         />
 
         <div className="card" style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 880 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 12, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.03em" }}>
-                <th style={{ padding: "12px 10px" }}>Rank</th>
-                <th style={{ padding: "12px 10px" }}>Roll no.</th>
-                <th style={{ padding: "12px 10px" }}>Student</th>
-                <th style={{ padding: "12px 10px" }}>Registration No. (PRN)</th>
-                <th style={{ padding: "12px 10px" }}>Score</th>
-                <th style={{ padding: "12px 10px" }}>Attempted</th>
-                <th style={{ padding: "12px 10px" }}>Status</th>
-                <th style={{ padding: "12px 10px" }}>Tab switches</th>
-                <th style={{ padding: "12px 10px" }}>Questions</th>
+                <th style={{ padding: "10px 8px" }}>Rank</th>
+                <th style={{ padding: "10px 8px" }}>Roll no.</th>
+                <th style={{ padding: "10px 8px" }}>Student</th>
+                <th style={{ padding: "10px 8px" }} title="Registration No. (PRN)">PRN</th>
+                <th style={{ padding: "10px 8px" }}>Score</th>
+                <th style={{ padding: "10px 8px" }}>Attempted</th>
+                <th style={{ padding: "10px 8px" }}>Status</th>
+                <th style={{ padding: "10px 8px" }}>Tab switches</th>
+                <th style={{ padding: "10px 8px" }}>Questions</th>
               </tr>
             </thead>
             <tbody>
@@ -185,16 +185,24 @@ export default function TestResults() {
                 return (
                   <>
                     <tr key={a.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td className="mono" style={{ padding: "12px 10px", fontWeight: 700 }}>
+                      <td className="mono" style={{ padding: "10px 8px", fontWeight: 700 }}>
                         {RANK_MEDAL[a.rank] ? `${RANK_MEDAL[a.rank]} ${a.rank}` : a.rank}
                       </td>
-                      <td className="mono" style={{ padding: "12px 10px" }}>{a.student.rollNumber || "—"}</td>
-                      <td style={{ padding: "12px 10px" }}>
-                        {a.student.name}
-                        <br /><span style={{ fontSize: 12, color: "var(--ink-dim)" }}>{a.student.email}</span>
+                      <td className="mono" style={{ padding: "10px 8px" }}>{a.student.rollNumber || "—"}</td>
+                      <td style={{ padding: "10px 8px", maxWidth: 170 }}>
+                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.student.name}</div>
+                        {/* Full name + email on hover (title) — truncated here so one long address
+                            doesn't force the whole table wider than the page (was the direct cause
+                            of the results table needing to scroll to see Status/Tab switches/View). */}
+                        <div
+                          title={`${a.student.name} — ${a.student.email}`}
+                          style={{ fontSize: 12, color: "var(--ink-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
+                          {a.student.email}
+                        </div>
                       </td>
-                      <td className="mono" style={{ padding: "12px 10px" }}>{a.student.registrationNumber || "—"}</td>
-                      <td style={{ padding: "12px 10px" }}>
+                      <td className="mono" style={{ padding: "10px 8px" }}>{a.student.registrationNumber || "—"}</td>
+                      <td style={{ padding: "10px 8px" }}>
                         <div className="mono" style={{ fontWeight: 700 }}>
                           {a.totalScore}{maxScore > 0 ? ` / ${maxScore}` : ""}
                         </div>
@@ -207,12 +215,12 @@ export default function TestResults() {
                           </div>
                         )}
                       </td>
-                      <td className="mono" style={{ padding: "12px 10px", fontSize: 13, color: incomplete ? "var(--rust)" : "var(--ink-dim)", fontWeight: incomplete ? 700 : 400 }}>
+                      <td className="mono" style={{ padding: "10px 8px", fontSize: 13, color: incomplete ? "var(--rust)" : "var(--ink-dim)", fontWeight: incomplete ? 700 : 400 }}>
                         {attempted} / {total || defaultTotalQuestions}
                       </td>
-                      <td style={{ padding: "12px 10px" }}><StatusBadge status={a.status} /></td>
-                      <td className="mono" style={{ padding: "12px 10px", fontSize: 12, color: a.tabSwitchCount > 0 ? "var(--rust)" : "var(--ink-dim)" }}>{a.tabSwitchCount ?? 0}</td>
-                      <td style={{ padding: "12px 10px" }}>
+                      <td style={{ padding: "10px 8px" }}><StatusBadge status={a.status} /></td>
+                      <td className="mono" style={{ padding: "10px 8px", fontSize: 12, color: a.tabSwitchCount > 0 ? "var(--rust)" : "var(--ink-dim)" }}>{a.tabSwitchCount ?? 0}</td>
+                      <td style={{ padding: "10px 8px" }}>
                         {Array.isArray(a.questionOrder) && a.questionOrder.length > 0 ? (
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}>
                             {expandedId === a.id ? "Hide" : "View"}
