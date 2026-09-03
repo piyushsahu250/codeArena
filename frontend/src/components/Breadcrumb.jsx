@@ -17,13 +17,23 @@ const SEGMENT_LABELS = {
 const DASHBOARD_PATHS = new Set(["/dashboard", "/staff", "/admin"]);
 
 // Segments that are real, meaningful path components (so still worth naming in the trail) but
-// have no listing page of their own at that exact URL — e.g. "/staff/tests" 404s, since staff
-// browse tests from a tab on the Staff Dashboard itself (/staff), never a standalone route; only
-// "/staff/tests/:id/edit|results|preview" exist. Before this fix, clicking the auto-generated
-// "Tests" crumb landed on the 404 page, which renders the logged-OUT marketing nav (no trace of
-// the staff shell) — indistinguishable from actually being signed out even though the session
-// was never touched. Rendered as inert text instead of a dead link.
-const NO_LINK_SEGMENTS = new Set(["tests"]);
+// have no listing page of their own at that exact URL. Clicking any of these landed on the 404
+// page, which renders the logged-OUT marketing nav (no trace of the app shell) — indistinguishable
+// from actually being signed out even though the session was never touched. Rendered as inert text
+// instead of a dead link. Found by auditing every route in App.jsx for a literal (non-":param",
+// non-opaque-id) segment that isn't the URL's last segment, then checking whether the path up to
+// and including that segment matches any defined route on its own:
+//   - "tests"  — /staff/tests/:id/edit|results|preview exist; bare /staff/tests doesn't (staff
+//     browse tests from a tab on the Staff Dashboard itself, /staff, never a standalone route).
+//   - "test"   — /test/:id/result exists (StudentTestResult.jsx, renders Navbar); bare /test doesn't.
+//   - "lesson" — /learning/:slug/lesson/:lessonId exists (LessonView.jsx, renders Navbar); bare
+//     /learning/:slug/lesson (no lessonId) doesn't.
+// Every other multi-segment route either has a real page at each intermediate prefix already, has
+// its middle segment's id skipped as an opaque uuid (isOpaqueId below) so the literal segment
+// before it becomes the final, never-linked crumb, or never renders a Breadcrumb at all (the
+// noChrome exam/interview/assessment routes, and the public certificate/result verify pages, none
+// of which include <Navbar/>).
+const NO_LINK_SEGMENTS = new Set(["tests", "test", "lesson"]);
 
 // True for opaque ids (UUIDs and similar) — these have no human-readable name available from the
 // URL alone, so they're skipped rather than shown as a raw id. Readable slugs (e.g. course slugs
