@@ -1861,8 +1861,8 @@ router.post("/lessons/:id/questions", authenticate, requireRole("ADMIN", "SUPER_
       if (cases.filter((tc) => !tc.isHidden).length < 2) {
         return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases" });
       }
-      if (cases.filter((tc) => tc.isHidden).length < 10) {
-        return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
+      if (cases.filter((tc) => tc.isHidden).length < 5) {
+        return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
       resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage });
     }
@@ -1921,8 +1921,8 @@ router.patch("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
         if (cases.filter((tc) => !tc.isHidden).length < 2) {
           return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases" });
         }
-        if (cases.filter((tc) => tc.isHidden).length < 10) {
-          return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
+        if (cases.filter((tc) => tc.isHidden).length < 5) {
+          return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
         }
       }
       // Only re-resolve when one of these three actually changed — otherwise re-running FUNCTION

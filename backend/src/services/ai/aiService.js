@@ -123,7 +123,7 @@ async function generateJson({ feature, userId, instituteId, system, prompt, maxT
 }
 
 const INTERVIEW_QUESTION_SCHEMA_HINT = {
-  CODING: 'Return {"questions":[{"title","prompt","testCases":[{"input","expected","isHidden"}] (exactly 12: 2 isHidden=false, 10 isHidden=true)}]}',
+  CODING: 'Return {"questions":[{"title","prompt","testCases":[{"input","expected","isHidden"}] (exactly 7: 2 isHidden=false, 5 isHidden=true)}]}',
   DEFAULT: 'Return {"questions":[{"title","prompt","options" (if applicable),"correctAnswer","explanation"}]}',
 };
 

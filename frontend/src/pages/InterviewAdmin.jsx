@@ -14,10 +14,15 @@ import { CATEGORIES, APTITUDE_CATS } from "../constants/interviewCategories";
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 4 };
 const labelStyle = { fontSize: 11, fontWeight: 600, color: "var(--ink-dim)" };
 
+// 2 empty visible + 5 empty hidden rows — matches the platform's minimum for a publishable CODING
+// question (only relevant once category is switched to CODING; every other category ignores
+// testCases entirely), same as CreateQuestion.jsx's default.
+const emptyCase = (isHidden) => ({ input: "", expected: "", isHidden, explanation: "" });
 const EMPTY_Q = {
   category: "HR", subject: "", company: "", aptitudeCategory: "", difficulty: "EASY", title: "", prompt: "",
   expectedKeywords: "", modelAnswer: "", options: "", correctAnswer: "", explanation: "", starterCode: "",
-  testCases: [{ input: "", expected: "", isHidden: false, explanation: "" }], language: "java", tags: "", followUpQuestionId: "",
+  testCases: [emptyCase(false), emptyCase(false), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true)],
+  language: "java", tags: "", followUpQuestionId: "",
   estimatedTimeMin: null, realWorldScenario: "", constraints: "", inputFormat: "", outputFormat: "",
   notes: "", edgeCases: "", problemExplanation: "", evaluationType: "STDIO",
 };
@@ -297,7 +302,7 @@ export default function InterviewAdmin() {
                   onStarterCodeChange={(v) => setForm({ ...form, starterCode: v })}
                 />
 
-                <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+                <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={5} />
 
                 <div style={{ marginTop: 10 }}>
                   <QuestionPreviewToggle

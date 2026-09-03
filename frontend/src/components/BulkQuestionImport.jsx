@@ -138,7 +138,7 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
 
       <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
         {questionKind === "coding"
-          ? "Coding questions — title, problem statement, difficulty, BTL level, 2 sample cases, and at least 10 hidden test cases. Each row/block can name its own Question Bank, or leave it blank to use the picker below."
+          ? "Coding questions — title, problem statement, difficulty, BTL level, 2 sample cases, and at least 5 hidden test cases. Each row/block can name its own Question Bank, or leave it blank to use the picker below."
           : "Multiple Choice, True/False, and Multiple Select questions, including BTL level."}
         {" "}Nothing is saved until you review the preview and confirm.
       </p>

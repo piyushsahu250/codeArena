@@ -16,9 +16,11 @@ const CATEGORY_SCHEMA_HINT = {
   CODING:
     'Return exactly {"questions": [{"title": string, "prompt": string, "difficulty": "EASY"|"MEDIUM"|"HARD", ' +
     '"tags": string[], "testCases": [{"input": string, "expected": string, "isHidden": boolean}]}]}. ' +
-    "Each question's testCases array must contain EXACTLY 2 entries with isHidden:false and EXACTLY 10 entries " +
-    "with isHidden:true (12 total) — this platform requires that minimum before a coding question can be " +
-    "published. `prompt` is the full original problem statement (goal, constraints, sample input/output).",
+    "Each question's testCases array must contain EXACTLY 2 entries with isHidden:false and EXACTLY 5 entries " +
+    "with isHidden:true (7 total, covering a basic case, a small/boundary case, a typical case, an edge case, " +
+    "and a large/stress case within the stated constraints) — this platform requires that minimum before a " +
+    "coding question can be published. `prompt` is the full original problem statement (goal, constraints, " +
+    "sample input/output).",
   APTITUDE:
     'Return exactly {"questions": [{"title": string, "prompt": string, ' +
     '"aptitudeCategory": "QUANTITATIVE"|"LOGICAL"|"VERBAL"|"DATA_INTERPRETATION", "options": string[] (exactly 4), ' +

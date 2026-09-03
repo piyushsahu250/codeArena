@@ -7,7 +7,10 @@
 // PATCH /:id route already enforces when test cases are edited directly — reused here rather than
 // re-invented, so a question can never reach VERIFIED below the bar this platform already sets for
 // "gradable."
-const MIN_CASES = { CODING: { visible: 2, hidden: 10 }, SQL: { visible: 1, hidden: 5 } };
+// CODING's hidden minimum was lowered from 10 to 5 (explicit product decision) — every question
+// authored under the old 10-minimum keeps every one of its existing hidden cases; this only
+// changes what's required of newly authored/edited ones going forward.
+const MIN_CASES = { CODING: { visible: 2, hidden: 5 }, SQL: { visible: 1, hidden: 5 } };
 
 function validateQuestionForVerification(question, testCases) {
   const reasons = [];

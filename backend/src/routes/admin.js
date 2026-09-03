@@ -74,12 +74,15 @@ router.get("/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
 });
 
 // Shared by the audit route below — same "mandatory field" set the admin CRUD routes already
-// enforce at creation time (2 visible / 10 hidden test cases, description, etc., see
+// enforce at creation time (2 visible / 5 hidden test cases, description, etc., see
 // moduleCoding.js/questions.js/learning.js/interview.js's own validation) plus a few fields those
 // routes leave optional but a genuinely complete question should still have (inputFormat,
 // outputFormat, constraints, tags, starter code). Deliberately read-only and non-destructive: this
 // only reports what's missing, it never invents content to fill the gap — an admin who hasn't
 // reviewed a question shouldn't have Claude-authored placeholder text silently attributed to them.
+// The hidden-test minimum was lowered platform-wide from 10 to 5 (explicit product decision, not a
+// bug fix) — the 138 existing questions authored under the old 10-minimum are unaffected and keep
+// every one of their existing hidden cases; this only changes what's required of NEW ones.
 function auditQuestion(q) {
   const missing = [];
   if (!q.title || !String(q.title).trim()) missing.push("title");
@@ -92,7 +95,7 @@ function auditQuestion(q) {
   const visible = testCases.filter((tc) => !tc.isHidden).length;
   const hidden = testCases.filter((tc) => tc.isHidden).length;
   if (visible < 2) missing.push(`visible test cases (has ${visible}, needs 2)`);
-  if (hidden < 10) missing.push(`hidden test cases (has ${hidden}, needs 10)`);
+  if (hidden < 5) missing.push(`hidden test cases (has ${hidden}, needs 5)`);
   const hasStarter = (q.starterCodeByLanguage && Object.keys(q.starterCodeByLanguage).length > 0) || !!q.starterCode;
   if (!hasStarter) missing.push("starter code");
   if (q.evaluationType === "FUNCTION" && !q.functionSignature) missing.push("function signature");

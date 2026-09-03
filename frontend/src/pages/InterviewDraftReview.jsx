@@ -270,7 +270,7 @@ function DraftQuestionCard({ draft, onChanged, selectable, selected, onToggleSel
               <div style={{ marginTop: 10 }}>
                 <ProblemStatementFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
               </div>
-              <TestCasesEditor testCases={form.testCases || []} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+              <TestCasesEditor testCases={form.testCases || []} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={5} />
             </>
           )}
 

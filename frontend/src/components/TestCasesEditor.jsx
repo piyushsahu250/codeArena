@@ -17,7 +17,7 @@ export default function TestCasesEditor({
   inputPlaceholder,
   expectedPlaceholder,
   minVisible = 2,
-  minHidden = 10,
+  minHidden = 5,
 }) {
   function updateCase(idx, field, value) {
     const next = [...testCases];

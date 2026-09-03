@@ -733,8 +733,8 @@ router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "SU
     if (cases.filter((tc) => !tc.isHidden).length < 2) {
       return res.status(400).json({ error: "Each question needs at least 2 visible sample test cases" });
     }
-    if (cases.filter((tc) => tc.isHidden).length < 10) {
-      return res.status(400).json({ error: "Each question needs at least 10 hidden test cases for final evaluation" });
+    if (cases.filter((tc) => tc.isHidden).length < 5) {
+      return res.status(400).json({ error: "Each question needs at least 5 hidden test cases for final evaluation" });
     }
     const q = await prisma.question.create({
       data: {
@@ -790,8 +790,8 @@ router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN"
 
     const visible = source.testCases.filter((tc) => !tc.isHidden).length;
     const hidden = source.testCases.filter((tc) => tc.isHidden).length;
-    if (visible < 2 || hidden < 10) {
-      return res.status(400).json({ error: `That question doesn't meet this test's minimum test-case requirements (needs 2 visible, 10 hidden — has ${visible} visible, ${hidden} hidden)` });
+    if (visible < 2 || hidden < 5) {
+      return res.status(400).json({ error: `That question doesn't meet this test's minimum test-case requirements (needs 2 visible, 5 hidden — has ${visible} visible, ${hidden} hidden)` });
     }
 
     const {
@@ -889,7 +889,7 @@ router.get("/admin/tests/:id/questions/bulk-template", authenticate, requireRole
       2, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
       "2 3", "5", "2 + 3 = 5",
       "10 20", "30", "",
-      "4 6->10||100 200->300||-5 5->0",
+      "4 6->10||100 200->300||-5 5->0||0 0->0||1000000000 1000000000->2000000000",
       "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
       "a, b = map(int, input().split())\nprint(a + b)",
       "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
@@ -984,8 +984,8 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
         continue;
       }
       const hiddenCases = parseModuleCodingHiddenTestCases(field(row, "hiddenTestCases"));
-      if (hiddenCases.length < 10) {
-        errors.push({ row: rowNum, reason: `Needs at least 10 hidden test cases — found ${hiddenCases.length} (check the "input->output||input->output" format)` });
+      if (hiddenCases.length < 5) {
+        errors.push({ row: rowNum, reason: `Needs at least 5 hidden test cases — found ${hiddenCases.length} (check the "input->output||input->output" format)` });
         continue;
       }
 
@@ -1077,8 +1077,8 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
       if (testCases.filter((tc) => !tc.isHidden).length < 2) {
         return res.status(400).json({ error: "Each question needs at least 2 visible sample test cases" });
       }
-      if (testCases.filter((tc) => tc.isHidden).length < 10) {
-        return res.status(400).json({ error: "Each question needs at least 10 hidden test cases for final evaluation" });
+      if (testCases.filter((tc) => tc.isHidden).length < 5) {
+        return res.status(400).json({ error: "Each question needs at least 5 hidden test cases for final evaluation" });
       }
       // Nested deleteMany+create inside the SAME update() call below, instead of a separate
       // prisma.testCase.deleteMany() run ahead of it — keeps the replace atomic with the update,

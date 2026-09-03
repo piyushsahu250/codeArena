@@ -63,7 +63,16 @@ export default function CreateQuestion() {
   const returnToChallenge = searchParams.get("returnToChallenge");
 
   const [form, setForm] = useState(emptyForm);
-  const [testCases, setTestCases] = useState([{ input: "", expected: "", isHidden: false, explanation: "" }]);
+  // 2 empty visible + 5 empty hidden rows by default — matches the platform's own minimum for a
+  // publishable coding question, so a new question starts with the right STRUCTURE ready to fill
+  // in, instead of forcing staff to click "+ Add" seven times before they can even begin (the
+  // previous single-empty-row default never matched the minimum even before it was 10). This never
+  // invents test DATA — every row starts genuinely blank, exactly as blank as the old single row was.
+  const emptyCase = (isHidden) => ({ input: "", expected: "", isHidden, explanation: "" });
+  const [testCases, setTestCases] = useState([
+    emptyCase(false), emptyCase(false),
+    emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true),
+  ]);
   const [options, setOptions] = useState(["", ""]);
   const [correctIndices, setCorrectIndices] = useState([]);
   const [folderId, setFolderId] = useState("");
@@ -170,7 +179,10 @@ export default function CreateQuestion() {
       if (q.functionSignature) setSignature(q.functionSignature);
       if (q.referenceSolution && typeof q.referenceSolution === "object") setReferenceSolution(q.referenceSolution);
       if (q.questionType === "CODING" || q.questionType === "SQL") {
-        setTestCases(q.testCases?.length ? q.testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || "" })) : [{ input: "", expected: "", isHidden: false, explanation: "" }]);
+        // The empty-array fallback only fires for a pre-existing row somehow saved with zero test
+        // cases at all (already invalid under this platform's own minimum) — same 2-visible/
+        // 5-hidden empty starting structure as a brand-new question, not a single lone row.
+        setTestCases(q.testCases?.length ? q.testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || "" })) : [emptyCase(false), emptyCase(false), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true)]);
       } else {
         setOptions(q.options?.length ? q.options : ["", ""]);
         setCorrectIndices(q.correctAnswer || []);
@@ -497,7 +509,7 @@ export default function CreateQuestion() {
                 inputLabel={form.evaluationType === "FUNCTION" ? "Input (one line per parameter)" : "Input (stdin)"}
                 expectedLabel={`Expected ${form.evaluationType === "FUNCTION" ? "return value" : "stdout"}`}
                 minVisible={2}
-                minHidden={10}
+                minHidden={5}
               />
 
               <div style={{ marginTop: 24, padding: 16, border: "1px solid var(--line)", borderRadius: "var(--radius)" }}>

@@ -100,8 +100,8 @@ async function approveDraftQuestion(draft, { req, frequencyTag, packageBand, exp
       err.status = 400;
       throw err;
     }
-    if (cases.filter((tc) => tc.isHidden).length < 10) {
-      const err = new Error("Each coding question needs at least 10 hidden test cases for final evaluation — edit the draft before approving");
+    if (cases.filter((tc) => tc.isHidden).length < 5) {
+      const err = new Error("Each coding question needs at least 5 hidden test cases for final evaluation — edit the draft before approving");
       err.status = 400;
       throw err;
     }
@@ -149,7 +149,7 @@ async function approveDraftQuestion(draft, { req, frequencyTag, packageBand, exp
 }
 
 // The ONLY funnel from a draft into a real, student-visible InterviewQuestion. Re-runs the exact
-// CODING 2-visible/10-hidden validation and resolveCodingFields() server-side resolution that
+// CODING 2-visible/5-hidden validation and resolveCodingFields() server-side resolution that
 // /admin/questions's own create/update routes enforce — a draft's own generation prompt only
 // requests that same minimum, but this is the real backstop, not the prompt.
 router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {

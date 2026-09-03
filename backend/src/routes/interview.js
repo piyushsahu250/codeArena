@@ -1342,7 +1342,7 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
     } = req.body;
     if (!category || !prompt) return res.status(400).json({ error: "category and prompt are required" });
     // CODING was previously the one category with no minimum test-case check at all (every other
-    // coding surface on the platform enforces this) — same 2 visible / 10 hidden bar as Question/
+    // coding surface on the platform enforces this) — same 2 visible / 5 hidden bar as Question/
     // PracticeQuestion. Unconditional (not gated on testCases being present) since this is
     // creation — a CODING question with no test cases at all must never be allowed to exist,
     // not just one with too few.
@@ -1352,8 +1352,8 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
       if (cases.filter((tc) => !tc.isHidden).length < 2) {
         return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases" });
       }
-      if (cases.filter((tc) => tc.isHidden).length < 10) {
-        return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
+      if (cases.filter((tc) => tc.isHidden).length < 5) {
+        return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
       resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage });
     }
@@ -1392,8 +1392,8 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
       if (req.body.testCases.filter((tc) => !tc.isHidden).length < 2) {
         return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases" });
       }
-      if (req.body.testCases.filter((tc) => tc.isHidden).length < 10) {
-        return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
+      if (req.body.testCases.filter((tc) => tc.isHidden).length < 5) {
+        return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
     }
     const fields = [
@@ -1703,8 +1703,8 @@ router.post("/admin/questions/import", authenticate, requireRole("ADMIN", "SUPER
       const parsedTestCases = usingNamedColumns ? [...namedSample1, ...namedSample2, ...namedHidden] : legacyTestCases;
       if (category === "CODING") {
         const cases = Array.isArray(parsedTestCases) ? parsedTestCases : [];
-        if (cases.filter((tc) => !tc.isHidden).length < 2 || cases.filter((tc) => tc.isHidden).length < 10) {
-          errors.push({ row: rowNum, reason: usingNamedColumns ? "Coding questions need 2 complete sample test cases and at least 10 hidden test cases" : "Coding questions need testCases as a JSON array with at least 2 visible and 10 hidden cases" });
+        if (cases.filter((tc) => !tc.isHidden).length < 2 || cases.filter((tc) => tc.isHidden).length < 5) {
+          errors.push({ row: rowNum, reason: usingNamedColumns ? "Coding questions need 2 complete sample test cases and at least 5 hidden test cases" : "Coding questions need testCases as a JSON array with at least 2 visible and 5 hidden cases" });
           continue;
         }
       }

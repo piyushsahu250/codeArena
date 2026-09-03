@@ -61,7 +61,7 @@ router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMI
         system: "You write programming exam questions for a computer-science education platform. Return only JSON matching the requested schema — no markdown formatting inside JSON string values.",
         prompt: `Write one ${difficulty || "MEDIUM"}-difficulty CODING question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. The student writes a complete stdin/stdout program in any language — no function-signature harness.${btlInstruction}${skillInstruction}
 Return JSON exactly shaped: {"title": string, "description": string (full problem statement including input/output format and constraints), "explanation": string (brief solution approach), "testCases": [{"input": string, "expected": string, "isHidden": boolean}]}.
-Provide exactly 5 testCases: 2 with isHidden=false (visible samples shown to students) and 3 with isHidden=true (used only for grading, covering edge cases).`,
+Provide exactly 7 testCases: 2 with isHidden=false (visible samples shown to students) and 5 with isHidden=true (used only for grading — cover a basic case, a small/boundary case, a typical case, an edge case, and a large/stress case within the stated constraints).`,
         maxTokens: 1500,
         injectionGuard: false, // subject/topic/skillTested are short admin-typed labels, not free-form student content
         validate: (v) => (!v?.title || !v?.description || !Array.isArray(v?.testCases)) ? "missing title/description/testCases" : null,

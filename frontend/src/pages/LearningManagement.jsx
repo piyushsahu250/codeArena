@@ -828,9 +828,14 @@ function ContentVersionPanel({ lessonId, onPublished }) {
 // that pre-checks the first radio button lets a staff member save a question without ever having
 // actually picked the correct answer, silently biasing every MCQ toward option A. See the create()
 // handler below, which now blocks submission until one is explicitly selected.
+// 2 empty visible + 5 empty hidden rows — matches the platform's minimum for a publishable CODING
+// question (only relevant once type is switched to CODING; MCQ/OUTPUT_PREDICTION/DEBUG ignore
+// testCases entirely).
+const emptyCase = (isHidden) => ({ input: "", expected: "", isHidden, explanation: "" });
 const EMPTY_Q = {
   type: "MCQ", prompt: "", options: ["", "", "", ""], correctAnswer: null, explanation: "", starterCode: "",
-  testCases: [{ input: "", expected: "", isHidden: false, explanation: "" }], language: "java",
+  testCases: [emptyCase(false), emptyCase(false), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true)],
+  language: "java",
   title: "", tags: "", estimatedTimeMin: null, realWorldScenario: "", constraints: "",
   inputFormat: "", outputFormat: "", notes: "", edgeCases: "", problemExplanation: "", evaluationType: "STDIO",
 };
@@ -982,7 +987,7 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
                 onStarterCodeChange={(v) => setForm({ ...form, starterCode: v })}
               />
 
-              <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+              <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={5} />
 
               <div style={{ marginTop: 10 }}>
                 <QuestionPreviewToggle
@@ -1186,9 +1191,12 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
   );
 }
 
+// 2 empty visible + 5 empty hidden rows — matches the platform's minimum for a publishable coding
+// question (this form is always CODING type, no other question type to consider).
 const EMPTY_CODING_Q = {
   title: "", description: "", difficulty: "EASY", starterCodeByLanguage: {}, timeLimitMs: 3000,
-  testCases: [{ input: "", expected: "", isHidden: false, explanation: "" }], tags: "",
+  testCases: [emptyCase(false), emptyCase(false), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true), emptyCase(true)],
+  tags: "",
   estimatedTimeMin: null, realWorldScenario: "", constraints: "", inputFormat: "", outputFormat: "",
   notes: "", edgeCases: "", problemExplanation: "",
 };
@@ -1346,7 +1354,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
             Search the shared Question Bank for an existing coding question and add a copy of it to this test's pool,
-            instead of retyping one from scratch. Only questions with at least 2 visible and 10 hidden test cases can be added.
+            instead of retyping one from scratch. Only questions with at least 2 visible and 5 hidden test cases can be added.
           </p>
           <input
             style={{ ...inputStyle, marginTop: 8 }}
@@ -1376,7 +1384,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>
             Import multiple coding questions at once from an .xlsx/.csv file — each row needs 2 visible sample
-            test cases and at least 10 hidden test cases.{" "}
+            test cases and at least 5 hidden test cases.{" "}
             <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px" }} onClick={downloadBulkTemplate}>
               ⬇ Download template
             </button>
@@ -1458,7 +1466,7 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
               />
             </div>
           ))}
-          <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={10} />
+          <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={2} minHidden={5} />
           <div style={{ marginTop: 10 }}>
             <QuestionPreviewToggle
               question={{

@@ -561,8 +561,8 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       if (cases.filter((tc) => !tc.isHidden).length < 2) {
         return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases" });
       }
-      if (cases.filter((tc) => tc.isHidden).length < 10) {
-        return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
+      if (cases.filter((tc) => tc.isHidden).length < 5) {
+        return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
       data.timeLimitMs = timeLimitMs ?? 2000;
       data.memoryLimitKb = memoryLimitKb || null;
@@ -590,9 +590,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
         return res.status(400).json({ error: "Each SQL question needs at least 1 visible sample test case" });
       }
       // SQL hidden cases each carry their own additional setup SQL (see the sqlSchema comment on
-      // the Question model) — authoring 10+ meaningfully distinct ones is a much heavier lift than
-      // for STDIO/FUNCTION cases, so the bar is raised less far here (1 -> 5) rather than to the
-      // general 10 used for CODING questions below.
+      // the Question model) — same 5-hidden-case minimum CODING questions now use below.
       if (cases.filter((tc) => tc.isHidden).length < 5) {
         return res.status(400).json({ error: "Each SQL question needs at least 5 hidden test cases for final evaluation" });
       }
@@ -1199,7 +1197,7 @@ router.post("/folders/:id/clear", authenticate, requireRole("ADMIN", "SUPER_ADMI
 
 // Notepad/.txt sample templates — hand-written (not generated from the xlsx sample data) so the
 // field order and wording match exactly what a staff member typing into Notepad would see,
-// including the platform's actual minimums (2 sample cases + 10 hidden cases for coding) spelled
+// including the platform's actual minimums (2 sample cases + 5 hidden cases for coding) spelled
 // out as a comment rather than left implicit.
 const MCQ_TXT_TEMPLATE = `Notepad Question Upload — Multiple Choice / True-False / Multiple Select
 One question per block, separated by a blank line. Each field is a "Label:" line — the value can
@@ -1293,7 +1291,7 @@ const CODING_TXT_TEMPLATE = `Notepad Question Upload — Coding
 One question per block, separated by a line of at least 3 dashes (---). Each field is a LABEL:
 line — the value can continue on the next line(s) until the next label. This platform requires
 2 visible sample cases (SAMPLE_INPUT/SAMPLE_OUTPUT and SAMPLE_INPUT_2/SAMPLE_OUTPUT_2) plus at
-least 10 hidden cases inside TEST_CASES (each as an INPUT: / OUTPUT: pair) — fewer than that will
+least 5 hidden cases inside TEST_CASES (each as an INPUT: / OUTPUT: pair) — fewer than that will
 be rejected, same as the spreadsheet template.
 
 QUESTION: Write a program to find the maximum element in an array.
@@ -1328,21 +1326,6 @@ OUTPUT: 0
 INPUT: 2
 1000000 999999
 OUTPUT: 1000000
-INPUT: 4
-3 3 3 3
-OUTPUT: 3
-INPUT: 7
-1 2 3 4 5 6 7
-OUTPUT: 7
-INPUT: 3
--10 -20 -30
-OUTPUT: -10
-INPUT: 5
-100 50 100 25 100
-OUTPUT: 100
-INPUT: 2
--5 5
-OUTPUT: 5
 `;
 
 // Download a sample template for bulk question import — quiz types by default, or coding
@@ -1367,7 +1350,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
         2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
         "2 3", "5", "2 + 3 = 5",
         "10 20", "30", "",
-        "4 6->10||100 200->300||-5 5->0",
+        "4 6->10||100 200->300||-5 5->0||0 0->0||1000000000 1000000000->2000000000",
         "STDIO", "", "", "",
         "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
         "a, b = map(int, input().split())\nprint(a + b)",
@@ -1383,7 +1366,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
         2, 256, 10, "1 <= a, b <= 10^9", "N/A — function parameters, not stdin", "N/A — return value, not stdout",
         "2\n3", "5", "2 + 3 = 5",
         "10\n20", "30", "",
-        "4\n6->10||100\n200->300||-5\n5->0",
+        "4\n6->10||100\n200->300||-5\n5->0||0\n0->0||1000000000\n1000000000->2000000000",
         "Function", "add", "int", "a:int, b:int",
         "", "", "", "",
         "Math, Basics", "Java Coding Bank",
@@ -1910,8 +1893,8 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
         continue;
       }
       const hiddenCases = parseHiddenTestCases(field(row, "hiddenTestCases"));
-      if (hiddenCases.length < 10) {
-        errors.push({ row: rowNum, reason: `Needs at least 10 hidden test cases — found ${hiddenCases.length} (check the "input->output||input->output" format)` });
+      if (hiddenCases.length < 5) {
+        errors.push({ row: rowNum, reason: `Needs at least 5 hidden test cases — found ${hiddenCases.length} (check the "input->output||input->output" format)` });
         continue;
       }
 
@@ -2242,8 +2225,8 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
         if (testCases.filter((tc) => !tc.isHidden).length < 2) {
           return res.status(400).json({ error: "Each coding question needs at least 2 visible sample test cases" });
         }
-        if (testCases.filter((tc) => tc.isHidden).length < 10) {
-          return res.status(400).json({ error: "Each coding question needs at least 10 hidden test cases for final evaluation" });
+        if (testCases.filter((tc) => tc.isHidden).length < 5) {
+          return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
         }
         // Nested deleteMany+create inside the SAME update() call below, rather than a separate
         // prisma.testCase.deleteMany() executed here — keeps the replace atomic with the update. A

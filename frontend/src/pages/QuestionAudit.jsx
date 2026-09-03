@@ -31,7 +31,7 @@ export default function QuestionAudit() {
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>
           Every coding question on the platform, checked against the same mandatory-field bar new questions are
           already held to at creation (description, input/output format, constraints, tags, starter code, 2+
-          visible / 10+ hidden test cases). This only reports gaps — it never fills them in, since generating
+          visible / 5+ hidden test cases). This only reports gaps — it never fills them in, since generating
           missing content on a question no one has reviewed isn't something to do silently.
         </p>
 
