@@ -242,5 +242,10 @@ app.listen(PORT, () => {
   // first real student submission to pay that cost — see warmUpCompilers()'s own comment for why
   // this matters specifically on this instance. Fire-and-forget: must never delay startup or crash
   // the process if it fails.
-  require("./utils/judge").warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message));
+  const judge = require("./utils/judge");
+  judge.warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message));
+  // Installs the sandbox-uid network-egress block once at startup — see setupNetworkIsolation()'s
+  // own comment for the full reasoning. Fire-and-forget, same as the warm-up above: must never
+  // delay startup or crash the process if iptables/the required capability isn't available.
+  judge.setupNetworkIsolation().catch((err) => console.warn("judge network isolation setup failed", err.message));
 });

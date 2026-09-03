@@ -27,6 +27,7 @@ RUN apt-get update -o Acquire::Retries=3 && DEBIAN_FRONTEND=noninteractive apt-g
     postgresql-client \
     util-linux \
     libcap2-bin \
+    iptables \
     libcairo2-dev \
     libpango1.0-dev \
     libjpeg-dev \
@@ -69,7 +70,7 @@ RUN npx prisma generate
 RUN chown -R app:app /app && chmod -R 750 /app
 
 # Grants the `node` binary itself (not the `app` user broadly, and not the whole container via
-# --cap-add) exactly the four capabilities judge.js needs: CAP_SETUID/CAP_SETGID to drop its
+# --cap-add) exactly the capabilities judge.js needs: CAP_SETUID/CAP_SETGID to drop its
 # child processes to `sandbox` before executing student code; CAP_CHOWN because judge.js
 # fs.chownSync()s each submission's temp directory/file to `sandbox` BEFORE that child runs (see
 # prepare()'s "sandbox needs read access" comment below); and CAP_FOWNER because the very next
@@ -84,13 +85,28 @@ RUN chown -R app:app /app && chmod -R 750 /app
 # failed first with "EPERM ... chown", then "EPERM ... chmod" on the same temp file, until CHOWN
 # then FOWNER were added; KILL is added proactively here since the same uid-boundary reasoning
 # applies to it and a broken timeout-kill would be a much worse failure mode to discover live —
-# a runaway submission that can't be killed — than a warm-up compile error.) All five are already
-# inside Docker's default capability bounding set — this doesn't grant anything new at the
-# container level, it just lets a non-root process actually exercise capabilities that were always
-# available to root by default. Must target the real binary, not the /usr/local/bin/node symlink
-# node:20-slim ships — `readlink -f` resolves it, since file capabilities are stored as an xattr on
-# the actual inode and are silently no-ops on a symlink.
-RUN setcap cap_setuid,cap_setgid,cap_chown,cap_fowner,cap_kill=+ep "$(readlink -f "$(which node)")"
+# a runaway submission that can't be killed — than a warm-up compile error.) Those five are already
+# inside Docker's default capability bounding set — granting them via setcap doesn't add anything
+# new at the container level, it just lets a non-root process actually exercise capabilities that
+# were always available to root by default.
+#
+# CAP_NET_ADMIN is different: it is NOT in Docker's default bounding set, so setcap alone is not
+# enough — the container itself must also be started with --cap-add=NET_ADMIN (see
+# deploy-backend.sh), or this capability silently has no effect regardless of what's set here.
+# judge.js's setupNetworkIsolation() uses it once at server startup to install a single iptables
+# OUTPUT rule dropping every packet from the `sandbox` uid — the actual fix for the confirmed live
+# gap that `unshare -n` (network-namespace-per-execution isolation, tried first) cannot work at
+# all under this minimal capability set: creating a new network namespace needs CAP_SYS_ADMIN,
+# which is a far broader capability than this platform is willing to grant just to make that one
+# mechanism work. A uid-based netfilter rule needs only CAP_NET_ADMIN to INSTALL, once, and then
+# enforces at the kernel level for every subsequent `sandbox`-uid packet with zero ongoing
+# capability requirement from the per-submission process itself — narrower, and it doesn't care
+# how many times per second submissions spawn.
+#
+# Must target the real binary, not the /usr/local/bin/node symlink node:20-slim ships —
+# `readlink -f` resolves it, since file capabilities are stored as an xattr on the actual inode and
+# are silently no-ops on a symlink.
+RUN setcap cap_setuid,cap_setgid,cap_chown,cap_fowner,cap_kill,cap_net_admin=+ep "$(readlink -f "$(which node)")"
 
 # The main API process runs as this non-root user from here on. It still becomes root-equivalent
 # for exactly the two syscalls above (setuid/setgid) when judge.js drops a child process to
