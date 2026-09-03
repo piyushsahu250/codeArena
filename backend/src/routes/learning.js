@@ -18,6 +18,7 @@ const { requireFeature } = require("../middleware/featureGate");
 const { courseEligibilityWhere, isEligibilityUnresolvable, studentCanAccessCourse, isCourseVisibleToStudent } = require("../utils/courseEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { getCourseLockInfo, wouldCreateCycle } = require("../utils/courseLock");
+const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
 const {
   ownsLmsInstitute, resolveModuleCourseInstituteId, resolveChapterCourseInstituteId,
   resolveLessonCourseInstituteId, resolvePracticeQuestionCourseInstituteId,
@@ -46,9 +47,15 @@ const hintLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req)
 // Strips answer-revealing fields from a practice question before sending it to a student. For
 // CODING questions this includes the sample (non-hidden) test cases, so a student can see what
 // their code needs to produce before running it — hidden cases (used by /submit) never go out.
-function sanitizeQuestion(q) {
+// `studentId` seeds a per-student, per-question option shuffle (see utils/optionShuffle.js) —
+// stable across refreshes/re-opens since it's a pure function of (studentId, q.id), not stored
+// state. Only applied to types that actually carry an options[]/correctAnswer-index pair (MCQ,
+// DEBUG, OUTPUT_PREDICTION per LearningManagement.jsx); FILL_BLANK and CODING pass through
+// untouched. Grading (test-submit, practice/:id/check below) must invert with this same seed.
+function sanitizeQuestion(q, studentId) {
+  const shuffled = studentId && Array.isArray(q.options) ? shuffleQuestionOptions(q.options, null, `${studentId}:${q.id}`) : null;
   return {
-    id: q.id, type: q.type, prompt: q.prompt, options: q.options,
+    id: q.id, type: q.type, prompt: q.prompt, options: shuffled ? shuffled.options : q.options,
     starterCode: q.starterCode, starterCodeByLanguage: q.starterCodeByLanguage || null, language: q.language, order: q.order,
     evaluationType: q.evaluationType, functionSignature: q.functionSignature,
     testCases: q.type === "CODING" ? (Array.isArray(q.testCases) ? q.testCases.filter((tc) => !tc.isHidden) : []) : undefined,
@@ -342,7 +349,7 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
     progress: progress ? { status: progress.status, bookmarked: progress.bookmarked } : null,
     // Admin/Staff get full question data (correctAnswer/explanation/testCases) for the CMS
     // edit form; a Student only ever sees the sanitized, answer-free shape.
-    questions: req.user.role === "STUDENT" ? lesson.questions.map(sanitizeQuestion) : lesson.questions,
+    questions: req.user.role === "STUDENT" ? lesson.questions.map((q) => sanitizeQuestion(q, req.user.id)) : lesson.questions,
   });
 });
 
@@ -448,15 +455,23 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), at
     const results = questions.map((q) => {
       const selected = answers[q.id];
       let correct;
+      // `selected` is a position in the shuffled options[] this student was shown (see
+      // sanitizeQuestion — same `${studentId}:${q.id}` seed) — invert before comparing, and
+      // re-express options/correctAnswer/selected in that same shuffled space in the response so
+      // the review screen shows exactly what the student saw, not the original authoring order.
+      const shuffled = q.type !== "FILL_BLANK" ? shuffleQuestionOptions(q.options, q.correctAnswer, `${req.user.id}:${q.id}`) : null;
       if (q.type === "FILL_BLANK") {
         correct = String(selected ?? "").trim().toLowerCase() === String(q.correctAnswer ?? "").trim().toLowerCase();
       } else {
-        correct = selected !== undefined && selected !== null && Number(selected) === Number(q.correctAnswer);
+        const originalSelected = selected !== undefined && selected !== null ? toOriginalSelection(Number(selected), shuffled.order) : null;
+        correct = originalSelected !== null && originalSelected === Number(q.correctAnswer);
       }
       if (correct) correctCount++;
       return {
-        questionId: q.id, type: q.type, prompt: q.prompt, options: q.options,
-        selected: selected ?? null, correct, correctAnswer: q.correctAnswer, explanation: q.explanation || null,
+        questionId: q.id, type: q.type, prompt: q.prompt, options: shuffled ? shuffled.options : q.options,
+        selected: selected ?? null, correct,
+        correctAnswer: shuffled ? shuffled.correctAnswer : q.correctAnswer,
+        explanation: q.explanation || null,
       };
     });
 
@@ -617,12 +632,20 @@ router.post("/practice/:id/check", authenticate, requireRole("STUDENT"), async (
     if (q.type === "CODING") return res.status(400).json({ error: "Use /run for coding questions" });
 
     let correct;
+    let correctAnswerOut = q.correctAnswer;
     if (q.type === "FILL_BLANK") {
       correct = String(req.body.answer ?? "").trim().toLowerCase() === String(q.correctAnswer ?? "").trim().toLowerCase();
     } else {
-      correct = Number(req.body.answer) === Number(q.correctAnswer);
+      // req.body.answer is a position in the shuffled options[] the student was shown (see
+      // sanitizeQuestion above) — invert with the SAME seed before comparing against the
+      // original-space correctAnswer index. correctAnswerOut is re-expressed in that same
+      // shuffled space so the frontend's existing "options[correctAnswer]" rendering still works.
+      const shuffled = shuffleQuestionOptions(q.options, q.correctAnswer, `${req.user.id}:${q.id}`);
+      const originalSelected = toOriginalSelection(Number(req.body.answer), shuffled.order);
+      correct = req.body.answer !== undefined && req.body.answer !== null && originalSelected === Number(q.correctAnswer);
+      correctAnswerOut = shuffled.correctAnswer;
     }
-    res.json({ correct, correctAnswer: q.correctAnswer, explanation: q.explanation || null });
+    res.json({ correct, correctAnswer: correctAnswerOut, explanation: q.explanation || null });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to check answer" });

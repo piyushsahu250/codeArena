@@ -824,8 +824,12 @@ function ContentVersionPanel({ lessonId, onPublished }) {
   );
 }
 
+// correctAnswer starts at null, deliberately NOT defaulted to an option (index 0/"A") — a form
+// that pre-checks the first radio button lets a staff member save a question without ever having
+// actually picked the correct answer, silently biasing every MCQ toward option A. See the create()
+// handler below, which now blocks submission until one is explicitly selected.
 const EMPTY_Q = {
-  type: "MCQ", prompt: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", starterCode: "",
+  type: "MCQ", prompt: "", options: ["", "", "", ""], correctAnswer: null, explanation: "", starterCode: "",
   testCases: [{ input: "", expected: "", isHidden: false, explanation: "" }], language: "java",
   title: "", tags: "", estimatedTimeMin: null, realWorldScenario: "", constraints: "",
   inputFormat: "", outputFormat: "", notes: "", edgeCases: "", problemExplanation: "", evaluationType: "STDIO",
@@ -838,9 +842,17 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
   const [form, setForm] = useState(EMPTY_Q);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   async function create(e) {
     e.preventDefault();
+    // No default correct answer is pre-selected (see EMPTY_Q) — block the save outright rather
+    // than silently persisting a null/undefined correctAnswer, which would make the question
+    // ungradable forever instead of just visibly incomplete right now.
+    if ((form.type === "MCQ" || form.type === "DEBUG" || form.type === "OUTPUT_PREDICTION") && form.correctAnswer === null) {
+      toast.error("Select which option is correct before saving.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = { ...form, order: lesson.questions?.length || 0 };

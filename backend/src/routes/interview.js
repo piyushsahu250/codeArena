@@ -15,6 +15,7 @@ const { buildInterviewReport } = require("../utils/interviewReport");
 const { buildRecommendations } = require("../utils/interviewRecommendations");
 const { generateResumeQuestions } = require("../utils/resumeInterviewQuestions");
 const { generateInterviewCertificatePdf } = require("../utils/interviewCertificatePdf");
+const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
 const { generateInterviewReportPdf } = require("../utils/interviewReportPdf");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
 const aiService = require("../services/ai/aiService");
@@ -86,10 +87,15 @@ function splitInterviewCases(testCases) {
   return { visible, hidden };
 }
 
-function sanitizeQuestion(q) {
+// `seed` (typically `${sessionId}:${q.id}`) shuffles APTITUDE options for display — see
+// utils/optionShuffle.js. Deterministic per interview session, so a refresh/resume/review shows
+// the same order every time without persisting anything new. Never touches correctAnswer, which
+// this sanitizer already excludes from every response.
+function sanitizeQuestion(q, seed) {
+  const options = seed && Array.isArray(q.options) ? shuffleQuestionOptions(q.options, null, seed).options : q.options;
   return {
     id: q.id, category: q.category, subject: q.subject, company: q.company, aptitudeCategory: q.aptitudeCategory,
-    difficulty: q.difficulty, title: q.title || null, prompt: q.prompt, options: q.options,
+    difficulty: q.difficulty, title: q.title || null, prompt: q.prompt, options,
     starterCode: q.starterCode, starterCodeByLanguage: q.starterCodeByLanguage || null, language: q.language, tags: q.tags || null,
     evaluationType: q.evaluationType, functionSignature: q.functionSignature,
     // Descriptive-only fields (CODING category), never reveal an answer — safe to send.
@@ -361,7 +367,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
           req, action: AUDIT_ACTIONS.INTERVIEW_SESSION_RESUMED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
           details: { sessionId: existing.id },
         });
-        return res.json({ session: existing, questions: ordered.map(sanitizeQuestion), resumed: true, serverTime: Date.now() });
+        return res.json({ session: existing, questions: ordered.map((q) => sanitizeQuestion(q, `${existing.id}:${q.id}`)), resumed: true, serverTime: Date.now() });
       }
     }
 
@@ -495,7 +501,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
       req, action: AUDIT_ACTIONS.INTERVIEW_SESSION_STARTED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
       details: { sessionId: session.id, type: session.isMock ? "MOCK" : session.isResumeBased ? "RESUME_BASED" : session.isCompanyRound ? "COMPANY_ROUND" : session.talentPoolConfigId ? "TALENT_POOL" : session.category, company: session.config?.company || null },
     });
-    res.json({ session, questions: questions.map(sanitizeQuestion), resumed: false, serverTime: Date.now() });
+    res.json({ session, questions: questions.map((q) => sanitizeQuestion(q, `${session.id}:${q.id}`)), resumed: false, serverTime: Date.now() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to start interview session" });
@@ -530,7 +536,7 @@ router.get("/sessions/:id", authenticate, requireRole("STUDENT"), async (req, re
     });
     if (!session || session.studentId !== req.user.id) return res.status(404).json({ error: "Session not found" });
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
-    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
+    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}, `${session.id}:${a.questionId}`), answer: a }));
     // A completed session's report/weakAreas never changes, so recomputing recommendations on
     // every single report-page load/refresh (confirmed up to ~11 DB round trips) is pure waste —
     // cache per-session with a long TTL.
@@ -783,7 +789,12 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), execLi
       const r = evaluateTechnicalAnswer(answerText, question.expectedKeywords || []);
       score = r.score; breakdown = r.breakdown;
     } else if (question.category === "APTITUDE") {
-      const r = evaluateAptitudeAnswer(answerText, question.correctAnswer, session.config?.negativeMarking);
+      // answerText carries a position in the shuffled options[] this student was shown (see
+      // sanitizeQuestion — same `${sessionId}:${questionId}` seed) — invert back to the original
+      // Question.correctAnswer index space before comparing.
+      const shuffleOrder = Array.isArray(question.options) ? shuffleQuestionOptions(question.options, null, `${session.id}:${questionId}`).order : null;
+      const originalAnswer = answerText !== undefined && answerText !== null && answerText !== "" ? toOriginalSelection(Number(answerText), shuffleOrder) : answerText;
+      const r = evaluateAptitudeAnswer(originalAnswer, question.correctAnswer, session.config?.negativeMarking);
       score = r.score; breakdown = { correct: r.correct };
     } else if (question.category === "CODING") {
       // Save the code as a PENDING answer BEFORE invoking the judge — same "save first, grade
@@ -830,7 +841,7 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), execLi
       const followUpQ = await maybeInsertFollowUp(session, question, answerText, skipped);
       if (followUpQ) {
         await prisma.interviewAnswer.create({ data: { sessionId: session.id, questionId: followUpQ.id, skipped: true } });
-        followUpQuestion = sanitizeQuestion(followUpQ);
+        followUpQuestion = sanitizeQuestion(followUpQ, `${session.id}:${followUpQ.id}`);
       }
     } catch (e) {
       console.error("follow-up insertion failed", e);
@@ -1076,7 +1087,7 @@ router.get("/sessions/:id/report/pdf", authenticate, requireRole("STUDENT"), asy
     if (!session.report) return res.status(400).json({ error: "This interview hasn't been submitted yet" });
 
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
-    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
+    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}, `${session.id}:${a.questionId}`), answer: a }));
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -2106,7 +2117,7 @@ router.get("/admin/sessions/:sessionId/report", authenticate, requireRole("ADMIN
     }
 
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
-    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
+    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}, `${session.id}:${a.questionId}`), answer: a }));
 
     const violationsByType = {};
     for (const v of session.violations) violationsByType[v.type] = (violationsByType[v.type] || 0) + 1;
@@ -2141,7 +2152,7 @@ router.get("/admin/sessions/:sessionId/report/pdf", authenticate, requireRole("A
     if (!session.report) return res.status(400).json({ error: "This interview hasn't been submitted yet" });
 
     const questions = await prisma.interviewQuestion.findMany({ where: { id: { in: session.answers.map((a) => a.questionId) } } });
-    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
+    const ordered = session.answers.map((a) => ({ ...sanitizeQuestion(questions.find((q) => q.id === a.questionId) || {}, `${session.id}:${a.questionId}`), answer: a }));
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="interview-report-${session.student.name.replace(/\s+/g, "-")}-${session.id.slice(0, 8)}.pdf"`);

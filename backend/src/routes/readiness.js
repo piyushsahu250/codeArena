@@ -15,6 +15,7 @@ const { cached, invalidate } = require("../utils/cache");
 const { GRADABLE_QUESTION_TYPES } = require("../utils/readinessBlueprint");
 const { generateReadinessReportPdf } = require("../utils/readinessReportPdf");
 const { readinessSubjectEligibilityWhere, studentCanAccessReadinessSubject } = require("../utils/readinessEligibility");
+const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
 
 const router = express.Router();
 
@@ -93,11 +94,16 @@ function formatAcademicContext(student) {
   return parts.length ? parts.join(" · ") : null;
 }
 
-function sanitizeQuestionForStudent(q) {
+// `seed` (typically `${assessmentId}:${questionId}`) shuffles this question's MCQ/MULTISELECT/
+// TRUE_FALSE options for display — see utils/optionShuffle.js. Deterministic per assessment
+// attempt, so a refresh/resume shows the same order every time without persisting anything new.
+// Never touches correctAnswer since this sanitizer already excludes it from every response.
+function sanitizeQuestionForStudent(q, seed) {
+  const options = seed && Array.isArray(q.options) ? shuffleQuestionOptions(q.options, null, seed).options : q.options;
   return {
     id: q.id, title: q.title, description: q.description, subject: q.subject, topic: q.topic,
     subtopic: q.subtopic, questionType: q.questionType, difficulty: q.difficulty, points: q.points,
-    btlLevel: q.btlLevel, options: q.options, starterCode: q.starterCode,
+    btlLevel: q.btlLevel, options, starterCode: q.starterCode,
     starterCodeByLanguage: q.starterCodeByLanguage, language: q.language, tags: q.tags,
     evaluationType: q.evaluationType, functionSignature: q.functionSignature,
     estimatedTimeMin: q.estimatedTimeMin, realWorldScenario: q.realWorldScenario, constraints: q.constraints,
@@ -389,7 +395,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
       const questions = await prisma.question.findMany({ where: { id: { in: existing.answers.map((a) => a.questionId) } }, include: { testCases: true } });
       const ordered = existing.answers.map((a) => questions.find((q) => q.id === a.questionId)).filter(Boolean);
       logger.info("READINESS_ASSESSMENT_RESUMED", { assessmentId: existing.id, studentId: req.user.id, subjectId, questionCount: ordered.length });
-      return res.json({ assessment: existing, questions: ordered.map(sanitizeQuestionForStudent), resumed: true });
+      return res.json({ assessment: existing, questions: ordered.map((q) => sanitizeQuestionForStudent(q, `${existing.id}:${q.id}`)), resumed: true });
     }
 
     // Server-side attempt cap — a resumed in-progress attempt (handled above) never counts against
@@ -462,7 +468,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
 
     logger.info("READINESS_ASSESSMENT_CREATED", { assessmentId: assessment.id, studentId: req.user.id, subjectId, assessmentMode, questionCount: items.length, usedFallback });
 
-    res.json({ assessment, questions: items.map(sanitizeQuestionForStudent), resumed: false, usedFallback, shortfallLevels });
+    res.json({ assessment, questions: items.map((q) => sanitizeQuestionForStudent(q, `${assessment.id}:${q.id}`)), resumed: false, usedFallback, shortfallLevels });
   } catch (err) {
     if (err.status === 400) return res.status(400).json({ error: err.message });
     console.error(err);
@@ -481,7 +487,7 @@ router.get("/assessments/:id", authenticate, requireRole("STUDENT"), async (req,
     });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(404).json({ error: "Assessment not found" });
     const questions = await prisma.question.findMany({ where: { id: { in: assessment.answers.map((a) => a.questionId) } }, include: { testCases: true } });
-    const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}), answer: a }));
+    const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}, `${assessment.id}:${a.questionId}`), answer: a }));
     res.json({
       assessment: { ...assessment, academicContext: formatAcademicContext(assessment.student), coverage: computeAssessmentCoverage(assessment.blueprint) },
       questions: ordered,
@@ -516,7 +522,15 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
     const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 
-    const { score, isCorrect } = await gradeReadinessAnswer(question, { answerText, code, language, selectedOptions, skipped });
+    // selectedOptions arrives as positions in the shuffled display order this student was shown
+    // (see sanitizeQuestionForStudent — same `${assessmentId}:${questionId}` seed) — invert back to
+    // original Question.options/correctAnswer indices before grading. Stored as-submitted (shuffled
+    // space) below, same convention as Test/Submission — the review endpoint re-shuffles options
+    // the same way when displaying it back, so the stored value and the displayed options stay consistent.
+    const shuffleOrder = Array.isArray(question.options) ? shuffleQuestionOptions(question.options, null, `${assessment.id}:${questionId}`).order : null;
+    const originalSelectedOptions = Array.isArray(selectedOptions) ? toOriginalSelection(selectedOptions, shuffleOrder) : selectedOptions;
+
+    const { score, isCorrect } = await gradeReadinessAnswer(question, { answerText, code, language, selectedOptions: originalSelectedOptions, skipped });
 
     const normalizedOptions = Array.isArray(selectedOptions) ? selectedOptions : null;
     const answer = await prisma.readinessAnswer.update({

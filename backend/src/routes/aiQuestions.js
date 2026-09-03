@@ -1,9 +1,11 @@
 const express = require("express");
+const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
+const { shuffleQuestionOptions } = require("../utils/optionShuffle");
 
 const router = express.Router();
 
@@ -75,12 +77,40 @@ Provide exactly 5 testCases: 2 with isHidden=false (visible samples shown to stu
     const draft = await aiService.generateJson({
       feature: aiService.FEATURES.QUESTION_BANK_GENERATE, userId: req.user.id, instituteId: req.requesterInstituteId,
       system: "You write exam questions for a computer-science education platform. Return only JSON matching the requested schema.",
+      // Deliberately gives the model NO instruction about *where* the correct answer should sit
+      // among the options — asking an LLM to "randomize" a position is not a reliable substitute
+      // for real randomness (models have their own placement habits regardless of instruction).
+      // Correctness first (the model just writes the right answer and 3 genuine distractors),
+      // position second: the shuffle below re-randomizes placement server-side with a real RNG
+      // after generation, so the saved question's answer position is never a function of the
+      // model's own bias (see the MCQ correct-answer distribution audit this fix was written for).
       prompt: `Write one ${difficulty || "MEDIUM"}-difficulty ${type} question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. ${shapeHint}${btlInstruction}${skillInstruction}
 Return JSON exactly shaped: {"title": string, "description": string (the question text), "options": string[], "correctAnswer": number[] (0-based indices into options), "explanation": string}.`,
       maxTokens: 800,
       injectionGuard: false,
-      validate: (v) => (!v?.title || !v?.description) ? "missing title/description" : null,
+      validate: (v) => {
+        if (!v?.title || !v?.description) return "missing title/description";
+        // Don't blindly trust the model's own answer index (spec: never assume it's correct just
+        // because it parsed) — a generation that names an out-of-range or missing correctAnswer is
+        // surfaced as a generation failure (staff can retry or write it manually), never silently
+        // saved with a broken/empty answer.
+        if (type !== "CODING" && Array.isArray(v?.options)) {
+          const idxs = Array.isArray(v.correctAnswer) ? v.correctAnswer : [];
+          if (idxs.length === 0) return "AI did not specify a correct answer";
+          if (idxs.some((i) => typeof i !== "number" || i < 0 || i >= v.options.length)) return "AI's correct answer index is out of range";
+        }
+        return null;
+      },
     });
+    // Re-randomize option position with a real RNG (crypto.randomUUID() as the shuffle seed —
+    // see utils/optionShuffle.js) — every generated MCQ/MULTISELECT gets an independently random
+    // placement regardless of the model's own habits. TRUE_FALSE is left as-is (always exactly
+    // "True"/"False" in that order — nothing meaningful to shuffle there).
+    if ((type === "MCQ" || type === "MULTISELECT") && Array.isArray(draft.options) && Array.isArray(draft.correctAnswer)) {
+      const shuffled = shuffleQuestionOptions(draft.options, draft.correctAnswer, crypto.randomUUID());
+      draft.options = shuffled.options;
+      draft.correctAnswer = shuffled.correctAnswer;
+    }
     res.json({ questionType: type, btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null, ...draft });
   } catch (err) {
     sendAiError(res, err, "AI question generation failed — try again or write it manually");
