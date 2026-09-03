@@ -13,6 +13,7 @@ import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { checkOtherTabsOpen } from "../utils/tabPresence";
+import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -694,6 +695,31 @@ export default function TestTaking() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [started]);
 
+  // Mobile-keyboard signal — touch devices only. Android Chrome (and some other mobile browsers)
+  // automatically exits the Fullscreen API the instant a text input/editor (e.g. the Monaco code
+  // editor's hidden textarea) gains focus and the on-screen keyboard opens; that fires the exact
+  // same `fullscreenchange` event a genuine Escape-or-switch-away exit does. keyboardSignalRef lets
+  // handleFullscreenChange below tell the two apart before counting a violation. See
+  // utils/mobileKeyboard.js for the full rationale — same signal useProctoring.js uses.
+  const keyboardSignalRef = useRef(null);
+  useEffect(() => {
+    if (!started || testMeta?.requireFullscreen === false || !isTouchDevice()) return;
+    const signal = createKeyboardSignal({
+      onKeyboardClose: () => {
+        // Retried only once the keyboard has actually closed — attempting re-entry while it's
+        // still open is both pointless (no fresh user gesture) and can visibly flicker.
+        if (!finalizedRef.current && !getFullscreenElement()) {
+          requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+        }
+      },
+    });
+    keyboardSignalRef.current = signal;
+    return () => {
+      signal.destroy();
+      keyboardSignalRef.current = null;
+    };
+  }, [started, testMeta?.requireFullscreen]);
+
   // Fullscreen-exit detection — immediately attempts to force back into fullscreen. Browsers
   // that block programmatic re-entry without a fresh user gesture will silently no-op the
   // request; the warning banner's "Resume fullscreen" button (driven by fullscreenOk, kept in
@@ -706,6 +732,13 @@ export default function TestTaking() {
       const active = !!getFullscreenElement();
       setFullscreenOk(active);
       if (!active && !finalizedRef.current) {
+        // Not hidden + keyboard-shrink signal on a recently-focused editable == the platform's own
+        // fullscreen-vs-keyboard conflict, not a real exit. Logged distinctly, never counted as a
+        // violation, and recovery is deferred to onKeyboardClose above instead of retried here.
+        if (!document.hidden && keyboardSignalRef.current?.isKeyboardLikelyOpen()) {
+          console.info("[exam] KEYBOARD_VIEWPORT_CHANGE: fullscreen exit attributed to the on-screen keyboard, not counted as a violation");
+          return;
+        }
         reportViolation("exiting fullscreen during a test is not allowed");
         requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
       } else if (active) {

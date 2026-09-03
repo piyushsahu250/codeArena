@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import { requestFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -80,6 +81,28 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
       .finally(() => setFullscreenOk(!!getFullscreenElement()));
   }, []);
 
+  // Mobile-keyboard signal — touch devices only. Android Chrome (and some other mobile browsers)
+  // automatically exits the Fullscreen API the instant a text input/editor gains focus and the
+  // on-screen keyboard opens; that fires the exact same `fullscreenchange` event a genuine
+  // Escape-or-switch-away exit does. keyboardSignalRef lets the fullscreenchange handler below
+  // tell the two apart before counting a violation. See mobileKeyboard.js for the full rationale.
+  const keyboardSignalRef = useRef(null);
+  useEffect(() => {
+    if (!active || !isTouchDevice()) return;
+    const signal = createKeyboardSignal({
+      onKeyboardClose: () => {
+        // Retried only once the keyboard has actually closed — attempting re-entry while it's
+        // still open is both pointless (no fresh user gesture) and can visibly flicker.
+        if (requireFullscreen && !getFullscreenElement()) requestFullscreen();
+      },
+    });
+    keyboardSignalRef.current = signal;
+    return () => {
+      signal.destroy();
+      keyboardSignalRef.current = null;
+    };
+  }, [active, requireFullscreen, requestFullscreen]);
+
   // Fullscreen-exit detection — immediately attempts to re-enter; browsers that block
   // programmatic re-entry without a fresh gesture will silently no-op it. Registered via
   // onFullscreenChange so the vendor-prefixed change events are covered too, not just the
@@ -92,6 +115,13 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
       const isFs = !!getFullscreenElement();
       setFullscreenOk(isFs);
       if (!isFs) {
+        // Not hidden + keyboard-shrink signal on a recently-focused editable == the platform's own
+        // fullscreen-vs-keyboard conflict, not a real exit. Logged distinctly, never counted as a
+        // violation, and recovery is deferred to onKeyboardClose above instead of retried here.
+        if (!document.hidden && keyboardSignalRef.current?.isKeyboardLikelyOpen()) {
+          console.info("[proctoring] KEYBOARD_VIEWPORT_CHANGE: fullscreen exit attributed to the on-screen keyboard, not counted as a violation");
+          return;
+        }
         report("FULLSCREEN_EXIT");
         requestFullscreen();
       }
