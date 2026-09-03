@@ -97,6 +97,11 @@ async function generateMarksheetPdf(data, res) {
         { label: "Result", value: resultLabel, color: resultColor },
       ]
     : [{ label: "Result", value: resultLabel, color: resultColor }];
+  // Admin-configured tier beyond plain pass/fail (e.g. "Distinction", "Topper") -- already present
+  // on `entry` (same object the on-screen view and this PDF both read from buildMarksheetData()),
+  // just never rendered here before. GOLD matches the achievement-accent tone used for the header
+  // band, same reasoning as the on-screen view's amber badge.
+  if (isPresent && entry.resultTag) stats.push({ label: "Result Tag", value: entry.resultTag, color: GOLD });
   if (typeof rank === "number") stats.push({ label: "Rank", value: totalStudents ? `${rank} of ${totalStudents}` : String(rank) });
   if (typeof classAverage === "number") stats.push({ label: "Class Average", value: `${classAverage}` });
   if (typeof attendancePercent === "number") stats.push({ label: "Attendance", value: `${attendancePercent}%` });

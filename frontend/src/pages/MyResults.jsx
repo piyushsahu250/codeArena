@@ -67,12 +67,20 @@ export default function MyResults() {
                   </div>
                   {r.description && <div style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>{r.description}</div>}
                 </div>
-                <span
-                  className="badge"
-                  style={{ background: r.passed ? "var(--mint)" : "var(--rust)", color: "#fff", fontWeight: 700 }}
-                >
-                  {r.resultLabel}
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                  <span
+                    className="badge"
+                    style={{ background: r.passed ? "var(--mint)" : "var(--rust)", color: "#fff", fontWeight: 700 }}
+                  >
+                    {r.resultLabel}
+                  </span>
+                  {/* Admin-configured tier beyond plain pass/fail (e.g. "Distinction", "Topper") --
+                      same badge styling as the admin's own entries table (ResultManagement.jsx),
+                      so a student sees the exact tier their institute actually configured. */}
+                  {r.resultTag && (
+                    <span className="badge" style={{ background: "var(--amber)", fontSize: 11 }}>{r.resultTag}</span>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: 24, marginTop: 16, flexWrap: "wrap" }}>

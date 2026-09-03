@@ -92,6 +92,9 @@ export default function MarksheetView() {
     { label: "Percentage", value: `${entry.percentage}%` },
     entry.grade ? { label: "Grade", value: entry.grade } : null,
     { label: "Result", value: resultLabel, color: resultColor },
+    // Admin-configured tier beyond plain pass/fail (e.g. "Distinction", "Topper") -- already part
+    // of the buildMarksheetData() payload (entry is spread through unfiltered), just never shown.
+    entry.resultTag ? { label: "Result Tag", value: entry.resultTag, color: "var(--amber-dark)" } : null,
     typeof rank === "number" ? { label: "Rank", value: totalStudents ? `${rank} of ${totalStudents}` : rank } : null,
     typeof classAverage === "number" ? { label: "Class Average", value: classAverage } : null,
     typeof attendancePercent === "number" ? { label: "Attendance", value: `${attendancePercent}%` } : null,

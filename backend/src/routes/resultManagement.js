@@ -183,6 +183,10 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
       passed: e.status === "PRESENT" ? e.passed : null,
       resultLabel: e.status === "PRESENT" ? (e.passed ? e.examination.passLabel : e.examination.failLabel) : e.status,
       grade: e.status === "PRESENT" ? e.grade : null,
+      // Admin-configured tier beyond plain pass/fail (e.g. "Distinction", "Topper") -- computed and
+      // stored on every entry already (see resultTagging.js), but this list route never surfaced it
+      // to the student who earned it. Same PRESENT-only gate as grade/percentage above.
+      resultTag: e.status === "PRESENT" ? e.resultTag : null,
       allowPdfDownload: e.examination.allowPdfDownload,
     })));
   } catch (err) {
