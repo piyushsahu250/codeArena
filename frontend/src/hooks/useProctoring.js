@@ -21,6 +21,11 @@ const VIOLATION_DEDUPE_MS = 1200; // collapses e.g. fullscreenchange+visibilityc
 // done anything. This only suppresses the two transition-prone types, only for a few seconds
 // right after activation, and never suppresses a real mid-interview tab switch or fullscreen exit.
 const ACTIVATION_GRACE_MS = 3000;
+// How long the page must stay hidden before a tab-switch is actually reported -- see the
+// tab-switch effect below for why this exists (screen-off/notification-glance vs. a real switch
+// are indistinguishable at the instant `document.hidden` flips true; only elapsed time tells
+// them apart with any confidence).
+const TAB_SWITCH_GRACE_MS = 3000;
 
 // Shared proctoring primitives for a locked-down assessment — extracted so both the exam
 // (TestTaking.jsx, unchanged, still has its own inline copy) and the new module coding
@@ -133,18 +138,34 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     return onFullscreenChange(handleChange);
   }, [active, requireFullscreen, report, requestFullscreen]);
 
-  // Tab switch / window blur.
+  // Tab switch / window blur. `document.hidden` fires identically whether the student actually
+  // switched to another app OR just locked/the screen timed out and woke back up -- browsers
+  // deliberately don't expose which, for privacy. Reporting on the instant would count a phone
+  // going to sleep the same as searching for answers in another tab. Instead this waits
+  // TAB_SWITCH_GRACE_MS with the page still hidden before actually filing anything; if the
+  // student is back before then, nothing is ever reported at all. A real switch-away-to-search
+  // overwhelmingly lasts well past a few seconds, so this costs essentially no real detection.
+  const tabSwitchGraceTimerRef = useRef(null);
   useEffect(() => {
     if (!active) return;
     function handleVisibility() {
       if (document.hidden) {
-        report("TAB_SWITCH");
-      } else if (requireFullscreen && !getFullscreenElement()) {
-        requestFullscreen();
+        clearTimeout(tabSwitchGraceTimerRef.current);
+        tabSwitchGraceTimerRef.current = setTimeout(() => {
+          if (document.hidden) report("TAB_SWITCH");
+        }, TAB_SWITCH_GRACE_MS);
+      } else {
+        clearTimeout(tabSwitchGraceTimerRef.current);
+        if (requireFullscreen && !getFullscreenElement()) {
+          requestFullscreen();
+        }
       }
     }
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearTimeout(tabSwitchGraceTimerRef.current);
+    };
   }, [active, requireFullscreen, report, requestFullscreen]);
 
   // Copy / paste / cut — blocked outright, not just logged.

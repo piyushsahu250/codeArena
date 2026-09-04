@@ -109,18 +109,25 @@ export default function ModuleCodingAssessment() {
   }
   useEffect(() => { load(); }, [moduleId]);
 
+  // Every violation type is reported to the server, which decides -- never trusted client-side --
+  // whether it's penalized (tab switch, fullscreen exit, camera/mic dropped, screen overlay:
+  // counts toward the maxViolations auto-submit limit) or logged only (copy/paste, right-click,
+  // devtools attempt, face missing, etc: recorded for admin review but never costs a strike). See
+  // moduleCoding.js's PENALIZED_VIOLATION_TYPES for the exact list -- previously every type here
+  // showed the same "Warning X/Y ... will auto-submit" banner and counted the same, which is
+  // exactly the false-violation behavior this was fixed to stop.
   async function onViolation(type) {
     if (!attemptIdRef.current || finalizedRef.current) return;
     try {
       const { data } = await api.post(`/module-coding/attempts/${attemptIdRef.current}/violation`, { type });
-      setViolationCount(data.violationCount);
+      if (data.penalized) setViolationCount(data.violationCount);
       if (data.autoSubmitted) {
         finalizedRef.current = true;
         setAutoSubmitted(true);
         setAutoSubmitReasonMsg(VIOLATION_LABEL[type] || "a proctoring violation");
         proctor.stopMedia();
         if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
-      } else {
+      } else if (data.penalized) {
         const msg = `Warning ${data.violationCount}/${data.maxViolations}: ${VIOLATION_LABEL[type] || type}. The assessment will auto-submit if this continues.`;
         setViolationWarning(msg);
         setTimeout(() => setViolationWarning((m) => (m === msg ? null : m)), 6000);

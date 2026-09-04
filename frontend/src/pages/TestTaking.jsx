@@ -21,6 +21,9 @@ const FACE_CONFIDENCE_THRESHOLD = 0.7;
 // effect for why this needs its own timeout (same reasoning as useProctoring.js's identical
 // constant, kept in sync manually since this page still has its own inline proctoring copy).
 const FACE_MODEL_LOAD_TIMEOUT_MS = 15000;
+// See the tab-switch-detection effect for why this exists -- screen-off/notification-glance vs.
+// a real switch are indistinguishable at the instant `document.hidden` flips true.
+const TAB_SWITCH_GRACE_MS = 3000;
 
 const MAX_TAB_VIOLATIONS = 3;
 
@@ -698,17 +701,34 @@ export default function TestTaking() {
   // proctoring configuration — switching tabs always counts as a violation. Only the "snap back
   // into fullscreen on refocus" behavior is gated, since a test with requireFullscreen=false
   // never entered fullscreen at all.
+  //
+  // `document.hidden` fires identically whether the candidate switched to another app OR their
+  // phone screen just locked/timed out and woke back up — browsers don't expose which, for
+  // privacy, and a screen-off blip was previously counted exactly like a real tab switch. This
+  // waits TAB_SWITCH_GRACE_MS with the page still hidden before actually filing a violation; if
+  // the candidate is back before then, nothing is reported. A genuine switch-away-to-search
+  // overwhelmingly outlasts a few seconds, so this costs essentially no real detection.
+  const tabSwitchGraceTimerRef = useRef(null);
   useEffect(() => {
     if (!started) return;
     function handleVisibilityChange() {
       if (document.hidden) {
-        reportViolation("switching tabs during a test is not allowed");
-      } else if (testMeta?.requireFullscreen !== false && !finalizedRef.current && !getFullscreenElement()) {
-        requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+        clearTimeout(tabSwitchGraceTimerRef.current);
+        tabSwitchGraceTimerRef.current = setTimeout(() => {
+          if (document.hidden) reportViolation("switching tabs during a test is not allowed");
+        }, TAB_SWITCH_GRACE_MS);
+      } else {
+        clearTimeout(tabSwitchGraceTimerRef.current);
+        if (testMeta?.requireFullscreen !== false && !finalizedRef.current && !getFullscreenElement()) {
+          requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+        }
       }
     }
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearTimeout(tabSwitchGraceTimerRef.current);
+    };
   }, [started]);
 
   // Mobile-keyboard signal — touch devices only. Android Chrome (and some other mobile browsers)

@@ -438,8 +438,19 @@ router.post("/attempts/:attemptId/submit-code", authenticate, requireRole("STUDE
   }
 });
 
-// STUDENT: report a proctoring violation. Auto-submits (grades + finalizes) once the
-// test-configured maxViolations is reached.
+// Mirrors interview.js's identical allowlist exactly (same rationale: real strikes only for
+// events that are genuinely proctoring-relevant and hard to trigger by accident). Before this
+// existed, EVERY type the client sent — COPY, RIGHT_CLICK, DEVTOOLS, a transient MULTI_MONITOR
+// check, even a browser-shortcut keypress — counted as a full strike toward the same
+// auto-submit limit as an actual tab switch, confirmed live: a student could hit 2/3 strikes
+// without ever leaving the tab. Everything else is still recorded in ProctoringViolation (an
+// admin reviewing an attempt sees the full event log either way), it just doesn't count.
+const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED", "SCREEN_OVERLAY_DETECTED"]);
+
+// STUDENT: report a proctoring violation. `type` distinguishes what happened; only penalized
+// types count toward the test-configured maxViolations auto-submit limit — see
+// PENALIZED_VIOLATION_TYPES above. Never trusts a client-supplied penalized flag (there isn't
+// one) — this allowlist is the sole source of truth, same as interview.js's identical route.
 router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const attempt = await prisma.moduleCodingAttempt.findUnique({ where: { id: req.params.attemptId }, include: { moduleCodingTest: true } });
@@ -449,16 +460,27 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
     }
 
     const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
-    await prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type } });
-    const violationCount = attempt.violationCount + 1;
-    const autoSubmitted = violationCount >= attempt.moduleCodingTest.maxViolations;
+    const penalized = PENALIZED_VIOLATION_TYPES.has(type);
+    const violationCount = penalized ? attempt.violationCount + 1 : attempt.violationCount;
 
-    await prisma.moduleCodingAttempt.update({ where: { id: attempt.id }, data: { violationCount } });
+    // Log row and count update describe one event -- transact them together when penalized so a
+    // partial write (log lands, count update fails, or vice versa) never leaves the two out of
+    // sync. Non-penalized events only ever write the log, so no transaction is needed there.
+    if (penalized) {
+      await prisma.$transaction([
+        prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type } }),
+        prisma.moduleCodingAttempt.update({ where: { id: attempt.id }, data: { violationCount } }),
+      ]);
+    } else {
+      await prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type } });
+    }
+
+    const autoSubmitted = penalized && violationCount >= attempt.moduleCodingTest.maxViolations;
     if (autoSubmitted) {
       await gradeModuleCodingAttempt(attempt.id, { reason: "MAX_VIOLATIONS" });
     }
 
-    res.json({ violationCount, maxViolations: attempt.moduleCodingTest.maxViolations, autoSubmitted });
+    res.json({ violationCount, maxViolations: attempt.moduleCodingTest.maxViolations, penalized, autoSubmitted });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to record violation" });
