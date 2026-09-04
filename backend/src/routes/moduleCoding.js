@@ -15,6 +15,7 @@ const { requireFeature } = require("../middleware/featureGate");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { safeErrorMessage } = require("../utils/errors");
+const { classifyViolation } = require("../utils/proctoringSeverity");
 const {
   ownsLmsInstitute, resolveModuleCourseInstituteId, resolveChapterCourseInstituteId,
   resolveModuleCodingTestCourseInstituteId,
@@ -438,19 +439,18 @@ router.post("/attempts/:attemptId/submit-code", authenticate, requireRole("STUDE
   }
 });
 
-// Mirrors interview.js's identical allowlist exactly (same rationale: real strikes only for
-// events that are genuinely proctoring-relevant and hard to trigger by accident). Before this
-// existed, EVERY type the client sent — COPY, RIGHT_CLICK, DEVTOOLS, a transient MULTI_MONITOR
-// check, even a browser-shortcut keypress — counted as a full strike toward the same
-// auto-submit limit as an actual tab switch, confirmed live: a student could hit 2/3 strikes
-// without ever leaving the tab. Everything else is still recorded in ProctoringViolation (an
-// admin reviewing an attempt sees the full event log either way), it just doesn't count.
-const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED", "SCREEN_OVERLAY_DETECTED"]);
+// Severity classification (NORMAL/INTERRUPTION/SUSPICIOUS/CONFIRMED_VIOLATION) and whether a given
+// occurrence is penalized now live in utils/proctoringSeverity.js, shared identically by this
+// route, tests.js, and interview.js — see that file for the full reasoning, including why
+// SUSPICIOUS events escalate into a real strike after repeating rather than either always or
+// never counting. Before that existed, EVERY type the client sent here — COPY, RIGHT_CLICK,
+// DEVTOOLS, a transient MULTI_MONITOR check, even a browser-shortcut keypress — counted as a
+// full strike toward the same auto-submit limit as an actual tab switch, confirmed live: a
+// student could hit 2/3 strikes without ever leaving the tab.
 
-// STUDENT: report a proctoring violation. `type` distinguishes what happened; only penalized
-// types count toward the test-configured maxViolations auto-submit limit — see
-// PENALIZED_VIOLATION_TYPES above. Never trusts a client-supplied penalized flag (there isn't
-// one) — this allowlist is the sole source of truth, same as interview.js's identical route.
+// STUDENT: report a proctoring violation. `type` distinguishes what happened; classifyViolation()
+// is the sole source of truth for its severity and whether this occurrence counts toward the
+// test-configured maxViolations auto-submit limit — never a client-supplied flag.
 router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const attempt = await prisma.moduleCodingAttempt.findUnique({ where: { id: req.params.attemptId }, include: { moduleCodingTest: true } });
@@ -460,7 +460,10 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
     }
 
     const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
-    const penalized = PENALIZED_VIOLATION_TYPES.has(type);
+    // Counted fresh from the log every time (not a running counter column) so the escalation
+    // threshold in proctoringSeverity.js can change later without a backfill.
+    const priorSuspiciousCount = await prisma.proctoringViolation.count({ where: { attemptId: attempt.id, severity: "SUSPICIOUS" } });
+    const { severity, penalized } = classifyViolation(type, priorSuspiciousCount);
     const violationCount = penalized ? attempt.violationCount + 1 : attempt.violationCount;
 
     // Log row and count update describe one event -- transact them together when penalized so a
@@ -468,11 +471,11 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
     // sync. Non-penalized events only ever write the log, so no transaction is needed there.
     if (penalized) {
       await prisma.$transaction([
-        prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type } }),
+        prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type, severity, penalized } }),
         prisma.moduleCodingAttempt.update({ where: { id: attempt.id }, data: { violationCount } }),
       ]);
     } else {
-      await prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type } });
+      await prisma.proctoringViolation.create({ data: { attemptId: attempt.id, type, severity, penalized } });
     }
 
     const autoSubmitted = penalized && violationCount >= attempt.moduleCodingTest.maxViolations;
@@ -480,7 +483,7 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
       await gradeModuleCodingAttempt(attempt.id, { reason: "MAX_VIOLATIONS" });
     }
 
-    res.json({ violationCount, maxViolations: attempt.moduleCodingTest.maxViolations, penalized, autoSubmitted });
+    res.json({ violationCount, maxViolations: attempt.moduleCodingTest.maxViolations, severity, penalized, autoSubmitted });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to record violation" });

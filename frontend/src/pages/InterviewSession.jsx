@@ -62,6 +62,10 @@ export default function InterviewSession() {
   const [violationCount, setViolationCount] = useState(0);
   const [maxViolations, setMaxViolations] = useState(3);
   const [violationWarning, setViolationWarning] = useState(null);
+  // Distinct from violationWarning above: shown for a SUSPICIOUS-severity event that did NOT get
+  // penalized this time -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y"
+  // counter (since it didn't actually count), and a note that repeating it will start counting.
+  const [suspiciousNotice, setSuspiciousNotice] = useState(null);
   const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
   // Self-view proctoring video position, draggable — was a hardcoded position:fixed bottom-right
   // corner with no way to move it, which on mobile sits directly on top of the "Next"/"Submit
@@ -220,11 +224,16 @@ export default function InterviewSession() {
     });
   }, [activeDraft.code, activeDraft.language, activeQuestion?.id]);
 
-  // Every violation type is reported to the server, which decides — never trusted client-side —
-  // whether it's penalized (tab switch, fullscreen exit, camera/mic dropped: counts toward the
-  // 3-strike auto-terminate) or logged only (face missing briefly, multiple faces detected: per
-  // spec, "future ready, log don't penalize"). Noise/silent-environment reminders never reach
-  // here at all — they're pure client-side UI state from useProctoring's `noiseWarning`.
+  // Every violation type is reported to the server, which classifies it into one of four
+  // severities (see backend/src/utils/proctoringSeverity.js) and decides — never trusted
+  // client-side — whether THIS occurrence counts toward the 3-strike auto-terminate:
+  //   CONFIRMED_VIOLATION (tab switch, fullscreen exit, camera/mic dropped) -- always counts.
+  //   SUSPICIOUS (copy/paste, right-click, devtools attempt, screen overlay, etc.) -- a soft
+  //     notice the first couple of times; only escalates into a real strike after repeating.
+  //   INTERRUPTION (face missing briefly, multiple faces detected) -- never counts, per the
+  //     original "future ready, log don't penalize" policy for face signals, now generalized.
+  // Noise/silent-environment reminders never reach here at all — they're pure client-side UI
+  // state from useProctoring's `noiseWarning`.
   async function onViolation(type) {
     if (finalizedRef.current) return;
     try {
@@ -240,6 +249,10 @@ export default function InterviewSession() {
         const msg = `Warning ${res.violationCount}/${res.maxViolations}: ${VIOLATION_LABEL[type] || type}. The interview will be terminated if this continues.`;
         setViolationWarning(msg);
         setTimeout(() => setViolationWarning((m) => (m === msg ? null : m)), 6000);
+      } else if (res.severity === "SUSPICIOUS") {
+        const msg = `Notice: ${VIOLATION_LABEL[type] || type} was detected. This didn't count this time, but repeating it will.`;
+        setSuspiciousNotice(msg);
+        setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 5000);
       }
     } catch {
       // best-effort
@@ -672,6 +685,11 @@ export default function InterviewSession() {
         {violationWarning && (
           <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
             ⚠ {violationWarning}
+          </div>
+        )}
+        {suspiciousNotice && (
+          <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
+            {suspiciousNotice}
           </div>
         )}
         {/* Persistent (unlike violationWarning above) -- see ModuleCodingAssessment.jsx's

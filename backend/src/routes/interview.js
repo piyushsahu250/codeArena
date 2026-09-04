@@ -22,6 +22,7 @@ const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { cached } = require("../utils/cache");
 const { dedupe, isInFlight } = require("../utils/requestDedup");
+const { classifyViolation } = require("../utils/proctoringSeverity");
 const { COMPANIES } = require("../utils/companies");
 const { isStudentTalentPoolMember } = require("../utils/talentPoolEligibility");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
@@ -1023,13 +1024,15 @@ router.post("/sessions/:id/finalize", authenticate, requireRole("STUDENT"), asyn
   }
 });
 
-// STUDENT: report a proctoring violation. `type` distinguishes what happened; `penalized`
-// (client-supplied, cross-checked against a fixed server-side set below — never trust the
-// client's own penalized flag) determines whether it counts toward the 3-strike auto-terminate
-// threshold or is only logged for review (face missing briefly, multiple faces detected — per
-// spec, "future ready, log don't penalize"). Noise/silent-environment reminders never reach this
-// endpoint at all — they're pure client-side UI state, not a proctoring concern.
-const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED", "SCREEN_OVERLAY_DETECTED"]);
+// STUDENT: report a proctoring violation. `type` distinguishes what happened; classifyViolation()
+// (utils/proctoringSeverity.js, shared identically by moduleCoding.js and tests.js) is the sole
+// source of truth for its severity and whether this occurrence counts toward the 3-strike
+// auto-terminate threshold — never a client-supplied flag. Its 4-level taxonomy is a superset of
+// this route's original "penalized vs. log don't penalize" policy for face signals (still exactly
+// classified as INTERRUPTION, never penalized) -- SUSPICIOUS now adds a middle tier that escalates
+// into a real strike only after repeating, rather than either always or never counting. Noise/
+// silent-environment reminders never reach this endpoint at all — they're pure client-side UI
+// state, not a proctoring concern.
 router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
@@ -1039,7 +1042,10 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
     }
 
     const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
-    const penalized = PENALIZED_VIOLATION_TYPES.has(type);
+    // Counted fresh from the log every time (not a running counter column) so the escalation
+    // threshold in proctoringSeverity.js can change later without a backfill.
+    const priorSuspiciousCount = await prisma.interviewViolation.count({ where: { sessionId: session.id, severity: "SUSPICIOUS" } });
+    const { severity, penalized } = classifyViolation(type, priorSuspiciousCount);
     const violationCount = penalized ? session.violationCount + 1 : session.violationCount;
     // The violation log row and the session's running count describe one event — transact them
     // together (same class of fix as session-start/round-advance above) when penalized, rather
@@ -1047,17 +1053,17 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
     // the log it's supposed to be derived from.
     if (penalized) {
       await prisma.$transaction([
-        prisma.interviewViolation.create({ data: { sessionId: session.id, type, penalized } }),
+        prisma.interviewViolation.create({ data: { sessionId: session.id, type, severity, penalized } }),
         prisma.interviewSession.update({ where: { id: session.id }, data: { violationCount } }),
       ]);
     } else {
-      await prisma.interviewViolation.create({ data: { sessionId: session.id, type, penalized } });
+      await prisma.interviewViolation.create({ data: { sessionId: session.id, type, severity, penalized } });
     }
-    logger.info("VIOLATION_RECORDED", { sessionId: session.id, type, penalized, violationCount });
+    logger.info("VIOLATION_RECORDED", { sessionId: session.id, type, severity, penalized, violationCount });
     if (penalized) {
       logAudit({
         req, action: AUDIT_ACTIONS.INTERVIEW_VIOLATION_RECORDED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
-        details: { sessionId: session.id, type, violationCount },
+        details: { sessionId: session.id, type, severity, violationCount },
       });
     }
 
@@ -1066,7 +1072,7 @@ router.post("/sessions/:id/violation", authenticate, requireRole("STUDENT"), asy
       await finalizeSession({ ...session, violationCount }, { status: "TERMINATED", terminationReason: "MAX_VIOLATIONS" }, req);
     }
 
-    res.json({ violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, penalized, terminated });
+    res.json({ violationCount, maxViolations: MAX_INTERVIEW_VIOLATIONS, severity, penalized, terminated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to record violation" });

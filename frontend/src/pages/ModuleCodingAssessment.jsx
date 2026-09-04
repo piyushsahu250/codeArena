@@ -59,6 +59,11 @@ export default function ModuleCodingAssessment() {
   const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [autoSubmitReasonMsg, setAutoSubmitReasonMsg] = useState("");
   const [violationWarning, setViolationWarning] = useState(null);
+  // Distinct from violationWarning above: shown for a SUSPICIOUS-severity event that did NOT get
+  // penalized this time (e.g. the 1st or 2nd copy/paste attempt, not yet the 3rd that escalates)
+  // -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y" counter (since it
+  // didn't actually count), and a note that repeating it will start counting.
+  const [suspiciousNotice, setSuspiciousNotice] = useState(null);
   const [violationCount, setViolationCount] = useState(0);
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [saveFailed, setSaveFailed] = useState(false); // surfaced honestly instead of the indicator silently staying stale on a failed autosave
@@ -109,13 +114,16 @@ export default function ModuleCodingAssessment() {
   }
   useEffect(() => { load(); }, [moduleId]);
 
-  // Every violation type is reported to the server, which decides -- never trusted client-side --
-  // whether it's penalized (tab switch, fullscreen exit, camera/mic dropped, screen overlay:
-  // counts toward the maxViolations auto-submit limit) or logged only (copy/paste, right-click,
-  // devtools attempt, face missing, etc: recorded for admin review but never costs a strike). See
-  // moduleCoding.js's PENALIZED_VIOLATION_TYPES for the exact list -- previously every type here
-  // showed the same "Warning X/Y ... will auto-submit" banner and counted the same, which is
-  // exactly the false-violation behavior this was fixed to stop.
+  // Every violation type is reported to the server, which classifies it into one of four
+  // severities (see backend/src/utils/proctoringSeverity.js) and decides -- never trusted
+  // client-side -- whether THIS occurrence counts toward the maxViolations auto-submit limit:
+  //   CONFIRMED_VIOLATION (tab switch, fullscreen exit, camera/mic dropped) -- always counts.
+  //   SUSPICIOUS (copy/paste, right-click, devtools attempt, screen overlay, etc.) -- a soft
+  //     notice the first couple of times; only escalates into a real strike after repeating.
+  //   INTERRUPTION (face missing, etc.) -- never counts, no matter how often.
+  // Previously every type here showed the identical "Warning X/Y ... will auto-submit" banner and
+  // counted the same on every single occurrence -- exactly the false-violation behavior this and
+  // the severity taxonomy were built to stop.
   async function onViolation(type) {
     if (!attemptIdRef.current || finalizedRef.current) return;
     try {
@@ -131,6 +139,10 @@ export default function ModuleCodingAssessment() {
         const msg = `Warning ${data.violationCount}/${data.maxViolations}: ${VIOLATION_LABEL[type] || type}. The assessment will auto-submit if this continues.`;
         setViolationWarning(msg);
         setTimeout(() => setViolationWarning((m) => (m === msg ? null : m)), 6000);
+      } else if (data.severity === "SUSPICIOUS") {
+        const msg = `Notice: ${VIOLATION_LABEL[type] || type} was detected. This didn't count this time, but repeating it will.`;
+        setSuspiciousNotice(msg);
+        setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 5000);
       }
     } catch {
       // best-effort
@@ -749,6 +761,11 @@ export default function ModuleCodingAssessment() {
       {violationWarning && (
         <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "12px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }}>
           ⚠ {violationWarning}
+        </div>
+      )}
+      {suspiciousNotice && (
+        <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 12, fontWeight: 700, textAlign: "center" }}>
+          {suspiciousNotice}
         </div>
       )}
 

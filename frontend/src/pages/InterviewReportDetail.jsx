@@ -10,6 +10,11 @@ const SCORE_LABELS = {
 };
 const CATEGORY_LABEL = { HR: "HR", TECHNICAL: "Technical", CODING: "Coding", APTITUDE: "Aptitude", SYSTEM_DESIGN: "System Design", BEHAVIORAL: "Behavioral", MANAGERIAL: "Managerial" };
 
+// Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display —
+// NORMAL never reaches this page at all (it's never logged), so only these three ever appear.
+const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
+const SEVERITY_LABEL = { INTERRUPTION: "Interruption", SUSPICIOUS: "Suspicious", CONFIRMED_VIOLATION: "Confirmed violation" };
+
 function sessionTypeLabel(s) {
   if (!s) return "";
   if (s.isMock) return "Mock Interview";
@@ -119,11 +124,24 @@ export default function InterviewReportDetail() {
 
         <div className="card" style={{ padding: 16, marginTop: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Proctoring Report</div>
+          <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+            Only <span style={{ color: SEVERITY_COLOR.CONFIRMED_VIOLATION }}>confirmed violations</span> count toward
+            "Total Violations" below — <span style={{ color: SEVERITY_COLOR.SUSPICIOUS }}>suspicious</span> events only
+            escalate into one after repeating, and <span style={{ color: SEVERITY_COLOR.INTERRUPTION }}>interruptions</span> never
+            do. See utils/proctoringSeverity.js for the exact classification.
+          </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: 10, marginTop: 10, fontSize: 13 }}>
             <div><div style={{ color: "var(--ink-dim)", fontSize: 11 }}>Total Violations</div><div className="mono" style={{ fontWeight: 700 }}>{proctoring.violationCount}</div></div>
-            {Object.entries(proctoring.byType).map(([type, count]) => (
-              <div key={type}><div style={{ color: "var(--ink-dim)", fontSize: 11 }}>{type.replace(/_/g, " ")}</div><div className="mono" style={{ fontWeight: 700 }}>{count}</div></div>
-            ))}
+            {Object.entries(proctoring.byType).map(([type, count]) => {
+              const severity = proctoring.events.find((e) => e.type === type)?.severity;
+              return (
+                <div key={type}>
+                  <div style={{ color: "var(--ink-dim)", fontSize: 11 }}>{type.replace(/_/g, " ")}</div>
+                  <div className="mono" style={{ fontWeight: 700, color: SEVERITY_COLOR[severity] || "inherit" }}>{count}</div>
+                  {severity && <div style={{ fontSize: 10, color: SEVERITY_COLOR[severity] }}>{SEVERITY_LABEL[severity]}</div>}
+                </div>
+              );
+            })}
           </div>
           {proctoring.events.length === 0 && <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>No proctoring events recorded for this session.</p>}
         </div>

@@ -14,6 +14,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { notifyTestAssigned } = require("../utils/notifications");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
+const { classifyViolation } = require("../utils/proctoringSeverity");
 
 const router = express.Router();
 
@@ -960,14 +961,17 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
 // full strike exactly like a real tab switch. FACE_MISSING/MULTIPLE_FACES intentionally stay
 // off this list — same "log don't penalize" policy interview.js already documents for face
 // signals, now applied consistently across every proctored surface.
-const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED", "SCREEN_OVERLAY_DETECTED"]);
+//
+// Superseded by utils/proctoringSeverity.js's 4-level taxonomy (NORMAL/INTERRUPTION/SUSPICIOUS/
+// CONFIRMED_VIOLATION) below — the binary allowlist this used to be couldn't express "penalize
+// this only if it keeps happening," which SUSPICIOUS-severity escalation now does.
 
 // --- STUDENT: report a proctoring violation during an attempt. `type` distinguishes what
-// happened; only penalized types count toward MAX_TAB_VIOLATIONS — see PENALIZED_VIOLATION_TYPES
-// above, the sole source of truth (never a client-supplied flag). Every event is still logged to
-// TestViolation regardless, so an admin reviewing a flagged attempt sees the real event history,
-// not just a count. After MAX_VIOLATIONS penalized events, the attempt is auto-submitted
-// server-side. ---
+// happened; classifyViolation() (utils/proctoringSeverity.js) is the sole source of truth for
+// its severity and whether THIS occurrence counts toward MAX_TAB_VIOLATIONS — never a
+// client-supplied flag. Every event is still logged to TestViolation regardless of severity, so
+// an admin reviewing a flagged attempt sees the real event history, not just a count. After
+// MAX_VIOLATIONS penalized events, the attempt is auto-submitted server-side. ---
 const MAX_TAB_VIOLATIONS = 3;
 router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
@@ -980,7 +984,11 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
     }
 
     const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
-    const penalized = PENALIZED_VIOLATION_TYPES.has(type);
+    // SUSPICIOUS escalation needs to know how many SUSPICIOUS events this attempt already has —
+    // counted fresh from the log every time rather than kept in a running counter column, so the
+    // escalation threshold in proctoringSeverity.js can change later without a backfill.
+    const priorSuspiciousCount = await prisma.testViolation.count({ where: { attemptId: attempt.id, severity: "SUSPICIOUS" } });
+    const { severity, penalized } = classifyViolation(type, priorSuspiciousCount);
     const tabSwitchCount = penalized ? attempt.tabSwitchCount + 1 : attempt.tabSwitchCount;
     const autoSubmitted = penalized && tabSwitchCount >= MAX_TAB_VIOLATIONS;
 
@@ -996,14 +1004,14 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
     // of sync. Non-penalized events only ever write the log.
     if (penalized) {
       await prisma.$transaction([
-        prisma.testViolation.create({ data: { attemptId: attempt.id, type, penalized } }),
+        prisma.testViolation.create({ data: { attemptId: attempt.id, type, severity, penalized } }),
         prisma.testAttempt.update({
           where: { id: attempt.id },
           data: { tabSwitchCount, ...(autoSubmitted ? { status: "AUTO_SUBMITTED", submittedAt: new Date() } : {}) },
         }),
       ]);
     } else {
-      await prisma.testViolation.create({ data: { attemptId: attempt.id, type, penalized } });
+      await prisma.testViolation.create({ data: { attemptId: attempt.id, type, severity, penalized } });
     }
 
     // Still counts as a completed test for XP/streak purposes (same treatment AUTO_SUBMITTED
@@ -1016,7 +1024,7 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
       );
     }
 
-    res.json({ tabSwitchCount, maxViolations: MAX_TAB_VIOLATIONS, penalized, autoSubmitted });
+    res.json({ tabSwitchCount, maxViolations: MAX_TAB_VIOLATIONS, severity, penalized, autoSubmitted });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to record violation" });

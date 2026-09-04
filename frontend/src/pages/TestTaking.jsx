@@ -125,6 +125,10 @@ export default function TestTaking() {
   const [submitResultMsg, setSubmitResultMsg] = useState(null); // { ok, text } — replaces alert(), which forces fullscreen exit
   const [secondsLeft, setSecondsLeft] = useState(null);
   const [tabWarning, setTabWarning] = useState(null);
+  // Distinct from tabWarning above: shown for a SUSPICIOUS-severity event that did NOT get
+  // penalized this time -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y"
+  // counter (since it didn't actually count), and a note that repeating it will start counting.
+  const [suspiciousNotice, setSuspiciousNotice] = useState(null);
   const [showQuestionPanel, setShowQuestionPanel] = useState(true);
   const [showResultsPanel, setShowResultsPanel] = useState(true);
   const initialLayout = useState(loadLayout)[0];
@@ -690,12 +694,14 @@ export default function TestTaking() {
 
   const lastViolationAtRef = useRef(0);
   const tabWarningTimeoutRef = useRef(null);
-  // `type` is reported to the server, which decides -- never trusted client-side -- whether it's
-  // penalized (tab switch, fullscreen exit, camera/mic dropped, screen overlay: counts toward
-  // MAX_TAB_VIOLATIONS) or logged only (face missing: recorded in TestViolation for admin review,
-  // but never costs a strike -- same "log don't penalize" policy the Interview surface already
-  // uses for face signals). `reason` is purely the human-readable text for the on-page banner,
-  // shown only when the server confirms this one actually counted.
+  const suspiciousNoticeTimeoutRef = useRef(null);
+  // `type` is reported to the server, which classifies it into one of four severities (see
+  // backend/src/utils/proctoringSeverity.js) and decides -- never trusted client-side -- whether
+  // THIS occurrence counts toward MAX_TAB_VIOLATIONS: CONFIRMED_VIOLATION (tab switch, fullscreen
+  // exit, camera/mic dropped) always does; SUSPICIOUS (currently only SCREEN_OVERLAY_DETECTED on
+  // this surface) only after repeating; INTERRUPTION (face missing) never does, no matter how
+  // often -- same "log don't penalize" policy the Interview surface already used for face
+  // signals, generalized. `reason` is purely the human-readable text for the on-page banner.
   function reportViolation(type, reason) {
     if (!attemptIdRef.current || finalizedRef.current) return;
     // Exiting fullscreen via Escape/Alt-Tab fires both `fullscreenchange` and `visibilitychange`
@@ -723,6 +729,14 @@ export default function TestTaking() {
           setTabWarning(message);
           clearTimeout(tabWarningTimeoutRef.current);
           tabWarningTimeoutRef.current = setTimeout(() => setTabWarning(null), 6000);
+        } else if (data.severity === "SUSPICIOUS") {
+          // A SUSPICIOUS-severity event (see backend/src/utils/proctoringSeverity.js — currently
+          // only SCREEN_OVERLAY_DETECTED reaches this on the exam surface) that didn't cross the
+          // escalation threshold this time -- a softer, distinct notice, not the strike banner.
+          const message = `Notice: ${reason}. This didn't count this time, but repeating it will.`;
+          setSuspiciousNotice(message);
+          clearTimeout(suspiciousNoticeTimeoutRef.current);
+          suspiciousNoticeTimeoutRef.current = setTimeout(() => setSuspiciousNotice(null), 5000);
         }
       })
       // Previously silent -- a violation that failed to even reach the server (network blip,
@@ -1776,6 +1790,12 @@ export default function TestTaking() {
               Resume fullscreen
             </button>
           )}
+        </div>
+      )}
+
+      {suspiciousNotice && (
+        <div style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }} className="mono">
+          {suspiciousNotice}
         </div>
       )}
 

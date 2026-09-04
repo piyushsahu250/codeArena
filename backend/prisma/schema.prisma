@@ -1757,6 +1757,12 @@ model ProctoringViolation {
   attempt   ModuleCodingAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   attemptId String
   type      String // TAB_SWITCH, FULLSCREEN_EXIT, COPY, PASTE, CUT, RIGHT_CLICK, DRAG_ATTEMPT, DEVTOOLS, REFRESH_ATTEMPT, MULTI_MONITOR, FACE_MISSING, MULTIPLE_FACES, CAMERA_DROPPED
+  // NORMAL | INTERRUPTION | SUSPICIOUS | CONFIRMED_VIOLATION — see utils/proctoringSeverity.js.
+  // `penalized` newly added alongside (this model previously had no such field at all -- every
+  // event here used to count as a full strike regardless of type, the exact bug the severity
+  // taxonomy and its allowlist predecessor both exist to fix).
+  severity  String   @default("CONFIRMED_VIOLATION")
+  penalized Boolean  @default(true)
   createdAt DateTime @default(now())
 
   @@index([attemptId, createdAt])
@@ -1775,6 +1781,12 @@ model TestViolation {
   attempt   TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   attemptId String
   type      String // TAB_SWITCH, FULLSCREEN_EXIT, CAMERA_DROPPED, MIC_DROPPED, FACE_MISSING, SCREEN_OVERLAY_DETECTED
+  // NORMAL | INTERRUPTION | SUSPICIOUS | CONFIRMED_VIOLATION — see utils/proctoringSeverity.js,
+  // the sole source of truth for how `type` maps to this. `penalized` stays alongside this
+  // (rather than being replaced by it) so every existing reader that only cares "did this count"
+  // keeps working unchanged — severity is the added, richer dimension for admin review and for
+  // deciding whether a SUSPICIOUS event happened often enough to escalate into a real strike.
+  severity  String  @default("CONFIRMED_VIOLATION")
   penalized Boolean @default(true)
   createdAt DateTime @default(now())
 
@@ -2692,6 +2704,10 @@ model InterviewViolation {
   session   InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   sessionId String
   type      String
+  // NORMAL | INTERRUPTION | SUSPICIOUS | CONFIRMED_VIOLATION — see utils/proctoringSeverity.js,
+  // the sole source of truth for how `type` maps to this. `penalized` stays alongside it so
+  // existing readers that only care "did this count" keep working unchanged.
+  severity  String   @default("CONFIRMED_VIOLATION")
   penalized Boolean  @default(true)
   createdAt DateTime @default(now())
 
