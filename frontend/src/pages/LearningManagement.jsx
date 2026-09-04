@@ -1494,6 +1494,10 @@ const ATTEMPT_STATUS_COLORS = {
 // Attempt, a derived Status badge, and a Reset action (Full or Custom-count) with an audit-logged
 // reason. Reused for both the legacy module-direct test panel and chapter-scoped Level panel —
 // both already fetch `test` with `title`/`maxAttempts` in scope.
+
+// Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display.
+const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
+
 function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
   const { user } = useAuth();
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
@@ -1502,6 +1506,28 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
   const [attempts, setAttempts] = useState(null);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(null);
+  // "N violation(s)" was previously just a bare count with nowhere to see what actually happened
+  // -- GET /module-coding/admin/attempts/:id (already exists, full attempt detail including the
+  // real per-event ProctoringViolation log) was never called from here. Lazy-loaded and cached
+  // per attempt id so re-expanding one already viewed doesn't re-fetch.
+  const [violationsExpandedId, setViolationsExpandedId] = useState(null);
+  const [violationsById, setViolationsById] = useState({});
+  const [violationsLoading, setViolationsLoading] = useState(null);
+
+  function toggleViolations(attemptId) {
+    if (violationsExpandedId === attemptId) {
+      setViolationsExpandedId(null);
+      return;
+    }
+    setViolationsExpandedId(attemptId);
+    if (!violationsById[attemptId]) {
+      setViolationsLoading(attemptId);
+      api.get(`/module-coding/admin/attempts/${attemptId}`)
+        .then(({ data }) => setViolationsById((prev) => ({ ...prev, [attemptId]: data.violations || [] })))
+        .catch((err) => setViolationsById((prev) => ({ ...prev, [attemptId]: { error: err.response?.data?.error || "Failed to load violation log" } })))
+        .finally(() => setViolationsLoading(null));
+    }
+  }
   const [resetTarget, setResetTarget] = useState(null);
   const [resetMode, setResetMode] = useState("full");
   const [customRemaining, setCustomRemaining] = useState(maxAttempts || 1);
@@ -1621,9 +1647,53 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
               {expanded === s.student.id && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)", display: "grid", gap: 6 }}>
                   {s.attempts.map((a) => (
-                    <div key={a.id} className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                      Attempt #{a.attemptNumber} — {a.status} — Score: {a.score}%{a.passed ? " (Passed)" : ""} — {a.violationCount} violation(s)
-                      {a.autoSubmitReason ? ` — auto-submitted: ${a.autoSubmitReason}` : ""}
+                    <div key={a.id}>
+                      <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                        Attempt #{a.attemptNumber} — {a.status} — Score: {a.score}%{a.passed ? " (Passed)" : ""} —{" "}
+                        {a.violationCount > 0 ? (
+                          <button
+                            style={{ background: "none", border: "none", padding: 0, color: "var(--rust)", fontWeight: 700, fontFamily: "inherit", fontSize: 11, cursor: "pointer", textDecoration: "underline" }}
+                            onClick={() => toggleViolations(a.id)}
+                            title="View the actual proctoring event log for this attempt"
+                          >
+                            {a.violationCount} violation(s) {violationsExpandedId === a.id ? "▲" : "▼"}
+                          </button>
+                        ) : (
+                          "0 violations"
+                        )}
+                        {a.autoSubmitReason ? ` — auto-submitted: ${a.autoSubmitReason}` : ""}
+                      </div>
+                      {violationsExpandedId === a.id && (
+                        <div className="card" style={{ padding: 10, marginTop: 6, background: "var(--bg-subtle, #FAFAF8)" }}>
+                          {violationsLoading === a.id && <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>Loading violation log…</p>}
+                          {violationsById[a.id]?.error && <p className="mono" style={{ fontSize: 11, color: "var(--rust)" }}>{violationsById[a.id].error}</p>}
+                          {Array.isArray(violationsById[a.id]) && (
+                            <table style={{ width: "100%", fontSize: 11 }}>
+                              <thead>
+                                <tr style={{ textAlign: "left", color: "var(--ink-dim)" }}>
+                                  <th style={{ padding: "2px 6px" }}>Time</th>
+                                  <th>Event</th>
+                                  <th>Severity</th>
+                                  <th>Counted?</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {violationsById[a.id].map((ev) => (
+                                  <tr key={ev.id} className="mono">
+                                    <td style={{ padding: "2px 6px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
+                                    <td>{ev.type.replace(/_/g, " ")}</td>
+                                    <td style={{ color: SEVERITY_COLOR[ev.severity] || "inherit" }}>{(ev.severity || "").replace(/_/g, " ")}</td>
+                                    <td>{ev.penalized ? "Yes" : "No"}</td>
+                                  </tr>
+                                ))}
+                                {violationsById[a.id].length === 0 && (
+                                  <tr><td colSpan={4} style={{ padding: "4px 6px", color: "var(--ink-dim)" }}>No events recorded.</td></tr>
+                                )}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

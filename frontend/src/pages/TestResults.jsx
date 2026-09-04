@@ -25,6 +25,9 @@ function StatCard({ label, value, accent }) {
 
 const RANK_MEDAL = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
+// Mirrors backend/src/utils/proctoringSeverity.js's 4-level taxonomy purely for display.
+const SEVERITY_COLOR = { INTERRUPTION: "var(--ink-dim)", SUSPICIOUS: "var(--amber)", CONFIRMED_VIOLATION: "var(--rust)" };
+
 export default function TestResults() {
   const { id } = useParams();
   const [test, setTest] = useState(null);
@@ -32,6 +35,28 @@ export default function TestResults() {
   const [loading, setLoading] = useState(true);
   const [rollFilter, setRollFilter] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  // "Tab switches" was previously just a bare count with nowhere to see what actually happened --
+  // GET /tests/admin/attempts/:id/violations (added alongside the exam severity taxonomy) already
+  // has the real per-event log; this was the one surface still missing a way to look at it.
+  // Lazy-loaded and cached per attempt id so re-expanding a row already viewed doesn't re-fetch.
+  const [violationsExpandedId, setViolationsExpandedId] = useState(null);
+  const [violationsById, setViolationsById] = useState({});
+  const [violationsLoading, setViolationsLoading] = useState(null);
+
+  function toggleViolations(attemptId) {
+    if (violationsExpandedId === attemptId) {
+      setViolationsExpandedId(null);
+      return;
+    }
+    setViolationsExpandedId(attemptId);
+    if (!violationsById[attemptId]) {
+      setViolationsLoading(attemptId);
+      api.get(`/tests/admin/attempts/${attemptId}/violations`)
+        .then(({ data }) => setViolationsById((prev) => ({ ...prev, [attemptId]: data })))
+        .catch((err) => setViolationsById((prev) => ({ ...prev, [attemptId]: { error: err.response?.data?.error || "Failed to load violation log" } })))
+        .finally(() => setViolationsLoading(null));
+    }
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -219,7 +244,20 @@ export default function TestResults() {
                         {attempted} / {total || defaultTotalQuestions}
                       </td>
                       <td style={{ padding: "10px 8px" }}><StatusBadge status={a.status} /></td>
-                      <td className="mono" style={{ padding: "10px 8px", fontSize: 12, color: a.tabSwitchCount > 0 ? "var(--rust)" : "var(--ink-dim)" }}>{a.tabSwitchCount ?? 0}</td>
+                      <td className="mono" style={{ padding: "10px 8px", fontSize: 12 }}>
+                        {a.tabSwitchCount > 0 ? (
+                          <button
+                            className="btn btn-ghost"
+                            style={{ fontSize: 12, padding: "2px 6px", color: "var(--rust)", fontWeight: 700 }}
+                            onClick={() => toggleViolations(a.id)}
+                            title="View the actual proctoring event log for this attempt"
+                          >
+                            {a.tabSwitchCount} {violationsExpandedId === a.id ? "▲" : "▼"}
+                          </button>
+                        ) : (
+                          <span style={{ color: "var(--ink-dim)" }}>0</span>
+                        )}
+                      </td>
                       <td style={{ padding: "10px 8px" }}>
                         {Array.isArray(a.questionOrder) && a.questionOrder.length > 0 ? (
                           <button className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}>
@@ -252,6 +290,48 @@ export default function TestResults() {
                                 ))}
                               </tbody>
                             </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {violationsExpandedId === a.id && (
+                      <tr>
+                        <td colSpan={9} style={{ padding: "0 10px 16px" }}>
+                          <div className="card" style={{ padding: 12, background: "var(--bg-subtle, #FAFAF8)" }}>
+                            {violationsLoading === a.id && <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Loading violation log…</p>}
+                            {violationsById[a.id]?.error && <p className="mono" style={{ fontSize: 12, color: "var(--rust)" }}>{violationsById[a.id].error}</p>}
+                            {violationsById[a.id] && !violationsById[a.id].error && (
+                              <>
+                                <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 8 }}>
+                                  Only <span style={{ color: SEVERITY_COLOR.CONFIRMED_VIOLATION }}>confirmed violations</span> count toward
+                                  the {a.tabSwitchCount} shown in the table — <span style={{ color: SEVERITY_COLOR.SUSPICIOUS }}>suspicious</span> events
+                                  only escalate into one after repeating, and <span style={{ color: SEVERITY_COLOR.INTERRUPTION }}>interruptions</span> never do.
+                                </p>
+                                <table style={{ width: "100%", fontSize: 12 }}>
+                                  <thead>
+                                    <tr style={{ textAlign: "left", color: "var(--ink-dim)" }}>
+                                      <th style={{ padding: "2px 8px" }}>Time</th>
+                                      <th>Event</th>
+                                      <th>Severity</th>
+                                      <th>Counted?</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {violationsById[a.id].events.map((ev) => (
+                                      <tr key={ev.id} className="mono">
+                                        <td style={{ padding: "2px 8px" }}>{new Date(ev.createdAt).toLocaleTimeString()}</td>
+                                        <td>{ev.type.replace(/_/g, " ")}</td>
+                                        <td style={{ color: SEVERITY_COLOR[ev.severity] || "inherit" }}>{ev.severity.replace(/_/g, " ")}</td>
+                                        <td>{ev.penalized ? "Yes" : "No"}</td>
+                                      </tr>
+                                    ))}
+                                    {violationsById[a.id].events.length === 0 && (
+                                      <tr><td colSpan={4} style={{ padding: "6px 8px", color: "var(--ink-dim)" }}>No events recorded.</td></tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
