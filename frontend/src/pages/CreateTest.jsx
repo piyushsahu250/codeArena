@@ -46,6 +46,12 @@ export default function CreateTest() {
   const [questions, setQuestions] = useState([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState([]);
+  // Per-question "Allow AI assistance" flag -- keyed by question id, mirrors `selected` (an id
+  // array) rather than living inside the `questions` list itself, since the same question object
+  // can be shared across the "quick add" search results and the selected list. Sent to the
+  // backend as TestQuestion.aiAllowed (see tests.js's questionCreateData) -- see its own schema
+  // comment for why this lives per-TestQuestion, not on Question globally.
+  const [aiAllowedMap, setAiAllowedMap] = useState({});
   const [form, setForm] = useState(emptyForm);
   const [academicGroups, setAcademicGroups] = useState([]);
   const [academicGroupIds, setAcademicGroupIds] = useState([]);
@@ -176,6 +182,7 @@ export default function CreateTest() {
       setGroupType(poolIds.length > 0 ? "TALENT_POOL" : "ACADEMIC");
       const qIds = t.questions.map((tq) => tq.question.id);
       setSelected(qIds);
+      setAiAllowedMap(Object.fromEntries(t.questions.map((tq) => [tq.question.id, !!tq.aiAllowed])));
       setQuestions((prev) => {
         const known = new Set(prev.map((q) => q.id));
         const extra = t.questions.map((tq) => tq.question).filter((q) => !known.has(q.id));
@@ -184,6 +191,10 @@ export default function CreateTest() {
       setLoading(false);
     });
   }, [id, isEdit]);
+
+  function toggleAiAllowed(qId) {
+    setAiAllowedMap((prev) => ({ ...prev, [qId]: !prev[qId] }));
+  }
 
   function toggle(qId) {
     setSelected((prev) => (prev.includes(qId) ? prev.filter((id2) => id2 !== qId) : [...prev, qId]));
@@ -289,6 +300,7 @@ export default function CreateTest() {
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         questionIds: isRandomMode ? undefined : selected,
+        questionAiAllowed: isRandomMode ? undefined : aiAllowedMap,
         subjectId, unitId,
         academicGroupIds: groupType === "ACADEMIC" ? academicGroupIds : [],
         instituteId: isPlatformLevel ? (instituteId || null) : undefined,
@@ -702,8 +714,20 @@ export default function CreateTest() {
                   {selected.map((qId) => {
                     const q = questions.find((qq) => qq.id === qId);
                     return (
-                      <span key={qId} className="badge" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span key={qId} className="badge" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         {q?.title || q?.description?.slice(0, 30) || "(loading…)"}
+                        {/* Per-question AI-assistance opt-in (TestQuestion.aiAllowed) -- off by
+                            default, admin decides per question which ones get an in-page "Ask AI
+                            for help" panel during the actual exam. See tests.js's schema comment
+                            on TestQuestion.aiAllowed for the full reasoning (hints/explanations
+                            only, never the answer, never wired into every question by default). */}
+                        <label
+                          title="Allow AI assistance on this question during the exam"
+                          style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 400, cursor: "pointer" }}
+                        >
+                          <input type="checkbox" checked={!!aiAllowedMap[qId]} onChange={() => toggleAiAllowed(qId)} style={{ margin: 0 }} />
+                          AI
+                        </label>
                         <button type="button" onClick={() => toggle(qId)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, padding: 0 }}>×</button>
                       </span>
                     );

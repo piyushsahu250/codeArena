@@ -970,6 +970,14 @@ model TestQuestion {
   questionId String
   order      Int      @default(0)
   timeLimitSec Int    @default(900) // how long the student gets on this question within the test
+  // Per-question admin flag: when true, the student sees an in-page "Ask AI for help" panel on
+  // this question during a proctored attempt. Deliberately per-TestQuestion, not on Question
+  // itself -- the same bank question can be reused across many tests/contexts (readiness,
+  // talent pool, other exams) where AI assistance may or may not be appropriate; scoping it to
+  // one specific test's assignment of one specific question is the only granularity that makes
+  // sense. See tests.js's POST /attempts/:attemptId/ai-assist, the sole place this is enforced --
+  // never trust a client claim that AI is allowed for a question, always look this up server-side.
+  aiAllowed  Boolean  @default(false)
 
   @@unique([testId, questionId])
 }

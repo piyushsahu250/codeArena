@@ -750,9 +750,12 @@ router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attach
 
 // STUDENT: a short, non-answer-revealing hint after a wrong practice submission — gated on
 // Institute.aiHintsEnabled (admin opt-in, default off) and only ever wired into Practice Coding,
-// never Coding Tests / Module Coding Tests / exams, which stay 100% unassisted. Requires the
-// student's most recent logged attempt on this question to be a non-ACCEPTED verdict, so a hint
-// can't be requested before actually trying (or after already solving it).
+// not Coding Tests / Module Coding Tests. This specific mechanism (post-wrong-attempt code
+// feedback) never applies to exams — the separate, narrower exception there is tests.js's
+// POST /attempts/:attemptId/ai-assist, gated per-question by TestQuestion.aiAllowed (admin
+// opt-in per question, default off), not this Institute-wide toggle. Requires the student's most
+// recent logged attempt on this question to be a non-ACCEPTED verdict, so a hint can't be
+// requested before actually trying (or after already solving it).
 router.post("/practice/:id/hint", authenticate, requireRole("STUDENT"), hintLimiter, async (req, res) => {
   try {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, institute: { select: { aiHintsEnabled: true } } } });

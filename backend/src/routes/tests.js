@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -11,6 +12,8 @@ const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwner
 const { resolveSubjectUnitTopic, canStaffUseSubject } = require("../utils/subjectAccess");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { notifyTestAssigned } = require("../utils/notifications");
+const aiService = require("../services/ai/aiService");
+const { sendAiError } = require("../utils/aiErrors");
 
 const router = express.Router();
 
@@ -27,11 +30,12 @@ async function resolveTestSubjectUnit(req, { subjectId, unitId }) {
   return { subjectId, unitId: null };
 }
 
-function questionCreateData(questionIds, questionTimeLimits) {
+function questionCreateData(questionIds, questionTimeLimits, questionAiAllowed) {
   return (questionIds || []).map((qId, idx) => ({
     questionId: qId,
     order: idx,
     timeLimitSec: Number(questionTimeLimits?.[qId]) || 900,
+    aiAllowed: !!questionAiAllowed?.[qId],
   }));
 }
 
@@ -152,7 +156,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
   try {
     const {
       title, code, description, instructions, durationMin, passingMarks, showResults,
-      startTime, endTime, questionIds, questionTimeLimits, academicGroupIds,
+      startTime, endTime, questionIds, questionTimeLimits, questionAiAllowed, academicGroupIds,
       requireFullscreen, requireWebcam, requireMicrophone, attendanceMandatory,
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
@@ -237,7 +241,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
         program: program?.trim() || null,
         createdById: req.user.id,
         instituteId: effectiveInstituteId,
-        questions: { create: questionCreateData(resolvedQuestionIds, questionTimeLimits) },
+        questions: { create: questionCreateData(resolvedQuestionIds, questionTimeLimits, questionAiAllowed) },
         academicGroups: { create: (academicGroupIds || []).map((academicGroupId) => ({ academicGroupId })) },
       },
       include: { questions: true, classes: true, academicGroups: true },
@@ -278,7 +282,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
 
     const {
       title, code, description, instructions, durationMin, passingMarks, showResults,
-      startTime, endTime, questionIds, questionTimeLimits, academicGroupIds,
+      startTime, endTime, questionIds, questionTimeLimits, questionAiAllowed, academicGroupIds,
       requireFullscreen, requireWebcam, requireMicrophone, attendanceMandatory,
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
@@ -363,7 +367,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       if (resolvedQuestionIds) {
         await tx.testQuestion.deleteMany({ where: { testId: existing.id } });
         await tx.testQuestion.createMany({
-          data: questionCreateData(resolvedQuestionIds, questionTimeLimits).map((q) => ({ ...q, testId: existing.id })),
+          data: questionCreateData(resolvedQuestionIds, questionTimeLimits, questionAiAllowed).map((q) => ({ ...q, testId: existing.id })),
         });
       }
 
@@ -1042,6 +1046,68 @@ router.get("/admin/attempts/:attemptId/violations", authenticate, requireRole("A
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load violation log" });
+  }
+});
+
+const examAiAssistLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
+
+// STUDENT: ask the in-page AI panel a question about the CURRENT exam question. Gated per-question
+// by TestQuestion.aiAllowed (see its own schema comment) -- the sole source of truth, looked up
+// fresh from the database every call, never a client-supplied claim that AI is allowed here. Same
+// guardrail as Practice Coding's /practice/:id/hint: hints and explanations only, enforced via the
+// system prompt below, and defense-in-depth by literally never including hidden test cases,
+// correctAnswer, or explanation in what's sent to the model -- not "the model was told not to
+// reveal it," but "it was never given it to reveal." Rendered as an in-page panel on the exam
+// itself (never a new tab/window), so this needs no proctoring exemption of any kind: fullscreen
+// stays active and the page never becomes hidden, exactly like using the exam's own editor.
+router.post("/attempts/:attemptId/ai-assist", authenticate, requireRole("STUDENT"), examAiAssistLimiter, async (req, res) => {
+  try {
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: req.params.attemptId },
+      select: { id: true, testId: true, studentId: true, status: true },
+    });
+    if (!attempt || attempt.studentId !== req.user.id) return res.status(403).json({ error: "Invalid attempt" });
+    if (attempt.status !== "IN_PROGRESS") return res.status(400).json({ error: "This attempt is no longer in progress" });
+
+    const { questionId, message } = req.body;
+    if (!questionId || !message || !message.trim()) {
+      return res.status(400).json({ error: "questionId and message are required" });
+    }
+
+    const testQuestion = await prisma.testQuestion.findUnique({
+      where: { testId_questionId: { testId: attempt.testId, questionId } },
+      select: {
+        aiAllowed: true,
+        question: { select: { title: true, description: true, questionType: true, subject: true, topic: true, options: true } },
+      },
+    });
+    if (!testQuestion || !testQuestion.aiAllowed) {
+      return res.status(403).json({ error: "AI assistance is not enabled for this question" });
+    }
+
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
+    const q = testQuestion.question;
+    const questionContext = [
+      `Question type: ${q.questionType}`,
+      q.subject ? `Subject: ${q.subject}` : null,
+      q.topic ? `Topic: ${q.topic}` : null,
+      `Title: ${q.title}`,
+      `Description: ${q.description}`,
+      // Options are already visible to every student taking this MCQ, not a secret -- correctAnswer
+      // and explanation are deliberately never selected above, at all, regardless of what's asked.
+      Array.isArray(q.options) && q.options.length ? `Options: ${q.options.join(" | ")}` : null,
+    ].filter(Boolean).join("\n");
+
+    const reply = await aiService.generateText({
+      feature: aiService.FEATURES.EXAM_AI_ASSIST, userId: req.user.id, instituteId: student?.instituteId,
+      system: "You are a patient exam-time teaching assistant. Help the student understand the question, clarify terminology, and think through their approach with hints -- never state the final answer, never write a complete solution, never reveal or guess a hidden test case. If asked directly for the answer or a full solution, politely decline and offer a hint toward it instead. Keep replies short (3-6 sentences).",
+      prompt: `${questionContext}\n\n${aiService.wrapUntrusted("Student's question", message.trim().slice(0, 1000))}`,
+      maxTokens: 400,
+      temperature: 0.5,
+    });
+    res.json({ reply });
+  } catch (err) {
+    sendAiError(res, err, "Failed to get AI assistance");
   }
 });
 

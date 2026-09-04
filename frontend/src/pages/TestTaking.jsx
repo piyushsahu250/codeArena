@@ -186,6 +186,18 @@ export default function TestTaking() {
 
   const [markedForReview, setMarkedForReview] = useState({});
 
+  // In-page AI assistance panel -- only ever rendered/usable when the CURRENT question's own
+  // aiAllowed flag (set by an admin per-question at test-creation time, see CreateTest.jsx and
+  // tests.js's TestQuestion.aiAllowed) is true; server re-checks this independently on every
+  // request regardless of what the UI shows. Deliberately an in-page panel, never a new
+  // tab/window -- opening it never triggers document.hidden or a fullscreen exit, so it needs no
+  // proctoring exemption of any kind, unlike everything else on this page.
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiMessages, setAiMessages] = useState([]); // [{ role: "student" | "ai", text }]
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
   // Premium exam-mode UI state -- purely presentational/navigational, layered on top of the
   // existing timer/autosave/proctoring/submission machinery above without changing any of it.
   const [showMobilePalette, setShowMobilePalette] = useState(false); // bottom-sheet open/closed
@@ -656,6 +668,13 @@ export default function TestTaking() {
     setVisited((prev) => (prev[current.id] ? prev : { ...prev, [current.id]: true }));
     setRunResult(null);
     setSubmitResultMsg(null);
+    // The AI panel's conversation is scoped to one question -- carrying it over to the next
+    // question would let the AI's replies about question A leak context into question B, and
+    // more importantly the panel itself must not stay open on a question where aiAllowed is off.
+    setAiPanelOpen(false);
+    setAiMessages([]);
+    setAiInput("");
+    setAiError(null);
   }, [current]);
 
   // Flush any pending debounced save the moment the candidate navigates away from a question —
@@ -712,6 +731,31 @@ export default function TestTaking() {
       // switching doesn't show a warning" was ever reported. Still fails open for the student
       // (never blocks them or retries indefinitely mid-exam), just no longer invisible.
       .catch((err) => console.error("[exam] violation report failed:", err));
+  }
+
+  // Sends the student's message to the in-page AI panel for the CURRENT question. The server
+  // independently re-checks aiAllowed for this exact question every call (see tests.js's
+  // POST /attempts/:attemptId/ai-assist) -- the button that opens this panel is only ever shown
+  // when the question data already says aiAllowed, but that's a UI convenience, never the actual
+  // authorization boundary.
+  async function sendAiMessage() {
+    const text = aiInput.trim();
+    if (!text || !current || aiLoading) return;
+    setAiMessages((prev) => [...prev, { role: "student", text }]);
+    setAiInput("");
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const { data } = await api.post(`/tests/attempts/${attemptIdRef.current}/ai-assist`, {
+        questionId: current.id,
+        message: text,
+      });
+      setAiMessages((prev) => [...prev, { role: "ai", text: data.reply }]);
+    } catch (err) {
+      setAiError(err.response?.data?.error || "Could not reach the AI assistant. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   // Tab-switch / focus-loss detection. Reporting is unconditional regardless of this test's
@@ -1755,6 +1799,58 @@ export default function TestTaking() {
             <>
               <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{current.points} points</p>
               <ProblemStatement question={isQuiz ? { ...current, testCases: [] } : current} />
+              {/* Only rendered when THIS question was specifically admin-flagged for it (see
+                  CreateTest.jsx / TestQuestion.aiAllowed) -- most questions on most tests will
+                  never show this at all. The button and panel are same-page (no new tab/window),
+                  so opening them never trips fullscreen-exit or tab-switch detection. */}
+              {questions[activeIdx]?.aiAllowed && (
+                <div style={{ marginTop: 16 }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setAiPanelOpen((v) => !v)} style={{ fontSize: 12 }}>
+                    🤖 {aiPanelOpen ? "Hide AI Assistant" : "Ask AI for Help"}
+                  </button>
+                  {aiPanelOpen && (
+                    <div className="card" style={{ marginTop: 10, padding: 14, display: "flex", flexDirection: "column", gap: 10, maxHeight: 360 }}>
+                      <p style={{ fontSize: 11, color: "var(--ink-dim)", margin: 0 }}>
+                        Ask for a hint or an explanation of this question — the assistant won't give you the final answer or a complete solution.
+                      </p>
+                      <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, maxHeight: 200 }}>
+                        {aiMessages.map((m, i) => (
+                          <div
+                            key={i}
+                            className="mono"
+                            style={{
+                              fontSize: 12, padding: "8px 10px", borderRadius: 8, whiteSpace: "pre-wrap",
+                              alignSelf: m.role === "student" ? "flex-end" : "flex-start",
+                              background: m.role === "student" ? "var(--paper)" : "var(--amber)",
+                              color: m.role === "student" ? "inherit" : "#3a2c00",
+                              border: m.role === "student" ? "1px solid var(--line)" : "none",
+                              maxWidth: "90%",
+                            }}
+                          >
+                            {m.text}
+                          </div>
+                        ))}
+                        {aiLoading && <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Thinking…</div>}
+                      </div>
+                      {aiError && <p style={{ fontSize: 11, color: "var(--rust)", margin: 0 }}>{aiError}</p>}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <input
+                          type="text"
+                          value={aiInput}
+                          onChange={(e) => setAiInput(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAiMessage(); } }}
+                          placeholder="Ask about this question…"
+                          disabled={aiLoading}
+                          style={{ flex: 1, padding: "8px 10px", borderRadius: 6, border: "1px solid var(--line)", fontSize: 13 }}
+                        />
+                        <button type="button" className="btn btn-primary" onClick={sendAiMessage} disabled={aiLoading || !aiInput.trim()} style={{ fontSize: 12 }}>
+                          Send
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

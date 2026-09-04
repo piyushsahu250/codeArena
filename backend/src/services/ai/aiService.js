@@ -32,6 +32,7 @@ const FEATURES = {
   RESUME_REVIEW: "resume_review",
   RESUME_IMPROVE: "resume_improve",
   LEARNING_HINT: "learning_hint",
+  EXAM_AI_ASSIST: "exam_ai_assist",
 };
 
 function isConfigured() {
