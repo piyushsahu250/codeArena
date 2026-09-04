@@ -636,6 +636,11 @@ export default function InterviewSession() {
           </div>
         </div>
 
+        {proctor.faceModelStatus === "unavailable" && (
+          <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
+            Face detection could not start (likely a network/firewall issue) — your camera feed is still shown, but presence isn't being automatically checked this session.
+          </div>
+        )}
         {proctor.faceStatus === "MISSING" && (
           <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
             Face not detected. Please position yourself in front of the camera.

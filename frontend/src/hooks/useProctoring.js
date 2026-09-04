@@ -6,6 +6,10 @@ import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
+// blazeface's model weights come from Google's CDN, not the app bundle — 15s is generous for a
+// working connection (the model is small, a few hundred KB) while still failing fast enough that
+// a genuinely blocked/unreachable CDN doesn't leave the student staring at "loading" indefinitely.
+const FACE_MODEL_LOAD_TIMEOUT_MS = 15000;
 const VIOLATION_DEDUPE_MS = 1200; // collapses e.g. fullscreenchange+visibilitychange firing together into one event
 // Entering fullscreen via requestFullscreen() is itself a browser-level transition — on some
 // OS/browser combinations it can cause a transient, spurious `visibilitychange` (document.hidden
@@ -391,15 +395,30 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   const cameraStatusRef = useRef("OK");
   const micStatusRef = useRef("OK");
 
+  // faceModelStatus lets a consumer show an honest "face detection couldn't start" banner instead
+  // of the previous silent `.catch(() => {})` — blazeface.load() fetches its model weights from
+  // Google's CDN on first use (not bundled with the app), so on a network that blocks it (a
+  // school firewall, a flaky connection) face-checking would previously just never activate with
+  // no trace anywhere, on a test whose admin explicitly turned requireWebcam on. The load promise
+  // itself also has no built-in timeout — left unbounded, a hung request would leave the student
+  // in "loading" forever with nothing to look at, so this races it against FACE_MODEL_LOAD_TIMEOUT_MS.
+  const [faceModelStatus, setFaceModelStatus] = useState("loading"); // loading | ready | unavailable
   useEffect(() => {
     if (!requireWebcam) return;
     let cancelled = false;
-    tf.ready()
-      .then(() => blazeface.load())
+    setFaceModelStatus("loading");
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), FACE_MODEL_LOAD_TIMEOUT_MS));
+    Promise.race([tf.ready().then(() => blazeface.load()), timeout])
       .then((model) => {
-        if (!cancelled) faceModelRef.current = model;
+        if (cancelled) return;
+        faceModelRef.current = model;
+        setFaceModelStatus("ready");
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (cancelled) return;
+        console.warn("[proctoring] face-detection model failed to load — face checks will not run this session:", err.message);
+        setFaceModelStatus("unavailable");
+      });
     return () => {
       cancelled = true;
     };
@@ -568,6 +587,6 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   return {
     requestFullscreen, fullscreenOk,
     mediaGranted, mediaError, requestingMedia, requestMedia, stopMedia, videoRef: setVideoNode,
-    faceStatus, cameraStatus, micStatus, noiseWarning,
+    faceStatus, faceModelStatus, cameraStatus, micStatus, noiseWarning,
   };
 }

@@ -718,6 +718,17 @@ export default function ModuleCodingAssessment() {
         }} />
       )}
 
+      {/* Deliberately NOT reported through onViolation/the violation log — moduleCoding.js's
+          endpoint currently penalizes every event type it receives (a separate, already-flagged
+          issue), so wiring a model-load failure through that path would falsely cost the student
+          a strike for a network/CDN problem that isn't their doing. This is a student-facing
+          notice only, visible in the console for a developer, until that endpoint is fixed to
+          distinguish penalized from logged-only events the way interview.js already does. */}
+      {status.test.requireWebcam && proctor.faceModelStatus === "unavailable" && (
+        <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 12, fontWeight: 700, textAlign: "center" }}>
+          ⚠ Face detection could not start (likely a network/firewall issue) — your camera feed is still shown, but presence isn't being automatically checked this session.
+        </div>
+      )}
       {proctor.faceStatus === "MISSING" && (
         <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "12px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }}>
           ⚠ No face detected — please stay visible in the camera frame.

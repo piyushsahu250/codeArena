@@ -11,6 +11,8 @@ const { credentialsResendTemplate } = require("../utils/emailTemplates");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
 const { revokeAllSessions } = require("../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const geminiProvider = require("../services/ai/geminiProvider");
+const aiRateLimits = require("../services/ai/rateLimits");
 
 const router = express.Router();
 
@@ -349,6 +351,41 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
 
     const snapshot = getSnapshot();
 
+    // AI provider health — AiUsageLog has been recording every Gemini call (success, failure,
+    // errorType, latency) since aiService.js's logUsage() since long before this section existed;
+    // nothing admin-facing ever read it back until now. Cached briefly (same reasoning as the
+    // dashboard stats above): this page polls every 10s and a `groupBy` + two `aggregate` queries
+    // on every poll is wasted work when the underlying numbers only change once per AI call.
+    const aiProvider = await cached("admin:monitoring:aiProvider", 15000, async () => {
+      const since = new Date();
+      since.setUTCHours(0, 0, 0, 0);
+      const [totalToday, failuresByType, latency, lastFailure] = await Promise.all([
+        prisma.aiUsageLog.count({ where: { createdAt: { gte: since } } }),
+        prisma.aiUsageLog.groupBy({ by: ["errorType"], where: { createdAt: { gte: since }, success: false }, _count: { _all: true } }),
+        prisma.aiUsageLog.aggregate({ where: { createdAt: { gte: since }, success: true }, _avg: { latencyMs: true } }),
+        prisma.aiUsageLog.findFirst({ where: { success: false }, orderBy: { createdAt: "desc" }, select: { feature: true, errorType: true, createdAt: true } }),
+      ]);
+      const failedToday = failuresByType.reduce((sum, g) => sum + g._count._all, 0);
+      return {
+        configured: geminiProvider.isConfigured(),
+        provider: "gemini", // matches AiUsageLog.provider's own value — see aiService.js's PRIMARY_PROVIDER
+        model: geminiProvider.DEFAULT_MODEL,
+        today: {
+          total: totalToday,
+          success: totalToday - failedToday,
+          failed: failedToday,
+          byErrorType: Object.fromEntries(failuresByType.map((g) => [g.errorType || "UNKNOWN", g._count._all])),
+          avgLatencyMs: latency._avg.latencyMs != null ? Math.round(latency._avg.latencyMs) : null,
+        },
+        quota: {
+          globalLimit: aiRateLimits.GLOBAL_DAILY_LIMIT,
+          globalUsed: totalToday,
+          perInstituteLimit: aiRateLimits.PER_INSTITUTE_DAILY_LIMIT,
+        },
+        lastFailure,
+      };
+    });
+
     res.json({
       process: {
         uptimeSec: Math.round(process.uptime()),
@@ -370,6 +407,7 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
         moduleCodingAssessments: activeModuleAttempts,
         mockInterviews: activeInterviewSessions,
       },
+      aiProvider,
       recentErrors: snapshot.recentErrors,
     });
   } catch (err) {

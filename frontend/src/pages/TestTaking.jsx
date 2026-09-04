@@ -17,6 +17,10 @@ import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
+// blazeface's model weights come from Google's CDN, not the app bundle — see the model-load
+// effect for why this needs its own timeout (same reasoning as useProctoring.js's identical
+// constant, kept in sync manually since this page still has its own inline proctoring copy).
+const FACE_MODEL_LOAD_TIMEOUT_MS = 15000;
 
 const MAX_TAB_VIOLATIONS = 3;
 
@@ -155,6 +159,8 @@ export default function TestTaking() {
   const [faceMissing, setFaceMissing] = useState(false);
   const faceModelRef = useRef(null);
   const faceMissingRef = useRef(false); // mirrors faceMissing for use inside the polling interval closure
+  // "loading" | "ready" | "unavailable" -- see the model-load effect below for why this exists.
+  const [faceModelStatus, setFaceModelStatus] = useState("loading");
 
   const [noiseWarning, setNoiseWarning] = useState(false);
   const noiseWarningTimeoutRef = useRef(null);
@@ -297,12 +303,22 @@ export default function TestTaking() {
   // never runs rather than blocking the candidate from taking the test at all.
   useEffect(() => {
     let cancelled = false;
-    tf.ready()
-      .then(() => blazeface.load())
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), FACE_MODEL_LOAD_TIMEOUT_MS));
+    Promise.race([tf.ready().then(() => blazeface.load()), timeout])
       .then((model) => {
-        if (!cancelled) faceModelRef.current = model;
+        if (cancelled) return;
+        faceModelRef.current = model;
+        setFaceModelStatus("ready");
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (cancelled) return;
+        // Previously a silent no-op -- on a requireWebcam test, face-checking would just never
+        // activate with zero trace anywhere if the model CDN was blocked/unreachable. Still
+        // never blocks the candidate from taking the test; just says so instead of pretending
+        // face monitoring is running when it isn't.
+        console.warn("[exam] face-detection model failed to load — face checks will not run this session:", err.message);
+        setFaceModelStatus("unavailable");
+      });
     return () => {
       cancelled = true;
     };
@@ -1639,6 +1655,15 @@ export default function TestTaking() {
           className="mono"
         >
           Please maintain a quiet environment during the examination.
+        </div>
+      )}
+
+      {testMeta?.requireWebcam && faceModelStatus === "unavailable" && (
+        <div
+          style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }}
+          className="mono"
+        >
+          ⚠ Face detection could not start (likely a network/firewall issue) — your camera feed is still shown, but presence isn't being automatically checked this session.
         </div>
       )}
 

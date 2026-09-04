@@ -95,6 +95,47 @@ export default function SystemMonitoring() {
               <StatCard label="Mock Interviews" value={data.activeSessions.mockInterviews} />
             </div>
 
+            <h3 style={{ fontSize: 15, marginTop: 28 }}>AI Provider ({data.aiProvider.provider})</h3>
+            {!data.aiProvider.configured ? (
+              <div className="card" style={{ padding: 16, marginTop: 10, fontSize: 13, color: "var(--ink-dim)" }}>
+                Not configured on this server (GEMINI_API_KEY is not set) — every AI feature is currently returning a graceful "not configured" error rather than attempting a call.
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 10 }}>
+                  <StatCard label="Requests Today" value={data.aiProvider.today.total} sub={data.aiProvider.model} />
+                  <StatCard
+                    label="Success Rate Today"
+                    value={data.aiProvider.today.total === 0 ? "—" : `${Math.round((data.aiProvider.today.success / data.aiProvider.today.total) * 100)}%`}
+                    warn={data.aiProvider.today.total > 0 && data.aiProvider.today.failed / data.aiProvider.today.total > 0.1}
+                    sub={`${data.aiProvider.today.success} ok / ${data.aiProvider.today.failed} failed`}
+                  />
+                  <StatCard label="Avg Latency (successful calls)" value={data.aiProvider.today.avgLatencyMs != null ? `${data.aiProvider.today.avgLatencyMs} ms` : "—"} />
+                  <StatCard
+                    label="Daily Quota Used (platform)"
+                    value={`${data.aiProvider.quota.globalUsed} / ${data.aiProvider.quota.globalLimit}`}
+                    warn={data.aiProvider.quota.globalUsed / data.aiProvider.quota.globalLimit > 0.8}
+                    sub={`Per-institute cap: ${data.aiProvider.quota.perInstituteLimit}/day`}
+                  />
+                </div>
+                {Object.keys(data.aiProvider.today.byErrorType).length > 0 && (
+                  <div className="card" style={{ padding: 12, marginTop: 10, fontSize: 12 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>Failures today by reason</div>
+                    {Object.entries(data.aiProvider.today.byErrorType).map(([type, count]) => (
+                      <div key={type} className="mono" style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
+                        <span>{type}</span><span>{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {data.aiProvider.lastFailure && (
+                  <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>
+                    Last failure: {data.aiProvider.lastFailure.errorType || "UNKNOWN"} on {data.aiProvider.lastFailure.feature} at {new Date(data.aiProvider.lastFailure.createdAt).toLocaleString()}
+                  </div>
+                )}
+              </>
+            )}
+
             <h3 style={{ fontSize: 15, marginTop: 28 }}>Recent Uncaught Errors</h3>
             <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
               Only process-level failures that weren't already caught and handled by a route — most errors on this platform are caught and return a normal error response, so this list is usually empty.
