@@ -283,18 +283,29 @@ export default function TestTaking() {
     if (!stream) return;
 
     const tracks = stream.getTracks();
-    function handleEnded() {
-      reportViolation("your camera or microphone was turned off or disconnected");
+    // A track's own `kind` ("video"/"audio") tells camera and mic drops apart -- previously both
+    // reported the same combined message regardless of which device actually failed, and (before
+    // this fix) counted as a bare, type-less violation server-side anyway.
+    function makeEndedHandler(kind) {
+      const label = kind === "video" ? "camera" : "microphone";
+      return () => reportViolation(kind === "video" ? "CAMERA_DROPPED" : "MIC_DROPPED", `your ${label} was turned off or disconnected`);
     }
-    tracks.forEach((t) => t.addEventListener("ended", handleEnded));
+    const endedHandlers = tracks.map((t) => [t, makeEndedHandler(t.kind)]);
+    endedHandlers.forEach(([t, handler]) => t.addEventListener("ended", handler));
 
     const pollInterval = setInterval(() => {
-      const stillLive = stream.getTracks().every((t) => t.readyState === "live");
-      if (!stillLive) reportViolation("your camera or microphone was turned off or disconnected");
+      const videoTracks = stream.getVideoTracks();
+      const audioTracks = stream.getAudioTracks();
+      if (videoTracks.length && !videoTracks.every((t) => t.readyState === "live")) {
+        reportViolation("CAMERA_DROPPED", "your camera was turned off or disconnected");
+      }
+      if (audioTracks.length && !audioTracks.every((t) => t.readyState === "live")) {
+        reportViolation("MIC_DROPPED", "your microphone was turned off or disconnected");
+      }
     }, 5000);
 
     return () => {
-      tracks.forEach((t) => t.removeEventListener("ended", handleEnded));
+      endedHandlers.forEach(([t, handler]) => t.removeEventListener("ended", handler));
       clearInterval(pollInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -349,7 +360,7 @@ export default function TestTaking() {
       if (!faceFound && !faceMissingRef.current) {
         faceMissingRef.current = true;
         setFaceMissing(true);
-        reportViolation("no face was detected in the camera frame — stay visible for the whole test");
+        reportViolation("FACE_MISSING", "no face was detected in the camera frame — stay visible for the whole test");
       } else if (faceFound && faceMissingRef.current) {
         faceMissingRef.current = false;
         setFaceMissing(false);
@@ -660,7 +671,13 @@ export default function TestTaking() {
 
   const lastViolationAtRef = useRef(0);
   const tabWarningTimeoutRef = useRef(null);
-  function reportViolation(reason) {
+  // `type` is reported to the server, which decides -- never trusted client-side -- whether it's
+  // penalized (tab switch, fullscreen exit, camera/mic dropped, screen overlay: counts toward
+  // MAX_TAB_VIOLATIONS) or logged only (face missing: recorded in TestViolation for admin review,
+  // but never costs a strike -- same "log don't penalize" policy the Interview surface already
+  // uses for face signals). `reason` is purely the human-readable text for the on-page banner,
+  // shown only when the server confirms this one actually counted.
+  function reportViolation(type, reason) {
     if (!attemptIdRef.current || finalizedRef.current) return;
     // Exiting fullscreen via Escape/Alt-Tab fires both `fullscreenchange` and `visibilitychange`
     // within the same instant — without this guard a single action was double-counted as 2
@@ -669,7 +686,7 @@ export default function TestTaking() {
     if (now - lastViolationAtRef.current < 1500) return;
     lastViolationAtRef.current = now;
     api
-      .post(`/tests/attempts/${attemptIdRef.current}/violation`)
+      .post(`/tests/attempts/${attemptIdRef.current}/violation`, { type })
       .then(({ data }) => {
         if (data.autoSubmitted) {
           finalizedRef.current = true;
@@ -679,7 +696,7 @@ export default function TestTaking() {
           // No alert() here — a dedicated full-screen message is shown once `autoSubmitted`
           // is true, and native alert()/confirm() dialogs force the browser to exit
           // fullscreen before they can render, which would fight the auto-submit cleanup.
-        } else {
+        } else if (data.penalized) {
           // No alert() here either: showing a native dialog while in fullscreen forces the
           // browser to silently exit fullscreen first, which was actively working against
           // the "immediately return to fullscreen" requirement. An on-page banner instead.
@@ -715,7 +732,7 @@ export default function TestTaking() {
       if (document.hidden) {
         clearTimeout(tabSwitchGraceTimerRef.current);
         tabSwitchGraceTimerRef.current = setTimeout(() => {
-          if (document.hidden) reportViolation("switching tabs during a test is not allowed");
+          if (document.hidden) reportViolation("TAB_SWITCH", "switching tabs during a test is not allowed");
         }, TAB_SWITCH_GRACE_MS);
       } else {
         clearTimeout(tabSwitchGraceTimerRef.current);
@@ -775,7 +792,7 @@ export default function TestTaking() {
           console.info("[exam] KEYBOARD_VIEWPORT_CHANGE: fullscreen exit attributed to the on-screen keyboard, not counted as a violation");
           return;
         }
-        reportViolation("exiting fullscreen during a test is not allowed");
+        reportViolation("FULLSCREEN_EXIT", "exiting fullscreen during a test is not allowed");
         requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
       } else if (active) {
         clearTimeout(tabWarningTimeoutRef.current);
@@ -827,7 +844,7 @@ export default function TestTaking() {
       if (shrinkRatio > SHRINK_RATIO_THRESHOLD) {
         if (!flagged) {
           flagged = true;
-          reportViolation("an on-screen search/assistant overlay was detected");
+          reportViolation("SCREEN_OVERLAY_DETECTED", "an on-screen search/assistant overlay was detected");
         }
       } else {
         flagged = false;
@@ -1327,7 +1344,7 @@ export default function TestTaking() {
       <AssessmentEndCard
         tone="danger"
         title="Assessment auto-submitted"
-        message="Your assessment was automatically submitted after repeated integrity violations (leaving the test window, exiting fullscreen, your camera/microphone being turned off, or no face being detected in frame)."
+        message="Your assessment was automatically submitted after repeated integrity violations (leaving the test window, exiting fullscreen, or your camera/microphone being turned off)."
         primaryLabel="Back to dashboard"
         onPrimary={() => navigate("/dashboard")}
       />
@@ -1417,9 +1434,9 @@ export default function TestTaking() {
               )}
               {needsWebcam && <li>Your face must stay visible in the camera frame at all times.</li>}
               <li>
-                Switching tabs{needsFullscreen ? ", exiting fullscreen," : ""}
-                {needsMedia ? ` disabling your ${mediaLabel},` : ""}
-                {needsWebcam ? " or moving out of camera view" : ""} is tracked and will auto-submit your test after {MAX_TAB_VIOLATIONS} violations.
+                Switching tabs{needsFullscreen ? " or exiting fullscreen" : ""}
+                {needsMedia ? `, or disabling your ${mediaLabel},` : ""} is tracked and will auto-submit your test after {MAX_TAB_VIOLATIONS} violations.
+                {needsWebcam && " Moving out of camera view is also logged for review, but on its own won't auto-submit your test."}
               </li>
               <li>
                 You get one continuous {testMeta.durationMin}-minute timer for the whole test — answer any question in any

@@ -950,8 +950,20 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
   }
 });
 
-// --- STUDENT: report a tab-switch / focus-loss violation during an attempt.
-// After MAX_VIOLATIONS, the attempt is auto-submitted server-side. ---
+// Mirrors moduleCoding.js's and interview.js's identical allowlist exactly. Before this existed,
+// the exam side didn't even know WHAT happened — the client sent no type at all, and every call
+// to this endpoint blindly incremented tabSwitchCount by 1, so a face-missing blip counted as a
+// full strike exactly like a real tab switch. FACE_MISSING/MULTIPLE_FACES intentionally stay
+// off this list — same "log don't penalize" policy interview.js already documents for face
+// signals, now applied consistently across every proctored surface.
+const PENALIZED_VIOLATION_TYPES = new Set(["TAB_SWITCH", "FULLSCREEN_EXIT", "CAMERA_DROPPED", "MIC_DROPPED", "SCREEN_OVERLAY_DETECTED"]);
+
+// --- STUDENT: report a proctoring violation during an attempt. `type` distinguishes what
+// happened; only penalized types count toward MAX_TAB_VIOLATIONS — see PENALIZED_VIOLATION_TYPES
+// above, the sole source of truth (never a client-supplied flag). Every event is still logged to
+// TestViolation regardless, so an admin reviewing a flagged attempt sees the real event history,
+// not just a count. After MAX_VIOLATIONS penalized events, the attempt is auto-submitted
+// server-side. ---
 const MAX_TAB_VIOLATIONS = 3;
 router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
@@ -963,8 +975,10 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
       return res.json({ tabSwitchCount: attempt.tabSwitchCount, autoSubmitted: true });
     }
 
-    const tabSwitchCount = attempt.tabSwitchCount + 1;
-    const autoSubmitted = tabSwitchCount >= MAX_TAB_VIOLATIONS;
+    const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
+    const penalized = PENALIZED_VIOLATION_TYPES.has(type);
+    const tabSwitchCount = penalized ? attempt.tabSwitchCount + 1 : attempt.tabSwitchCount;
+    const autoSubmitted = penalized && tabSwitchCount >= MAX_TAB_VIOLATIONS;
 
     // Coding answers are auto-saved as PENDING drafts and only graded at submission time —
     // a violation-triggered auto-submit is a submission just like any other, so it must grade
@@ -973,13 +987,20 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
       await gradePendingCodingSubmissions(attempt.id);
     }
 
-    const updated = await prisma.testAttempt.update({
-      where: { id: attempt.id },
-      data: {
-        tabSwitchCount,
-        ...(autoSubmitted ? { status: "AUTO_SUBMITTED", submittedAt: new Date() } : {}),
-      },
-    });
+    // Log row and count update describe one event -- transact them together when penalized (same
+    // reasoning as moduleCoding.js's identical route) so a partial write never leaves the two out
+    // of sync. Non-penalized events only ever write the log.
+    if (penalized) {
+      await prisma.$transaction([
+        prisma.testViolation.create({ data: { attemptId: attempt.id, type, penalized } }),
+        prisma.testAttempt.update({
+          where: { id: attempt.id },
+          data: { tabSwitchCount, ...(autoSubmitted ? { status: "AUTO_SUBMITTED", submittedAt: new Date() } : {}) },
+        }),
+      ]);
+    } else {
+      await prisma.testViolation.create({ data: { attemptId: attempt.id, type, penalized } });
+    }
 
     // Still counts as a completed test for XP/streak purposes (same treatment AUTO_SUBMITTED
     // gets everywhere else on the platform) — not surfaced in this response, though, since a
@@ -991,10 +1012,36 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
       );
     }
 
-    res.json({ tabSwitchCount: updated.tabSwitchCount, autoSubmitted });
+    res.json({ tabSwitchCount, maxViolations: MAX_TAB_VIOLATIONS, penalized, autoSubmitted });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to record violation" });
+  }
+});
+
+// ADMIN/STAFF: event-level proctoring log for one exam attempt -- for reviewing exactly what
+// happened, not just tabSwitchCount. Mirrors moduleCoding.js's /admin/attempts/:attemptId and
+// interview.js's /admin/sessions/:id/violations exactly.
+router.get("/admin/attempts/:attemptId/violations", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: req.params.attemptId },
+      include: { test: { select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } } }, student: { select: { name: true, email: true } } },
+    });
+    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
+    if (req.requesterInstituteId && attempt.test.instituteId && attempt.test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only view attempts for tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, attempt.test)) {
+      return res.status(403).json({ error: "You can only view attempts for tests you created or that were shared with you" });
+    }
+    const violations = await prisma.testViolation.findMany({ where: { attemptId: attempt.id }, orderBy: { createdAt: "asc" } });
+    const byType = {};
+    for (const v of violations) byType[v.type] = (byType[v.type] || 0) + 1;
+    res.json({ student: attempt.student, tabSwitchCount: attempt.tabSwitchCount, byType, events: violations });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load violation log" });
   }
 });
 

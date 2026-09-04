@@ -379,7 +379,12 @@ export default function AdminDashboard() {
                         {a.status === "IN_PROGRESS"
                           ? `started ${new Date(a.startedAt).toLocaleString()}`
                           : `submitted ${new Date(a.submittedAt).toLocaleString()}`}
-                        {a.tabSwitchCount > 0 && ` · ${a.tabSwitchCount} tab switch${a.tabSwitchCount > 1 ? "es" : ""}`}
+                        {/* Despite the field name, this now counts every penalized proctoring event
+                            (fullscreen exits, camera/mic drops, screen overlays too), not just literal
+                            tab switches -- labeled generically to match. See tests.js's
+                            PENALIZED_VIOLATION_TYPES / GET /tests/admin/attempts/:id/violations for
+                            the real per-event breakdown this summary card doesn't have room to show. */}
+                        {a.tabSwitchCount > 0 && ` · ${a.tabSwitchCount} violation${a.tabSwitchCount > 1 ? "s" : ""}`}
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

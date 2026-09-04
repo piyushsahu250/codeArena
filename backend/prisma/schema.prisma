@@ -984,7 +984,12 @@ model TestAttempt {
   submittedAt DateTime?
   totalScore  Int       @default(0)
   status      String    @default("IN_PROGRESS") // IN_PROGRESS, SUBMITTED, AUTO_SUBMITTED
+  // Despite the name, this now counts every PENALIZED proctoring event (see
+  // TestViolation.penalized / tests.js's PENALIZED_VIOLATION_TYPES), not literally just tab
+  // switches — kept as-is rather than renamed to avoid a migration plus updating every existing
+  // reader (AdminDashboard.jsx, exports.js, StudentTestResult.jsx, etc.) for a cosmetic rename.
   tabSwitchCount Int    @default(0)
+  violations     TestViolation[]
 
   // Generated once, at first attempt creation, from Test.shuffleQuestions/shuffleOptions — never
   // recomputed afterward, so a refresh, logout/login, or auto-save/recovery always sees the same
@@ -1744,6 +1749,25 @@ model ProctoringViolation {
   attempt   ModuleCodingAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   attemptId String
   type      String // TAB_SWITCH, FULLSCREEN_EXIT, COPY, PASTE, CUT, RIGHT_CLICK, DRAG_ATTEMPT, DEVTOOLS, REFRESH_ATTEMPT, MULTI_MONITOR, FACE_MISSING, MULTIPLE_FACES, CAMERA_DROPPED
+  createdAt DateTime @default(now())
+
+  @@index([attemptId, createdAt])
+}
+
+// Event-level proctoring log for exam attempts -- brings the exam surface to parity with
+// ProctoringViolation (Module Coding) and InterviewViolation (Interview) above, which both
+// already record every event with a stored `penalized` flag rather than making an admin
+// recompute it later against whatever the allowlist happens to be at read time. Previously the
+// exam side had NO per-event record at all -- TestAttempt.tabSwitchCount was a bare integer that
+// went up by exactly 1 on every single call to /attempts/:id/violation regardless of type, and an
+// admin reviewing a flagged attempt saw only "3 tab switches" even when the real cause was e.g.
+// two camera drops and one actual tab switch.
+model TestViolation {
+  id        String      @id @default(uuid())
+  attempt   TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attemptId String
+  type      String // TAB_SWITCH, FULLSCREEN_EXIT, CAMERA_DROPPED, MIC_DROPPED, FACE_MISSING, SCREEN_OVERLAY_DETECTED
+  penalized Boolean @default(true)
   createdAt DateTime @default(now())
 
   @@index([attemptId, createdAt])

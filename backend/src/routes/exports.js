@@ -122,7 +122,11 @@ const ENTITIES = {
     });
     return rows.map((a) => ({
       "Roll Number": a.student.rollNumber || "", Student: a.student.name, "Registration Number (PRN)": a.student.registrationNumber || "", Email: a.student.email,
-      Test: a.test.title, Score: a.totalScore, Status: a.status, "Tab Switches": a.tabSwitchCount,
+      // Despite the field name (tabSwitchCount, kept for schema-compatibility reasons — see its
+      // own comment), this now counts every penalized proctoring event, not just tab switches
+      // (fullscreen exits, camera/mic drops, screen overlays too) — labeled generically here to
+      // match. See GET /tests/admin/attempts/:id/violations for the actual per-event breakdown.
+      Test: a.test.title, Score: a.totalScore, Status: a.status, "Proctoring Violations": a.tabSwitchCount,
       "Started At": a.startedAt.toISOString(), "Submitted At": a.submittedAt ? a.submittedAt.toISOString() : "",
     }));
   },
