@@ -5,6 +5,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { getSnapshot } = require("../utils/metrics");
 const { getQueueStatus } = require("../utils/queue");
+const { getQueueStatus: getAiQueueStatus } = require("../utils/aiQueue");
 const { cached } = require("../utils/cache");
 const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
 const { credentialsResendTemplate } = require("../utils/emailTemplates");
@@ -337,6 +338,7 @@ router.post("/email-logs/:id/retry", authenticate, requireRole("ADMIN", "SUPER_A
 router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const os = require("os");
+    const fs = require("fs");
     const mem = process.memoryUsage();
 
     const dbPingStart = process.hrtime.bigint();
@@ -348,6 +350,17 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
       prisma.moduleCodingAttempt.count({ where: { status: "IN_PROGRESS" } }),
       prisma.interviewSession.count({ where: { status: "IN_PROGRESS" } }),
     ]);
+
+    // "Active users" — LoginSession has no separate expiresAt column (session validity is purely
+    // the JWT's own exp claim, see utils/sessions.js), so this can't say "currently holds a valid
+    // token" with certainty. loginAt within the last 24h + never explicitly logged out is an
+    // honest, clearly-scoped proxy for "recently active," not a claim of live concurrent sessions.
+    const activeUsersSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeUserCount = await prisma.loginSession.findMany({
+      where: { isActive: true, loginAt: { gte: activeUsersSince } },
+      select: { userId: true },
+      distinct: ["userId"],
+    }).then((rows) => rows.length);
 
     const snapshot = getSnapshot();
 
@@ -386,6 +399,42 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
       };
     });
 
+    // Email delivery — EmailLog has recorded every send attempt (Apps Script bridge or SMTP,
+    // utils/mailer.js's sendMailLogged) since long before this section existed; same "nothing
+    // admin-facing ever read it back" gap the AI section above already closed.
+    const emailDelivery = await cached("admin:monitoring:email", 15000, async () => {
+      const since = new Date();
+      since.setUTCHours(0, 0, 0, 0);
+      const byStatus = await prisma.emailLog.groupBy({ by: ["status"], where: { createdAt: { gte: since } }, _count: { _all: true } });
+      const counts = Object.fromEntries(byStatus.map((g) => [g.status, g._count._all]));
+      const lastFailure = await prisma.emailLog.findFirst({
+        where: { status: "FAILED" }, orderBy: { createdAt: "desc" }, select: { emailType: true, errorMessage: true, createdAt: true },
+      });
+      return {
+        today: { sent: counts.SENT || 0, failed: counts.FAILED || 0, pending: counts.PENDING || 0, retrying: counts.RETRYING || 0 },
+        transportConfigured: !!(process.env.APPS_SCRIPT_WEB_APP_URL || process.env.MAIL_HOST),
+        lastFailure,
+      };
+    });
+
+    // Disk — the one resource judge.js's own temp-file writes (submission I/O) actually depend
+    // on running out of. fs.statfsSync is Node 18.15+/20+ built-in, no new dependency. Wrapped
+    // separately: unlike every other section here, a filesystem call failing shouldn't take the
+    // whole monitoring page down with it.
+    let storage = null;
+    try {
+      const stat = fs.statfsSync("/app");
+      const totalBytes = stat.blocks * stat.bsize;
+      const freeBytes = stat.bfree * stat.bsize;
+      storage = {
+        totalGb: Math.round((totalBytes / 1024 / 1024 / 1024) * 10) / 10,
+        freeGb: Math.round((freeBytes / 1024 / 1024 / 1024) * 10) / 10,
+        usedPercent: Math.round(((totalBytes - freeBytes) / totalBytes) * 1000) / 10,
+      };
+    } catch (err) {
+      console.warn("[monitoring] disk stat unavailable:", err.message);
+    }
+
     res.json({
       process: {
         uptimeSec: Math.round(process.uptime()),
@@ -400,14 +449,18 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
       database: {
         pingMs: Math.round(dbPingMs * 10) / 10,
       },
+      storage,
       requestTiming: snapshot.requestTimingMs,
       judgeQueue: getQueueStatus(),
+      aiQueue: getAiQueueStatus(),
       activeSessions: {
         codingTests: activeTestAttempts,
         moduleCodingAssessments: activeModuleAttempts,
         mockInterviews: activeInterviewSessions,
       },
+      activeUsers: { last24h: activeUserCount },
       aiProvider,
+      emailDelivery,
       recentErrors: snapshot.recentErrors,
     });
   } catch (err) {

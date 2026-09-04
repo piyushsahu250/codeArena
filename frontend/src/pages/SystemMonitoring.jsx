@@ -20,6 +20,30 @@ function StatCard({ label, value, sub, warn }) {
   );
 }
 
+// A single top-of-page Healthy/Warning/Critical read, aggregated from the same per-metric `warn`
+// thresholds each StatCard below already uses individually -- not a separate SLA/monitoring
+// system, just one honest summary of signals that are already computed. 0 warning signals =
+// Healthy, 1-2 = Warning (something to look at, nothing broken), 3+ = Critical (multiple systems
+// degraded at once, worth checking immediately). A deliberately simple, stated heuristic -- not a
+// claim of a formal alerting SLA this single-process platform doesn't have.
+function overallStatus(data) {
+  let warnings = 0;
+  if (data.process.eventLoopLagMs > 200) warnings++;
+  if (data.database.pingMs > 200) warnings++;
+  if (data.requestTiming.p95 > 1000) warnings++;
+  if (data.requestTiming.p99 > 3000) warnings++;
+  if (data.judgeQueue.waiting > 5) warnings++;
+  if (data.aiQueue.waiting > 5) warnings++;
+  if (data.aiProvider.configured && data.aiProvider.today.total > 0 && data.aiProvider.today.failed / data.aiProvider.today.total > 0.1) warnings++;
+  if (data.aiProvider.configured && data.aiProvider.quota.globalUsed / data.aiProvider.quota.globalLimit > 0.8) warnings++;
+  if (!data.emailDelivery.transportConfigured) warnings++;
+  if (data.emailDelivery.today.sent + data.emailDelivery.today.failed > 0 && data.emailDelivery.today.failed / (data.emailDelivery.today.sent + data.emailDelivery.today.failed) > 0.2) warnings++;
+  if (data.storage && data.storage.usedPercent > 90) warnings++;
+  if (warnings >= 3) return { label: "Critical", color: "var(--rust)" };
+  if (warnings >= 1) return { label: "Warning", color: "var(--amber)" };
+  return { label: "Healthy", color: "var(--mint)" };
+}
+
 export default function SystemMonitoring() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -47,6 +71,16 @@ export default function SystemMonitoring() {
           <div><h1>System Monitoring</h1><ChalkUnderline /></div>
           {lastUpdated && <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>Updated {lastUpdated.toLocaleTimeString()} · refreshes every {POLL_MS / 1000}s</span>}
         </div>
+        {data && (() => {
+          const status = overallStatus(data);
+          return (
+            <div className="card" style={{ padding: "12px 18px", marginTop: 16, display: "flex", alignItems: "center", gap: 10, borderLeft: `4px solid ${status.color}` }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: status.color, flexShrink: 0 }} />
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{status.label}</span>
+              <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>— aggregated from the metrics below, not a separate check</span>
+            </div>
+          );
+        })()}
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 4 }}>
           Live metrics from this backend process and its database connection — single instance, no external monitoring agent.
         </p>
@@ -74,6 +108,17 @@ export default function SystemMonitoring() {
               <StatCard label="DB Ping (SELECT 1)" value={`${data.database.pingMs} ms`} warn={data.database.pingMs > 200} />
             </div>
 
+            <h3 style={{ fontSize: 15, marginTop: 28 }}>Storage</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 10 }}>
+              {data.storage ? (
+                <>
+                  <StatCard label="Disk Used" value={`${data.storage.usedPercent}%`} warn={data.storage.usedPercent > 90} sub={`${data.storage.freeGb} GB free of ${data.storage.totalGb} GB`} />
+                </>
+              ) : (
+                <div className="card" style={{ padding: 16, fontSize: 13, color: "var(--ink-dim)" }}>Disk usage unavailable on this host.</div>
+              )}
+            </div>
+
             <h3 style={{ fontSize: 15, marginTop: 28 }}>API Response Time (last {data.requestTiming.sampleSize} requests)</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 10 }}>
               <StatCard label="Average" value={data.requestTiming.avg != null ? `${data.requestTiming.avg} ms` : "—"} />
@@ -88,11 +133,18 @@ export default function SystemMonitoring() {
               <StatCard label="Waiting in Queue" value={data.judgeQueue.waiting} warn={data.judgeQueue.waiting > 5} />
             </div>
 
+            <h3 style={{ fontSize: 15, marginTop: 28 }}>AI Queue</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 10 }}>
+              <StatCard label="Running Now" value={`${data.aiQueue.active} / ${data.aiQueue.maxConcurrent}`} />
+              <StatCard label="Waiting in Queue" value={data.aiQueue.waiting} warn={data.aiQueue.waiting > 5} />
+            </div>
+
             <h3 style={{ fontSize: 15, marginTop: 28 }}>Active Sessions Right Now</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 10 }}>
               <StatCard label="Coding Tests" value={data.activeSessions.codingTests} />
               <StatCard label="Module Coding Assessments" value={data.activeSessions.moduleCodingAssessments} />
               <StatCard label="Mock Interviews" value={data.activeSessions.mockInterviews} />
+              <StatCard label="Active Users (last 24h)" value={data.activeUsers.last24h} sub="Logged in and not explicitly logged out" />
             </div>
 
             <h3 style={{ fontSize: 15, marginTop: 28 }}>AI Provider ({data.aiProvider.provider})</h3>
@@ -136,9 +188,33 @@ export default function SystemMonitoring() {
               </>
             )}
 
-            <h3 style={{ fontSize: 15, marginTop: 28 }}>Recent Uncaught Errors</h3>
+            <h3 style={{ fontSize: 15, marginTop: 28 }}>Email Delivery</h3>
+            {!data.emailDelivery.transportConfigured ? (
+              <div className="card" style={{ padding: 16, marginTop: 10, fontSize: 13, color: "var(--ink-dim)" }}>
+                No transport configured (neither the Apps Script bridge nor SMTP) — email sends are being logged as "simulated," not actually delivered.
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 10 }}>
+                  <StatCard label="Sent Today" value={data.emailDelivery.today.sent} />
+                  <StatCard
+                    label="Failed Today"
+                    value={data.emailDelivery.today.failed}
+                    warn={data.emailDelivery.today.sent + data.emailDelivery.today.failed > 0 && data.emailDelivery.today.failed / (data.emailDelivery.today.sent + data.emailDelivery.today.failed) > 0.2}
+                  />
+                  <StatCard label="Pending / Retrying" value={data.emailDelivery.today.pending + data.emailDelivery.today.retrying} />
+                </div>
+                {data.emailDelivery.lastFailure && (
+                  <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>
+                    Last failure: {data.emailDelivery.lastFailure.emailType} at {new Date(data.emailDelivery.lastFailure.createdAt).toLocaleString()} — {data.emailDelivery.lastFailure.errorMessage}
+                  </div>
+                )}
+              </>
+            )}
+
+            <h3 style={{ fontSize: 15, marginTop: 28 }}>Recent Errors &amp; Failed Background Jobs</h3>
             <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
-              Only process-level failures that weren't already caught and handled by a route — most errors on this platform are caught and return a normal error response, so this list is usually empty.
+              Process-level failures that weren't already caught and handled by a route, plus a failed run of the Daily/Weekly Challenge scheduler, AI auto-refresh, or Talent Pool reminder sweep (context tags: challengeScheduler / aiRefreshScheduler / talentPoolReminderScheduler). Most errors on this platform are caught and return a normal error response, so this list is usually empty.
             </p>
             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
               {data.recentErrors.length === 0 && (

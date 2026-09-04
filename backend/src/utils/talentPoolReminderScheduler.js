@@ -41,7 +41,12 @@ function startTalentPoolReminderScheduler() {
   const intervalMs = Math.max(60 * 1000, Number(process.env.TALENT_POOL_REMINDER_INTERVAL_MS) || 60 * 60 * 1000);
   console.log(`Talent Pool reminder scheduler enabled — running every ${intervalMs}ms.`);
   setInterval(() => {
-    runOnce().catch((err) => console.error("Talent Pool reminder sweep failed:", err));
+    runOnce().catch((err) => {
+      console.error("Talent Pool reminder sweep failed:", err);
+      // See challengeScheduler.js's identical addition — surfaces into the admin monitoring
+      // page's "recent errors" feed instead of only the container's raw logs.
+      require("./metrics").recordProcessError(err, "talentPoolReminderScheduler");
+    });
   }, intervalMs);
 }
 

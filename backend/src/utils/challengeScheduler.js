@@ -146,7 +146,13 @@ function startChallengeScheduler() {
   const intervalMs = Math.max(60 * 1000, Number(process.env.CHALLENGE_SCHEDULER_INTERVAL_MS) || 60 * 60 * 1000);
   console.log(`Challenge scheduler enabled — running every ${intervalMs}ms.`);
   setInterval(() => {
-    runOnce().catch((err) => console.error("Challenge scheduler run failed:", err));
+    runOnce().catch((err) => {
+      console.error("Challenge scheduler run failed:", err);
+      // Surfaces into the admin monitoring page's "recent errors" feed (see utils/metrics.js) —
+      // previously a failed scheduled run was only ever visible in the container's raw logs, with
+      // nothing in-app to tell an admin a background job silently stopped working.
+      require("./metrics").recordProcessError(err, "challengeScheduler");
+    });
   }, intervalMs);
 }
 

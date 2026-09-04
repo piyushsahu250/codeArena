@@ -68,7 +68,12 @@ function startAiRefreshScheduler() {
   const intervalMs = Math.max(60 * 1000, Number(process.env.AI_AUTO_REFRESH_INTERVAL_MS) || 24 * 60 * 60 * 1000);
   console.log(`AI auto-refresh scheduler enabled — running every ${intervalMs}ms, next run in ${intervalMs}ms.`);
   setInterval(() => {
-    runOnce().catch((err) => console.error("AI auto-refresh run failed:", err));
+    runOnce().catch((err) => {
+      console.error("AI auto-refresh run failed:", err);
+      // See challengeScheduler.js's identical addition — surfaces into the admin monitoring
+      // page's "recent errors" feed instead of only the container's raw logs.
+      require("./metrics").recordProcessError(err, "aiRefreshScheduler");
+    });
   }, intervalMs);
 }
 
