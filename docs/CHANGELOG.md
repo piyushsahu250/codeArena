@@ -266,3 +266,8 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 - Database model count: 104 -> 105 (review DATABASE.md, DATA_DICTIONARY.md)
 - This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
 - Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
+
+## 2026-09-04 (auto-detected drift)
+- API endpoint count: 522 -> 523 (review API_DOCUMENTATION.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
