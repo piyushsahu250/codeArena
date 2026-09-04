@@ -73,6 +73,17 @@ function exemptionRemarkError(status, remarks) {
 // Review; once it moves to Ready to Publish (a deliberate "about to go out" checkpoint) or beyond,
 // only Admin-tier roles may touch entries (matches the spec's explicit "Update Results" being an
 // Admin-only publication action).
+//
+// Deliberately institute-wide, not further scoped to a staff member's own assigned classes:
+// ResultExamination carries no createdById or per-staff assignment relation at all (batch/
+// divisions/semester here are free-text/informational, not a relation to any staff-ownership
+// concept — see this model's own schema comments), and CLERK is included in this gate right
+// alongside STAFF, which only makes sense if entering marks is meant as shared institute-level
+// data-entry work, not a single subject-teacher's own gradebook. Introducing per-class
+// restriction would mean inventing a new staff<->examination assignment mechanism from nothing,
+// not fixing a gap in an existing one -- and accountability for who actually entered what already
+// exists regardless, via recordEntryHistory's full per-field audit trail. Revisit only if a real
+// per-subject-teacher assignment model is deliberately added to ResultExamination itself.
 function canEditEntries(examination, user) {
   if (examination.marksFrozen) return false;
   if (user.role === "ADMIN" || user.role === "SUPER_ADMIN" || user.role === "INSTITUTE_ADMIN") return true;
