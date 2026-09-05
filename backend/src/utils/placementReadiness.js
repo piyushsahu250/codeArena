@@ -51,7 +51,14 @@ async function computePlacementReadiness(studentId) {
   const codingScore = performance.analytics.codingVsMcq.coding.percentage;
   const aptitudeScore = performance.analytics.codingVsMcq.mcq.percentage;
   const academicScore = performance.summary.overallPercentage;
-  const resumeScore = resume ? computeAtsScore(resume).score : null;
+  // A Resume ROW existing is not the same as a resume with actual content -- the Resume Builder
+  // creates an empty shell the first time a student opens it, before they've typed anything.
+  // Confirmed live: without this check, that empty shell scored a genuine 0% (every ATS section
+  // legitimately empty) and dragged down the weighted average exactly like a real, badly-written
+  // resume would -- indistinguishable from "hasn't started this yet," which is the same
+  // data-completeness gap every other component already excludes rather than penalizes.
+  const hasResumeContent = !!(resume && (resume.fullName || resume.summary || resume.skills?.length || resume.experience?.length || resume.projects?.length));
+  const resumeScore = hasResumeContent ? computeAtsScore(resume).score : null;
   const interviewScore = interviewReports.length
     ? Math.round(interviewReports.reduce((sum, r) => sum + r.overallScore, 0) / interviewReports.length)
     : null;
@@ -61,7 +68,7 @@ async function computePlacementReadiness(studentId) {
     { key: "coding", label: "Coding", weight: WEIGHTS.coding, score: codingScore, dataPoints: performance.summary.totalCodingAttempted },
     { key: "aptitude", label: "Aptitude (test MCQs)", weight: WEIGHTS.aptitude, score: aptitudeScore, dataPoints: performance.summary.totalMcqAttempted },
     { key: "academic", label: "Academic (formal tests)", weight: WEIGHTS.academic, score: academicScore, dataPoints: performance.summary.totalTestsCompleted },
-    { key: "resume", label: "Resume / ATS", weight: WEIGHTS.resume, score: resumeScore, dataPoints: resume ? 1 : 0 },
+    { key: "resume", label: "Resume / ATS", weight: WEIGHTS.resume, score: resumeScore, dataPoints: hasResumeContent ? 1 : 0 },
     { key: "interview", label: "Mock Interviews", weight: WEIGHTS.interview, score: interviewScore, dataPoints: interviewReports.length },
     { key: "certifications", label: "Certifications", weight: WEIGHTS.certifications, score: certScore, dataPoints: certificateCount },
   ];
