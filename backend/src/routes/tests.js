@@ -1197,6 +1197,74 @@ router.get("/:id/results", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
   res.json(attempts);
 });
 
+// STAFF/ADMIN: per-question breakdown for one test — "Faculty Analytics" (platform-maturity spec
+// item #6): attempted count, fully-correct count/rate, and average score-as-percent-of-max, sorted
+// hardest-first (lowest correct rate) so the questions students actually struggled with surface at
+// the top rather than being buried in per-student rows. "Fully correct" is defined the same way
+// regardless of question type — score >= the question's own points — since Submission.score is
+// already the one universal, type-agnostic field (MCQ full-or-zero, CODING/SQL proportional to
+// passedCases/totalCases), so this needs no separate MCQ/coding branching logic.
+//
+// `reviewRecommended` is a heuristic flag (correct rate under 20%, with at least 5 attempts so a
+// single early submission can't trigger it), not a claim that a question IS broken -- a genuinely
+// hard question and a badly-worded one produce the identical signal from this data alone; only a
+// human can tell them apart. This is intentionally surfaced, never auto-corrected.
+router.get("/:id/question-analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const test = await prisma.test.findUnique({
+    where: { id: req.params.id },
+    select: {
+      instituteId: true, createdById: true, shares: { select: { staffId: true } },
+      questions: { orderBy: { order: "asc" }, select: { questionId: true, question: { select: { questionNumber: true, title: true, points: true, questionType: true } } } },
+    },
+  });
+  if (!test) return res.status(404).json({ error: "Test not found" });
+  if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+    return res.status(403).json({ error: "You can only view analytics for tests under your own institute" });
+  }
+  if (!canStaffAccessTest(req, test)) {
+    return res.status(403).json({ error: "You can only view analytics for tests you created or that were shared with you" });
+  }
+
+  const questionIds = test.questions.map((tq) => tq.questionId);
+  const submissions = questionIds.length
+    ? await prisma.submission.findMany({
+        where: { attempt: { testId: req.params.id }, questionId: { in: questionIds } },
+        select: { questionId: true, score: true, studentId: true },
+      })
+    : [];
+  const byQuestion = new Map(questionIds.map((id) => [id, []]));
+  for (const s of submissions) byQuestion.get(s.questionId)?.push(s);
+
+  const rows = test.questions.map((tq) => {
+    const q = tq.question;
+    const subs = byQuestion.get(tq.questionId) || [];
+    // Distinct students, not raw submission rows — autosave can write more than one Submission
+    // row per student per question over the course of an attempt (see Submission.createdAt/the
+    // autosave endpoints), so a raw count would overcount "attempted."
+    const byStudent = new Map();
+    for (const s of subs) {
+      const prior = byStudent.get(s.studentId);
+      if (!prior || s.score > prior.score) byStudent.set(s.studentId, s);
+    }
+    const attempted = byStudent.size;
+    const scores = [...byStudent.values()].map((s) => s.score);
+    const fullyCorrect = q.points > 0 ? scores.filter((sc) => sc >= q.points).length : 0;
+    const correctRate = attempted > 0 ? fullyCorrect / attempted : null;
+    const avgScorePercent = attempted > 0 && q.points > 0
+      ? Math.round((scores.reduce((sum, sc) => sum + sc, 0) / attempted / q.points) * 100)
+      : null;
+    return {
+      questionId: tq.questionId, questionNumber: q.questionNumber, title: q.title, questionType: q.questionType, points: q.points,
+      attempted, fullyCorrect, correctRate, avgScorePercent,
+      reviewRecommended: attempted >= 5 && correctRate !== null && correctRate < 0.2,
+    };
+  });
+  // Hardest (or least-attempted-yet, correctRate null) first — that ordering is what makes this a
+  // "which questions need attention" view rather than just the test's own authored question order.
+  rows.sort((a, b) => (a.correctRate ?? -1) - (b.correctRate ?? -1));
+  res.json(rows);
+});
+
 // --- STUDENT: view their own result for a test, respecting the test's showResults toggle ---
 router.get("/:id/my-result", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {

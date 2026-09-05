@@ -43,6 +43,27 @@ export default function TestResults() {
   const [violationsById, setViolationsById] = useState({});
   const [violationsLoading, setViolationsLoading] = useState(null);
 
+  // Faculty Analytics (platform-maturity spec item #6): per-question attempted/correct-rate
+  // breakdown, sorted hardest-first. Lazy-loaded on demand (not fetched alongside the leaderboard
+  // above) since it's a second, heavier query over every Submission row for this test -- most
+  // visits to this page are "check the leaderboard," not "review question difficulty."
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState("");
+
+  function toggleAnalytics() {
+    const next = !showAnalytics;
+    setShowAnalytics(next);
+    if (next && !analytics && !analyticsLoading) {
+      setAnalyticsLoading(true);
+      api.get(`/tests/${id}/question-analytics`)
+        .then(({ data }) => setAnalytics(data))
+        .catch((err) => setAnalyticsError(err.response?.data?.error || "Failed to load question analytics"))
+        .finally(() => setAnalyticsLoading(false));
+    }
+  }
+
   function toggleViolations(attemptId) {
     if (violationsExpandedId === attemptId) {
       setViolationsExpandedId(null);
@@ -158,9 +179,14 @@ export default function TestResults() {
             <h1 style={{ margin: 0 }}>Leaderboard</h1>
             <p style={{ margin: "4px 0 0", color: "var(--ink-dim)" }}>{test?.title || "Loading test…"}</p>
           </div>
-          <button className="btn btn-primary" onClick={downloadCsv} disabled={filtered.length === 0}>
-            ⬇ Download results (Excel/CSV)
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button className="btn btn-ghost" onClick={toggleAnalytics}>
+              📊 {showAnalytics ? "Hide" : "Question Analytics"}
+            </button>
+            <button className="btn btn-primary" onClick={downloadCsv} disabled={filtered.length === 0}>
+              ⬇ Download results (Excel/CSV)
+            </button>
+          </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
@@ -173,6 +199,54 @@ export default function TestResults() {
             accent={summary.incompleteCount > 0 ? "var(--rust)" : "var(--ink-dim)"}
           />
         </div>
+
+        {showAnalytics && (
+          <div className="card" style={{ padding: 16, marginTop: 16 }}>
+            <h3 style={{ fontSize: 15, margin: 0 }}>Question Analytics</h3>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+              Sorted hardest-first (lowest correct rate). "Review recommended" is a heuristic (under 20% correct
+              with at least 5 attempts) — it flags a question worth a human look, not a claim that it's broken;
+              a genuinely hard question and a badly-worded one look identical from this data alone.
+            </p>
+            {analyticsLoading && <p className="mono" style={{ marginTop: 12, color: "var(--ink-dim)" }}>Loading…</p>}
+            {analyticsError && <p style={{ marginTop: 12, color: "var(--rust)" }}>{analyticsError}</p>}
+            {analytics && (
+              <div style={{ overflowX: "auto", marginTop: 12 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640, fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", borderBottom: "2px solid var(--line)", fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase" }}>
+                      <th style={{ padding: "8px" }}>Question</th>
+                      <th style={{ padding: "8px" }}>Type</th>
+                      <th style={{ padding: "8px" }}>Attempted</th>
+                      <th style={{ padding: "8px" }}>Fully Correct</th>
+                      <th style={{ padding: "8px" }}>Correct Rate</th>
+                      <th style={{ padding: "8px" }}>Avg Score</th>
+                      <th style={{ padding: "8px" }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.map((q) => (
+                      <tr key={q.questionId} style={{ borderBottom: "1px solid var(--line)" }}>
+                        <td style={{ padding: "8px" }}>Q{q.questionNumber}{q.title ? `: ${q.title}` : ""}</td>
+                        <td className="mono" style={{ padding: "8px" }}>{q.questionType}</td>
+                        <td className="mono" style={{ padding: "8px" }}>{q.attempted}</td>
+                        <td className="mono" style={{ padding: "8px" }}>{q.fullyCorrect}</td>
+                        <td className="mono" style={{ padding: "8px", color: q.correctRate !== null && q.correctRate < 0.2 ? "var(--rust)" : "inherit", fontWeight: q.reviewRecommended ? 700 : 400 }}>
+                          {q.correctRate !== null ? `${Math.round(q.correctRate * 100)}%` : "—"}
+                        </td>
+                        <td className="mono" style={{ padding: "8px" }}>{q.avgScorePercent !== null ? `${q.avgScorePercent}%` : "—"}</td>
+                        <td style={{ padding: "8px" }}>{q.reviewRecommended && <span className="badge" style={{ background: "var(--warning-bg)", color: "var(--amber-dark)" }}>Review recommended</span>}</td>
+                      </tr>
+                    ))}
+                    {analytics.length === 0 && (
+                      <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }}>No questions on this test.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         <input
           type="text"
