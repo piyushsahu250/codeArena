@@ -19,6 +19,13 @@ writes one row to `PlatformHealthReport`. Every "fix" it might reveal is a human
     group, orphaned Institute/AcademicGroup references, elevated email-failure rate in the last 24h,
     elevated AI-failure rate in the last 24h. **It reports these — it never deletes, renames, or
     merges any row.**
+  - Checks for an active Coding Assessment (Module-direct or chapter-scoped Level) with zero
+    questions configured — the exact regression that already happened live once (an empty,
+    `isActive: true` gating test permanently locks every module after it for every student; see
+    `learningLock.js`'s own header comment). This doesn't re-fix that bug, it catches the moment
+    someone reintroduces it.
+  - Checks for published CODING questions with fewer than the platform's hidden-test-case minimum
+    (5) — flagged for manual review, never auto-generated.
   - Submits one trivial Python program to the real judge sandbox and checks it actually compiles
     and passes — a genuine smoke test, not a status flag.
   - Calls the real AI service with a 10-token "reply with ok" prompt (only if `GEMINI_API_KEY` is

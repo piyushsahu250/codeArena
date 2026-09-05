@@ -7,7 +7,10 @@
 //
 // What this DOES cover: institute isolation, basic RBAC, data-integrity read-only scans (never
 // deletes anything, only reports), email/AI/compiler live status, a per-role smoke test of a
-// handful of key endpoints. What this does NOT cover (see docs/PLATFORM_HEALTH.md for why): a real
+// handful of key endpoints, an LMS-unlocking regression guard (an active gating test with zero
+// questions -- the exact bug class that already happened live once, see learningLock.js), and
+// published coding questions below the platform's hidden-test-case minimum. What this does NOT
+// cover (see docs/PLATFORM_HEALTH.md for why): a real
 // automated test suite (none exists in this codebase), true P95 latency (needs real traffic
 // sampling, not a handful of on-demand requests), staging/canary deployment, AI-based support-ticket
 // triage, automatic fixing or rollback of anything.
@@ -127,6 +130,47 @@ async function checkDataIntegrity() {
 }
 
 // ============================================================
+// 2b. LMS unlocking regression guard + question test-case coverage
+// ============================================================
+// This exact failure mode already happened live once (see learningLock.js's own header comment,
+// "Confirmed live 2026-09-02"): an active ModuleCodingTest/Level with zero questions can never be
+// attempted or passed by anyone, which permanently locks every module after it for every student
+// at that institute, with no way to recover short of an admin noticing. That fix excluded the
+// empty/unattemptable case from gating rather than preventing new ones from being created — so an
+// admin could still reintroduce the exact same bug today by adding a new active, empty test. This
+// check exists specifically to catch that regression the moment it happens, not to re-litigate
+// the fix itself.
+async function checkLmsUnlockingIntegrity() {
+  const emptyActiveTests = await prisma.moduleCodingTest.findMany({
+    where: { isActive: true, questions: { none: {} } },
+    select: { id: true, title: true, moduleId: true, chapterId: true },
+  });
+  if (emptyActiveTests.length > 0) {
+    record(
+      "P1", "LMS", "empty_active_gating_test",
+      `${emptyActiveTests.length} active Coding Assessment(s) have zero questions configured — if any gates a module, every student is permanently blocked from everything after it. IDs: ${emptyActiveTests.map((t) => t.id).join(", ")}`
+    );
+  }
+
+  // Mirrors questionValidation.js's own MIN_CASES.CODING.hidden -- kept as a literal here rather
+  // than imported, since this script intentionally has zero dependency on route-layer code (see
+  // this file's own "detect-and-report only" header comment); update both if that minimum ever
+  // changes again.
+  const MIN_HIDDEN_CASES = 5;
+  const publishedCoding = await prisma.question.findMany({
+    where: { questionType: "CODING", questionStatus: "PUBLISHED" },
+    select: { id: true, questionNumber: true, title: true, _count: { select: { testCases: { where: { isHidden: true } } } } },
+  });
+  const underMinimum = publishedCoding.filter((q) => q._count.testCases < MIN_HIDDEN_CASES);
+  if (underMinimum.length > 0) {
+    record(
+      "P2", "QUESTION_BANK", "insufficient_hidden_test_cases",
+      `${underMinimum.length} published CODING question(s) have fewer than ${MIN_HIDDEN_CASES} hidden test cases (e.g. Q${underMinimum[0].questionNumber}${underMinimum[0].title ? ` "${underMinimum[0].title}"` : ""}) — flagged for manual review, per policy, never auto-generated.`
+    );
+  }
+}
+
+// ============================================================
 // 3. Compiler / judge — a real submission, not a status flag
 // ============================================================
 async function checkCompiler() {
@@ -218,6 +262,7 @@ async function main() {
       await checkRoleWorkflows(institutes[0], cleanup);
     }
     await checkDataIntegrity();
+    await checkLmsUnlockingIntegrity();
     await checkCompiler();
     await checkAi();
   } finally {
