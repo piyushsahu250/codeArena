@@ -70,6 +70,7 @@ export default function StudentSearch({ basePath }) {
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState([]);
   const [regenerating, setRegenerating] = useState(false);
+  const [settingStatus, setSettingStatus] = useState(false);
   const [emailCredentials, setEmailCredentials] = useState(true);
   const [editingStudentId, setEditingStudentId] = useState(null);
 
@@ -275,6 +276,37 @@ export default function StudentSearch({ basePath }) {
     }
   }
 
+  // Bulk activate/deactivate -- reuses the same selected-checkbox state as Regenerate Passwords
+  // above. Deactivating also immediately kills each affected student's already-active session
+  // server-side (POST /users/bulk-status), same reasoning as the single-student Edit Profile toggle.
+  async function setBulkStatus(isActive) {
+    const verb = isActive ? "Reactivate" : "Deactivate";
+    const ok = await confirmDialog({
+      title: `${verb} ${selected.length} student${selected.length === 1 ? "" : "s"}?`,
+      message: isActive
+        ? "Each selected student regains the ability to log in."
+        : "Each selected student is immediately blocked from logging in, and any session they're currently signed into is cut off right away — not just their next login attempt.",
+      confirmLabel: verb,
+      danger: !isActive,
+    });
+    if (!ok) return;
+    setSettingStatus(true);
+    try {
+      const { data } = await api.post("/users/bulk-status", { studentIds: selected, isActive });
+      toast.success(
+        `${data.updated} student${data.updated === 1 ? "" : "s"} ${isActive ? "reactivated" : "deactivated"}` +
+        (data.skipped ? ` (${data.skipped} already ${isActive ? "active" : "inactive"}, left unchanged)` : "") + "."
+      );
+      setSelected([]);
+      // Reflect the new status immediately in the visible list without a full re-fetch.
+      setResults((prev) => prev?.map((s) => (selected.includes(s.id) ? { ...s, isActive } : s)) ?? prev);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update student status");
+    } finally {
+      setSettingStatus(false);
+    }
+  }
+
   return (
     <div>
       <Navbar />
@@ -410,6 +442,12 @@ export default function StudentSearch({ basePath }) {
               <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={regeneratePasswords} disabled={selected.length === 0 || regenerating}>
                 {regenerating ? "Regenerating…" : `Regenerate Passwords${selected.length ? ` (${selected.length})` : ""}`}
               </button>
+              <button className="btn btn-ghost" onClick={() => setBulkStatus(true)} disabled={selected.length === 0 || settingStatus}>
+                {settingStatus ? "Working…" : "Reactivate"}
+              </button>
+              <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={() => setBulkStatus(false)} disabled={selected.length === 0 || settingStatus}>
+                {settingStatus ? "Working…" : "Deactivate"}
+              </button>
             </div>
           </div>
         )}
@@ -421,7 +459,14 @@ export default function StudentSearch({ basePath }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                   {canRegenerate && <input type="checkbox" checked={selected.includes(s.id)} onChange={() => toggle(s.id)} />}
                   <Link to={`${basePath}/students/${s.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}><span className="mono" style={{ fontWeight: 400, marginRight: 6 }}>{s.rollNumber || "—"}</span>{s.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>
+                      <span className="mono" style={{ fontWeight: 400, marginRight: 6 }}>{s.rollNumber || "—"}</span>{s.name}
+                      {s.isActive === false && (
+                        <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "var(--rust)", border: "1px solid var(--rust)", borderRadius: 4, padding: "1px 6px" }}>
+                          Deactivated
+                        </span>
+                      )}
+                    </div>
                     <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
                       {s.registrationNumber || "—"} · {s.email}
                     </div>

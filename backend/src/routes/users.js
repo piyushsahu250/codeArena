@@ -1146,7 +1146,7 @@ router.get("/browse", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
     const hydrated = await prisma.user.findMany({
       where: { id: { in: pageIds } },
       select: {
-        id: true, name: true, email: true, rollNumber: true, registrationNumber: true,
+        id: true, name: true, email: true, rollNumber: true, registrationNumber: true, isActive: true,
         institute: { select: { name: true } },
         class: { select: { name: true, batchYear: true } },
         academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } },
@@ -1625,6 +1625,56 @@ router.post("/bulk-regenerate-password", authenticate, requireRole("ADMIN", "SUP
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to regenerate passwords" });
+  }
+});
+
+// ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN: bulk activate/deactivate students (platform-maturity
+// roadmap's Bulk Operations item -- the one genuine gap found against that wishlist: single-
+// student activate/deactivate already existed via PATCH /:id, everything else on the wishlist
+// -- bulk assign test (already class/group-scoped at creation), bulk reset password, bulk
+// upload, bulk export, bulk certificate issue (already automatic on course/test/readiness
+// completion, not something to batch-trigger by hand) -- was already covered elsewhere).
+// STUDENT only, deliberately: STAFF/CLERK go through staffClerk.js's dedicated status route,
+// which carries its own richer LOCKED/ACTIVE/SUSPENDED state machine -- looping them through
+// this plain isActive toggle here would silently bypass that. Same institute-scoping IDOR fix
+// as bulk-regenerate-password just above: out-of-institute ids are excluded from the query
+// itself, not merely hidden from the response. Same session-revocation reasoning as the single-
+// student PATCH /:id route above -- deactivating must cut off an already-active session
+// immediately, not just block the next login.
+router.post("/bulk-status", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.studentIds) ? [...new Set(req.body.studentIds)] : [];
+    const isActive = !!req.body.isActive;
+    if (ids.length === 0) return res.status(400).json({ error: "No students selected" });
+
+    const targets = await prisma.user.findMany({
+      where: { id: { in: ids }, role: "STUDENT", ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}) },
+      select: { id: true, name: true, isActive: true },
+    });
+    const toUpdate = targets.filter((u) => u.isActive !== isActive); // skip no-ops -- already at the target state
+    const admin = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } });
+    const auditAction = isActive ? "ACCOUNT_ACTIVATED" : "ACCOUNT_DEACTIVATED";
+
+    for (const u of toUpdate) {
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: u.id }, data: { isActive } }),
+        prisma.auditLog.create({
+          data: {
+            action: auditAction,
+            adminId: req.user.id,
+            adminName: admin?.name || req.user.email,
+            details: { studentId: u.id, studentName: u.name, bulk: true, before: u.isActive, after: isActive },
+          },
+        }),
+      ]);
+      if (!isActive) await revokeAllSessions(u.id).catch(() => {});
+    }
+
+    const failedIds = ids.filter((id) => !targets.some((u) => u.id === id));
+    res.json({ updated: toUpdate.length, skipped: targets.length - toUpdate.length, failedIds });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update student status" });
   }
 });
 
