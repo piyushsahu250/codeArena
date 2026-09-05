@@ -697,6 +697,16 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       await deleteAcademicGroupIfEmpty(existing.academicGroupId);
     }
 
+    // A deactivated account must lose access immediately, not just be blocked from its NEXT
+    // login -- authenticate() (middleware/auth.js) only checks the JWT + LoginSession.isActive,
+    // never User.isActive, so without this an already-logged-in student/staff/clerk stays fully
+    // usable (including mid-exam) for up to the 12h token TTL after an admin deactivates them.
+    // staffClerk.js's dedicated STAFF/CLERK status-change route already does this; this generic
+    // route (which is what actually handles STUDENT deactivation) was missing it.
+    if (isActiveToggled && !data.isActive) {
+      await revokeAllSessions(existing.id).catch(() => {});
+    }
+
     res.json(updated);
   } catch (err) {
     console.error(err);
