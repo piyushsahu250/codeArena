@@ -61,6 +61,7 @@ import BulkUpload from "./pages/BulkUpload";
 import AcademicGroups from "./pages/AcademicGroups";
 import CourseAssignments from "./pages/CourseAssignments";
 import InstituteManagement from "./pages/InstituteManagement";
+import OnboardInstitute from "./pages/OnboardInstitute";
 import FeatureManagement from "./pages/FeatureManagement";
 import AttendanceStructure from "./pages/AttendanceStructure";
 import AttendanceHome from "./pages/AttendanceHome";
@@ -365,6 +366,7 @@ export default function App() {
           <Route path="/admin/academic-groups" element={<Protected roles={["ADMIN"]}><AcademicGroups /></Protected>} />
           <Route path="/admin/course-assignments" element={<Protected roles={["ADMIN"]}><CourseAssignments /></Protected>} />
           <Route path="/admin/institutes" element={<Protected roles={["ADMIN"]}><InstituteManagement /></Protected>} />
+          <Route path="/admin/institutes/onboard" element={<Protected roles={["ADMIN"]}><OnboardInstitute /></Protected>} />
           <Route path="/admin/feature-management" element={<Protected roles={["ADMIN"]}><FeatureManagement /></Protected>} />
           <Route path="/admin/attendance-structure" element={<Protected roles={["ADMIN"]}><AttendanceStructure /></Protected>} />
           <Route path="/admin/talent-pools" element={<Protected roles={["ADMIN", "STAFF"]}><TalentPools /></Protected>} />

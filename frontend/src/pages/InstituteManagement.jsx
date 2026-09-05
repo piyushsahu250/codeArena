@@ -136,7 +136,10 @@ export default function InstituteManagement() {
             <h1>Institute Management</h1>
             <ChalkUnderline />
           </div>
-          <Link to="/admin" className="btn btn-ghost">← Back to Admin</Link>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link to="/admin/institutes/onboard" className="btn btn-primary">+ Onboard New Institute</Link>
+            <Link to="/admin" className="btn btn-ghost">← Back to Admin</Link>
+          </div>
         </div>
         <p style={{ color: "var(--ink-dim)", marginTop: 12, fontSize: 14 }}>
           Create an institute before adding classes or users under it. Deactivate an institute to hide it from new
