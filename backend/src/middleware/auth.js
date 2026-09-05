@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { isSessionActive } = require("../utils/sessions");
+const prisma = require("../prisma");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 // `authExpired: true` on every 401 this middleware produces is a deliberate discriminator for the
 // frontend's global axios interceptor (see frontend/src/api.js) — it needs to force a re-login
@@ -29,9 +31,32 @@ async function authenticate(req, res, next) {
   }
 }
 
+// Fire-and-forget, called only AFTER the 403 has already been sent — logging a rejected
+// privilege-escalation attempt must never slow down or risk failing the response it's rejecting.
+// req.user is only the JWT payload ({ id, role, email, jti } — see authenticate() above), which
+// carries no instituteId, so this does its own one-off lookup here rather than requiring every
+// route chain to run attachRequesterInstitute before requireRole just so this could piggyback on
+// it (most chains run requireRole first specifically so an unauthorized role never even reaches
+// an institute-scoping check). logAudit already swallows its own errors, but this still wraps the
+// lookup itself in a try/catch so a DB hiccup here can never surface anywhere the caller sees.
+async function logUnauthorizedAttempt(req, requiredRoles) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true, instituteId: true } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.UNAUTHORIZED_ACCESS_ATTEMPT,
+      actorId: req.user.id, actorName: user?.name || req.user.email, actorRole: req.user.role,
+      studentId: req.user.id, instituteId: user?.instituteId || null,
+      details: { method: req.method, path: req.originalUrl, requiredRoles },
+    });
+  } catch (err) {
+    console.error("Failed to log unauthorized access attempt:", err.message);
+  }
+}
+
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
+      if (req.user) logUnauthorizedAttempt(req, roles).catch(() => {});
       return res.status(403).json({ error: "Insufficient permissions" });
     }
     next();

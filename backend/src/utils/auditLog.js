@@ -29,6 +29,7 @@ function parseDevice(userAgent) {
 // doesn't need a schema migration, but every writer should pick a name from (or matching the
 // style of) this list rather than inventing an inconsistent one.
 const AUDIT_ACTIONS = {
+  UNAUTHORIZED_ACCESS_ATTEMPT: "UNAUTHORIZED_ACCESS_ATTEMPT",
   LOGIN: "LOGIN",
   LOGOUT: "LOGOUT",
   LOGIN_FAILED: "LOGIN_FAILED",

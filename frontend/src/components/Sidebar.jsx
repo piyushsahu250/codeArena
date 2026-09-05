@@ -5,6 +5,7 @@ import {
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
   CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target, StickyNote, AlertTriangle,
+  Shield,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
@@ -116,6 +117,7 @@ const MENU = {
       { label: "Audit Log", to: "/admin/audit-log", icon: History },
       { label: "Reported Problems", to: "/admin/issue-reports", icon: AlertTriangle },
       { label: "Platform Health", to: "/admin/platform-health", icon: Activity, onlyRole: "SUPER_ADMIN" },
+      { label: "Security Dashboard", to: "/admin/security-dashboard", icon: Shield, onlyRole: "SUPER_ADMIN" },
       { label: "Certificates", to: "/admin/certificates", icon: Award },
       { label: "Monitoring", to: "/admin/monitoring", icon: Activity },
       { label: "Backups", to: "/admin/backups", icon: Download },

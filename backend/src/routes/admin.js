@@ -469,4 +469,76 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
   }
 });
 
+// SUPER_ADMIN: security-relevant events, aggregated from AuditLog -- no new logging system, this
+// reads the same table every other admin audit view already reads. Deliberately SUPER_ADMIN-only
+// (not ADMIN) since this surfaces cross-institute-sensitive signals platform-wide, unlike
+// /monitoring and /users/audit-log which are institute-scoped for non-Super-Admin callers.
+//
+// Honestly scoped to what this platform actually logs today -- see each section's own comment for
+// what's real vs. a known, currently-untracked gap:
+//   - Failed logins / password-reset attempts: real, from auth.js's existing LOGIN_FAILED /
+//     PASSWORD_RESET_REQUESTED / PASSWORD_RESET_BLOCKED / PASSWORD_RESET_FAILED writes.
+//   - Unauthorized access attempts: real, from requireRole's own new UNAUTHORIZED_ACCESS_ATTEMPT
+//     logging (middleware/auth.js) -- covers a role mismatch on any route, platform-wide, from
+//     today onward. Does NOT cover the many separate inline institute-scoping 403 checks scattered
+//     across individual routes (e.g. "you can only view your own institute's X") -- those aren't
+//     centralized behind one middleware the way role checks are, so retrofitting logging onto
+//     every one of them is a larger, separate change, not something to do in the same pass as
+//     this dashboard. That means a genuine cross-institute IDOR attempt that passes the role check
+//     but fails an institute check is NOT yet represented here.
+//   - Feature-flag changes: real, from featureManagement.js's FEATURE_TOGGLED/FEATURE_BULK_TOGGLED.
+//   - Admin privilege (role) changes: not tracked because the underlying action doesn't exist on
+//     this platform -- no route changes a user's role after creation, so there is nothing to log.
+//   - Rate-limit events, compiler/sandbox security events: NOT tracked yet. express-rate-limit's
+//     429s and judge.js's sandbox enforcement don't write to AuditLog today -- flagged here rather
+//     than fabricated.
+router.get("/security-dashboard", authenticate, requireRole("SUPER_ADMIN"), async (req, res) => {
+  try {
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      failedLogins24h, failedLogins7d, recentFailedLogins,
+      passwordResetsRequested24h, passwordResetsBlocked24h, passwordResetsFailed24h,
+      unauthorized24h, unauthorized7d, recentUnauthorized,
+      featureChanges7d, recentFeatureChanges,
+    ] = await Promise.all([
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.LOGIN_FAILED, createdAt: { gte: since24h } } }),
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.LOGIN_FAILED, createdAt: { gte: since7d } } }),
+      prisma.auditLog.findMany({
+        where: { action: AUDIT_ACTIONS.LOGIN_FAILED, createdAt: { gte: since24h } },
+        orderBy: { createdAt: "desc" }, take: 20,
+        select: { createdAt: true, ipAddress: true, deviceInfo: true, details: true },
+      }),
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.PASSWORD_RESET_REQUESTED, createdAt: { gte: since24h } } }),
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.PASSWORD_RESET_BLOCKED, createdAt: { gte: since24h } } }),
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.PASSWORD_RESET_FAILED, createdAt: { gte: since24h } } }),
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.UNAUTHORIZED_ACCESS_ATTEMPT, createdAt: { gte: since24h } } }),
+      prisma.auditLog.count({ where: { action: AUDIT_ACTIONS.UNAUTHORIZED_ACCESS_ATTEMPT, createdAt: { gte: since7d } } }),
+      prisma.auditLog.findMany({
+        where: { action: AUDIT_ACTIONS.UNAUTHORIZED_ACCESS_ATTEMPT, createdAt: { gte: since24h } },
+        orderBy: { createdAt: "desc" }, take: 20,
+        select: { createdAt: true, adminName: true, adminRole: true, ipAddress: true, instituteId: true, details: true },
+      }),
+      prisma.auditLog.count({ where: { action: { in: [AUDIT_ACTIONS.FEATURE_TOGGLED, AUDIT_ACTIONS.FEATURE_BULK_TOGGLED] }, createdAt: { gte: since7d } } }),
+      prisma.auditLog.findMany({
+        where: { action: { in: [AUDIT_ACTIONS.FEATURE_TOGGLED, AUDIT_ACTIONS.FEATURE_BULK_TOGGLED] }, createdAt: { gte: since7d } },
+        orderBy: { createdAt: "desc" }, take: 20,
+        select: { createdAt: true, adminName: true, instituteId: true, details: true },
+      }),
+    ]);
+
+    res.json({
+      failedLogins: { last24h: failedLogins24h, last7d: failedLogins7d, recent: recentFailedLogins },
+      passwordResets: { requested24h: passwordResetsRequested24h, blocked24h: passwordResetsBlocked24h, failed24h: passwordResetsFailed24h },
+      unauthorizedAttempts: { last24h: unauthorized24h, last7d: unauthorized7d, recent: recentUnauthorized },
+      featureChanges: { last7d: featureChanges7d, recent: recentFeatureChanges },
+      notTracked: ["rate_limit_events", "compiler_sandbox_events", "cross_institute_specific_breakdown", "admin_role_changes_not_a_feature"],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load security dashboard" });
+  }
+});
+
 module.exports = router;
