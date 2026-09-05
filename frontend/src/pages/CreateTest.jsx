@@ -728,7 +728,7 @@ export default function CreateTest() {
                           <input type="checkbox" checked={!!aiAllowedMap[qId]} onChange={() => toggleAiAllowed(qId)} style={{ margin: 0 }} />
                           AI
                         </label>
-                        <button type="button" onClick={() => toggle(qId)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, padding: 0 }}>×</button>
+                        <button type="button" onClick={() => toggle(qId)} aria-label={`Remove "${q?.title || "this question"}" from the test`} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, padding: 0 }}>×</button>
                       </span>
                     );
                   })}
