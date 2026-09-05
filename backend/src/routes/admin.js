@@ -4,7 +4,8 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { getSnapshot } = require("../utils/metrics");
-const { getQueueStatus } = require("../utils/queue");
+const { getQueueStatus, mapWithConcurrency } = require("../utils/queue");
+const { notifyMany } = require("../utils/notifications");
 const { getQueueStatus: getAiQueueStatus } = require("../utils/aiQueue");
 const { cached } = require("../utils/cache");
 const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
@@ -538,6 +539,70 @@ router.get("/security-dashboard", authenticate, requireRole("SUPER_ADMIN"), asyn
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load security dashboard" });
+  }
+});
+
+const ANNOUNCEMENT_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
+
+// ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN: System Announcements (platform-maturity spec item #14, the
+// one notification type this platform genuinely didn't have -- every other listed type (test
+// assigned, reminder, result published, certificate issued, etc.) already exists in
+// utils/notifications.js). Reuses that same file's notifyMany() for the in-app half and
+// sendMailLogged (via the same bounded-concurrency background-batch pattern users.js's bulk
+// credential emails already use) for the optional email half -- no new notification/email
+// mechanism invented for this.
+//
+// Audience resolution never trusts a client-supplied instituteId: an institute-scoped requester
+// (req.requesterInstituteId set) can only ever reach their own institute's users regardless of
+// what `audience` claims; only a platform-level SUPER_ADMIN (requesterInstituteId null) can
+// actually reach every institute at once.
+router.post("/announcements", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { audience, message, subject, sendEmail } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ error: "message is required" });
+    if (!["ALL_STUDENTS", "ALL_STAFF", "EVERYONE"].includes(audience)) {
+      return res.status(400).json({ error: "audience must be ALL_STUDENTS, ALL_STAFF, or EVERYONE" });
+    }
+
+    const roleWhere = audience === "ALL_STUDENTS" ? { role: "STUDENT" }
+      : audience === "ALL_STAFF" ? { role: { in: ["STAFF", "CLERK"] } }
+      : { role: { in: ["STUDENT", "STAFF", "CLERK"] } }; // EVERYONE -- deliberately excludes other
+      // admin-tier accounts even under EVERYONE; an announcement is for the people being managed,
+      // not a way to message other admins.
+    const where = { ...roleWhere, isActive: true, ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}) };
+
+    const recipients = await prisma.user.findMany({ where, select: { id: true, name: true, email: true } });
+    if (recipients.length === 0) return res.json({ recipientCount: 0, emailQueued: false });
+
+    await notifyMany(prisma, recipients.map((r) => r.id), {
+      type: "SYSTEM_ANNOUNCEMENT",
+      message: message.trim(),
+      link: null,
+    });
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.SYSTEM_ANNOUNCEMENT_SENT, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { audience, recipientCount: recipients.length, sendEmail: !!sendEmail },
+    });
+
+    // Fire-and-forget, same posture as the bulk-credential-email batches in users.js: the response
+    // already reflects that recipients are notified in-app; email delivery happens in the
+    // background and is independently visible afterward via EmailLog/Email Logs, not blocking this
+    // request on however long it takes to mail out to every recipient.
+    if (sendEmail) {
+      mapWithConcurrency(recipients, ANNOUNCEMENT_EMAIL_CONCURRENCY, (r) =>
+        sendMailLogged(prisma, {
+          to: r.email, name: r.name, studentId: r.id, emailType: "SYSTEM_ANNOUNCEMENT",
+          subject: subject?.trim() || "Announcement from CodeArena",
+          html: wrapBranded(`<p>Hi ${r.name},</p><p>${message.trim().replace(/\n/g, "<br/>")}</p>`),
+        }).catch((e) => ({ ok: false, error: e.message }))
+      ).catch((err) => console.error("[admin.announcements] background email batch failed:", err));
+    }
+
+    res.json({ recipientCount: recipients.length, emailQueued: !!sendEmail });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to send announcement" });
   }
 });
 

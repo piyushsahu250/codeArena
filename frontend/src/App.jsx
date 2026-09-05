@@ -124,6 +124,7 @@ import CompanyMaster from "./pages/CompanyMaster";
 import IssueReports from "./pages/IssueReports";
 import PlatformHealth from "./pages/PlatformHealth";
 import SecurityDashboard from "./pages/SecurityDashboard";
+import Announcements from "./pages/Announcements";
 
 const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
 
@@ -385,6 +386,7 @@ export default function App() {
           <Route path="/admin/issue-reports" element={<Protected roles={["ADMIN"]}><IssueReports basePath="/admin" /></Protected>} />
           <Route path="/admin/platform-health" element={<Protected roles={["SUPER_ADMIN"]}><PlatformHealth /></Protected>} />
           <Route path="/admin/security-dashboard" element={<Protected roles={["SUPER_ADMIN"]}><SecurityDashboard /></Protected>} />
+          <Route path="/admin/announcements" element={<Protected roles={["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"]}><Announcements /></Protected>} />
 
           {/* Placement Clerk — always institute-scoped, Placement Cell operations only (no
               Learning/Test Management access — those routes above simply never list CLERK). */}

@@ -118,6 +118,7 @@ const MENU = {
       { label: "Reported Problems", to: "/admin/issue-reports", icon: AlertTriangle },
       { label: "Platform Health", to: "/admin/platform-health", icon: Activity, onlyRole: "SUPER_ADMIN" },
       { label: "Security Dashboard", to: "/admin/security-dashboard", icon: Shield, onlyRole: "SUPER_ADMIN" },
+      { label: "Announcements", to: "/admin/announcements", icon: Mail },
       { label: "Certificates", to: "/admin/certificates", icon: Award },
       { label: "Monitoring", to: "/admin/monitoring", icon: Activity },
       { label: "Backups", to: "/admin/backups", icon: Download },

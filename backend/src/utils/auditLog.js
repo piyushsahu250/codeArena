@@ -30,6 +30,7 @@ function parseDevice(userAgent) {
 // style of) this list rather than inventing an inconsistent one.
 const AUDIT_ACTIONS = {
   UNAUTHORIZED_ACCESS_ATTEMPT: "UNAUTHORIZED_ACCESS_ATTEMPT",
+  SYSTEM_ANNOUNCEMENT_SENT: "SYSTEM_ANNOUNCEMENT_SENT",
   LOGIN: "LOGIN",
   LOGOUT: "LOGOUT",
   LOGIN_FAILED: "LOGIN_FAILED",
