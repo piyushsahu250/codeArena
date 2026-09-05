@@ -34,6 +34,7 @@ export default function StudentPerformance({ basePath }) {
 
   const [perf, setPerf] = useState(null);
   const [error, setError] = useState("");
+  const [readiness, setReadiness] = useState(null);
   const [resetting, setResetting] = useState(false);
   const [downloading, setDownloading] = useState(null);
   const [downloadingProfile, setDownloadingProfile] = useState(false);
@@ -59,6 +60,10 @@ export default function StudentPerformance({ basePath }) {
     api.get(`/users/${studentId}/performance`)
       .then((res) => setPerf(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load performance data"));
+    // Best-effort, separate from the main load: a readiness-score failure shouldn't block the
+    // rest of this dashboard from rendering (see placementReadiness.js's own comment on why this
+    // is a second query, not folded into /performance).
+    api.get(`/users/${studentId}/placement-readiness`).then((res) => setReadiness(res.data)).catch(() => setReadiness(null));
   }
 
   useEffect(load, [studentId]);
@@ -642,6 +647,35 @@ export default function StudentPerformance({ basePath }) {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Placement Readiness Score -- combines coding/aptitude/academic/resume/interview/
+            certification signals that already exist elsewhere on this page and on the Resume
+            Builder/Mock Interview features; see backend/src/utils/placementReadiness.js for the
+            exact weighting and why an incomplete signal is excluded rather than scored as zero. */}
+        {readiness && (
+          <div className="card" style={{ padding: 20, marginTop: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <h3 style={{ fontSize: 16, margin: 0 }}>Placement Readiness</h3>
+                <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4, maxWidth: 480 }}>{readiness.disclaimer}</p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div className="mono" style={{ fontSize: 32, fontWeight: 700, color: "var(--mint)" }}>
+                  {readiness.overallScore !== null ? `${readiness.overallScore}%` : "—"}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>{readiness.dataCompleteness}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginTop: 16 }}>
+              {readiness.components.map((c) => (
+                <div key={c.key} className="card" style={{ padding: 12, opacity: c.included ? 1 : 0.5 }}>
+                  <div className="mono" style={{ fontSize: 18, fontWeight: 700 }}>{c.included ? `${c.score}%` : "No data"}</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>{c.label} · weight {Math.round(c.weight * 100)}%</div>
+                </div>
+              ))}
             </div>
           </div>
         )}

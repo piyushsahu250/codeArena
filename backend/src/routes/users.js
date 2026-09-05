@@ -8,6 +8,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
 const { accountCredentialsTemplate, credentialsResendTemplate } = require("../utils/emailTemplates");
 const { computeStudentPerformance } = require("../utils/studentPerformance");
+const { computePlacementReadiness } = require("../utils/placementReadiness");
 const { generatePerformancePdf } = require("../utils/reportPdf");
 const { generateTempPassword, validatePasswordComplexity, isPasswordReused, recordPasswordChange } = require("../utils/password");
 const { createSession, revokeAllSessions } = require("../utils/sessions");
@@ -1380,6 +1381,24 @@ router.get("/:id/performance", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load performance data" });
+  }
+});
+
+// Placement Readiness Score (platform-maturity spec item #18) -- same access rule as the
+// performance dashboard above (a student sees only their own; staff/clerk/admin see anyone under
+// their own institute). Deliberately its own endpoint, not folded into /:id/performance's response
+// body, since computing it touches Resume/InterviewReport/Certificate on top of what the
+// performance computation already reads -- callers that only need the existing dashboard
+// shouldn't pay for those extra queries on every load.
+router.get("/:id/placement-readiness", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK", "STUDENT"), async (req, res) => {
+  try {
+    const target = await authorizeStudentPerformanceAccess(req, res);
+    if (!target) return;
+    const data = await computePlacementReadiness(target.id);
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load placement readiness" });
   }
 });
 
