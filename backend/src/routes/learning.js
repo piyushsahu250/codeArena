@@ -1676,6 +1676,59 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_AD
   }
 });
 
+// ADMIN: Bulk Lesson Creation (LMS master-spec section 63 — "Where practical allow: Bulk lesson
+// creation... do not make the interface unnecessarily complicated"). One title per line, pasted —
+// no template, no file upload, no database IDs, matching the same "keep it simple" spirit as the
+// Bulk Question Upload redesign. Each line becomes a real Lesson row (placeholder content, to be
+// filled in afterward via the normal single-lesson editor) with auto-incrementing order continuing
+// from the module's current lesson count. A title that collides with an existing lesson in this
+// module (Lesson's own @@unique([moduleId, title])) is skipped and reported, never silently
+// dropped or allowed to abort the whole batch — same "never silently discard, always partial-
+// import" rule the Bulk Question Upload system already follows.
+router.post("/modules/:id/lessons/bulk", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
+    const titles = Array.isArray(req.body.titles) ? req.body.titles.map((t) => String(t || "").trim()).filter(Boolean) : [];
+    if (titles.length === 0) return res.status(400).json({ error: "At least one lesson title is required" });
+    if (titles.length > 200) return res.status(400).json({ error: "Maximum 200 lessons per bulk create" });
+
+    const existing = await prisma.lesson.findMany({ where: { moduleId: req.params.id }, select: { title: true } });
+    const existingTitles = new Set(existing.map((l) => l.title));
+    let nextOrder = existing.length;
+
+    const created = [];
+    const skipped = [];
+    const seenThisBatch = new Set();
+    for (const title of titles) {
+      if (existingTitles.has(title) || seenThisBatch.has(title)) {
+        skipped.push({ title, reason: existingTitles.has(title) ? "A lesson with this title already exists in this module" : "Duplicate within this list" });
+        continue;
+      }
+      seenThisBatch.add(title);
+      const lesson = await prisma.lesson.create({
+        data: { moduleId: req.params.id, title, order: nextOrder++, estimatedMinutes: 10, content: "" },
+      });
+      created.push(lesson);
+    }
+
+    if (created.length > 0) {
+      await logAudit({
+        req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+        actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: moduleInstituteId,
+        details: { entity: "lesson", operation: "bulk_create", moduleId: req.params.id, createdCount: created.length, skippedCount: skipped.length },
+      });
+    }
+    res.json({ createdCount: created.length, skippedCount: skipped.length, created, skipped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to bulk-create lessons" });
+  }
+});
+
 // Chapter-scoped Learning Topic creation — a Learning Topic IS a Lesson row, just with
 // chapterId set. moduleId is denormalized from the chapter's own module so every existing
 // moduleId-keyed query (isModuleNowComplete, LessonProgress counting, etc.) keeps working

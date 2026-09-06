@@ -728,6 +728,10 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const [form, setForm] = useState({ title: "", estimatedMinutes: 10, order: mod.lessons.length });
   const [saving, setSaving] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
 
   async function create(e) {
     e.preventDefault();
@@ -740,6 +744,23 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
       alert(err.response?.data?.error || "Failed to create lesson");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function createBulk(e) {
+    e.preventDefault();
+    const titles = bulkText.split("\n").map((t) => t.trim()).filter(Boolean);
+    if (titles.length === 0) return;
+    setBulkSaving(true);
+    setBulkResult(null);
+    try {
+      const { data } = await api.post(`/learning/modules/${mod.id}/lessons/bulk`, { titles });
+      setBulkResult(data);
+      if (data.createdCount > 0) { setBulkText(""); onRefresh(); }
+    } catch (err) {
+      alert(err.response?.data?.error || "Bulk create failed");
+    } finally {
+      setBulkSaving(false);
     }
   }
 
@@ -761,6 +782,13 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
   return (
     <div style={{ marginTop: 20 }}>
       {isAdmin && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => { setBulkMode((v) => !v); setBulkResult(null); }}>
+            {bulkMode ? "Single lesson" : "Bulk Add Lessons"}
+          </button>
+        </div>
+      )}
+      {isAdmin && !bulkMode && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
             <label style={labelStyle}>New lesson title</label>
@@ -771,6 +799,33 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
             <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
           </div>
           <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add lesson"}</button>
+        </form>
+      )}
+      {isAdmin && bulkMode && (
+        <form onSubmit={createBulk} className="card" style={{ padding: 16 }}>
+          <label style={labelStyle}>One lesson title per line — no template, no IDs needed</label>
+          <textarea
+            style={{ ...inputStyle, minHeight: 120, fontFamily: "monospace" }}
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            placeholder={"Introduction to Variables\nConditional Statements\nLoops in Java"}
+          />
+          <button className="btn btn-primary" style={{ marginTop: 10 }} disabled={bulkSaving || !bulkText.trim()}>
+            {bulkSaving ? "Creating…" : "Create Lessons"}
+          </button>
+          {bulkResult && (
+            <div style={{ marginTop: 12, fontSize: 13 }}>
+              <p style={{ color: "var(--mint)" }}>{bulkResult.createdCount} lesson(s) created.</p>
+              {bulkResult.skippedCount > 0 && (
+                <>
+                  <p style={{ color: "var(--amber-dark)" }}>{bulkResult.skippedCount} skipped:</p>
+                  <ul style={{ paddingLeft: 18 }}>
+                    {bulkResult.skipped.map((s, i) => <li key={i}>{s.title} — {s.reason}</li>)}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
         </form>
       )}
 
