@@ -43,15 +43,21 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
     return "";
   }
 
-  async function downloadTemplate() {
+  // type: "quiz" | "coding" | "combined" — "combined" always downloads the .xlsx workbook
+  // regardless of the current Notepad/spreadsheet radio (the Notepad format is one question-type
+  // per file by design, no combined variant there) since it exists purely so a faculty member
+  // choosing between MCQ and Coding can grab both sheets in one download instead of two.
+  async function downloadTemplate(type) {
+    const isTxt = uploadFormat === "notepad" && type !== "combined";
     const res = await api.get("/questions/bulk-template", {
-      params: { type: questionKind, format: uploadFormat === "notepad" ? "txt" : undefined },
+      params: { type: type === "quiz" ? undefined : type, format: isTxt ? "txt" : undefined },
       responseType: "blob",
     });
-    const ext = uploadFormat === "notepad" ? "txt" : "xlsx";
+    const ext = isTxt ? "txt" : "xlsx";
+    const name = type === "combined" ? "CodeArena_Question_Upload_Template" : type === "coding" ? "coding-template" : "question-bank-template";
     const url = URL.createObjectURL(res.data);
     const a = document.createElement("a");
-    a.href = url; a.download = `${questionKind === "coding" ? "coding" : "question-bank"}-template.${ext}`;
+    a.href = url; a.download = `${name}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -142,9 +148,21 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
           : "Multiple Choice, True/False, and Multiple Select questions, including BTL level."}
         {" "}Nothing is saved until you review the preview and confirm.
       </p>
-      <button type="button" className="btn btn-ghost" style={{ marginTop: 4, fontSize: 12 }} onClick={downloadTemplate}>
-        ⬇ Download {uploadFormat === "notepad" ? "Notepad" : "spreadsheet"} template
-      </button>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate("quiz")}>
+          ⬇ Download MCQ Template
+        </button>
+        {allowCoding && (
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate("coding")}>
+            ⬇ Download Coding Template
+          </button>
+        )}
+        {allowCoding && (
+          <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate("combined")}>
+            ⬇ Download Combined Template (MCQ + Coding, one file)
+          </button>
+        )}
+      </div>
 
       {stage === "pick" && (
         <form onSubmit={handlePreview} style={{ marginTop: 14 }}>

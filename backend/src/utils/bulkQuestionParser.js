@@ -213,4 +213,4 @@ function parseNotepadCodingText(text) {
   });
 }
 
-module.exports = { parseNotepadMcqText, parseNotepadCodingText, extractBtlDigit };
+module.exports = { parseNotepadMcqText, parseNotepadCodingText, extractBtlDigit, letterToOptionNumber };

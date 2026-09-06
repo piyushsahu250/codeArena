@@ -7,7 +7,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
 const { spreadsheetFileFilter, spreadsheetOrTextFileFilter } = require("../utils/uploadFilters");
-const { parseNotepadMcqText, parseNotepadCodingText } = require("../utils/bulkQuestionParser");
+const { parseNotepadMcqText, parseNotepadCodingText, letterToOptionNumber } = require("../utils/bulkQuestionParser");
 const { questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
@@ -29,9 +29,18 @@ const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
 const BTL_LEVELS = [1, 2, 3, 4, 5, 6];
 const QUESTION_STATUSES = ["DRAFT", "UNDER_REVIEW", "VERIFIED", "PUBLISHED", "ARCHIVED"];
 
+// Column order matches what a faculty member actually fills in first (the question + its options),
+// with the rarely-touched/advanced columns (Question Type, Marks, BTL, Question Name) trailing —
+// Question Type is optional and auto-detected per row when left blank (True/False when there are
+// exactly two True/False options; Multiple Select when Correct Option names more than one letter;
+// Multiple Choice otherwise), only needed to force a type explicitly. Separate Option A-D/Correct
+// Option (a plain letter) replaces the old single packed "Options"/"Correct Answer" columns as the
+// default template shape — runQuizBulkImport still accepts the old packed shape too, so an
+// existing file built against the previous template keeps working unchanged.
 const TEMPLATE_HEADERS = [
-  "Question Name", "Subject", "Unit", "Topic", "Question Text", "Question Type",
-  "Options", "Correct Answer", "Marks", "Difficulty Level", "BTL", "Explanation",
+  "Question Text", "Option A", "Option B", "Option C", "Option D", "Correct Option",
+  "Explanation", "Difficulty Level", "Subject", "Unit", "Topic",
+  "Question Type", "Marks", "BTL", "Question Name",
 ];
 
 // Coding-question bulk import. A flat spreadsheet cell can't hold a nested test-case list, so
@@ -1344,10 +1353,51 @@ INPUT: 2
 OUTPUT: 1000000
 `;
 
-// Download a sample template for bulk question import — quiz types by default, or coding
-// questions via ?type=coding; .xlsx by default, or Notepad/.txt via ?format=txt.
+const MCQ_TEMPLATE_ROWS = [
+  // Question Text, Option A-D, Correct Option, Explanation, Difficulty, Subject, Unit, Topic,
+  // [optional:] Question Type, Marks, BTL, Question Name — order matches TEMPLATE_HEADERS.
+  ["DELETE THESE 3 EXAMPLE ROWS BEFORE UPLOADING — they're here only to show the format", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["What is 2 + 3?", "4", "5", "6", "7", "B", "2 + 3 = 5.", "Easy", "Java", "Java Basics", "Operators", "", "", "", ""],
+  ["Water boils at 100°C at sea level.", "True", "False", "", "", "A", "", "Easy", "Science", "Unit 1", "Physics", "", "", "", ""],
+  ["Which of the following are prime numbers?", "2", "3", "4", "9", "A,B", "2 and 3 are prime; 4 and 9 are not.", "Medium", "Math", "Unit 2", "Number Theory", "Multiple Select", 5, 2, ""],
+];
+const CODING_TEMPLATE_ROWS = [
+  [
+    "Sum of Two Numbers", "Java", "Unit 1", "Math", "Addition", "Read two integers and print their sum.", "Easy", "BTL-3", "Java, Python, C++, C",
+    2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
+    "2 3", "5", "2 + 3 = 5",
+    "10 20", "30", "",
+    "4 6->10||100 200->300||-5 5->0||0 0->0||1000000000 1000000000->2000000000",
+    "STDIO", "", "", "",
+    "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
+    "a, b = map(int, input().split())\nprint(a + b)",
+    "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
+    "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
+    "Math, Basics", "Java Coding Bank",
+  ],
+  [
+    // FUNCTION-mode test case inputs use one line per parameter (never space-separated on one
+    // line, unlike STDIO) — a two-scalar-parameter signature like add(a, b) needs "2\n3", not
+    // "2 3", matching exactly what functionHarness.js's generated driver parses per parameter.
+    "Add Two Numbers (Function)", "Java", "Unit 1", "Math", "Implement a function that returns the sum of two integers.", "Easy", "BTL-3", "Java, Python, C++",
+    2, 256, 10, "1 <= a, b <= 10^9", "N/A — function parameters, not stdin", "N/A — return value, not stdout",
+    "2\n3", "5", "2 + 3 = 5",
+    "10\n20", "30", "",
+    "4\n6->10||100\n200->300||-5\n5->0||0\n0->0||1000000000\n1000000000->2000000000",
+    "Function", "add", "int", "a:int, b:int",
+    "", "", "", "",
+    "Math, Basics", "Java Coding Bank",
+  ],
+];
+
+// Download a sample template for bulk question import — quiz types by default, coding questions
+// via ?type=coding, or ?type=combined (both MCQ and CODING sheets in one workbook, for a faculty
+// member who'd rather download once — the two are still uploaded separately, matching each
+// sheet's own bulk-import route). .xlsx by default, or Notepad/.txt via ?format=txt (combined
+// isn't offered for .txt — the Notepad format is one question-type per file by design).
 router.get("/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), requireFeature("question_bank"), (req, res) => {
   const isCoding = req.query.type === "coding";
+  const isCombined = req.query.type === "combined";
 
   if (req.query.format === "txt") {
     const body = isCoding ? CODING_TXT_TEMPLATE : MCQ_TXT_TEMPLATE;
@@ -1356,52 +1406,29 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
     return res.send(body);
   }
 
-  let headers, sampleRows, filename;
-
-  if (isCoding) {
-    headers = CODING_TEMPLATE_HEADERS;
-    sampleRows = [
-      [
-        "Sum of Two Numbers", "Java", "Unit 1", "Math", "Addition", "Read two integers and print their sum.", "Easy", "BTL-3", "Java, Python, C++, C",
-        2, 256, 10, "1 <= a, b <= 10^9", "Two space-separated integers a and b on one line", "A single integer: a + b",
-        "2 3", "5", "2 + 3 = 5",
-        "10 20", "30", "",
-        "4 6->10||100 200->300||-5 5->0||0 0->0||1000000000 1000000000->2000000000",
-        "STDIO", "", "", "",
-        "import java.util.*;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int a = sc.nextInt(), b = sc.nextInt();\n    System.out.println(a + b);\n  }\n}",
-        "a, b = map(int, input().split())\nprint(a + b)",
-        "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
-        "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
-        "Math, Basics", "Java Coding Bank",
-      ],
-      [
-        // FUNCTION-mode test case inputs use one line per parameter (never space-separated on one
-        // line, unlike STDIO) — a two-scalar-parameter signature like add(a, b) needs "2\n3", not
-        // "2 3", matching exactly what functionHarness.js's generated driver parses per parameter.
-        "Add Two Numbers (Function)", "Java", "Unit 1", "Math", "Implement a function that returns the sum of two integers.", "Easy", "BTL-3", "Java, Python, C++",
-        2, 256, 10, "1 <= a, b <= 10^9", "N/A — function parameters, not stdin", "N/A — return value, not stdout",
-        "2\n3", "5", "2 + 3 = 5",
-        "10\n20", "30", "",
-        "4\n6->10||100\n200->300||-5\n5->0||0\n0->0||1000000000\n1000000000->2000000000",
-        "Function", "add", "int", "a:int, b:int",
-        "", "", "", "",
-        "Math, Basics", "Java Coding Bank",
-      ],
-    ];
-    filename = "coding-question-template.xlsx";
-  } else {
-    headers = TEMPLATE_HEADERS;
-    sampleRows = [
-      ["Capital of France", "Geography", "Unit 1", "Europe", "What is the capital of France?", "Multiple Choice", "Paris|London|Berlin|Madrid", "Paris", 5, "Easy", "BTL-1", "Paris has been the capital since 987 AD."],
-      ["Water boils at 100C", "Science", "Unit 1", "Physics", "Water boils at 100°C at sea level.", "True/False", "", "True", 2, "Easy", "BTL-1", ""],
-      ["Prime numbers", "Math", "Unit 2", "Number Theory", "Which of the following are prime numbers?", "Multiple Select", "2|3|4|9", "2,3", 5, "Medium", "BTL-2", "2 and 3 are prime; 4 and 9 are not."],
-    ];
-    filename = "question-bank-template.xlsx";
-  }
-
-  const sheet = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Questions");
+  // Instructions sheet FIRST (the tab a faculty member sees when the file first opens) — deliberately
+  // short; the goal is "glance at this once," not another document to read. parseUploadedFile()
+  // skips this sheet by name (not by position), so its being first here doesn't affect parsing.
+  const instructions = XLSX.utils.aoa_to_sheet([
+    ["Instructions"],
+    ["1. Do not change column names."],
+    ["2. One question per row."],
+    [isCombined ? "3. MCQ sheet: Correct Option must be A/B/C/D. Coding sheet: Difficulty must be Easy/Medium/Hard." : isCoding ? "3. Difficulty must be Easy, Medium, or Hard." : "3. Correct Option must be A, B, C, or D (or A,B for Multiple Select)."],
+    ["4. Do not leave Question Text blank."],
+    ["5. Do not add formulas or macros."],
+    ["6. Save as .xlsx before uploading."],
+    ["7. Delete the example rows on each sheet before uploading your own questions."],
+  ]);
+  XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
+
+  if (isCombined || !isCoding) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...MCQ_TEMPLATE_ROWS]), "MCQ");
+  }
+  if (isCombined || isCoding) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([CODING_TEMPLATE_HEADERS, ...CODING_TEMPLATE_ROWS]), "CODING");
+  }
+  const filename = isCombined ? "CodeArena_Question_Upload_Template.xlsx" : isCoding ? "coding-question-template.xlsx" : "question-bank-template.xlsx";
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -1428,26 +1455,31 @@ router.get("/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
         orderBy: { questionNumber: "asc" },
       });
 
+  const optionLetters = ["A", "B", "C", "D", "E", "F"];
   const rows = questions.map((q) => {
     const options = Array.isArray(q.options) ? q.options : [];
     const correctAnswer = Array.isArray(q.correctAnswer) ? q.correctAnswer : [];
+    // Column order/shape mirrors TEMPLATE_HEADERS exactly (separate Option A-D + a letter-based
+    // Correct Option) so an exported file re-uploads cleanly through the same bulk-import path
+    // without needing to be reshaped first.
     return [
-      `Q${q.questionNumber}`,
-      q.title || "",
-      q.subjectRef?.name || q.subject || "",
-      q.unitRef?.name || "",
-      q.topic || "",
-      q.description,
-      TYPE_LABELS[q.questionType] || q.questionType,
-      options.join("|"),
-      correctAnswer.map((i) => options[i]).filter(Boolean).join(","),
-      q.points,
+      sanitizeForSpreadsheet(q.description),
+      sanitizeForSpreadsheet(options[0] || ""), sanitizeForSpreadsheet(options[1] || ""),
+      sanitizeForSpreadsheet(options[2] || ""), sanitizeForSpreadsheet(options[3] || ""),
+      correctAnswer.map((i) => optionLetters[i]).filter(Boolean).join(","),
+      sanitizeForSpreadsheet(q.explanation || ""),
       DIFFICULTY_LABELS[q.difficulty] || q.difficulty,
-      q.explanation || "",
+      sanitizeForSpreadsheet(q.subjectRef?.name || q.subject || ""),
+      sanitizeForSpreadsheet(q.unitRef?.name || ""),
+      sanitizeForSpreadsheet(q.topic || ""),
+      TYPE_LABELS[q.questionType] || q.questionType,
+      q.points,
+      q.btlLevel || "",
+      sanitizeForSpreadsheet(q.title || ""),
     ];
   });
 
-  const sheet = XLSX.utils.aoa_to_sheet([["Question ID", ...TEMPLATE_HEADERS], ...rows]);
+  const sheet = XLSX.utils.aoa_to_sheet([["Question ID", ...TEMPLATE_HEADERS], ...rows.map((r, i) => [`Q${questions[i].questionNumber}`, ...r])]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Questions");
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
@@ -1474,18 +1506,41 @@ const DIFFICULTY_ALIASES = { easy: "EASY", medium: "MEDIUM", hard: "HARD" };
 
 const IMPORT_HEADER_ALIASES = {
   title: ["question name", "name"],
-  subject: ["subject", "subject course", "subject/course"],
-  unit: ["unit"],
-  topic: ["topic"],
-  description: ["question text", "question", "text"],
+  subject: ["subject", "subject course", "subject/course", "course"],
+  unit: ["unit", "module"],
+  topic: ["topic", "chapter"],
+  description: ["question text", "question", "text", "question description"],
   questionType: ["question type", "type"],
   options: ["options"],
-  correctAnswer: ["correct answer", "answer"],
+  // Separate Option A/B/.../F columns — the simple-template alternative to the packed "Options"
+  // column above (both are supported; a row using either shape works, see optionsFromRow() below).
+  // Recognizes several column-naming conventions a college's own existing spreadsheet might already
+  // use (spec: "Answer A"/"Choice A" as well as "Option A"), so a faculty member's own file doesn't
+  // need reformatting first.
+  optionA: ["option a", "answer a", "choice a"],
+  optionB: ["option b", "answer b", "choice b"],
+  optionC: ["option c", "answer c", "choice c"],
+  optionD: ["option d", "answer d", "choice d"],
+  optionE: ["option e", "answer e", "choice e"],
+  optionF: ["option f", "answer f", "choice f"],
+  correctAnswer: ["correct answer", "answer", "correct option", "correct"],
   points: ["marks", "points"],
-  difficulty: ["difficulty level", "difficulty"],
-  explanation: ["explanation"],
+  difficulty: ["difficulty level", "difficulty", "level"],
+  explanation: ["explanation", "solution"],
   btl: ["btl", "btl level", "bloom s taxonomy level"],
 };
+
+// Formula-injection defense for exported spreadsheets — a question's free-text fields (title,
+// description, options, explanation, subject/unit/topic names) are all faculty/staff-authored
+// content, not developer-authored, so a cell that happens to start with =, +, -, or @ would
+// otherwise be interpreted as a live formula by Excel/Sheets/LibreOffice's CSV/text importers when
+// the exported file is later reopened or re-uploaded elsewhere. Prefixing with a single quote is
+// the standard mitigation (Excel/Sheets/LibreOffice all treat a leading ' as "force text," not
+// part of the displayed value) and is harmless for any value that didn't need it.
+function sanitizeForSpreadsheet(value) {
+  const s = String(value ?? "");
+  return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+}
 
 function normalizeHeader(str) {
   return String(str || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -1516,7 +1571,18 @@ function parseUploadedFile(file, { coding }) {
   }
   try {
     const workbook = XLSX.read(file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    // The Combined template (bulk-template?type=combined) has BOTH an "MCQ" and a "CODING" sheet
+    // in one workbook — whichever import route the file was posted to (this route always knows
+    // which, via `coding`) must read the sheet actually matching that, not just "whatever comes
+    // first," or a combined file uploaded through the wrong-numbered route would silently parse
+    // the other question type's columns as if they were its own. Falls back to "first non-
+    // Instructions sheet" for a plain single-sheet file (our own non-combined templates, or a
+    // faculty member's own spreadsheet that was never one of our templates at all).
+    const wanted = coding ? ["coding", "code"] : ["mcq", "questions", "quiz"];
+    const sheetName = workbook.SheetNames.find((n) => wanted.includes(normalizeHeader(n)))
+      || workbook.SheetNames.find((n) => normalizeHeader(n) !== "instructions")
+      || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
     return { rows: sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [], error: null };
   } catch {
     return { rows: null, error: "Could not read this file. Please upload a valid .xlsx, .csv, or .txt file." };
@@ -1533,8 +1599,10 @@ function parseUploadedFile(file, { coding }) {
 // even if something else changed in between.
 async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commit) {
   const headerMap = buildHeaderMap(Object.keys(rows[0] || {}));
-  if (!headerMap.description || !headerMap.questionType) {
-    return { error: "Missing required columns. The file must include Question Text and Question Type." };
+  // Question Type is optional (auto-detected per row when the column/value is absent — see below);
+  // only Question Text is a genuinely hard requirement to import anything at all.
+  if (!headerMap.description) {
+    return { error: "Missing required column. The file must include Question Text." };
   }
 
   const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
@@ -1569,7 +1637,44 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
     attemptedRowCount++;
 
     if (!description) { errors.push({ row: rowNum, reason: "Missing Question Text" }); continue; }
-    const questionType = TYPE_ALIASES[normalizeHeader(typeRaw)];
+
+    // Simple template: separate Option A/B/.../F columns, preferred over the packed "Options"
+    // column when any are present — the faculty-facing redesign this replaces pipe-delimited
+    // options with. Falls back to "Options" untouched for any existing file/template still using
+    // the old packed column, so nothing already relying on it breaks.
+    const separateOptions = ["optionA", "optionB", "optionC", "optionD", "optionE", "optionF"]
+      .map((k) => field(row, k)).filter((v) => v !== "");
+    const optionsRaw = separateOptions.length > 0
+      ? separateOptions
+      : field(row, "options").split("|").map((s) => s.trim()).filter(Boolean);
+    // Correct Option as a letter (A/B/C/D, case-insensitive, with or without an "Option "/"Answer "/
+    // "Choice " prefix) resolves against optionsRaw's own position — A is whichever option ended up
+    // first regardless of which column shape supplied it. Split on comma/pipe first so Multiple
+    // Select's "A, C" convention also converts per-token; anything that isn't a single letter
+    // (option text, a 1-based number) is passed through untouched to normalizeCorrectIndices, which
+    // already handles those.
+    const correctAnswerRaw = field(row, "correctAnswer")
+      .split(/[,|]/)
+      .map((tok) => {
+        const t = tok.trim();
+        const m = t.match(/^(?:option|answer|choice)?\s*([A-Fa-f])$/i);
+        return m ? letterToOptionNumber(m[1]) : t;
+      })
+      .join(",");
+    const pointsRaw = field(row, "points");
+    const difficultyRaw = field(row, "difficulty");
+    const explanation = field(row, "explanation");
+
+    // Question Type is optional — the simple template has no such column at all. Auto-detected the
+    // same way the Notepad upload format already does: exactly 2 options that are literally
+    // True/False -> True/False; more than one Correct Option token -> Multiple Select; otherwise
+    // Multiple Choice. An explicit Question Type column, when present, always wins.
+    let questionType = typeRaw ? TYPE_ALIASES[normalizeHeader(typeRaw)] : undefined;
+    if (!questionType && !typeRaw) {
+      const isTrueFalse = optionsRaw.length === 2 && optionsRaw.every((o) => /^(true|false)$/i.test(o));
+      const correctCount = correctAnswerRaw.split(",").map((s) => s.trim()).filter(Boolean).length;
+      questionType = isTrueFalse ? "TRUE_FALSE" : correctCount > 1 ? "MULTISELECT" : "MCQ";
+    }
     if (!questionType) {
       unrecognizedTypeCount++;
       // Confirmed live: a user's own spreadsheet (not our template) can have a "Question Type"-
@@ -1578,7 +1683,7 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
       // mapping. Truncated here, and the accepted values spelled out, so one row's error is
       // actually readable; the systemic case (every/most rows wrong the same way -> structureHint
       // below) is what actually explains what's going on.
-      const shown = typeRaw ? (typeRaw.length > 40 ? `${typeRaw.slice(0, 40)}…` : typeRaw) : "(blank)";
+      const shown = typeRaw.length > 40 ? `${typeRaw.slice(0, 40)}…` : typeRaw;
       errors.push({ row: rowNum, reason: `Unrecognized Question Type "${shown}" — expected MCQ, True/False, or Multiple Select` });
       continue;
     }
@@ -1605,12 +1710,6 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
         continue;
       }
     }
-
-    const optionsRaw = field(row, "options").split("|").map((s) => s.trim()).filter(Boolean);
-    const correctAnswerRaw = field(row, "correctAnswer");
-    const pointsRaw = field(row, "points");
-    const difficultyRaw = field(row, "difficulty");
-    const explanation = field(row, "explanation");
 
     try {
       const normalized = normalizeOptions(questionType, optionsRaw, correctAnswerRaw);
