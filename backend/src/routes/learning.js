@@ -29,6 +29,7 @@ const { computeLearningRecommendations } = require("../utils/learningRecommendat
 const { computeConceptMastery } = require("../utils/conceptMastery");
 const { STUCK_CATEGORIES, generateMentorAssist } = require("../utils/learningMentor");
 const { validateCourse } = require("../utils/courseValidation");
+const { computeCourseAnalytics } = require("../utils/lmsFacultyAnalytics");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -1193,6 +1194,24 @@ router.get("/courses/:id/validate", authenticate, requireRole("ADMIN", "SUPER_AD
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to validate course" });
+  }
+});
+
+// ADMIN/STAFF: Faculty LMS Analytics + At-Risk Students (spec sections 40-41). An institute-
+// scoped admin/staff only ever sees their OWN institute's eligible students (scopeInstituteId),
+// even for a course assigned to several institutes — never another institute's roster.
+router.get("/courses/:id/analytics", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const course = await prisma.course.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    if (!ownsLmsInstitute(req, course.instituteId)) {
+      return res.status(403).json({ error: "You can only view analytics for courses under your own institute" });
+    }
+    const analytics = await computeCourseAnalytics(req.params.id, req.requesterInstituteId || null);
+    res.json(analytics);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to compute course analytics" });
   }
 });
 

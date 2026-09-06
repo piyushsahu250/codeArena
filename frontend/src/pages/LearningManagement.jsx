@@ -282,6 +282,9 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
   const [validatingId, setValidatingId] = useState(null); // which course's report is currently open
   const [validationResult, setValidationResult] = useState(null);
   const [validating, setValidating] = useState(false);
+  const [analyticsId, setAnalyticsId] = useState(null); // which course's Faculty Analytics is open
+  const [analyticsResult, setAnalyticsResult] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
   async function toggleValidate(c) {
     if (validatingId === c.id) { setValidatingId(null); return; }
@@ -296,6 +299,22 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
       setValidatingId(null);
     } finally {
       setValidating(false);
+    }
+  }
+
+  async function toggleAnalytics(c) {
+    if (analyticsId === c.id) { setAnalyticsId(null); return; }
+    setAnalyticsId(c.id);
+    setAnalyticsResult(null);
+    setLoadingAnalytics(true);
+    try {
+      const { data } = await api.get(`/learning/courses/${c.id}/analytics`);
+      setAnalyticsResult(data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to load analytics");
+      setAnalyticsId(null);
+    } finally {
+      setLoadingAnalytics(false);
     }
   }
 
@@ -489,6 +508,9 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
                     <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleValidate(c)}>
                       {validatingId === c.id ? "Hide Validation" : "Validate"}
                     </button>
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleAnalytics(c)}>
+                      {analyticsId === c.id ? "Hide Analytics" : "Analytics"}
+                    </button>
                     {isAdmin && (
                       <button
                         className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}
@@ -537,6 +559,62 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
                                 <span>{f.message}</span>
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {analyticsId === c.id && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                    {loadingAnalytics ? (
+                      <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Loading analytics…</p>
+                    ) : analyticsResult && (
+                      <>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10 }}>
+                          <div><div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{analyticsResult.enrolledCount}</div><div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Enrolled</div></div>
+                          <div><div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{analyticsResult.activeCount}</div><div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Active (any progress)</div></div>
+                          <div><div className="mono" style={{ fontSize: 20, fontWeight: 700, color: "var(--mint)" }}>{analyticsResult.completionRate}%</div><div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Completed ({analyticsResult.completedCount})</div></div>
+                          <div><div className="mono" style={{ fontSize: 20, fontWeight: 700, color: analyticsResult.atRisk.length ? "var(--rust)" : "var(--ink-dim)" }}>{analyticsResult.atRisk.length}</div><div style={{ fontSize: 11, color: "var(--ink-dim)" }}>At-Risk</div></div>
+                        </div>
+
+                        {analyticsResult.moduleCompletion.length > 0 && (
+                          <div style={{ marginTop: 14 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>MODULE COMPLETION</div>
+                            <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                              {analyticsResult.moduleCompletion.map((m) => (
+                                <div key={m.moduleId} style={{ fontSize: 12 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                    <span>{m.title}</span>
+                                    <span className="mono" style={{ color: "var(--ink-dim)" }}>{m.completedCount}/{m.totalStudents}</span>
+                                  </div>
+                                  <div style={{ height: 5, borderRadius: 3, background: "var(--line)", marginTop: 3, overflow: "hidden" }}>
+                                    <div style={{ height: "100%", width: `${m.totalStudents ? (m.completedCount / m.totalStudents) * 100 : 0}%`, background: "var(--mint)" }} />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {analyticsResult.atRisk.length > 0 && (
+                          <div style={{ marginTop: 14 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--rust)" }}>AT-RISK STUDENTS</div>
+                            <div style={{ display: "grid", gap: 6, marginTop: 6 }}>
+                              {analyticsResult.atRisk.map((s) => (
+                                <div key={s.id} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                                  <span>{s.name} <span className="mono" style={{ color: "var(--ink-dim)" }}>{s.registrationNumber || s.email}</span></span>
+                                  <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                    {s.reasons.map((r) => (
+                                      <span key={r} className="mono" style={{ fontSize: 10, padding: "2px 6px", borderRadius: 999, background: "var(--danger-bg)", color: "var(--rust)" }}>
+                                        {r === "NO_ACTIVITY" ? "No activity" : "Repeated assessment failure"}
+                                      </span>
+                                    ))}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </>
