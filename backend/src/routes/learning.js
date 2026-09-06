@@ -2206,6 +2206,34 @@ function splitProjectTaskCases(testCases) {
   return { visible: all.filter((tc) => !tc.isHidden), hidden: all.filter((tc) => tc.isHidden) };
 }
 
+// Atomically transitions a ProjectTaskProgress row to COMPLETED and reports whether THIS call was
+// the one that made it so — never a separate findUnique-then-upsert. That "check, then act" shape
+// has raced under real concurrent load on this platform before (see resume.js's GET /me route
+// comment for the confirmed incident: two near-simultaneous requests both read "no row exists yet"
+// and both tried to create one). A double-click on Submit, two open tabs, or a client retry
+// hitting /submit or /complete twice in quick succession must award PROJECT_TASK/PROJECT_COMPLETE
+// XP exactly once — not once per request that happened to read "not yet completed" before either
+// write landed. `updateMany`'s WHERE (status not already COMPLETED) is evaluated atomically by the
+// database per row; only one concurrent caller can ever flip it and see count > 0. Callers that
+// also need to persist submittedCode/language on every accepted attempt (even a resubmit after
+// already solved) do that as a separate, unconditional update afterward — safe to run on every
+// call regardless of the race, since it never touches status/completedAt or gates XP.
+async function markProjectTaskCompletedIfFirstTime(studentId, taskId) {
+  const now = new Date();
+  const updated = await prisma.projectTaskProgress.updateMany({
+    where: { studentId, taskId, status: { not: "COMPLETED" } },
+    data: { status: "COMPLETED", completedAt: now },
+  });
+  if (updated.count > 0) return true;
+  try {
+    await prisma.projectTaskProgress.create({ data: { studentId, taskId, status: "COMPLETED", completedAt: now } });
+    return true;
+  } catch (e) {
+    if (e.code === "P2002") return false; // a concurrent request already created/completed it first
+    throw e;
+  }
+}
+
 // Strips answer-revealing fields before sending a task to a student — same convention as
 // sanitizeQuestion above: hidden test cases never leave the server, only sample (visible) ones.
 function sanitizeProjectTask(t, progress) {
@@ -2485,12 +2513,13 @@ router.post("/tasks/:id/submit", authenticate, requireRole("STUDENT"), attachReq
 
     let gamification = null;
     if (result.verdict === "ACCEPTED") {
-      const existing = await prisma.projectTaskProgress.findUnique({ where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } } });
-      const alreadyCompleted = existing?.status === "COMPLETED";
-      await prisma.projectTaskProgress.upsert({
+      const isFirstCompletion = await markProjectTaskCompletedIfFirstTime(req.user.id, task.id);
+      // Always record the latest passing code, independent of the race-safe completion check
+      // above — a resubmit after already solving it still updates what's on file, it just never
+      // re-awards XP for it.
+      await prisma.projectTaskProgress.update({
         where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } },
-        update: { status: "COMPLETED", submittedCode: code, language, completedAt: alreadyCompleted ? existing.completedAt : new Date() },
-        create: { studentId: req.user.id, taskId: task.id, status: "COMPLETED", submittedCode: code, language, completedAt: new Date() },
+        data: { submittedCode: code, language },
       });
       try {
         const allTasks = await prisma.projectTask.findMany({ where: { projectId: project.id }, select: { id: true } });
@@ -2498,8 +2527,8 @@ router.post("/tasks/:id/submit", authenticate, requireRole("STUDENT"), attachReq
         const projectNowComplete = allTasks.length > 0 && completedCount === allTasks.length;
         gamification = await processGamification(req.user.id, {
           xpActivities: [
-            ...(alreadyCompleted ? [] : ["PROJECT_TASK"]),
-            ...(projectNowComplete && !alreadyCompleted ? ["PROJECT_COMPLETE"] : []),
+            ...(isFirstCompletion ? ["PROJECT_TASK"] : []),
+            ...(projectNowComplete && isFirstCompletion ? ["PROJECT_COMPLETE"] : []),
           ],
           xpMeta: { taskId: task.id, projectId: project.id },
           streakEligible: true,
@@ -2561,13 +2590,7 @@ router.post("/tasks/:id/complete", authenticate, requireRole("STUDENT"), async (
     if (Array.isArray(task.testCases) && task.testCases.length > 0) {
       return res.status(400).json({ error: "This task is auto-graded — submit your code instead of marking it complete" });
     }
-    const existing = await prisma.projectTaskProgress.findUnique({ where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } } });
-    const alreadyCompleted = existing?.status === "COMPLETED";
-    await prisma.projectTaskProgress.upsert({
-      where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } },
-      update: { status: "COMPLETED", completedAt: alreadyCompleted ? existing.completedAt : new Date() },
-      create: { studentId: req.user.id, taskId: task.id, status: "COMPLETED", completedAt: new Date() },
-    });
+    const isFirstCompletion = await markProjectTaskCompletedIfFirstTime(req.user.id, task.id);
     let gamification = null;
     try {
       const allTasks = await prisma.projectTask.findMany({ where: { projectId: project.id }, select: { id: true } });
@@ -2575,8 +2598,8 @@ router.post("/tasks/:id/complete", authenticate, requireRole("STUDENT"), async (
       const projectNowComplete = allTasks.length > 0 && completedCount === allTasks.length;
       gamification = await processGamification(req.user.id, {
         xpActivities: [
-          ...(alreadyCompleted ? [] : ["PROJECT_TASK"]),
-          ...(projectNowComplete && !alreadyCompleted ? ["PROJECT_COMPLETE"] : []),
+          ...(isFirstCompletion ? ["PROJECT_TASK"] : []),
+          ...(projectNowComplete && isFirstCompletion ? ["PROJECT_COMPLETE"] : []),
         ],
         xpMeta: { taskId: task.id, projectId: project.id },
         streakEligible: true,
