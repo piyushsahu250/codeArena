@@ -434,7 +434,21 @@ async function computeQuestionAnalytics(req) {
 
   const mostDifficult = withStats.filter((q) => q.attempts >= 3 && q.passRate !== null)
     .sort((a, b) => a.passRate - b.passRate).slice(0, 10);
+  // Complements mostDifficult -- a consistently ~100% pass rate across real volume is its own
+  // quality signal (possibly trivial, or an answer key that's leaked/guessable), not just "good."
+  // Never flags a question with < 3 attempts either, same reasoning as mostDifficult: a single
+  // lucky/unlucky attempt isn't a real signal yet.
+  const mostTrivial = withStats.filter((q) => q.attempts >= 3 && q.passRate !== null)
+    .sort((a, b) => b.passRate - a.passRate).slice(0, 10);
   const mostAttempted = [...withStats].sort((a, b) => b.attempts - a.attempts).slice(0, 10);
+
+  // A published CODING/SQL question sitting in the bank with zero Formal Test submissions ever --
+  // never assigned to a test, or assigned but never actually attempted by any student -- is either
+  // dead weight worth pruning or a sign a question got added and then forgotten. Bounded to 20 for
+  // the response (this can only ever be a subset of the already-3000-capped `scopedQuestions`).
+  const attemptedIds = new Set(withStats.map((q) => q.questionId));
+  const neverAttempted = scopedQuestions.filter((q) => !attemptedIds.has(q.id)).slice(0, 20)
+    .map((q) => ({ questionId: q.id, title: q.title || (q.description ? q.description.slice(0, 60) : "Untitled"), subject: q.subject || null, topic: q.topic || null }));
 
   return {
     totals: {
@@ -449,7 +463,9 @@ async function computeQuestionAnalytics(req) {
       avgScore: Math.round(avgScoreOverall * 10) / 10,
     },
     mostDifficult,
+    mostTrivial,
     mostAttempted,
+    neverAttempted: { count: scopedQuestions.length - withStats.length, sample: neverAttempted },
   };
 }
 

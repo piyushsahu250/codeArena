@@ -631,6 +631,44 @@ export default function QuestionBank() {
                     </div>
                   </div>
                 )}
+                {analytics.mostTrivial?.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Possibly too easy (highest pass rate, 3+ attempts) — worth a look for a trivial or leaked answer</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+                      {analytics.mostTrivial.map((q) => (
+                        <div key={q.questionId} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <span>{q.title}{q.subject ? ` — ${q.subject}` : ""}</span>
+                          <span className="mono" style={{ color: "var(--amber)" }}>{q.passRate}% pass · {q.attempts} attempts</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {analytics.mostAttempted?.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Most attempted</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+                      {analytics.mostAttempted.map((q) => (
+                        <div key={q.questionId} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <span>{q.title}{q.subject ? ` — ${q.subject}` : ""}</span>
+                          <span className="mono" style={{ color: "var(--ink-dim)" }}>{q.attempts} attempts · {q.passRate != null ? `${q.passRate}% pass` : "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {analytics.neverAttempted?.count > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                      Never attempted ({analytics.neverAttempted.count}) — not assigned to any Formal Test yet, or assigned but never actually attempted
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
+                      {analytics.neverAttempted.sample.map((q) => (
+                        <div key={q.questionId}>{q.title}{q.subject ? ` — ${q.subject}` : ""}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
             {!analyticsLoading && analytics && analytics.attempts.totalAttempts === 0 && (
