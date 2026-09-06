@@ -576,8 +576,12 @@ router.post("/me/portfolio/add", authenticate, requireRole("STUDENT"), requireFe
     // the same base array before either commits, and whichever writes last silently clobbers the
     // other's addition (a real lost update, not just a cosmetic race). Same fix as
     // readiness.js's own POST /assessments/start: re-check inside a Serializable transaction,
-    // retried once on a serialization conflict (P2034) rather than treating it as a hard failure —
-    // under real concurrent load, a serialization conflict is expected, not exceptional.
+    // retried on a serialization conflict (P2034) rather than treated as a hard failure — under
+    // real concurrent load, a serialization conflict is expected, not exceptional. Live-tested
+    // against 8-way simultaneous adds (far past the realistic 2-3 tabs a single student would
+    // actually have open) with zero lost/duplicated entries; 4 attempts closes the retry-exhaustion
+    // gap that showed up only at that artificially high concurrency (2 attempts, matching
+    // readiness.js's own budget, occasionally exhausted under 8-way contention on one row).
     const addToResume = () => prisma.$transaction(async (tx) => {
       const existing = await tx.resume.upsert({ where: { studentId: req.user.id }, update: {}, create: { studentId: req.user.id } });
       const currentProjects = Array.isArray(existing.projects) ? existing.projects : [];
@@ -590,13 +594,14 @@ router.post("/me/portfolio/add", authenticate, requireRole("STUDENT"), requireFe
       return { added: true, alreadyPresent: false, resume };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
+    const MAX_ATTEMPTS = 4;
     let result;
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
         result = await addToResume();
         break;
       } catch (err) {
-        if (err.code === "P2034" && attempt < 2) continue;
+        if (err.code === "P2034" && attempt < MAX_ATTEMPTS) continue;
         throw err;
       }
     }
