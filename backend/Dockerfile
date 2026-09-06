@@ -24,7 +24,9 @@ RUN apt-get update -o Acquire::Retries=3 && DEBIAN_FRONTEND=noninteractive apt-g
     default-jdk-headless \
     python3 \
     time \
-    postgresql-client \
+    curl \
+    ca-certificates \
+    gnupg \
     util-linux \
     libcap2-bin \
     iptables \
@@ -34,6 +36,20 @@ RUN apt-get update -o Acquire::Retries=3 && DEBIAN_FRONTEND=noninteractive apt-g
     libgif-dev \
     librsvg2-dev \
     libpixman-1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Debian bookworm's own `postgresql-client` package is only v15 -- pg_dump refuses to dump from a
+# server whose major version is NEWER than its own (a hard, well-known Postgres compatibility
+# rule, not a bug), and the production database (Neon, managed Postgres) runs Postgres 18. Caught
+# live via the Daily Health Check's checkBackupCapability() -- GET /admin/backup/database (the
+# Super-Admin "Download Backup" button) was actually broken in production until this fix, silently,
+# since nobody had tried a real backup since Neon's last major-version upgrade. Pulls postgresql-
+# client-18 from the official PGDG apt repo rather than waiting for Debian bookworm's own package
+# to catch up (it won't, until the next Debian release) or hand-installing a raw binary.
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update -o Acquire::Retries=3 \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends postgresql-client-18 \
     && rm -rf /var/lib/apt/lists/*
 
 # Dedicated, unprivileged, fixed-UID/GID system user for compiling/running untrusted
