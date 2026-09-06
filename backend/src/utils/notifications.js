@@ -99,7 +99,6 @@ async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel, 
         "TALENT_POOL_ASSESSMENT_ASSIGNED"
       )
     ) : []),
-    ),
   ]);
 }
 
