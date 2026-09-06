@@ -103,19 +103,30 @@ async function computeLearningRecommendations(prisma, studentId) {
   // recommendations rather than merged, since they measure different things.
   const mastery = await computeConceptMastery(prisma, studentId);
   const weakConcept = weakestRatedConcept(mastery);
-  if (weakConcept) {
+  if (weakConcept && eligibleCourses.length > 0) {
     // Find any accessible (published + eligible + module-unlocked) lesson containing a CODING
     // practice question tagged with this concept, so the recommendation has somewhere to send
     // the student — never linking to a locked module's content.
+    //
+    // Scoped to this student's own eligible courses (not a platform-wide scan of every CODING
+    // practice question) — this function is called on every dashboard/Learning Hub load (albeit
+    // 5-min cached per student at the route level, see learning.js's GET /recommendations), and an
+    // unbounded findMany here is exactly the recurring "full-table-scan under load" pattern this
+    // platform has hit before as its question bank grows. getModuleLockMap is likewise computed
+    // once per course (cached in lockMapByCourse), not once per candidate question — a course with
+    // several matching questions previously recomputed the same lock map redundantly.
+    const eligibleCourseIds = eligibleCourses.map((c) => c.id);
     const candidates = await prisma.practiceQuestion.findMany({
-      where: { type: "CODING" },
+      where: { type: "CODING", lesson: { module: { courseId: { in: eligibleCourseIds } } } },
       select: { id: true, tags: true, lessonId: true, lesson: { select: { moduleId: true, module: { select: { courseId: true, course: { select: { slug: true } } } } } } },
     });
+    const lockMapByCourse = new Map();
     for (const q of candidates) {
       if (!Array.isArray(q.tags) || !q.tags.includes(weakConcept.tag)) continue;
       const courseId = q.lesson?.module?.courseId;
-      if (!eligibleCourses.some((c) => c.id === courseId)) continue;
-      const lockMap = await getModuleLockMap(prisma, studentId, courseId);
+      if (!courseId) continue;
+      if (!lockMapByCourse.has(courseId)) lockMapByCourse.set(courseId, await getModuleLockMap(prisma, studentId, courseId));
+      const lockMap = lockMapByCourse.get(courseId);
       if (lockMap.get(q.lesson.moduleId)?.locked) continue;
       recs.push({
         type: "WEAK_CONCEPT",

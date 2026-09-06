@@ -88,19 +88,26 @@ async function buildAutofillData(studentId) {
 // ({ title, description, technologies, role, duration, githubUrl, liveUrl }). Nothing invented:
 // `technologies` comes straight from the project's authored `skillsRequired`, `description` from
 // its authored `objective`/`description` — never AI-generated, never guessed.
+//
+// Starts from THIS STUDENT's own ProjectTaskProgress rows (naturally small — bounded by their own
+// activity) rather than fetching every active CourseProject on the entire platform first, which
+// scales with total platform project count, not with anything about this student — exactly the
+// unbounded full-table-scan pattern this platform has hit before as content volume grows. Called
+// on every /resume/me/portfolio and /resume/me/autofill request, with no route-level caching on
+// either, so this was the highest-traffic version of the mistake, not just a stylistic one.
 async function getCompletedProjects(studentId) {
+  const completedTaskRows = await prisma.projectTaskProgress.findMany({
+    where: { studentId, status: "COMPLETED" },
+    select: { taskId: true, task: { select: { projectId: true } } },
+  });
+  if (completedTaskRows.length === 0) return [];
+  const candidateProjectIds = [...new Set(completedTaskRows.map((r) => r.task.projectId))];
+  const completedSet = new Set(completedTaskRows.map((r) => r.taskId));
+
   const projects = await prisma.courseProject.findMany({
-    where: { isActive: true, tasks: { some: {} } },
+    where: { id: { in: candidateProjectIds }, isActive: true },
     select: { id: true, title: true, description: true, objective: true, skillsRequired: true, tasks: { select: { id: true } } },
   });
-  if (projects.length === 0) return [];
-
-  const allTaskIds = projects.flatMap((p) => p.tasks.map((t) => t.id));
-  const completed = await prisma.projectTaskProgress.findMany({
-    where: { studentId, taskId: { in: allTaskIds }, status: "COMPLETED" },
-    select: { taskId: true },
-  });
-  const completedSet = new Set(completed.map((c) => c.taskId));
 
   return projects
     .filter((p) => p.tasks.length > 0 && p.tasks.every((t) => completedSet.has(t.id)))
