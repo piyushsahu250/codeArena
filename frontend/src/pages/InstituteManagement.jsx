@@ -382,6 +382,7 @@ export default function InstituteManagement() {
                         <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>
                           AI by feature — {Object.entries(usageById[inst.id].ai.byFeature).map(([f, c]) => `${f}: ${c}`).join(" · ")}
                           {" · "}{(usageById[inst.id].ai.promptTokens + usageById[inst.id].ai.completionTokens).toLocaleString()} tokens
+                          {" · "}~${usageById[inst.id].ai.estimatedCostUsd.toFixed(4)} est. (Standard-tier pricing; $0 if this key is on the free tier)
                         </div>
                       )}
                       <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>

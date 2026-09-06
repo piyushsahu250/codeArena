@@ -6,6 +6,7 @@ const { cached, invalidate } = require("../utils/cache");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion } = require("../utils/studentProfileCompletion");
 const { decryptProfile } = require("../utils/piiEncryption");
+const { estimateAiCostUsd } = require("../utils/aiCostEstimate");
 
 const router = express.Router();
 
@@ -296,6 +297,9 @@ router.get("/:id/usage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INST
         byFeature: Object.fromEntries(aiCallsByFeature.map((g) => [g.feature, g._count._all])),
         promptTokens: aiTokenAgg._sum.promptTokens || 0,
         completionTokens: aiTokenAgg._sum.completionTokens || 0,
+        // Estimate only -- see aiCostEstimate.js's own comment on why this can never be presented
+        // as an authoritative bill (this codebase can't tell free-tier from paid-tier from here).
+        estimatedCostUsd: estimateAiCostUsd(aiTokenAgg._sum.promptTokens, aiTokenAgg._sum.completionTokens),
       },
       emailsSent,
       storage: {

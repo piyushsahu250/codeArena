@@ -8,6 +8,7 @@ const { getQueueStatus, mapWithConcurrency } = require("../utils/queue");
 const { notifyMany } = require("../utils/notifications");
 const { getQueueStatus: getAiQueueStatus } = require("../utils/aiQueue");
 const { cached } = require("../utils/cache");
+const { estimateAiCostUsd } = require("../utils/aiCostEstimate");
 const { sendMail, sendMailLogged, retryEmailLogged, wrapBranded, MAX_EMAIL_RETRIES } = require("../utils/mailer");
 const { credentialsResendTemplate } = require("../utils/emailTemplates");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
@@ -373,11 +374,16 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
     const aiProvider = await cached("admin:monitoring:aiProvider", 15000, async () => {
       const since = new Date();
       since.setUTCHours(0, 0, 0, 0);
-      const [totalToday, failuresByType, latency, lastFailure] = await Promise.all([
+      const monthStart = new Date();
+      monthStart.setUTCDate(1);
+      monthStart.setUTCHours(0, 0, 0, 0);
+      const [totalToday, failuresByType, latency, lastFailure, tokensToday, tokensMonth] = await Promise.all([
         prisma.aiUsageLog.count({ where: { createdAt: { gte: since } } }),
         prisma.aiUsageLog.groupBy({ by: ["errorType"], where: { createdAt: { gte: since }, success: false }, _count: { _all: true } }),
         prisma.aiUsageLog.aggregate({ where: { createdAt: { gte: since }, success: true }, _avg: { latencyMs: true } }),
         prisma.aiUsageLog.findFirst({ where: { success: false }, orderBy: { createdAt: "desc" }, select: { feature: true, errorType: true, createdAt: true } }),
+        prisma.aiUsageLog.aggregate({ where: { createdAt: { gte: since } }, _sum: { promptTokens: true, completionTokens: true } }),
+        prisma.aiUsageLog.aggregate({ where: { createdAt: { gte: monthStart } }, _sum: { promptTokens: true, completionTokens: true } }),
       ]);
       const failedToday = failuresByType.reduce((sum, g) => sum + g._count._all, 0);
       return {
@@ -397,6 +403,20 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
           perInstituteLimit: aiRateLimits.PER_INSTITUTE_DAILY_LIMIT,
         },
         lastFailure,
+        // Estimate only -- see aiCostEstimate.js's own comment on why this can never be presented
+        // as an authoritative bill (this codebase can't tell a free-tier key from a paid one).
+        cost: {
+          today: {
+            promptTokens: tokensToday._sum.promptTokens || 0,
+            completionTokens: tokensToday._sum.completionTokens || 0,
+            estimatedUsd: estimateAiCostUsd(tokensToday._sum.promptTokens, tokensToday._sum.completionTokens),
+          },
+          monthToDate: {
+            promptTokens: tokensMonth._sum.promptTokens || 0,
+            completionTokens: tokensMonth._sum.completionTokens || 0,
+            estimatedUsd: estimateAiCostUsd(tokensMonth._sum.promptTokens, tokensMonth._sum.completionTokens),
+          },
+        },
       };
     });
 

@@ -169,7 +169,22 @@ export default function SystemMonitoring() {
                     warn={data.aiProvider.quota.globalUsed / data.aiProvider.quota.globalLimit > 0.8}
                     sub={`Per-institute cap: ${data.aiProvider.quota.perInstituteLimit}/day`}
                   />
+                  <StatCard
+                    label="Est. Cost Today"
+                    value={`$${data.aiProvider.cost.today.estimatedUsd.toFixed(4)}`}
+                    sub={`${(data.aiProvider.cost.today.promptTokens + data.aiProvider.cost.today.completionTokens).toLocaleString()} tokens`}
+                  />
+                  <StatCard
+                    label="Est. Cost Month-to-Date"
+                    value={`$${data.aiProvider.cost.monthToDate.estimatedUsd.toFixed(2)}`}
+                    sub={`${(data.aiProvider.cost.monthToDate.promptTokens + data.aiProvider.cost.monthToDate.completionTokens).toLocaleString()} tokens`}
+                  />
                 </div>
+                <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>
+                  Cost figures are an estimate at Standard/pay-as-you-go pricing for {data.aiProvider.model} ($0.75/$3.75 per 1M input/output
+                  tokens) — if this API key is actually on Google AI Studio's free tier, real cost is $0. Check your own Google AI Studio
+                  billing to know which applies.
+                </p>
                 {Object.keys(data.aiProvider.today.byErrorType).length > 0 && (
                   <div className="card" style={{ padding: 12, marginTop: 10, fontSize: 12 }}>
                     <div style={{ fontWeight: 700, marginBottom: 4 }}>Failures today by reason</div>
