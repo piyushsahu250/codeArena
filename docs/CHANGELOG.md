@@ -333,3 +333,8 @@ Format per [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md):
 - API endpoint count: 552 -> 553 (review API_DOCUMENTATION.md)
 - This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
 - Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
+
+## 2026-09-06 (auto-detected drift)
+- API endpoint count: 553 -> 554 (review API_DOCUMENTATION.md)
+- This entry was generated mechanically by `scripts/docSync.js` (counts only — no AI involved, no prose rewritten).
+- Manual review needed: update the prose in the doc file(s) referenced above to describe what actually changed and why.
