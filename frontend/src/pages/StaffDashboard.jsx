@@ -10,6 +10,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
 import StatCard from "../components/StatCard";
 import EmptyState from "../components/EmptyState";
+import SendTestNotificationModal from "../components/SendTestNotificationModal";
 
 function statusOf(test) {
   const now = new Date();
@@ -53,6 +54,7 @@ export default function StaffDashboard() {
   const [subjectFilter, setSubjectFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [staffOwnerFilter, setStaffOwnerFilter] = useState(""); // Admin only
+  const [notifyingTest, setNotifyingTest] = useState(null); // Test row currently open in SendTestNotificationModal, or null
 
   useEffect(() => {
     refresh();
@@ -77,8 +79,8 @@ export default function StaffDashboard() {
         + test.classes.reduce((sum, tc) => sum + (tc.class?._count?.users || 0), 0);
       const ok = await confirm({
         title: "Publish this test?",
-        message: `"${test.title}" (${test.questions?.length ?? test._count?.questions ?? "?"} question(s), ${test.durationMin} min) will become visible to eligible students. ${
-          studentCount > 0 ? `${studentCount} student(s) will receive this test.` : "This test has no academic group/class assignment yet, so no student will see it until one is added."
+        message: `"${test.title}" (${test.questions?.length ?? test._count?.questions ?? "?"} question(s), ${test.durationMin} min) will become visible to eligible students inside CodeArena. ${
+          studentCount > 0 ? `${studentCount} student(s) will see it — no email is sent automatically; use "Send Notification" afterward if you want them emailed too.` : "This test has no academic group/class assignment yet, so no student will see it until one is added."
         }`,
         confirmLabel: "Publish Test",
         cancelLabel: "Cancel",
@@ -450,6 +452,9 @@ export default function StaffDashboard() {
                     <button className="btn btn-dark" onClick={() => togglePublish(test)}>
                       {test.isPublished ? "Unpublish" : "Publish"}
                     </button>
+                    {test.isPublished && (
+                      <button className="btn btn-ghost" onClick={() => setNotifyingTest(test)}>Send Notification</button>
+                    )}
                     {isAdminTier && (
                       <button className="btn btn-ghost" style={{ color: "var(--rust)", borderColor: "var(--rust)" }} onClick={() => deleteTest(test)}>
                         Delete
@@ -465,6 +470,9 @@ export default function StaffDashboard() {
           )}
         </div>
       </div>
+      {notifyingTest && (
+        <SendTestNotificationModal test={notifyingTest} onClose={() => setNotifyingTest(null)} />
+      )}
     </div>
   );
 }

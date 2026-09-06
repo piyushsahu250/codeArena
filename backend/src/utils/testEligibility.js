@@ -113,4 +113,51 @@ async function studentCanAccessTest(prisma, testId, academicGroupId, classId, me
   return false;
 }
 
-module.exports = { testEligibilityWhere, isTestVisibleToStudent, studentCanAccessTest };
+// Reverse of testEligibilityWhere: given a testId, find every STUDENT eligible to see it — used
+// by the publish route's automatic in-app notification and by the manual "Send Notification"
+// action (routes/tests.js), so "who gets notified about this test" always matches "who can
+// actually see this test" rather than a second, independently-drifting definition. Mirrors
+// isTestVisibleToStudent's exact branching (Talent Pool exclusivity overrides everything else;
+// otherwise academicGroups/classes; otherwise open-to-everyone bounded by instituteId).
+async function getTestRecipients(prisma, testId) {
+  const test = await prisma.test.findUnique({
+    where: { id: testId },
+    select: {
+      instituteId: true,
+      academicGroups: { select: { academicGroupId: true } },
+      classes: { select: { classId: true } },
+      talentPools: { select: { poolId: true } },
+    },
+  });
+  if (!test) return [];
+  const SELECT = { id: true, name: true, email: true, instituteId: true };
+
+  if (test.talentPools.length > 0) {
+    const poolIds = test.talentPools.map((p) => p.poolId);
+    const members = await prisma.talentPoolMember.findMany({ where: { poolId: { in: poolIds } }, select: { studentId: true } });
+    const studentIds = [...new Set(members.map((m) => m.studentId))];
+    if (studentIds.length === 0) return [];
+    return prisma.user.findMany({ where: { id: { in: studentIds }, role: "STUDENT", isActive: true }, select: SELECT });
+  }
+
+  const academicGroupIds = test.academicGroups.map((g) => g.academicGroupId);
+  const classIds = test.classes.map((c) => c.classId);
+  if (academicGroupIds.length === 0 && classIds.length === 0) {
+    return prisma.user.findMany({
+      where: { role: "STUDENT", isActive: true, ...(test.instituteId ? { instituteId: test.instituteId } : {}) },
+      select: SELECT,
+    });
+  }
+  return prisma.user.findMany({
+    where: {
+      role: "STUDENT", isActive: true,
+      OR: [
+        ...(academicGroupIds.length ? [{ academicGroupId: { in: academicGroupIds } }] : []),
+        ...(classIds.length ? [{ classId: { in: classIds } }] : []),
+      ],
+    },
+    select: SELECT,
+  });
+}
+
+module.exports = { testEligibilityWhere, isTestVisibleToStudent, studentCanAccessTest, getTestRecipients };

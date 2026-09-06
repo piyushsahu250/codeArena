@@ -802,7 +802,11 @@ router.post("/:id/tests", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INS
     });
 
     const members = await prisma.talentPoolMember.findMany({ where: { poolId: pool.id }, include: { student: { select: MEMBER_SELECT } } });
-    if (members.length) await notifyAssessmentAssigned(prisma, members.map((m) => m.student), pool, test.title);
+    // sendEmail:false explicit (matches the new default) -- a Test assigned to a Talent Pool is
+    // still "a test is assigned" per the "stop automatic email for every test" fix; students still
+    // see it in-app immediately, staff use the separate manual "Send Notification" action
+    // (routes/tests.js POST /:id/notify) if they actually want students emailed about it.
+    if (members.length) await notifyAssessmentAssigned(prisma, members.map((m) => m.student), pool, test.title, { sendEmail: false });
     await logAudit({
       req, action: AUDIT_ACTIONS.TALENT_POOL_ASSESSMENT_ASSIGNED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: poolInstituteIds(pool)[0] || null, details: { poolId: pool.id, poolName: pool.name, testId, testTitle: test.title },

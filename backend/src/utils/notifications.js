@@ -40,11 +40,15 @@ async function notifyMany(prisma, recipientIds, { type, message, link, meta }) {
   }
 }
 
-async function emailStudent(prisma, student, subject, bodyHtml, emailType) {
+// batchId is optional — passed through to EmailLog so a caller sending many of these as one
+// logical batch (routes/tests.js's manual "Send Notification", users.js's bulk sends) can roll up
+// success/fail counts for that one batch afterward, without scanning the whole table.
+async function emailStudent(prisma, student, subject, bodyHtml, emailType, batchId) {
   if (!student?.email) return;
   const instituteName = await lookupInstituteName(prisma, student.instituteId).catch(() => null);
   await sendMailLogged(prisma, {
     to: student.email, name: student.name, subject, html: wrapBranded(bodyHtml, instituteName), emailType, studentId: student.id,
+    ...(batchId ? { batchId } : {}),
   }).catch(() => {});
 }
 
@@ -73,7 +77,14 @@ async function notifyPoolRemoved(prisma, student, pool) {
 
 // Fired once per assignment event, to every current member — students, so callers should pass
 // the already-loaded member list (id+name+email) rather than re-querying here.
-async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel) {
+//
+// sendEmail defaults to FALSE for the same "stop automatic email for every test" reason as
+// notifyTestAssigned above: assigning a Test to a Talent Pool (routes/talentPools.js POST
+// /:id/tests) is still "a test is assigned" per that fix's scope, so it must not auto-email either
+// — only the in-app half is automatic. Assigning a Mock Interview (a different entity, not a Test
+// row) is unaffected and keeps its own existing behavior; this option only threads through the
+// Test-assignment call site.
+async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel, { sendEmail = false } = {}) {
   const link = "/talent-pools";
   await Promise.all([
     notifyMany(prisma, members.map((m) => m.id), {
@@ -81,12 +92,13 @@ async function notifyAssessmentAssigned(prisma, members, pool, assessmentLabel) 
       message: `New exclusive assessment "${assessmentLabel}" assigned to your "${pool.name}" Talent Pool`,
       link,
     }),
-    ...members.map((m) =>
+    ...(sendEmail ? members.map((m) =>
       emailStudent(
         prisma, m, `New assessment for "${pool.name}"`,
         `<p>Hi ${m.name},</p><p>A new exclusive assessment, <strong>${assessmentLabel}</strong>, has been assigned to your <strong>${pool.name}</strong> Talent Pool.</p><p><a href="${FRONTEND_URL}${link}">View your Talent Pools</a></p>`,
         "TALENT_POOL_ASSESSMENT_ASSIGNED"
       )
+    ) : []),
     ),
   ]);
 }
@@ -206,12 +218,20 @@ async function notifyDocumentVerification(prisma, student, { document, status, v
   ]);
 }
 
-// Fired when a Test's academic-group assignment changes (routes/tests.js PATCH /:id) — same
-// "many students, one event" shape as notifyAssessmentAssigned above, for the ordinary
-// (non-Talent-Pool) Test Creation flow, which previously sent no notification of any kind.
-// Callers should only invoke this for a PUBLISHED test — an unpublished one isn't visible to
-// students yet regardless of assignment, so notifying about it would be confusing/premature.
-async function notifyTestAssigned(prisma, students, test) {
+// Fired when a Test is published (routes/tests.js PATCH /:id/publish) — same "many students, one
+// event" shape as notifyAssessmentAssigned above. Callers should only invoke this for a PUBLISHED
+// test — an unpublished one isn't visible to students yet regardless of assignment, so notifying
+// about it would be confusing/premature.
+//
+// sendEmail defaults to FALSE (in-app only): per the "stop automatic email for every test" spec,
+// students must always see a new/assigned test inside the platform (this in-app half is never
+// optional), but automatically emailing every assigned student on every publish was the actual
+// complaint being fixed — that's now an explicit, staff-triggered action instead (routes/tests.js
+// POST /:id/notify). This function's automatic caller (the publish route) always passes
+// sendEmail:false; the manual "Send Notification" route calls emailStudent directly per the
+// staff's own checkbox choice instead of going through here, since it also needs idempotency
+// tracking this function doesn't do.
+async function notifyTestAssigned(prisma, students, test, { sendEmail = false } = {}) {
   if (!students || students.length === 0) return;
   const link = "/tests";
   await Promise.all([
@@ -220,13 +240,13 @@ async function notifyTestAssigned(prisma, students, test) {
       message: `New test "${test.title}" has been assigned to you`,
       link,
     }),
-    ...students.map((s) =>
+    ...(sendEmail ? students.map((s) =>
       emailStudent(
         prisma, s, `New test assigned: "${test.title}"`,
         `<p>Hi ${s.name},</p><p>A new test, <strong>${test.title}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Tests</a></p>`,
         "TEST_ASSIGNED"
       )
-    ),
+    ) : []),
   ]);
 }
 
@@ -271,4 +291,9 @@ module.exports = {
   notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished,
   notifyResultPublished, notifyAccountStatusChanged, notifyPermissionUpdated, notifyPasswordResetByAdmin, notifyDocumentVerification,
   notifyTestAssigned, notifyCourseAssigned, notifyCertificateIssued,
+  // Exported for routes/tests.js's manual "Send Notification" action, which needs the same
+  // institute-branded single-student email send this file's own notify* wrappers already use,
+  // but with its own idempotency/logging around the batch rather than going through a notifyX
+  // wrapper shaped for one specific event type.
+  emailStudent,
 };

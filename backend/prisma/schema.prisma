@@ -441,6 +441,8 @@ model Test {
   // Talent Pool attendance: the auto-generated LecturePlan (if any) that represents this Test for
   // a pool's attendance owner — see LecturePlan.testId.
   lecturePlans       LecturePlan[]
+  // Manual "Send Notification" action's history — see TestNotificationSend's own comment.
+  notificationSends  TestNotificationSend[]
 
   @@index([createdById])
   @@index([isPublished])
@@ -449,6 +451,31 @@ model Test {
   @@index([instituteId])
   @@index([subjectId])
   @@index([unitId])
+}
+
+// One row per manual "Send Notification" click (routes/tests.js POST /:id/notify) — the platform
+// stopped auto-emailing every student on every test create/edit/publish/assign (that's what this
+// whole feature replaces); this is the deliberate, explicit alternative a staff/admin uses instead.
+// idempotencyKey is client-generated once when the confirm dialog opens and resent unchanged on
+// any retry of that same click (double-click, a dropped-response retry, a queue retry) — the
+// unique constraint below is what actually prevents a duplicate send, not just UI disabling, since
+// a network-level retry never re-renders the dialog to generate a new one. A genuinely new click
+// later (e.g. after a page refresh) gets its own fresh key and is a new, legitimate send — this
+// table only de-duplicates one user action's retries, it doesn't limit how many times a test can
+// ever be notified about.
+model TestNotificationSend {
+  id             String   @id @default(uuid())
+  test           Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId         String
+  idempotencyKey String   @unique
+  sendEmail      Boolean
+  sendInApp      Boolean
+  recipientCount Int
+  sentById       String
+  sentByName     String
+  createdAt      DateTime @default(now())
+
+  @@index([testId])
 }
 
 // Explicit test sharing: grants a Staff member other than the owner (createdById) access to

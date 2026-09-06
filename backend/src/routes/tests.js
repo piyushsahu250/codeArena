@@ -5,13 +5,16 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { gradePendingCodingSubmissions } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
-const { isTestVisibleToStudent, testEligibilityWhere } = require("../utils/testEligibility");
+const { isTestVisibleToStudent, testEligibilityWhere, getTestRecipients } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { safeErrorMessage } = require("../utils/errors");
 const { staffTestAccessWhere, canStaffAccessTest } = require("../utils/testOwnership");
 const { resolveSubjectUnitTopic, canStaffUseSubject } = require("../utils/subjectAccess");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
-const { notifyTestAssigned } = require("../utils/notifications");
+const { notifyTestAssigned, notifyMany, emailStudent } = require("../utils/notifications");
+const { mapWithConcurrency } = require("../utils/queue");
+const NOTIFY_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { classifyViolation } = require("../utils/proctoringSeverity");
@@ -543,12 +546,12 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
       // Fire-and-forget, same posture as every other notify call in this codebase — this is the
       // moment the test actually becomes visible to students (false -> true), not the earlier
       // PATCH / group-assignment edit, which may happen well before a test is ready to publish.
-      prisma.testAcademicGroup.findMany({ where: { testId: test.id }, select: { academicGroupId: true } })
-        .then((groups) => {
-          const academicGroupIds = groups.map((g) => g.academicGroupId);
-          if (academicGroupIds.length === 0) return [];
-          return prisma.user.findMany({ where: { role: "STUDENT", academicGroupId: { in: academicGroupIds } }, select: { id: true, name: true, email: true } });
-        })
+      //
+      // In-app only (sendEmail is NOT passed, defaulting to false in notifyTestAssigned) — per the
+      // "stop automatic email for every test" fix, publishing a test must never automatically email
+      // students, only ever the in-app notification/dashboard surface. A staff member who wants
+      // students actually emailed uses the separate, explicit POST /:id/notify action below.
+      getTestRecipients(prisma, test.id)
         .then((students) => notifyTestAssigned(prisma, students, test))
         .catch((err) => console.error("[tests.publish] notification failed:", err));
     } else if (!test.isPublished && existing.isPublished) {
@@ -561,6 +564,182 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update publish status" });
+  }
+});
+
+// STAFF/ADMIN/INSTITUTE_ADMIN/SUPER_ADMIN: preview who a manual "Send Notification" would reach,
+// before the confirm dialog commits to anything -- recipient count plus a per-academic-group
+// breakdown (Institute / Batch / Branch / Section), matching the spec's "Recipients" preview.
+// Read-only, no side effects -- safe to call as many times as the UI wants (e.g. re-opening the
+// dialog); idempotency only matters for the actual send below.
+router.get("/:id/notification-recipients", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const test = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, title: true, instituteId: true, createdById: true, shares: { select: { staffId: true } } },
+    });
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage notifications for tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only manage notifications for tests you created or that were shared with you" });
+    }
+
+    const recipients = await getTestRecipients(prisma, test.id);
+    const studentIds = recipients.map((s) => s.id);
+    const groupBreakdown = studentIds.length > 0
+      ? await prisma.user.groupBy({ by: ["academicGroupId"], where: { id: { in: studentIds } }, _count: true })
+      : [];
+    const groupIds = groupBreakdown.map((g) => g.academicGroupId).filter(Boolean);
+    const groups = groupIds.length > 0
+      ? await prisma.academicGroup.findMany({
+          where: { id: { in: groupIds } },
+          select: { id: true, batch: true, section: true, department: { select: { name: true } }, institute: { select: { name: true } } },
+        })
+      : [];
+    const groupById = new Map(groups.map((g) => [g.id, g]));
+    const breakdown = groupBreakdown.filter((g) => g.academicGroupId).map((g) => {
+      const info = groupById.get(g.academicGroupId);
+      return {
+        academicGroupId: g.academicGroupId, count: g._count,
+        institute: info?.institute?.name || null, batch: info?.batch || null,
+        branch: info?.department?.name || null, section: info?.section || null,
+      };
+    });
+    // Students with no academicGroupId (open-to-everyone / legacy-class-only tests) are counted
+    // but have no group to break down by -- surfaced separately so the UI total still adds up.
+    const ungroupedCount = recipients.length - breakdown.reduce((s, g) => s + g.count, 0);
+
+    res.json({ test: { id: test.id, title: test.title }, recipientCount: recipients.length, breakdown, ungroupedCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to compute recipients" });
+  }
+});
+
+// STAFF/ADMIN/INSTITUTE_ADMIN/SUPER_ADMIN: the manual "Send Notification" action -- the ONLY thing
+// on this platform that emails students about a test now; nothing fires automatically from
+// create/edit/save-draft/publish/assign (see the publish route above, and
+// docs/TEST_NOTIFICATION_FIX.md for the full before/after). idempotencyKey is client-generated once when the confirm
+// dialog opens and resent unchanged on any retry of that same click -- see TestNotificationSend's
+// own schema comment for why the unique constraint, not just UI button-disabling, is what actually
+// prevents a duplicate send.
+router.post("/:id/notify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { sendEmail, sendInApp, idempotencyKey } = req.body;
+    if (!sendEmail && !sendInApp) return res.status(400).json({ error: "Select at least one notification type (Email or In-App)" });
+    if (!idempotencyKey || typeof idempotencyKey !== "string") return res.status(400).json({ error: "idempotencyKey is required" });
+
+    const test = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, title: true, instituteId: true, createdById: true, isPublished: true, shares: { select: { staffId: true } } },
+    });
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only send notifications for tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only send notifications for tests you created or that were shared with you" });
+    }
+    if (!test.isPublished) {
+      return res.status(400).json({ error: "Publish this test before notifying students — an unpublished test isn't visible to them yet." });
+    }
+
+    const recipients = await getTestRecipients(prisma, test.id);
+
+    // Idempotency: try to create the record first. A unique-constraint collision means this exact
+    // key was already processed (a retry/double-click of the SAME confirm click, not a new one) --
+    // return the original result instead of sending anything a second time.
+    let sendRecord;
+    try {
+      sendRecord = await prisma.testNotificationSend.create({
+        data: {
+          testId: test.id, idempotencyKey, sendEmail: !!sendEmail, sendInApp: !!sendInApp,
+          recipientCount: recipients.length, sentById: req.user.id, sentByName: req.user.name,
+        },
+      });
+    } catch (err) {
+      if (err.code === "P2002") {
+        const existing = await prisma.testNotificationSend.findUnique({ where: { idempotencyKey } });
+        return res.json({
+          alreadySent: true, recipientCount: existing.recipientCount, sentAt: existing.createdAt,
+          sendEmail: existing.sendEmail, sendInApp: existing.sendInApp,
+        });
+      }
+      throw err;
+    }
+
+    if (sendInApp && recipients.length > 0) {
+      await notifyMany(prisma, recipients.map((s) => s.id), {
+        type: "TEST_NOTIFICATION", message: `Reminder: "${test.title}" is available`, link: "/tests",
+      });
+    }
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.TEST_NOTIFICATION_SENT, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId,
+      details: { testId: test.id, title: test.title, sendEmail: !!sendEmail, sendInApp: !!sendInApp, recipientCount: recipients.length, sendId: sendRecord.id },
+    });
+
+    res.json({ recipientCount: recipients.length, sendEmailQueued: !!sendEmail && recipients.length > 0, sendId: sendRecord.id });
+
+    // Fire-and-forget background email batch -- never blocks the response (or test publishing,
+    // which this route is entirely separate from) on however long it takes to mail out to every
+    // recipient, same posture as every other bulk-email path on this platform (users.js bulk-
+    // upload/regenerate-password, admin.js System Announcements). batchId = this send's own id, so
+    // the notification-log route below can roll up per-send success/fail straight from EmailLog.
+    if (sendEmail && recipients.length > 0) {
+      mapWithConcurrency(recipients, NOTIFY_EMAIL_CONCURRENCY, (s) =>
+        emailStudent(
+          prisma, s, `Notification: "${test.title}"`,
+          `<p>Hi ${s.name},</p><p>You have a notification about <strong>${test.title}</strong>.</p><p><a href="${FRONTEND_URL}/tests">View your Tests</a></p>`,
+          "TEST_NOTIFICATION", sendRecord.id
+        ).catch((e) => ({ ok: false, error: e.message }))
+      ).catch((err) => console.error("[tests.notify] background email batch failed:", err));
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to send notification" });
+  }
+});
+
+// STAFF/ADMIN/INSTITUTE_ADMIN/SUPER_ADMIN: history of manual "Send Notification" sends for this
+// test, each with its own EmailLog rollup (batchId = TestNotificationSend.id, same batching
+// convention bulk-regenerate-password/System Announcements already use) -- Test / Notification
+// type / Recipients / Sent by / Date-time / Success / Failed / Reason, exactly the log the spec asks for.
+router.get("/:id/notification-log", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const test = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, title: true, instituteId: true, createdById: true, shares: { select: { staffId: true } } },
+    });
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only view notification history for tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only view notification history for tests you created or that were shared with you" });
+    }
+
+    const sends = await prisma.testNotificationSend.findMany({ where: { testId: test.id }, orderBy: { createdAt: "desc" } });
+    const results = await Promise.all(sends.map(async (send) => {
+      let emailSuccess = 0, emailFailed = 0, failures = [];
+      if (send.sendEmail) {
+        const logs = await prisma.emailLog.findMany({ where: { batchId: send.id }, select: { status: true, recipientEmail: true, errorMessage: true } });
+        emailSuccess = logs.filter((l) => l.status === "SENT").length;
+        emailFailed = logs.filter((l) => l.status === "FAILED").length;
+        failures = logs.filter((l) => l.status === "FAILED").map((l) => ({ email: l.recipientEmail, reason: l.errorMessage }));
+      }
+      return {
+        id: send.id, sendEmail: send.sendEmail, sendInApp: send.sendInApp, recipientCount: send.recipientCount,
+        sentByName: send.sentByName, createdAt: send.createdAt, emailSuccess, emailFailed, failures,
+      };
+    }));
+    res.json({ test: { id: test.id, title: test.title }, sends: results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load notification log" });
   }
 });
 
