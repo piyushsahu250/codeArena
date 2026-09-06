@@ -149,6 +149,12 @@ export default function ProjectView() {
             ))}
           </div>
 
+          {project.tasks.length === 0 && (
+            <div className="card" style={{ padding: 24, flex: "3 1 320px", textAlign: "center", color: "var(--ink-dim)" }}>
+              This project doesn't have any tasks yet — check back soon.
+            </div>
+          )}
+
           {activeTask && (
             <div style={{ flex: "3 1 320px", minWidth: 0 }}>
               <ProjectTaskCard key={activeTask.id} task={activeTask} onProgress={(gamification) => { notify(gamification); load(); }} />
