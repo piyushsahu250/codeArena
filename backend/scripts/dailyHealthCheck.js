@@ -228,11 +228,13 @@ async function checkAi() {
 // stored, matching this check's read-only philosophy) and confirms it exits 0 AND produces a
 // complete dump (pg_dump always writes "-- PostgreSQL database dump complete" as literally its
 // last line on success; a truncated/failed dump won't have it even if the process exits 0).
-// The production database itself is managed Postgres (Neon, per backend/CLOUD_RUN.md) which
-// already runs its own automated point-in-time-recovery backups server-side -- this check is a
-// defense-in-depth verification of this platform's OWN supplementary backup path, not a
-// replacement for Neon's, and deliberately doesn't attempt a full restore-test (that needs a
-// disposable scratch database to restore into, which isn't safely provisionable from here).
+// The production database itself is AWS RDS Postgres (confirmed live via DATABASE_URL's own
+// *.rds.amazonaws.com hostname -- CLOUD_RUN.md/CLOUD_RUN_MIGRATION.md's Neon references describe
+// a different, not-currently-active deployment target), which already runs its own automated
+// backups server-side -- this check is a defense-in-depth verification of this platform's OWN
+// supplementary backup path, not a replacement for RDS's, and deliberately doesn't attempt a full
+// restore-test (that needs a disposable scratch database to restore into, which isn't safely
+// provisionable from here).
 // ============================================================
 async function checkBackupCapability() {
   const dbUrl = process.env.DATABASE_URL;
@@ -243,7 +245,10 @@ async function checkBackupCapability() {
   const started = Date.now();
   try {
     const parsed = new URL(dbUrl);
-    const pgEnv = { ...process.env, PGPASSWORD: decodeURIComponent(parsed.password || ""), PGSSLMODE: parsed.searchParams.get("sslmode") || "require" };
+    // HOME: "/tmp" -- see backup.js's identical fix for why (libpq's default client-cert lookup
+    // path resolves to $HOME/.postgresql/, and this process's real HOME is /root, unreadable by
+    // the unprivileged user this runs as).
+    const pgEnv = { ...process.env, PGPASSWORD: decodeURIComponent(parsed.password || ""), PGSSLMODE: parsed.searchParams.get("sslmode") || "require", HOME: "/tmp" };
     const pgArgs = [
       "-h", parsed.hostname, "-p", parsed.port || "5432",
       "-U", decodeURIComponent(parsed.username || ""), "-d", decodeURIComponent(parsed.pathname.replace(/^\//, "")),

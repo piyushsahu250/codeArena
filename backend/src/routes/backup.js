@@ -30,6 +30,16 @@ router.get("/database", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attac
       ...process.env,
       PGPASSWORD: decodeURIComponent(parsed.password || ""),
       PGSSLMODE: parsed.searchParams.get("sslmode") || "require",
+      // libpq (this container's newer postgresql-client-18, since the pg_dump-v15-can't-dump-
+      // v18-server fix) looks for a client cert at $HOME/.postgresql/postgresql.crt by default --
+      // sslmode=require only needs an encrypted connection, no client cert, but libpq still tries
+      // to open that path if it exists/is configured, and this process's real HOME resolves to
+      // /root (a leftover from the container's brief real-root phase before docker-entrypoint.sh
+      // drops to the unprivileged `app` user — see Dockerfile's own comment on that), which `app`
+      // can't read. Caught live: pg_dump failed with "could not open certificate file
+      // /root/.postgresql/postgresql.crt: Permission denied" the first time this ran after that
+      // version fix. /tmp is always readable/writable by every user in a standard container.
+      HOME: "/tmp",
     };
     const pgArgs = [
       "-h", parsed.hostname,
