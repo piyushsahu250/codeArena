@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
+const { Prisma } = require("@prisma/client");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -57,14 +58,17 @@ function pdfFilename(resume) {
 // Snapshots the resume's current field values as a new ResumeVersion, then prunes anything
 // beyond the 20 most recent for this resume — "automatically save every major edit" without
 // unbounded growth from an active editing session.
-async function saveVersion(resumeId, resumeSnapshot) {
+// `client` defaults to the global `prisma` (every pre-existing call site's exact prior behavior,
+// unaffected) — pass a transaction client (`tx`) instead when the version snapshot must land
+// inside the same transaction as the resume mutation it snapshots (see POST /me/portfolio/add).
+async function saveVersion(resumeId, resumeSnapshot, client = prisma) {
   const atsScore = computeAtsScore(resumeSnapshot).score;
-  const version = await prisma.resumeVersion.create({ data: { resumeId, snapshot: resumeSnapshot, atsScore, atsEngineVersion: ATS_ENGINE_VERSION } });
-  const versions = await prisma.resumeVersion.findMany({
+  const version = await client.resumeVersion.create({ data: { resumeId, snapshot: resumeSnapshot, atsScore, atsEngineVersion: ATS_ENGINE_VERSION } });
+  const versions = await client.resumeVersion.findMany({
     where: { resumeId }, orderBy: { createdAt: "desc" }, select: { id: true }, skip: 20,
   });
   if (versions.length) {
-    await prisma.resumeVersion.deleteMany({ where: { id: { in: versions.map((v) => v.id) } } });
+    await client.resumeVersion.deleteMany({ where: { id: { in: versions.map((v) => v.id) } } });
   }
   return version.id;
 }
@@ -566,16 +570,38 @@ router.post("/me/portfolio/add", authenticate, requireRole("STUDENT"), requireFe
     const entry = completed.find((p) => p.title === projectTitle);
     if (!entry) return res.status(400).json({ error: "This project isn't fully completed by you yet, or doesn't exist" });
 
-    const existing = await prisma.resume.upsert({ where: { studentId: req.user.id }, update: {}, create: { studentId: req.user.id } });
-    const currentProjects = Array.isArray(existing.projects) ? existing.projects : [];
-    if (currentProjects.some((p) => p.title === projectTitle)) {
-      return res.json({ added: false, alreadyPresent: true, resume: existing });
+    // Read-check-write on a JSON array (Resume.projects) races under two near-simultaneous "Add
+    // to Resume" clicks for DIFFERENT completed projects (the button exists on both MyPortfolio.jsx
+    // and ProjectView.jsx — a student could plausibly have both open) — both requests would read
+    // the same base array before either commits, and whichever writes last silently clobbers the
+    // other's addition (a real lost update, not just a cosmetic race). Same fix as
+    // readiness.js's own POST /assessments/start: re-check inside a Serializable transaction,
+    // retried once on a serialization conflict (P2034) rather than treating it as a hard failure —
+    // under real concurrent load, a serialization conflict is expected, not exceptional.
+    const addToResume = () => prisma.$transaction(async (tx) => {
+      const existing = await tx.resume.upsert({ where: { studentId: req.user.id }, update: {}, create: { studentId: req.user.id } });
+      const currentProjects = Array.isArray(existing.projects) ? existing.projects : [];
+      if (currentProjects.some((p) => p.title === projectTitle)) {
+        return { added: false, alreadyPresent: true, resume: existing };
+      }
+      await saveVersion(existing.id, existing, tx);
+      const resume = await tx.resume.update({ where: { studentId: req.user.id }, data: { projects: [...currentProjects, entry] } });
+      await saveVersion(resume.id, resume, tx);
+      return { added: true, alreadyPresent: false, resume };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    let result;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        result = await addToResume();
+        break;
+      } catch (err) {
+        if (err.code === "P2034" && attempt < 2) continue;
+        throw err;
+      }
     }
-    await saveVersion(existing.id, existing);
-    const resume = await prisma.resume.update({ where: { studentId: req.user.id }, data: { projects: [...currentProjects, entry] } });
-    await saveVersion(resume.id, resume);
     const config = await getFieldConfig();
-    res.json({ added: true, alreadyPresent: false, resume, completion: computeCompletion(resume, config.mandatorySections) });
+    res.json({ ...result, completion: result.added ? computeCompletion(result.resume, config.mandatorySections) : undefined });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to add project to resume" });
