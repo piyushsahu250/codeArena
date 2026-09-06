@@ -60,6 +60,7 @@ export default function StudentDashboard() {
   const [dash, setDash] = useState(null);
   const [tests, setTests] = useState(null);
   const [learning, setLearning] = useState(null);
+  const [weakConcept, setWeakConcept] = useState(null); // spec section 23: "X is your weakest concept" — see conceptMastery.js
   const [gami, setGami] = useState(null);
   const [interviewSummary, setInterviewSummary] = useState(null);
   const [resumeCompletion, setResumeCompletion] = useState(null);
@@ -92,6 +93,10 @@ export default function StudentDashboard() {
     loadDashSummary();
     api.get("/tests").then((res) => setTests(res.data)).catch(() => setTests([]));
     api.get("/learning/courses/java").then((res) => setLearning(res.data)).catch(() => setLearning(null));
+    api.get("/learning/mastery").then((res) => {
+      const rated = (res.data.mastery || []).filter((m) => m.strength !== "INSUFFICIENT_DATA" && m.strength !== "STRONG");
+      setWeakConcept(rated.length ? rated[rated.length - 1] : null);
+    }).catch(() => setWeakConcept(null));
     api.get("/gamification/me").then((res) => setGami(res.data)).catch(() => setGami(null));
     api.get("/interview/summary").then((res) => setInterviewSummary(res.data)).catch(() => setInterviewSummary(null));
     api.get("/resume/me").then((res) => setResumeCompletion(res.data.completion?.percent ?? 0)).catch(() => setResumeCompletion(0));
@@ -387,7 +392,7 @@ export default function StudentDashboard() {
           {learning === null ? (
             <SkeletonLines count={2} />
           ) : (
-            <RecommendedLearningBlock learning={learning} interviewSummary={interviewSummary} />
+            <RecommendedLearningBlock learning={learning} interviewSummary={interviewSummary} weakConcept={weakConcept} />
           )}
         </Section>
 
@@ -494,10 +499,10 @@ function QuickActions({ learningResumeId, style }) {
   );
 }
 
-function RecommendedLearningBlock({ learning, interviewSummary }) {
+function RecommendedLearningBlock({ learning, interviewSummary, weakConcept }) {
   const currentModule = learning?.modules?.find((m) => !m.locked && !m.completed);
   const weakAreas = interviewSummary?.weakAreas || [];
-  const hasAny = currentModule || weakAreas.length > 0;
+  const hasAny = currentModule || weakAreas.length > 0 || weakConcept;
 
   if (!hasAny) return <EmptyState text="Keep going — recommendations show up here as you build a track record." />;
 
@@ -507,6 +512,12 @@ function RecommendedLearningBlock({ learning, interviewSummary }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 13 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><BookOpen size={14} /> Continue <strong>{currentModule.title}</strong> to keep your learning streak going.</span>
           <Link to={`/learning/${learning.course.slug}/lesson/${learning.resumeLessonId}`} className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>Go →</Link>
+        </div>
+      )}
+      {weakConcept && (
+        <div style={{ fontSize: 13 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Target size={14} /> <strong style={{ textTransform: "capitalize" }}>{weakConcept.tag}</strong> is currently your weakest coding concept ({weakConcept.percent}% solved, {weakConcept.solvedCount}/{weakConcept.attemptedCount} problems). </span>
+          <Link to="/learning" className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>Practice →</Link>
         </div>
       )}
       {weakAreas.length > 0 && (

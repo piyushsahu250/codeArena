@@ -14,6 +14,7 @@
 // actually assigned/eligible for.
 const { getModuleLockMap } = require("./learningLock");
 const { courseEligibilityWhere, isEligibilityUnresolvable } = require("./courseEligibility");
+const { computeConceptMastery, weakestRatedConcept } = require("./conceptMastery");
 
 const LOW_QUIZ_SCORE_THRESHOLD = 60;
 const MAX_RECOMMENDATIONS = 6;
@@ -92,6 +93,40 @@ async function computeLearningRecommendations(prisma, studentId) {
       actionLabel: "Review",
       actionUrl: `/learning/${weakQuiz.lesson.module.course.slug}/lesson/${weakQuiz.lessonId}`,
     });
+  }
+
+  // --- Priority 2c: weakest concept (PracticeQuestion.tags) from Practice Coding attempts ---
+  // Spec section 23's own example ("Loops is currently your weakest Java concept -> [Practice
+  // Loops]"). A DIFFERENT signal from the Readiness-report one below (priority 3) — this one is
+  // sourced from actual in-course Practice Coding attempts (see utils/conceptMastery.js), the
+  // Readiness one from a separate employability-test module — kept as two distinct
+  // recommendations rather than merged, since they measure different things.
+  const mastery = await computeConceptMastery(prisma, studentId);
+  const weakConcept = weakestRatedConcept(mastery);
+  if (weakConcept) {
+    // Find any accessible (published + eligible + module-unlocked) lesson containing a CODING
+    // practice question tagged with this concept, so the recommendation has somewhere to send
+    // the student — never linking to a locked module's content.
+    const candidates = await prisma.practiceQuestion.findMany({
+      where: { type: "CODING" },
+      select: { id: true, tags: true, lessonId: true, lesson: { select: { moduleId: true, module: { select: { courseId: true, course: { select: { slug: true } } } } } } },
+    });
+    for (const q of candidates) {
+      if (!Array.isArray(q.tags) || !q.tags.includes(weakConcept.tag)) continue;
+      const courseId = q.lesson?.module?.courseId;
+      if (!eligibleCourses.some((c) => c.id === courseId)) continue;
+      const lockMap = await getModuleLockMap(prisma, studentId, courseId);
+      if (lockMap.get(q.lesson.moduleId)?.locked) continue;
+      recs.push({
+        type: "WEAK_CONCEPT",
+        priority: 2,
+        title: `Practice: ${weakConcept.tag}`,
+        description: `"${weakConcept.tag}" is currently your weakest coding concept (${weakConcept.percent}% solved, ${weakConcept.solvedCount}/${weakConcept.attemptedCount} problems).`,
+        actionLabel: "Practice",
+        actionUrl: `/learning/${q.lesson.module.course.slug}/lesson/${q.lessonId}`,
+      });
+      break;
+    }
   }
 
   // --- Priority 3: weakest topic from the student's own latest Employability Readiness report ---

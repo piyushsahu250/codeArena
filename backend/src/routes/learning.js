@@ -26,6 +26,7 @@ const {
 } = require("../utils/lmsOwnership");
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
+const { computeConceptMastery } = require("../utils/conceptMastery");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -535,6 +536,21 @@ router.get("/recommendations", authenticate, requireRole("STUDENT"), attachReque
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load recommendations" });
+  }
+});
+
+// STUDENT: per-concept (PracticeQuestion.tags) mastery — spec section 21/33. See
+// utils/conceptMastery.js's own header comment for exactly what this is (and isn't) computed
+// from, and why a thinly-attempted tag is reported as INSUFFICIENT_DATA rather than a percentage.
+router.get("/mastery", authenticate, requireRole("STUDENT"), requireFeature("lms"), async (req, res) => {
+  try {
+    const mastery = await cached(`concept-mastery:${req.user.id}`, 5 * 60 * 1000, () =>
+      computeConceptMastery(prisma, req.user.id)
+    );
+    res.json({ mastery });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load concept mastery" });
   }
 });
 

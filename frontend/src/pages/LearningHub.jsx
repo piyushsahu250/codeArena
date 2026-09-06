@@ -4,8 +4,51 @@ import {
   Coffee, Binary, Cpu, Terminal, Network, Database, Globe, GitBranch, Wifi, Target, Layers, Wrench, BookOpen, Code2,
 } from "lucide-react";
 import api from "../api";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+
+// LMS master-spec section 21: "Track mastery for individual concepts... Show: Strong / Developing
+// / Needs Practice." Sourced from PracticeQuestion.tags + PracticeRunLog — see
+// backend/src/utils/conceptMastery.js's own header comment for exactly what this is (and isn't)
+// computed from. STRONG/DEVELOPING/NEEDS_PRACTICE render as a labeled percentage bar;
+// INSUFFICIENT_DATA (fewer than 2 distinct problems attempted under that tag) renders as a plain
+// "not enough attempts yet" note rather than a misleading percentage.
+const MASTERY_COLOR = { STRONG: "var(--mint)", DEVELOPING: "var(--amber-dark)", NEEDS_PRACTICE: "var(--rust)" };
+const MASTERY_LABEL = { STRONG: "Strong", DEVELOPING: "Developing", NEEDS_PRACTICE: "Needs Practice", INSUFFICIENT_DATA: "Not enough attempts yet" };
+
+function ConceptMasteryPanel() {
+  const [mastery, setMastery] = useState(null);
+  useEffect(() => {
+    api.get("/learning/mastery").then((res) => setMastery(res.data.mastery)).catch(() => setMastery([]));
+  }, []);
+
+  if (!mastery || mastery.length === 0) return null;
+
+  return (
+    <div className="card" style={{ padding: 20, marginTop: 20 }}>
+      <h3 style={{ fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}><Target size={15} /> Concept Mastery</h3>
+      <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>Based on your Practice Coding attempts, by concept.</p>
+      <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+        {mastery.map((m) => (
+          <div key={m.tag}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <span style={{ textTransform: "capitalize", fontWeight: 600 }}>{m.tag}</span>
+              <span className="mono" style={{ fontSize: 11, color: MASTERY_COLOR[m.strength] || "var(--ink-dim)" }}>
+                {m.percent != null ? `${m.percent}% · ` : ""}{MASTERY_LABEL[m.strength]}
+              </span>
+            </div>
+            {m.percent != null && (
+              <div style={{ height: 6, borderRadius: 3, background: "var(--line)", marginTop: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${m.percent}%`, background: MASTERY_COLOR[m.strength] }} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Per-course banner: a colored gradient (built from the platform's own token palette, not any
 // external brand's colors) + a lucide icon, matched against the course's name/slug. No image
@@ -72,6 +115,7 @@ function CourseCard({ course, index }) {
 }
 
 export default function LearningHub() {
+  const { user } = useAuth();
   const [courses, setCourses] = useState([]);
 
   useEffect(() => {
@@ -87,6 +131,8 @@ export default function LearningHub() {
         <p style={{ color: "var(--ink-dim)", marginTop: 12 }}>
           Structured, self-paced courses to build up your skills before attempting a coding test.
         </p>
+
+        {user.role === "STUDENT" && <ConceptMasteryPanel />}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 18, marginTop: 24 }}>
           {courses.map((c, i) => <CourseCard key={c.id} course={c} index={i} />)}
