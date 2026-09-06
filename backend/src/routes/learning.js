@@ -28,6 +28,7 @@ const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 const { computeConceptMastery } = require("../utils/conceptMastery");
 const { STUCK_CATEGORIES, generateMentorAssist } = require("../utils/learningMentor");
+const { validateCourse } = require("../utils/courseValidation");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -1176,6 +1177,23 @@ router.get("/courses/:id/assignments", authenticate, requireRole("ADMIN", "SUPER
     institutes: instituteRows.map((r) => r.institute),
     academicGroups: groupRows.map((r) => r.academicGroup),
   });
+});
+
+// ADMIN/STAFF: Course Content Validation (spec section 45) — advisory report only, never blocks
+// the actual publish route below; see utils/courseValidation.js's own header comment for why.
+router.get("/courses/:id/validate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const course = await prisma.course.findUnique({ where: { id: req.params.id }, select: { instituteId: true } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    if (!ownsLmsInstitute(req, course.instituteId)) {
+      return res.status(403).json({ error: "You can only validate courses under your own institute" });
+    }
+    const report = await validateCourse(req.params.id);
+    res.json(report);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to validate course" });
+  }
 });
 
 // ADMIN/STAFF diagnostic: exactly reproduces what a specific student sees on their own Course

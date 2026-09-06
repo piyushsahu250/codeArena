@@ -279,6 +279,25 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [validatingId, setValidatingId] = useState(null); // which course's report is currently open
+  const [validationResult, setValidationResult] = useState(null);
+  const [validating, setValidating] = useState(false);
+
+  async function toggleValidate(c) {
+    if (validatingId === c.id) { setValidatingId(null); return; }
+    setValidatingId(c.id);
+    setValidationResult(null);
+    setValidating(true);
+    try {
+      const { data } = await api.get(`/learning/courses/${c.id}/validate`);
+      setValidationResult(data);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to validate course");
+      setValidatingId(null);
+    } finally {
+      setValidating(false);
+    }
+  }
 
   function startEdit(c) {
     setEditingId(c.id);
@@ -447,40 +466,83 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
           {filtered.map((c) => {
             const statusColor = COURSE_STATUS_COLORS[c.status] || COURSE_STATUS_COLORS.DRAFT;
             return (
-              <div key={c.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                <div style={{ cursor: "pointer" }} onClick={() => onSelect(c.id)}>
-                  <div style={{ fontWeight: 600 }}>{c.name} <span className="mono" style={{ fontWeight: 400, fontSize: 12, color: "var(--ink-dim)" }}>/{c.slug}</span></div>
-                  <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{c.description}</div>
-                  {c.category && <span className="badge" style={{ marginTop: 4, display: "inline-block", background: "var(--info-bg)", color: "var(--ink)" }}>{c.category}</span>}
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  {isAdmin ? (
-                    <select
-                      style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)", background: statusColor.bg, color: statusColor.color, fontWeight: 600 }}
-                      value={c.status || "DRAFT"}
-                      onChange={(e) => changeStatus(c, e.target.value)}
-                    >
-                      {COURSE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{COURSE_STATUS_LABELS[s]}</option>)}
-                    </select>
-                  ) : (
-                    <span className="badge" style={{ background: statusColor.bg, color: statusColor.color }}>{COURSE_STATUS_LABELS[c.status] || "Draft"}</span>
-                  )}
-                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c.id)}>Manage →</button>
-                  {isAdmin && (
-                    <button
-                      className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}
-                      disabled={c.status !== "PUBLISHED"}
-                      title={c.status !== "PUBLISHED" ? "Only Published courses can be assigned" : undefined}
-                      onClick={() => navigate(`/admin/course-assignments?courseId=${c.id}`)}
-                    >
-                      Assign →
+              <div key={c.id} className="card" style={{ padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ cursor: "pointer" }} onClick={() => onSelect(c.id)}>
+                    <div style={{ fontWeight: 600 }}>{c.name} <span className="mono" style={{ fontWeight: 400, fontSize: 12, color: "var(--ink-dim)" }}>/{c.slug}</span></div>
+                    <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{c.description}</div>
+                    {c.category && <span className="badge" style={{ marginTop: 4, display: "inline-block", background: "var(--info-bg)", color: "var(--ink)" }}>{c.category}</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    {isAdmin ? (
+                      <select
+                        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)", background: statusColor.bg, color: statusColor.color, fontWeight: 600 }}
+                        value={c.status || "DRAFT"}
+                        onChange={(e) => changeStatus(c, e.target.value)}
+                      >
+                        {COURSE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{COURSE_STATUS_LABELS[s]}</option>)}
+                      </select>
+                    ) : (
+                      <span className="badge" style={{ background: statusColor.bg, color: statusColor.color }}>{COURSE_STATUS_LABELS[c.status] || "Draft"}</span>
+                    )}
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c.id)}>Manage →</button>
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleValidate(c)}>
+                      {validatingId === c.id ? "Hide Validation" : "Validate"}
                     </button>
-                  )}
-                  {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => startEdit(c)}>Edit</button>}
-                  {isAdmin && (
-                    <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
-                  )}
+                    {isAdmin && (
+                      <button
+                        className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}
+                        disabled={c.status !== "PUBLISHED"}
+                        title={c.status !== "PUBLISHED" ? "Only Published courses can be assigned" : undefined}
+                        onClick={() => navigate(`/admin/course-assignments?courseId=${c.id}`)}
+                      >
+                        Assign →
+                      </button>
+                    )}
+                    {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => startEdit(c)}>Edit</button>}
+                    {isAdmin && (
+                      <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>
+                    )}
+                  </div>
                 </div>
+
+                {validatingId === c.id && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+                    {validating ? (
+                      <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>Validating…</p>
+                    ) : validationResult && (
+                      <>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span
+                            className="badge"
+                            style={{
+                              background: validationResult.status === "PASS" ? "var(--success-bg)" : validationResult.status === "ERROR" ? "var(--danger-bg)" : "var(--warning-bg)",
+                              color: validationResult.status === "PASS" ? "var(--mint)" : validationResult.status === "ERROR" ? "var(--rust)" : "var(--amber-dark)",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {validationResult.status}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+                            {validationResult.errorCount || 0} error(s) · {validationResult.warningCount || 0} warning(s)
+                          </span>
+                        </div>
+                        {validationResult.findings.length === 0 ? (
+                          <p style={{ fontSize: 13, color: "var(--mint)", marginTop: 8 }}>No issues found.</p>
+                        ) : (
+                          <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+                            {validationResult.findings.map((f, i) => (
+                              <div key={i} style={{ fontSize: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                                <span style={{ color: f.severity === "ERROR" ? "var(--rust)" : "var(--amber-dark)", fontWeight: 700, flexShrink: 0 }}>{f.severity === "ERROR" ? "✕" : "⚠"}</span>
+                                <span>{f.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
