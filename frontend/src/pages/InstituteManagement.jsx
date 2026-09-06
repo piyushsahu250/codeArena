@@ -20,6 +20,9 @@ export default function InstituteManagement() {
   const [profileStatsOpenId, setProfileStatsOpenId] = useState(null);
   const [profileStatsById, setProfileStatsById] = useState({});
   const [profileStatsLoading, setProfileStatsLoading] = useState(false);
+  const [usageOpenId, setUsageOpenId] = useState(null);
+  const [usageById, setUsageById] = useState({});
+  const [usageLoading, setUsageLoading] = useState(false);
 
   function load() {
     api.get("/institutes").then((res) => setInstitutes(res.data));
@@ -109,6 +112,21 @@ export default function InstituteManagement() {
         .then((res) => setAnalyticsById((prev) => ({ ...prev, [inst.id]: res.data })))
         .catch(() => setAnalyticsById((prev) => ({ ...prev, [inst.id]: null })))
         .finally(() => setAnalyticsLoading(false));
+    }
+  }
+
+  function toggleUsage(inst) {
+    if (usageOpenId === inst.id) {
+      setUsageOpenId(null);
+      return;
+    }
+    setUsageOpenId(inst.id);
+    if (!usageById[inst.id]) {
+      setUsageLoading(true);
+      api.get(`/institutes/${inst.id}/usage`)
+        .then((res) => setUsageById((prev) => ({ ...prev, [inst.id]: res.data })))
+        .catch(() => setUsageById((prev) => ({ ...prev, [inst.id]: null })))
+        .finally(() => setUsageLoading(false));
     }
   }
 
@@ -258,6 +276,9 @@ export default function InstituteManagement() {
                     <button className="btn btn-ghost" onClick={() => toggleProfileStats(inst)}>
                       {profileStatsOpenId === inst.id ? "Hide profile stats" : "Profile completion"}
                     </button>
+                    <button className="btn btn-ghost" onClick={() => toggleUsage(inst)}>
+                      {usageOpenId === inst.id ? "Hide usage" : "Usage this month"}
+                    </button>
                     <button className="btn btn-ghost" onClick={() => startEdit(inst)}>Edit</button>
                     <button className="btn btn-dark" onClick={() => toggleActive(inst)}>
                       {inst.isActive ? "Deactivate" : "Activate"}
@@ -329,6 +350,37 @@ export default function InstituteManagement() {
                               <div style={{ color: "var(--ink-dim)", marginTop: 4 }}>Missing: {s.missingFields.join(", ")}</div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              {usageOpenId === inst.id && editingId !== inst.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+                  {usageLoading && !usageById[inst.id] ? (
+                    <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Loading…</p>
+                  ) : !usageById[inst.id] ? (
+                    <p style={{ fontSize: 13, color: "var(--rust)" }}>Failed to load usage data.</p>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 10 }}>
+                        Since {new Date(usageById[inst.id].since).toLocaleDateString()} · headcounts are a live snapshot, everything else is since that date
+                      </div>
+                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
+                        <span><strong>{usageById[inst.id].activeStudents}</strong> active students</span>
+                        <span><strong>{usageById[inst.id].activeStaff}</strong> active staff/clerk</span>
+                        <span><strong>{usageById[inst.id].assessments.total}</strong> assessments taken</span>
+                        <span><strong>{usageById[inst.id].ai.totalCalls}</strong> AI calls</span>
+                        <span><strong>{usageById[inst.id].emailsSent}</strong> emails sent</span>
+                      </div>
+                      <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 8 }}>
+                        Assessments — {usageById[inst.id].assessments.testAttempts} tests · {usageById[inst.id].assessments.moduleCodingAttempts} module coding · {usageById[inst.id].assessments.readinessAttempts} readiness
+                      </div>
+                      {usageById[inst.id].ai.totalCalls > 0 && (
+                        <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>
+                          AI by feature — {Object.entries(usageById[inst.id].ai.byFeature).map(([f, c]) => `${f}: ${c}`).join(" · ")}
+                          {" · "}{(usageById[inst.id].ai.promptTokens + usageById[inst.id].ai.completionTokens).toLocaleString()} tokens
                         </div>
                       )}
                     </>

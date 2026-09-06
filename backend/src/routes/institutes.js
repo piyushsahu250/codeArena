@@ -226,6 +226,73 @@ router.get("/:id/course-analytics", authenticate, requireRole("ADMIN", "SUPER_AD
   }
 });
 
+// ADMIN/STAFF/CLERK: per-institute usage metering (Phase 7 SaaS roadmap's Usage item — tracking
+// only, deliberately no billing/payment integration attached to it: that's a separate decision
+// with real financial/compliance stakes this pass didn't take). `since` (ISO date, default: start
+// of the current UTC calendar month) bounds every activity metric; the two headcount metrics
+// (activeStudents/activeStaff) are a live snapshot, not period-bounded, since "how many active
+// accounts does this institute have right now" is what actually matters for a seat-based view.
+// AI usage reuses AiUsageLog (utils/aiService.js's own usage log, already recording every Gemini
+// call institute-scoped) rather than adding a second tracking mechanism next to it. Storage
+// footprint is deliberately NOT included here -- this platform stores several large fields
+// (profile photos, signatures, student documents) as data URLs directly in Postgres text columns,
+// and getting a true per-institute byte total right needs raw SQL across multiple tables; left as
+// a known gap rather than shipped as an approximate/misleading number.
+router.get("/:id/usage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = req.params.id;
+    if (req.requesterInstituteId && req.requesterInstituteId !== instituteId) {
+      return res.status(403).json({ error: "You can only view your own institute's data" });
+    }
+    const institute = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true, name: true } });
+    if (!institute) return res.status(404).json({ error: "Institute not found" });
+
+    let since = req.query.since ? new Date(req.query.since) : null;
+    if (!since || isNaN(since.getTime())) {
+      since = new Date();
+      since.setUTCDate(1);
+      since.setUTCHours(0, 0, 0, 0);
+    }
+
+    const [
+      activeStudents, activeStaff,
+      testAttempts, moduleCodingAttempts, readinessAttempts,
+      aiCallsByFeature, aiTokenAgg,
+      emailsSent,
+    ] = await Promise.all([
+      prisma.user.count({ where: { instituteId, role: "STUDENT", isActive: true } }),
+      prisma.user.count({ where: { instituteId, role: { in: ["STAFF", "CLERK"] }, isActive: true } }),
+      prisma.testAttempt.count({ where: { student: { instituteId }, startedAt: { gte: since } } }),
+      prisma.moduleCodingAttempt.count({ where: { student: { instituteId }, startedAt: { gte: since } } }),
+      prisma.readinessAssessment.count({ where: { student: { instituteId }, startedAt: { gte: since } } }),
+      prisma.aiUsageLog.groupBy({ by: ["feature"], where: { instituteId, createdAt: { gte: since } }, _count: { _all: true } }),
+      prisma.aiUsageLog.aggregate({ where: { instituteId, createdAt: { gte: since } }, _sum: { promptTokens: true, completionTokens: true } }),
+      prisma.emailLog.count({ where: { instituteId, createdAt: { gte: since } } }),
+    ]);
+
+    res.json({
+      institute,
+      since: since.toISOString(),
+      activeStudents,
+      activeStaff,
+      assessments: {
+        testAttempts, moduleCodingAttempts, readinessAttempts,
+        total: testAttempts + moduleCodingAttempts + readinessAttempts,
+      },
+      ai: {
+        totalCalls: aiCallsByFeature.reduce((sum, g) => sum + g._count._all, 0),
+        byFeature: Object.fromEntries(aiCallsByFeature.map((g) => [g.feature, g._count._all])),
+        promptTokens: aiTokenAgg._sum.promptTokens || 0,
+        completionTokens: aiTokenAgg._sum.completionTokens || 0,
+      },
+      emailsSent,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load usage data" });
+  }
+});
+
 // ADMIN/STAFF/CLERK: Student Profile Completion stats for one institute — total/completed/
 // incomplete/percent plus the list of students still pending, optionally filtered by department.
 // Institute-scoped for Staff/Clerk (attachRequesterInstitute) the same way every other Placement
