@@ -22,6 +22,7 @@ const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/option
 const {
   ownsLmsInstitute, resolveModuleCourseInstituteId, resolveChapterCourseInstituteId,
   resolveLessonCourseInstituteId, resolvePracticeQuestionCourseInstituteId,
+  resolveProjectCourseInstituteId, resolveProjectTaskCourseInstituteId,
 } = require("../utils/lmsOwnership");
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
@@ -2004,6 +2005,436 @@ router.get("/practice/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
   const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
   if (!q) return res.status(404).json({ error: "Question not found" });
   res.json(q);
+});
+
+// =========================== Course Projects (Project-Based Learning) ===========================
+// Spec: "CODEARENA – COMPLETE LEARNING MANAGEMENT SYSTEM", sections 14-17. A CourseProject is a
+// module-scoped, multi-task capstone (Mini Task/Mini Project/Course Project/Capstone) sitting
+// alongside that module's lessons + Coding Assessment, broken into ordered ProjectTasks so a
+// student sees "7/8 completed" (section 16) rather than one all-or-nothing submission.
+// Auto-graded tasks reuse the exact same judge.js/functionHarness.js pipeline as PracticeQuestion
+// (runQueued/judgeSubmission, already imported above) — no new judge, per the standing
+// "reuse, don't duplicate" rule. A task with no testCases is MANUAL — self-marked-complete by the
+// student (POST /tasks/:id/complete), since there's nothing to auto-judge (e.g. a design step).
+
+// Resolves whether req.user may access this project at all — for a STUDENT, also whether its
+// owning module is currently unlocked (a locked module's projects are exactly as inaccessible as
+// its lessons). Throws { status, error } on any failure; callers catch and forward it as-is.
+async function loadProjectAccess(req, projectId) {
+  const project = await prisma.courseProject.findUnique({
+    where: { id: projectId },
+    include: { module: { include: { course: true } } },
+  });
+  if (!project) throw { status: 404, error: "Project not found" };
+  const course = project.module.course;
+
+  if (req.user.role === "STUDENT") {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    const eligible = course.status === "PUBLISHED" && await studentCanAccessCourse(prisma, course.id, student?.instituteId, student?.academicGroupId);
+    if (!eligible || !project.isActive) throw { status: 404, error: "Project not found" };
+    const lockMap = await getModuleLockMap(prisma, req.user.id, course.id);
+    if (lockMap.get(project.moduleId)?.locked) throw { status: 403, error: "This module is locked" };
+  } else if (!ownsLmsInstitute(req, course.instituteId)) {
+    throw { status: 403, error: "You can only manage courses under your own institute" };
+  }
+  return { project, course };
+}
+
+async function loadTaskAccess(req, taskId) {
+  const task = await prisma.projectTask.findUnique({ where: { id: taskId } });
+  if (!task) throw { status: 404, error: "Task not found" };
+  const access = await loadProjectAccess(req, task.projectId);
+  return { task, ...access };
+}
+
+function splitProjectTaskCases(testCases) {
+  const all = Array.isArray(testCases) ? testCases : [];
+  return { visible: all.filter((tc) => !tc.isHidden), hidden: all.filter((tc) => tc.isHidden) };
+}
+
+// Strips answer-revealing fields before sending a task to a student — same convention as
+// sanitizeQuestion above: hidden test cases never leave the server, only sample (visible) ones.
+function sanitizeProjectTask(t, progress) {
+  return {
+    id: t.id, order: t.order, title: t.title, instructions: t.instructions,
+    hints: t.hints || null, starterCode: t.starterCode, starterCodeByLanguage: t.starterCodeByLanguage || null,
+    language: t.language, evaluationType: t.evaluationType, functionSignature: t.functionSignature,
+    testCases: Array.isArray(t.testCases) ? t.testCases.filter((tc) => !tc.isHidden) : [],
+    isManual: !Array.isArray(t.testCases) || t.testCases.length === 0,
+    status: progress?.status || "NOT_STARTED",
+  };
+}
+
+// ---- Admin/Staff CRUD ----
+
+router.get("/modules/:id/projects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+  try {
+    const projects = await prisma.courseProject.findMany({
+      where: { moduleId: req.params.id },
+      orderBy: { order: "asc" },
+      include: { _count: { select: { tasks: true } } },
+    });
+    res.json(projects);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load projects" });
+  }
+});
+
+router.post("/modules/:id/projects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
+    const { title, description, objective, realWorldScenario, requirements, expectedOutput, skillsRequired, level, difficulty, order } = req.body;
+    if (!title) return res.status(400).json({ error: "title is required" });
+    const project = await prisma.courseProject.create({
+      data: {
+        moduleId: req.params.id, title,
+        description: description || null, objective: objective || null, realWorldScenario: realWorldScenario || null,
+        requirements: requirements ?? undefined, expectedOutput: expectedOutput || null, skillsRequired: skillsRequired ?? undefined,
+        level: level || "MINI_PROJECT", difficulty: difficulty || "EASY", order: Number(order) || 0,
+      },
+    });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: moduleInstituteId,
+      details: { entity: "project", operation: "create", projectId: project.id, moduleId: req.params.id, title: project.title },
+    });
+    res.json(project);
+  } catch (err) {
+    console.error(err);
+    res.status(err.code === "P2002" ? 409 : 500).json({ error: err.code === "P2002" ? "A project with this title already exists in this module" : "Failed to create project" });
+  }
+});
+
+router.patch("/projects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = await resolveProjectCourseInstituteId(req.params.id);
+    if (instituteId === undefined) return res.status(404).json({ error: "Project not found" });
+    if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    const body = req.body;
+    const data = {};
+    for (const f of ["title", "description", "objective", "realWorldScenario", "expectedOutput", "level", "difficulty", "requirements", "skillsRequired"]) {
+      if (body[f] !== undefined) data[f] = body[f];
+    }
+    if (body.order !== undefined) data.order = Number(body.order);
+    if (body.isActive !== undefined) data.isActive = !!body.isActive;
+    const project = await prisma.courseProject.update({ where: { id: req.params.id }, data });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId,
+      details: { entity: "project", operation: body.isActive !== undefined ? (body.isActive ? "activate" : "deactivate") : "edit", projectId: project.id, title: project.title, changedFields: Object.keys(body) },
+    });
+    res.json(project);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update project" });
+  }
+});
+
+router.delete("/projects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const project = await prisma.courseProject.findUnique({ where: { id: req.params.id }, include: { module: { include: { course: { select: { instituteId: true } } } } } });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+    if (!ownsLmsInstitute(req, project.module.course.instituteId)) {
+      return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    }
+    const progressCount = await prisma.projectTaskProgress.count({ where: { task: { projectId: project.id } } });
+    if (progressCount > 0) {
+      return res.status(409).json({ error: `Cannot delete this project: ${progressCount} student progress record(s) exist under it. Unpublish it instead, or delete its individual tasks first.` });
+    }
+    await prisma.courseProject.delete({ where: { id: req.params.id } });
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED,
+      actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: project.module.course.instituteId,
+      details: { entity: "project", operation: "delete", projectId: project.id, title: project.title },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete project" });
+  }
+});
+
+// Admin/Staff: full project detail with unsanitized tasks (hidden test cases included) for the CMS edit form.
+router.get("/projects/:id/admin", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+  const project = await prisma.courseProject.findUnique({
+    where: { id: req.params.id },
+    include: { tasks: { orderBy: { order: "asc" } } },
+  });
+  if (!project) return res.status(404).json({ error: "Project not found" });
+  res.json(project);
+});
+
+router.post("/projects/:id/tasks", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = await resolveProjectCourseInstituteId(req.params.id);
+    if (instituteId === undefined) return res.status(404).json({ error: "Project not found" });
+    if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    const { title, instructions, hints, starterCode, starterCodeByLanguage, language, evaluationType, functionSignature, testCases, order } = req.body;
+    if (!title || !instructions) return res.status(400).json({ error: "title and instructions are required" });
+    let taskOrder = order;
+    if (taskOrder === undefined) {
+      const max = await prisma.projectTask.aggregate({ where: { projectId: req.params.id }, _max: { order: true } });
+      taskOrder = (max._max.order ?? -1) + 1;
+    }
+    const task = await prisma.projectTask.create({
+      data: {
+        projectId: req.params.id, title, instructions, order: Number(taskOrder),
+        hints: hints ?? undefined, starterCode: starterCode || null, starterCodeByLanguage: starterCodeByLanguage ?? undefined,
+        language: language || null, evaluationType: evaluationType || "STDIO", functionSignature: functionSignature ?? undefined,
+        testCases: testCases ?? undefined,
+      },
+    });
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create task" });
+  }
+});
+
+router.patch("/tasks/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = await resolveProjectTaskCourseInstituteId(req.params.id);
+    if (instituteId === undefined) return res.status(404).json({ error: "Task not found" });
+    if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    const body = req.body;
+    const data = {};
+    for (const f of ["title", "instructions", "starterCode", "language", "evaluationType"]) {
+      if (body[f] !== undefined) data[f] = body[f];
+    }
+    for (const f of ["hints", "starterCodeByLanguage", "functionSignature", "testCases"]) {
+      if (body[f] !== undefined) data[f] = body[f];
+    }
+    if (body.order !== undefined) data.order = Number(body.order);
+    const task = await prisma.projectTask.update({ where: { id: req.params.id }, data });
+    res.json(task);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update task" });
+  }
+});
+
+router.delete("/tasks/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = await resolveProjectTaskCourseInstituteId(req.params.id);
+    if (instituteId === undefined) return res.status(404).json({ error: "Task not found" });
+    if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+    await prisma.projectTask.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete task" });
+  }
+});
+
+// ---- Student-facing ----
+
+// STUDENT (module must be unlocked): every active project for a module, with per-project task
+// completion rollup — spec section 16's "7/8 completed".
+router.get("/courses/:slug/modules/:moduleId/projects", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const course = await prisma.course.findFirst({ where: { slug: req.params.slug }, select: { id: true, status: true } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    if (course.status !== "PUBLISHED" || !(await studentCanAccessCourse(prisma, course.id, student?.instituteId, student?.academicGroupId))) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+    const courseModule = await prisma.courseModule.findFirst({ where: { id: req.params.moduleId, courseId: course.id }, select: { id: true } });
+    if (!courseModule) return res.status(404).json({ error: "Module not found" });
+    const lockMap = await getModuleLockMap(prisma, req.user.id, course.id);
+    if (lockMap.get(courseModule.id)?.locked) return res.status(403).json({ error: "This module is locked" });
+
+    const projects = await prisma.courseProject.findMany({
+      where: { moduleId: courseModule.id, isActive: true },
+      orderBy: { order: "asc" },
+      include: { tasks: { select: { id: true } } },
+    });
+    const allTaskIds = projects.flatMap((p) => p.tasks.map((t) => t.id));
+    const progress = allTaskIds.length
+      ? await prisma.projectTaskProgress.findMany({ where: { studentId: req.user.id, taskId: { in: allTaskIds }, status: "COMPLETED" } })
+      : [];
+    const completedSet = new Set(progress.map((p) => p.taskId));
+    res.json(projects.map((p) => ({
+      id: p.id, title: p.title, description: p.description, level: p.level, difficulty: p.difficulty,
+      totalTasks: p.tasks.length, completedTasks: p.tasks.filter((t) => completedSet.has(t.id)).length,
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load projects" });
+  }
+});
+
+// STUDENT: full project detail (objective/scenario/requirements/skills + sanitized task list with
+// this student's own per-task progress) — module lock enforced via loadProjectAccess.
+router.get("/projects/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    let access;
+    try { access = await loadProjectAccess(req, req.params.id); }
+    catch (e) { return res.status(e.status || 500).json({ error: e.error || "Failed to load project" }); }
+    const { project } = access;
+    const tasks = await prisma.projectTask.findMany({ where: { projectId: project.id }, orderBy: { order: "asc" } });
+    const progress = tasks.length
+      ? await prisma.projectTaskProgress.findMany({ where: { studentId: req.user.id, taskId: { in: tasks.map((t) => t.id) } } })
+      : [];
+    const progressByTask = new Map(progress.map((p) => [p.taskId, p]));
+    res.json({
+      id: project.id, title: project.title, description: project.description, objective: project.objective,
+      realWorldScenario: project.realWorldScenario, requirements: project.requirements || [], expectedOutput: project.expectedOutput,
+      skillsRequired: project.skillsRequired || [], level: project.level, difficulty: project.difficulty,
+      tasks: tasks.map((t) => sanitizeProjectTask(t, progressByTask.get(t.id))),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load project" });
+  }
+});
+
+// STUDENT: run a project task against its VISIBLE (sample) test cases only — free, unlimited,
+// no progress written. Same Run/Submit split as Practice Coding.
+router.post("/tasks/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), runLimiter, async (req, res) => {
+  try {
+    let access;
+    try { access = await loadTaskAccess(req, req.params.id); }
+    catch (e) { return res.status(e.status || 500).json({ error: e.error || "Failed to load task" }); }
+    const { task } = access;
+    if (!Array.isArray(task.testCases) || task.testCases.length === 0) return res.status(400).json({ error: "This task has no auto-graded test cases — use Mark Complete instead" });
+    const { language, code } = req.body;
+    const { visible } = splitProjectTaskCases(task.testCases);
+    const result = await runQueued(() => judgeSubmission({ language, code, testCases: visible, timeLimitMs: 3000, evaluationType: task.evaluationType, functionSignature: task.functionSignature }));
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Execution failed" });
+  }
+});
+
+// STUDENT: submit a project task for real grading (hidden test cases, falling back to visible for
+// legacy/none-marked-hidden tasks) — marks ProjectTaskProgress COMPLETED on ACCEPTED and awards
+// PROJECT_TASK XP (first time only), plus PROJECT_COMPLETE XP the moment every task under this
+// project is COMPLETED for this student.
+router.post("/tasks/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), runLimiter, async (req, res) => {
+  try {
+    let access;
+    try { access = await loadTaskAccess(req, req.params.id); }
+    catch (e) { return res.status(e.status || 500).json({ error: e.error || "Failed to load task" }); }
+    const { task, project } = access;
+    if (!Array.isArray(task.testCases) || task.testCases.length === 0) return res.status(400).json({ error: "This task has no auto-graded test cases — use Mark Complete instead" });
+
+    const { language, code } = req.body;
+    const { visible, hidden } = splitProjectTaskCases(task.testCases);
+    const gradingCases = hidden.length > 0 ? hidden : visible;
+    const result = await runQueued(() => judgeSubmission({ language, code, testCases: gradingCases, timeLimitMs: 3000, evaluationType: task.evaluationType, functionSignature: task.functionSignature }));
+
+    let gamification = null;
+    if (result.verdict === "ACCEPTED") {
+      const existing = await prisma.projectTaskProgress.findUnique({ where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } } });
+      const alreadyCompleted = existing?.status === "COMPLETED";
+      await prisma.projectTaskProgress.upsert({
+        where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } },
+        update: { status: "COMPLETED", submittedCode: code, language, completedAt: alreadyCompleted ? existing.completedAt : new Date() },
+        create: { studentId: req.user.id, taskId: task.id, status: "COMPLETED", submittedCode: code, language, completedAt: new Date() },
+      });
+      try {
+        const allTasks = await prisma.projectTask.findMany({ where: { projectId: project.id }, select: { id: true } });
+        const completedCount = await prisma.projectTaskProgress.count({ where: { studentId: req.user.id, taskId: { in: allTasks.map((t) => t.id) }, status: "COMPLETED" } });
+        const projectNowComplete = allTasks.length > 0 && completedCount === allTasks.length;
+        gamification = await processGamification(req.user.id, {
+          xpActivities: [
+            ...(alreadyCompleted ? [] : ["PROJECT_TASK"]),
+            ...(projectNowComplete && !alreadyCompleted ? ["PROJECT_COMPLETE"] : []),
+          ],
+          xpMeta: { taskId: task.id, projectId: project.id },
+          streakEligible: true,
+        });
+      } catch (e) { console.error("gamification failed", e); }
+    } else {
+      await prisma.projectTaskProgress.upsert({
+        where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } },
+        update: { status: "IN_PROGRESS", submittedCode: code, language },
+        create: { studentId: req.user.id, taskId: task.id, status: "IN_PROGRESS", submittedCode: code, language },
+      });
+    }
+
+    const { details, ...safeResult } = result;
+    res.json({ ...safeResult, gamification });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Submission failed" });
+  }
+});
+
+// STUDENT: self-mark-complete for a MANUAL task (no auto-gradable test cases configured) — never
+// usable on an auto-gradable task (checked below), so "completed" always means either a real
+// ACCEPTED judge verdict or an explicit action on a task that was never claimed to be judged.
+router.post("/tasks/:id/complete", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    let access;
+    try { access = await loadTaskAccess(req, req.params.id); }
+    catch (e) { return res.status(e.status || 500).json({ error: e.error || "Failed to load task" }); }
+    const { task, project } = access;
+    if (Array.isArray(task.testCases) && task.testCases.length > 0) {
+      return res.status(400).json({ error: "This task is auto-graded — submit your code instead of marking it complete" });
+    }
+    const existing = await prisma.projectTaskProgress.findUnique({ where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } } });
+    const alreadyCompleted = existing?.status === "COMPLETED";
+    await prisma.projectTaskProgress.upsert({
+      where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } },
+      update: { status: "COMPLETED", completedAt: alreadyCompleted ? existing.completedAt : new Date() },
+      create: { studentId: req.user.id, taskId: task.id, status: "COMPLETED", completedAt: new Date() },
+    });
+    let gamification = null;
+    try {
+      const allTasks = await prisma.projectTask.findMany({ where: { projectId: project.id }, select: { id: true } });
+      const completedCount = await prisma.projectTaskProgress.count({ where: { studentId: req.user.id, taskId: { in: allTasks.map((t) => t.id) }, status: "COMPLETED" } });
+      const projectNowComplete = allTasks.length > 0 && completedCount === allTasks.length;
+      gamification = await processGamification(req.user.id, {
+        xpActivities: [
+          ...(alreadyCompleted ? [] : ["PROJECT_TASK"]),
+          ...(projectNowComplete && !alreadyCompleted ? ["PROJECT_COMPLETE"] : []),
+        ],
+        xpMeta: { taskId: task.id, projectId: project.id },
+        streakEligible: true,
+      });
+    } catch (e) { console.error("gamification failed", e); }
+    res.json({ success: true, gamification });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to mark task complete" });
+  }
+});
+
+// STUDENT: autosave/draft for a project task's code — same generic CodeDraft pattern as Practice
+// Coding, keyed by contextType "PROJECT_TASK" so it needs no dedicated draft model.
+router.post("/tasks/:id/autosave", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const { language, code } = req.body;
+    if (typeof code !== "string" || !language) return res.status(400).json({ error: "language and code are required" });
+    await prisma.codeDraft.upsert({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "PROJECT_TASK", contextId: req.params.id } },
+      update: { code, language },
+      create: { studentId: req.user.id, contextType: "PROJECT_TASK", contextId: req.params.id, code, language },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Autosave failed" });
+  }
+});
+
+router.get("/tasks/:id/draft", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const draft = await prisma.codeDraft.findUnique({
+      where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "PROJECT_TASK", contextId: req.params.id } },
+    });
+    res.json(draft ? { code: draft.code, language: draft.language } : null);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load draft" });
+  }
 });
 
 module.exports = router;

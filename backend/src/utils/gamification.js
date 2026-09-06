@@ -14,6 +14,8 @@ const XP_RULE_DEFS = [
   { activity: "CODING_HARD", label: "Solve a Hard Problem", xp: 40 },
   { activity: "TEST_COMPLETE", label: "Complete a Coding Test", xp: 30 },
   { activity: "MODULE_CODING_PASS", label: "Pass a Module's Proctored Coding Assessment", xp: 40 },
+  { activity: "PROJECT_TASK", label: "Complete a Project Task", xp: 15 },
+  { activity: "PROJECT_COMPLETE", label: "Complete a Full Project", xp: 75 },
   { activity: "DAILY_STREAK", label: "Maintain Daily Streak", xp: 10 },
   { activity: "DAILY_CHALLENGE", label: "Solve the Daily Challenge", xp: 25 },
   { activity: "WEEKLY_CHALLENGE", label: "Solve the Weekly Challenge", xp: 60 },

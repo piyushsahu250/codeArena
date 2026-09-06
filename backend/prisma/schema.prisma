@@ -280,6 +280,7 @@ model User {
   certificates    Certificate[]
   practiceRunLogs PracticeRunLog[]
   codeDrafts      CodeDraft[]
+  projectTaskProgress ProjectTaskProgress[]
   moduleCodingAttempts ModuleCodingAttempt[]
   xpEvents        XpEvent[]
   badges          StudentBadge[]
@@ -1363,6 +1364,7 @@ model CourseModule {
   codingTest ModuleCodingTest?
   chapters   Chapter[]
   notes      LearningNote[]
+  projects   CourseProject[]
 
   @@unique([courseId, title])
   @@index([courseId])
@@ -1581,11 +1583,95 @@ model PracticeRunLog {
   @@index([studentId, createdAt])
 }
 
+// Project-Based Learning (spec: "CODEARENA – COMPLETE LEARNING MANAGEMENT SYSTEM", section 14) —
+// a module-scoped, multi-task project ("Student Management System") sitting alongside that
+// module's lessons/coding-assessment. Deliberately module-scoped (not lesson-scoped, unlike
+// PracticeQuestion) since a project is a module-level capstone, not tied to one lesson's content.
+// Ownership/institute-isolation is resolved the same way as every other nested LMS resource —
+// walk up to the owning Course (see utils/lmsOwnership.js's resolveProjectCourseInstituteId) —
+// and student visibility follows the module lock exactly like Lesson does (see learningLock.js;
+// a locked module's projects are not returned, same as its lessons).
+model CourseProject {
+  id                 String   @id @default(uuid())
+  module             CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId           String
+  title              String
+  description        String?
+  objective          String?  // "Project objective" — spec section 15
+  realWorldScenario  String?
+  requirements       Json?    // string[]
+  expectedOutput     String?
+  skillsRequired     Json?    // string[] — informational, shown to student before starting
+  level              String   @default("MINI_PROJECT") // MICRO_TASK|MINI_TASK|MINI_PROJECT|COURSE_PROJECT|CAPSTONE — spec section 14
+  difficulty         Difficulty @default(EASY)
+  order              Int      @default(0)
+  isActive           Boolean  @default(true) // publish/unpublish, same convention as CourseModule.isActive
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tasks ProjectTask[]
+
+  @@unique([moduleId, title])
+  @@index([moduleId])
+}
+
+// One ordered subtask within a CourseProject ("Task 1: Create Student class") — spec section 16's
+// task breakdown, so a student sees "7/8 completed" rather than one all-or-nothing submission.
+// Auto-graded exactly like PracticeQuestion's CODING type (same judge.js/functionHarness.js
+// pipeline, reused rather than reinvented — see routes/learning.js's /projects/:projectId/tasks/
+// :taskId/run and /submit) whenever testCases are configured; a task with no testCases is
+// MANUAL — completion is marked by the student themselves after running their code, since there
+// is nothing to auto-judge (e.g. a written-design step), matching spec section 15's "Submission /
+// Evaluation" without forcing every task into a coding-judge shape it doesn't fit.
+model ProjectTask {
+  id                    String   @id @default(uuid())
+  project               CourseProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId             String
+  order                 Int      @default(0)
+  title                 String
+  instructions          String
+  hints                 Json?    // string[] — progressive hints, spec section 17 (Hint 1, Hint 2, Strong Hint...)
+  starterCode           String?
+  starterCodeByLanguage Json?
+  language              String?
+  evaluationType        String   @default("STDIO") // STDIO|FUNCTION — same as PracticeQuestion, only meaningful when testCases is set
+  functionSignature     Json?
+  testCases             Json?    // [{input, expected, isHidden?}] — same shape as PracticeQuestion.testCases; null/empty = MANUAL task (self-marked complete)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  progress ProjectTaskProgress[]
+
+  @@index([projectId])
+}
+
+// Per-student progress on one ProjectTask — the durable record behind "7/8 completed" and behind
+// the CourseProject's own overall completion. status COMPLETED is only ever set by the server
+// (either a real ACCEPTED verdict from judge.js for an auto-graded task, or an explicit
+// self-marked-done action for a MANUAL task) — never trusted from the frontend.
+model ProjectTaskProgress {
+  id            String    @id @default(uuid())
+  student       User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId     String
+  task          ProjectTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId        String
+  status        String    @default("NOT_STARTED") // NOT_STARTED|IN_PROGRESS|COMPLETED
+  submittedCode String?
+  language      String?
+  completedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([studentId, taskId])
+  @@index([taskId])
+  @@index([studentId])
+}
+
 // Generic code-draft autosave for coding surfaces that have no natural "attempt" row to hang a
 // draft off of (Practice Coding, Mock Interview coding questions) — Coding Tests and Module
 // Coding Tests autosave onto their own Submission/attempt models instead and don't use this.
 // contextType + contextId together identify what's being edited (e.g. "PRACTICE" + questionId,
 // or "INTERVIEW" + "<sessionId>:<questionId>") without needing a dedicated FK per surface.
+// "PROJECT_TASK" + taskId is the same generic pattern, reused for ProjectTask coding drafts.
 model CodeDraft {
   id          String   @id @default(uuid())
   student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)

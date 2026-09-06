@@ -42,6 +42,7 @@ const LessonView = lazy(() => import("./pages/LessonView"));
 const InterviewSession = lazy(() => import("./pages/InterviewSession"));
 const ReadinessAssessment = lazy(() => import("./pages/ReadinessAssessment"));
 const ModuleCodingAssessment = lazy(() => import("./pages/ModuleCodingAssessment"));
+const ProjectView = lazy(() => import("./pages/ProjectView"));
 // Lazy-loaded: these pull in recharts, which every student/login/account-settings page load was
 // previously downloading regardless of whether that user ever visits a chart-bearing page.
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -325,6 +326,16 @@ export default function App() {
               <Protected roles={["STUDENT"]} noChrome>
                 <Suspense fallback={<LoadingScreen />}>
                   <ModuleCodingAssessment />
+                </Suspense>
+              </Protected>
+            }
+          />
+          <Route
+            path="/learning/:slug/module/:moduleId/project/:projectId"
+            element={
+              <Protected roles={["STUDENT"]}>
+                <Suspense fallback={<LoadingScreen />}>
+                  <ProjectView />
                 </Suspense>
               </Protected>
             }

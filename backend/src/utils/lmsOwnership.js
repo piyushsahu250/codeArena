@@ -36,6 +36,16 @@ async function resolvePracticeQuestionCourseInstituteId(practiceQuestionId) {
   return q ? q.lesson.module.course.instituteId : undefined;
 }
 
+async function resolveProjectCourseInstituteId(projectId) {
+  const project = await prisma.courseProject.findUnique({ where: { id: projectId }, select: { module: { select: { course: { select: { instituteId: true } } } } } });
+  return project ? project.module.course.instituteId : undefined;
+}
+
+async function resolveProjectTaskCourseInstituteId(taskId) {
+  const task = await prisma.projectTask.findUnique({ where: { id: taskId }, select: { project: { select: { module: { select: { course: { select: { instituteId: true } } } } } } } });
+  return task ? task.project.module.course.instituteId : undefined;
+}
+
 // ModuleCodingTest ("Level") is scoped either directly to a Module (legacy) or to a Chapter (see
 // its schema comment) — exactly one of moduleId/chapterId is set, never both.
 async function resolveModuleCodingTestCourseInstituteId(testId) {
@@ -57,4 +67,6 @@ module.exports = {
   resolveLessonCourseInstituteId,
   resolvePracticeQuestionCourseInstituteId,
   resolveModuleCodingTestCourseInstituteId,
+  resolveProjectCourseInstituteId,
+  resolveProjectTaskCourseInstituteId,
 };

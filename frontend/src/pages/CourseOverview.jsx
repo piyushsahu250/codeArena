@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { GraduationCap, Lock, CheckCircle2, Clock, ClipboardList, ChevronDown, ChevronRight } from "lucide-react";
+import { GraduationCap, Lock, CheckCircle2, Clock, ClipboardList, ChevronDown, ChevronRight, Hammer } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -23,12 +23,14 @@ export default function CourseOverview() {
   // still get `lessons` inline on the initial response (unchanged), so this cache is unused for
   // them — `moduleLessons[m.id] ?? m.lessons` below picks whichever is actually available.
   const [moduleLessons, setModuleLessons] = useState({});
+  const [moduleProjects, setModuleProjects] = useState({});
   const [expanded, setExpanded] = useState({});
   const [loadingModule, setLoadingModule] = useState(null);
 
   useEffect(() => {
     setData(null);
     setModuleLessons({});
+    setModuleProjects({});
     setExpanded({});
     api.get(`/learning/courses/${slug}`)
       .then((res) => setData(res.data))
@@ -43,6 +45,13 @@ export default function CourseOverview() {
         .then((res) => setModuleLessons((prev) => ({ ...prev, [m.id]: res.data })))
         .catch(() => setModuleLessons((prev) => ({ ...prev, [m.id]: [] })))
         .finally(() => setLoadingModule(null));
+    }
+    // Projects (Mini Project / Course Project / Capstone) — student-only, same lazy-on-expand
+    // pattern as lessons; a locked module 403s so this simply never fires for one.
+    if (isStudent && !moduleProjects[m.id]) {
+      api.get(`/learning/courses/${slug}/modules/${m.id}/projects`)
+        .then((res) => setModuleProjects((prev) => ({ ...prev, [m.id]: res.data })))
+        .catch(() => setModuleProjects((prev) => ({ ...prev, [m.id]: [] })));
     }
   }
 
@@ -170,6 +179,31 @@ export default function CourseOverview() {
                             {m.codingTest.passed ? "View" : "Start →"}
                           </Link>
                         )}
+                      </div>
+                    )}
+
+                    {isStudent && moduleProjects[m.id]?.length > 0 && (
+                      <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+                        {moduleProjects[m.id].map((p) => (
+                          <Link
+                            key={p.id}
+                            to={`/learning/${slug}/module/${m.id}/project/${p.id}`}
+                            style={{
+                              display: "flex", justifyContent: "space-between", alignItems: "center",
+                              padding: "10px 14px", borderRadius: 8, textDecoration: "none", color: "var(--ink)",
+                              border: "1px solid var(--line)", fontSize: 13,
+                            }}
+                          >
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <Hammer size={13} />
+                              {p.title}
+                              <span className="mono" style={{ fontSize: 10, color: "var(--ink-dim)", textTransform: "uppercase" }}>{p.level.replace(/_/g, " ")}</span>
+                            </span>
+                            <span className="mono" style={{ fontSize: 11, color: p.completedTasks === p.totalTasks && p.totalTasks > 0 ? "var(--mint)" : "var(--ink-dim)" }}>
+                              {p.completedTasks === p.totalTasks && p.totalTasks > 0 ? "✓ Complete" : `${p.completedTasks}/${p.totalTasks} tasks`}
+                            </span>
+                          </Link>
+                        ))}
                       </div>
                     )}
                   </>

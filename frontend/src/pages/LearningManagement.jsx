@@ -37,6 +37,8 @@ export default function LearningManagement() {
   const [codingTestModuleId, setCodingTestModuleId] = useState(null);
   const [chaptersModuleId, setChaptersModuleId] = useState(null); // which module's Chapter list to show
   const [chapter, setChapter] = useState(null); // selected chapter { id, moduleId, title, ... } for detail view
+  const [projectsModuleId, setProjectsModuleId] = useState(null); // which module's Project list to show
+  const [project, setProject] = useState(null); // selected project for detail view
 
   const [courseDetail, setCourseDetail] = useState(null); // { course, modules: [{...lessons}] }
   const [progressLookup, setProgressLookup] = useState(false); // "Student Progress" tool, replaces the course tree when open
@@ -83,7 +85,7 @@ export default function LearningManagement() {
             <button
               className={progressLookup ? "btn btn-primary" : "btn btn-ghost"}
               style={{ fontSize: 12 }}
-              onClick={() => { setProgressLookup((v) => !v); setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}
+              onClick={() => { setProgressLookup((v) => !v); setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); setProjectsModuleId(null); setProject(null); }}
             >
               {progressLookup ? "← Back to Courses" : "Student Progress Lookup"}
             </button>
@@ -106,18 +108,20 @@ export default function LearningManagement() {
         ) : (
           <>
             <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 20 }}>
-              <span style={{ cursor: "pointer", textDecoration: courseId ? "underline" : "none" }} onClick={() => { setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>Courses</span>
-              {selectedCourse && <> / <span style={{ cursor: "pointer", textDecoration: (moduleId || codingTestModuleId || chaptersModuleId) ? "underline" : "none" }} onClick={() => { setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); }}>{selectedCourse.name}</span></>}
+              <span style={{ cursor: "pointer", textDecoration: courseId ? "underline" : "none" }} onClick={() => { setCourseId(null); setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); setProjectsModuleId(null); setProject(null); }}>Courses</span>
+              {selectedCourse && <> / <span style={{ cursor: "pointer", textDecoration: (moduleId || codingTestModuleId || chaptersModuleId || projectsModuleId) ? "underline" : "none" }} onClick={() => { setModuleId(null); setLessonId(null); setCodingTestModuleId(null); setChaptersModuleId(null); setChapter(null); setProjectsModuleId(null); setProject(null); }}>{selectedCourse.name}</span></>}
               {selectedModule && !codingTestModuleId && <> / <span style={{ cursor: "pointer", textDecoration: lessonId ? "underline" : "none" }} onClick={() => setLessonId(null)}>{selectedModule.title}</span></>}
               {selectedLesson && <> / {selectedLesson.title}</>}
               {codingTestModuleId && <> / {courseDetail?.modules.find((m) => m.id === codingTestModuleId)?.title} / Coding Assessment</>}
               {chaptersModuleId && <> / <span style={{ cursor: "pointer", textDecoration: chapter ? "underline" : "none" }} onClick={() => setChapter(null)}>{courseDetail?.modules.find((m) => m.id === chaptersModuleId)?.title} / Chapters</span></>}
               {chapter && <> / {chapter.title}</>}
+              {projectsModuleId && <> / <span style={{ cursor: "pointer", textDecoration: project ? "underline" : "none" }} onClick={() => setProject(null)}>{courseDetail?.modules.find((m) => m.id === projectsModuleId)?.title} / Projects</span></>}
+              {project && <> / {project.title}</>}
             </div>
 
             {!courseId && <CoursePanel courses={courses} onSelect={setCourseId} onRefresh={loadCourses} />}
-            {courseId && !moduleId && !codingTestModuleId && !chaptersModuleId && courseDetail && (
-              <ModulePanel course={selectedCourse} modules={courseDetail.modules} onSelect={setModuleId} onManageCoding={setCodingTestModuleId} onManageChapters={setChaptersModuleId} onRefresh={refresh} />
+            {courseId && !moduleId && !codingTestModuleId && !chaptersModuleId && !projectsModuleId && courseDetail && (
+              <ModulePanel course={selectedCourse} modules={courseDetail.modules} onSelect={setModuleId} onManageCoding={setCodingTestModuleId} onManageChapters={setChaptersModuleId} onManageProjects={setProjectsModuleId} onRefresh={refresh} />
             )}
             {moduleId && !lessonId && selectedModule && (
               <LessonPanel mod={selectedModule} onSelect={setLessonId} onRefresh={refresh} />
@@ -133,6 +137,12 @@ export default function LearningManagement() {
             )}
             {chapter && (
               <ChapterDetailPanel chapter={chapter} onBack={() => setChapter(null)} />
+            )}
+            {projectsModuleId && !project && (
+              <ProjectListPanel moduleId={projectsModuleId} onSelect={setProject} />
+            )}
+            {project && (
+              <ProjectDetailPanel project={project} onBack={() => setProject(null)} />
             )}
           </>
         )}
@@ -485,7 +495,7 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
 // reaches this page, Staff included (see LearningManagement()'s top comment) — Module create/
 // edit/delete is gated by isAdmin below purely as defense-in-depth, matching the backend routes
 // (ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN can write, STAFF is read-only).
-function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapters, onRefresh }) {
+function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapters, onManageProjects, onRefresh }) {
   const { user } = useAuth();
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const confirmDialog = useConfirm();
@@ -563,6 +573,7 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(m.id)}>{isAdmin ? "Manage →" : "View →"}</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageChapters(m.id)}>Chapters</button>
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageCoding(m.id)}>Coding Assessment</button>
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onManageProjects(m.id)}>Projects</button>
               {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(m)}>Delete</button>}
             </div>
           </div>
@@ -2368,6 +2379,357 @@ function LevelPanel({ levelId, onBack }) {
 
       {tab === "questions" && <CodingQuestionsPanel testId={test.id} questions={test.questions} onRefresh={load} />}
       {tab === "attempts" && <CodingAttemptsPanel testId={test.id} testTitle={test.title} maxAttempts={test.maxAttempts} />}
+    </div>
+  );
+}
+
+// =========================== Projects (Project-Based Learning) ===========================
+// Spec: "CODEARENA – COMPLETE LEARNING MANAGEMENT SYSTEM", sections 14-17. A module-scoped
+// multi-task capstone (Mini Task / Mini Project / Course Project / Capstone Project). Mirrors
+// the exact Chapter/Topic CRUD panel pattern above (list -> create -> reorder -> detail) rather
+// than inventing a new admin-UI convention.
+
+const PROJECT_LEVELS = ["MICRO_TASK", "MINI_TASK", "MINI_PROJECT", "COURSE_PROJECT", "CAPSTONE"];
+
+function ProjectListPanel({ moduleId, onSelect }) {
+  const { user } = useAuth();
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  const [projects, setProjects] = useState(null);
+  const [form, setForm] = useState({ title: "", description: "", level: "MINI_PROJECT", difficulty: "EASY" });
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    api.get(`/learning/modules/${moduleId}/projects`).then((res) => setProjects(res.data));
+  }
+  useEffect(load, [moduleId]);
+
+  async function create(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post(`/learning/modules/${moduleId}/projects`, { ...form, order: projects?.length || 0 });
+      setForm({ title: "", description: "", level: "MINI_PROJECT", difficulty: "EASY" });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create project");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(p) {
+    if (!confirm(`Delete project "${p.title}" and all its tasks? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/learning/projects/${p.id}`);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete project");
+    }
+  }
+
+  async function reorder(p, delta) {
+    await api.patch(`/learning/projects/${p.id}`, { order: p.order + delta });
+    load();
+  }
+
+  async function toggleActive(p) {
+    await api.patch(`/learning/projects/${p.id}`, { isActive: !p.isActive });
+    load();
+  }
+
+  if (projects === null) return <p className="mono" style={{ marginTop: 20 }}>Loading…</p>;
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 200px" }}>
+            <label style={labelStyle}>New project title</label>
+            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Student Management System" />
+          </div>
+          <div style={{ flex: "1 1 160px" }}>
+            <label style={labelStyle}>Level</label>
+            <select style={inputStyle} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+              {PROJECT_LEVELS.map((l) => <option key={l} value={l}>{l.replace(/_/g, " ")}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={labelStyle}>Difficulty</label>
+            <select style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+              <option value="EASY">Easy</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HARD">Hard</option>
+            </select>
+          </div>
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add project"}</button>
+        </form>
+      )}
+
+      <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+        {projects.sort((a, b) => a.order - b.order).map((p) => (
+          <div key={p.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ cursor: "pointer" }} onClick={() => onSelect(p)}>
+              <div style={{ fontWeight: 600 }}>{p.title}</div>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+                {p.level.replace(/_/g, " ")} · {p._count.tasks} task{p._count.tasks === 1 ? "" : "s"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <Badge tone={p.isActive ? "success" : "default"}>{p.isActive ? "Published" : "Draft"}</Badge>
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(p, -1)}>↑</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(p, 1)}>↓</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(p)}>{p.isActive ? "Unpublish" : "Publish"}</button>}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(p)}>{isAdmin ? "Manage →" : "View →"}</button>
+              {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(p)}>Delete</button>}
+            </div>
+          </div>
+        ))}
+        {projects.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No projects yet — add one above.</p>}
+      </div>
+    </div>
+  );
+}
+
+function ProjectDetailPanel({ project, onBack }) {
+  const { user } = useAuth();
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  const [tab, setTab] = useState("tasks");
+  const [form, setForm] = useState({
+    title: project.title, description: project.description || "", objective: project.objective || "",
+    realWorldScenario: project.realWorldScenario || "", expectedOutput: project.expectedOutput || "",
+    requirements: (project.requirements || []).join("\n"), skillsRequired: (project.skillsRequired || []).join(", "),
+    level: project.level, difficulty: project.difficulty,
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function save(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch(`/learning/projects/${project.id}`, {
+        ...form,
+        requirements: form.requirements.split("\n").map((r) => r.trim()).filter(Boolean),
+        skillsRequired: form.skillsRequired.split(",").map((s) => s.trim()).filter(Boolean),
+      });
+      alert("Project saved.");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to save project");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to projects</button>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button className={tab === "settings" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("settings")}>Settings</button>
+        <button className={tab === "tasks" ? "btn btn-dark" : "btn btn-ghost"} onClick={() => setTab("tasks")}>Tasks</button>
+      </div>
+
+      {tab === "settings" && (
+        <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
+          {!isAdmin && <Badge style={{ fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</Badge>}
+          <label style={labelStyle}>Title</label>
+          <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle}>Description</label>
+          <textarea style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={labelStyle}>Objective</label>
+          <input style={inputStyle} disabled={!isAdmin} value={form.objective} onChange={(e) => setForm({ ...form, objective: e.target.value })} placeholder="What the student will build" />
+          <label style={labelStyle}>Real-world scenario</label>
+          <textarea style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.realWorldScenario} onChange={(e) => setForm({ ...form, realWorldScenario: e.target.value })} />
+          <label style={labelStyle}>Requirements (one per line)</label>
+          <textarea style={{ ...inputStyle, minHeight: 80 }} disabled={!isAdmin} value={form.requirements} onChange={(e) => setForm({ ...form, requirements: e.target.value })} />
+          <label style={labelStyle}>Expected output</label>
+          <textarea style={{ ...inputStyle, minHeight: 50 }} disabled={!isAdmin} value={form.expectedOutput} onChange={(e) => setForm({ ...form, expectedOutput: e.target.value })} />
+          <label style={labelStyle}>Skills required (comma-separated)</label>
+          <input style={inputStyle} disabled={!isAdmin} value={form.skillsRequired} onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })} placeholder="OOP, Collections, File I/O" />
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Level</label>
+              <select style={inputStyle} disabled={!isAdmin} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+                {PROJECT_LEVELS.map((l) => <option key={l} value={l}>{l.replace(/_/g, " ")}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Difficulty</label>
+              <select style={inputStyle} disabled={!isAdmin} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+                <option value="EASY">Easy</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HARD">Hard</option>
+              </select>
+            </div>
+          </div>
+          {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save project"}</button>}
+        </form>
+      )}
+
+      {tab === "tasks" && <ProjectTasksPanel projectId={project.id} />}
+    </div>
+  );
+}
+
+function ProjectTasksPanel({ projectId }) {
+  const { user } = useAuth();
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  const [tasks, setTasks] = useState(null);
+  const [taskId, setTaskId] = useState(null);
+  const [form, setForm] = useState({ title: "" });
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    api.get(`/learning/projects/${projectId}/admin`).then((res) => setTasks(res.data.tasks));
+  }
+  useEffect(load, [projectId]);
+
+  async function create(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post(`/learning/projects/${projectId}/tasks`, { title: form.title, instructions: "Describe what the student must do in this task." });
+      setForm({ title: "" });
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to create task");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(t) {
+    if (!confirm(`Delete task "${t.title}"? Any student progress on it is lost.`)) return;
+    try {
+      await api.delete(`/learning/tasks/${t.id}`);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete task");
+    }
+  }
+
+  async function reorder(t, delta) {
+    await api.patch(`/learning/tasks/${t.id}`, { order: t.order + delta });
+    load();
+  }
+
+  if (tasks === null) return <p className="mono" style={{ marginTop: 16 }}>Loading…</p>;
+
+  if (taskId) {
+    return <TaskDetailPanel task={tasks.find((t) => t.id === taskId)} onBack={() => { setTaskId(null); load(); }} />;
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {isAdmin && (
+        <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "2 1 200px" }}>
+            <label style={labelStyle}>New task title</label>
+            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Task 1: Create Student class" />
+          </div>
+          <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add task"}</button>
+        </form>
+      )}
+
+      <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+        {tasks.sort((a, b) => a.order - b.order).map((t, i) => (
+          <div key={t.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ cursor: "pointer" }} onClick={() => setTaskId(t.id)}>
+              <div style={{ fontWeight: 600 }}>Task {i + 1}: {t.title}</div>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+                {Array.isArray(t.testCases) && t.testCases.length > 0 ? `Auto-graded · ${t.testCases.length} test case(s)` : "Manual (self-marked complete)"}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, -1)}>↑</button>}
+              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, 1)}>↓</button>}
+              <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setTaskId(t.id)}>{isAdmin ? "Edit →" : "View →"}</button>
+              {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(t)}>Delete</button>}
+            </div>
+          </div>
+        ))}
+        {tasks.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No tasks yet — add one above.</p>}
+      </div>
+    </div>
+  );
+}
+
+function TaskDetailPanel({ task, onBack }) {
+  const { user } = useAuth();
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  const [form, setForm] = useState({
+    title: task.title, instructions: task.instructions, starterCode: task.starterCode || "",
+    language: task.language || "java", evaluationType: task.evaluationType || "STDIO",
+    testCases: Array.isArray(task.testCases) ? task.testCases : [],
+    hints: (task.hints || []).join("\n"),
+  });
+  const [signature, setSignature] = useState(task.functionSignature || EMPTY_SIGNATURE);
+  const [saving, setSaving] = useState(false);
+  const isManual = form.testCases.length === 0;
+
+  async function save(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch(`/learning/tasks/${task.id}`, {
+        title: form.title, instructions: form.instructions, starterCode: form.starterCode,
+        language: form.language, evaluationType: form.evaluationType,
+        functionSignature: form.evaluationType === "FUNCTION" ? signature : null,
+        testCases: form.testCases,
+        hints: form.hints.split("\n").map((h) => h.trim()).filter(Boolean),
+      });
+      alert("Task saved.");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to save task");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to tasks</button>
+      <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 12, maxWidth: 640 }}>
+        {!isAdmin && <Badge style={{ fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</Badge>}
+        <label style={labelStyle}>Title</label>
+        <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <label style={labelStyle}>Instructions (what the student must do)</label>
+        <textarea style={{ ...inputStyle, minHeight: 100 }} disabled={!isAdmin} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+        <label style={labelStyle}>Progressive hints (one per line — shown to the student one at a time, "Show hint 1 of N")</label>
+        <textarea style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.hints} onChange={(e) => setForm({ ...form, hints: e.target.value })} placeholder={"Think about which fields the class needs\nUse a List to store multiple students"} />
+
+        <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--card-bg, #F7F7F5)", fontSize: 12, marginTop: 14 }}>
+          Leave test cases empty for a <strong>Manual</strong> task (a written/design step the student self-marks complete). Add test cases to make this task auto-graded by the compiler, exactly like a Practice Coding question.
+        </div>
+
+        <label style={labelStyle}>Default language</label>
+        <select style={inputStyle} disabled={!isAdmin} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+          <option value="java">Java</option>
+          <option value="javascript">JavaScript</option>
+          <option value="python">Python</option>
+          <option value="c">C</option>
+          <option value="cpp">C++</option>
+        </select>
+
+        {isAdmin && (
+          <>
+            <EvaluationTypeFields
+              evaluationType={form.evaluationType}
+              onEvaluationTypeChange={(v) => setForm({ ...form, evaluationType: v })}
+              signature={signature}
+              onSignatureChange={setSignature}
+              starterCode={form.starterCode}
+              onStarterCodeChange={(v) => setForm({ ...form, starterCode: v })}
+            />
+            <TestCasesEditor testCases={form.testCases} onChange={(tc) => setForm({ ...form, testCases: tc })} minVisible={1} minHidden={0} />
+          </>
+        )}
+        {!isAdmin && (
+          <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>
+            {isManual ? "Manual task — no auto-graded test cases." : `${form.testCases.length} test case(s) configured.`}
+          </p>
+        )}
+
+        {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save task"}</button>}
+      </form>
     </div>
   );
 }
