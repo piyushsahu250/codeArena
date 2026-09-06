@@ -126,8 +126,12 @@ export default function ProjectView() {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 20, marginTop: 20, alignItems: "start" }}>
-          <div style={{ display: "grid", gap: 6 }}>
+        {/* flexWrap, not a fixed grid column — a 220px sidebar plus content in a rigid grid
+            leaves an unusably narrow ~135px for the code editor on a 375px phone. flex-basis lets
+            the task list keep its natural width on desktop while wrapping to full-width, stacked
+            above the content, the moment the viewport is too narrow to fit both. */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 20, marginTop: 20, alignItems: "flex-start" }}>
+          <div style={{ display: "grid", gap: 6, flex: "1 1 220px", minWidth: 0 }}>
             {project.tasks.map((t, i) => (
               <button
                 key={t.id}
@@ -145,7 +149,11 @@ export default function ProjectView() {
             ))}
           </div>
 
-          {activeTask && <ProjectTaskCard key={activeTask.id} task={activeTask} onProgress={(gamification) => { notify(gamification); load(); }} />}
+          {activeTask && (
+            <div style={{ flex: "3 1 320px", minWidth: 0 }}>
+              <ProjectTaskCard key={activeTask.id} task={activeTask} onProgress={(gamification) => { notify(gamification); load(); }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
