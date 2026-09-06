@@ -373,6 +373,7 @@ export default function InstituteManagement() {
                         <span><strong>{usageById[inst.id].assessments.total}</strong> assessments taken</span>
                         <span><strong>{usageById[inst.id].ai.totalCalls}</strong> AI calls</span>
                         <span><strong>{usageById[inst.id].emailsSent}</strong> emails sent</span>
+                        <span><strong>{formatBytes(usageById[inst.id].storage.totalBytes)}</strong> stored</span>
                       </div>
                       <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 8 }}>
                         Assessments — {usageById[inst.id].assessments.testAttempts} tests · {usageById[inst.id].assessments.moduleCodingAttempts} module coding · {usageById[inst.id].assessments.readinessAttempts} readiness
@@ -383,6 +384,9 @@ export default function InstituteManagement() {
                           {" · "}{(usageById[inst.id].ai.promptTokens + usageById[inst.id].ai.completionTokens).toLocaleString()} tokens
                         </div>
                       )}
+                      <div className="mono" style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>
+                        Storage — {formatBytes(usageById[inst.id].storage.profilePhotosBytes)} profile photos · {formatBytes(usageById[inst.id].storage.documentsBytes)} student documents · {formatBytes(usageById[inst.id].storage.resumePhotosBytes)} resume photos · {formatBytes(usageById[inst.id].storage.logoBytes + usageById[inst.id].storage.signatoriesBytes)} branding
+                      </div>
                     </>
                   )}
                 </div>
@@ -402,3 +406,12 @@ export default function InstituteManagement() {
 
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
+
+function formatBytes(bytes) {
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  let n = bytes;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}

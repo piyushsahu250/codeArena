@@ -233,11 +233,15 @@ router.get("/:id/course-analytics", authenticate, requireRole("ADMIN", "SUPER_AD
 // (activeStudents/activeStaff) are a live snapshot, not period-bounded, since "how many active
 // accounts does this institute have right now" is what actually matters for a seat-based view.
 // AI usage reuses AiUsageLog (utils/aiService.js's own usage log, already recording every Gemini
-// call institute-scoped) rather than adding a second tracking mechanism next to it. Storage
-// footprint is deliberately NOT included here -- this platform stores several large fields
-// (profile photos, signatures, student documents) as data URLs directly in Postgres text columns,
-// and getting a true per-institute byte total right needs raw SQL across multiple tables; left as
-// a known gap rather than shipped as an approximate/misleading number.
+// call institute-scoped) rather than adding a second tracking mechanism next to it.
+//
+// Storage is a live snapshot (not `since`-bounded, same reasoning as the headcounts), measured via
+// octet_length() raw SQL across every field on this platform that stores a file as a data URL
+// directly in a Postgres text column rather than external object storage (see User.profilePhotoUrl,
+// Institute.logoUrl, StudentDocument.documentLink, Resume.photoUrl's own comments) -- Prisma's
+// query builder has no "sum of string byte length" aggregate, and a true per-institute total needs
+// this across four tables. Every query is Prisma's tagged-template $queryRaw (auto-parameterized,
+// not string interpolation) scoped by this institute's own id.
 router.get("/:id/usage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF", "CLERK"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.params.id;
@@ -259,6 +263,7 @@ router.get("/:id/usage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INST
       testAttempts, moduleCodingAttempts, readinessAttempts,
       aiCallsByFeature, aiTokenAgg,
       emailsSent,
+      profilePhotosRaw, logoRaw, documentsRaw, resumePhotosRaw, signatoriesRaw,
     ] = await Promise.all([
       prisma.user.count({ where: { instituteId, role: "STUDENT", isActive: true } }),
       prisma.user.count({ where: { instituteId, role: { in: ["STAFF", "CLERK"] }, isActive: true } }),
@@ -268,7 +273,14 @@ router.get("/:id/usage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INST
       prisma.aiUsageLog.groupBy({ by: ["feature"], where: { instituteId, createdAt: { gte: since } }, _count: { _all: true } }),
       prisma.aiUsageLog.aggregate({ where: { instituteId, createdAt: { gte: since } }, _sum: { promptTokens: true, completionTokens: true } }),
       prisma.emailLog.count({ where: { instituteId, createdAt: { gte: since } } }),
+      prisma.$queryRaw`SELECT COALESCE(SUM(octet_length("profilePhotoUrl")), 0)::bigint AS bytes FROM "User" WHERE "instituteId" = ${instituteId}`,
+      prisma.$queryRaw`SELECT COALESCE(octet_length("logoUrl"), 0)::bigint AS bytes FROM "Institute" WHERE id = ${instituteId}`,
+      prisma.$queryRaw`SELECT COALESCE(SUM(octet_length(sd."documentLink")), 0)::bigint AS bytes FROM "StudentDocument" sd JOIN "User" u ON u.id = sd."studentId" WHERE u."instituteId" = ${instituteId}`,
+      prisma.$queryRaw`SELECT COALESCE(SUM(octet_length(r."photoUrl")), 0)::bigint AS bytes FROM "Resume" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId}`,
+      prisma.$queryRaw`SELECT COALESCE(octet_length("marksheetSignatories"::text), 0)::bigint AS bytes FROM "Institute" WHERE id = ${instituteId}`,
     ]);
+    const [profilePhotosBytes, logoBytes, documentsBytes, resumePhotosBytes, signatoriesBytes] =
+      [profilePhotosRaw, logoRaw, documentsRaw, resumePhotosRaw, signatoriesRaw].map((rows) => Number(rows[0]?.bytes || 0));
 
     res.json({
       institute,
@@ -286,6 +298,10 @@ router.get("/:id/usage", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INST
         completionTokens: aiTokenAgg._sum.completionTokens || 0,
       },
       emailsSent,
+      storage: {
+        profilePhotosBytes, logoBytes, documentsBytes, resumePhotosBytes, signatoriesBytes,
+        totalBytes: profilePhotosBytes + logoBytes + documentsBytes + resumePhotosBytes + signatoriesBytes,
+      },
     });
   } catch (err) {
     console.error(err);
