@@ -10,6 +10,8 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
+import ImStuckMenu from "../components/ImStuckMenu";
+import useAiStatus from "../hooks/useAiStatus";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
@@ -151,6 +153,7 @@ export default function ProjectView() {
 }
 
 function ProjectTaskCard({ task, onProgress }) {
+  const aiAvailable = useAiStatus();
   const [language, setLanguage] = useState(task.language || "java");
   const [code, setCode] = useState(task.starterCode || defaultStarter(task.language || "java"));
   const [runResult, setRunResult] = useState(null);
@@ -237,6 +240,9 @@ function ProjectTaskCard({ task, onProgress }) {
           <button className="btn btn-primary" onClick={markComplete} disabled={completing || task.status === "COMPLETED"}>
             {task.status === "COMPLETED" ? "✓ Completed" : completing ? "Saving…" : "Mark Complete"}
           </button>
+          {task.status !== "COMPLETED" && (
+            <ImStuckMenu endpoint={`/learning/tasks/${task.id}/assist`} code={null} language={null} aiAvailable={aiAvailable} />
+          )}
         </div>
       ) : (
         <>
@@ -264,6 +270,9 @@ function ProjectTaskCard({ task, onProgress }) {
             <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "var(--success-bg)" : "var(--danger-bg)" }}>
               <CodeResultBlock title="Submission result" result={submitResult} />
             </div>
+          )}
+          {task.status !== "COMPLETED" && (
+            <ImStuckMenu endpoint={`/learning/tasks/${task.id}/assist`} code={code} language={language} aiAvailable={aiAvailable} />
           )}
         </>
       )}

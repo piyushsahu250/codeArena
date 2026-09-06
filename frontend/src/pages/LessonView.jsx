@@ -9,6 +9,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
 import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
+import ImStuckMenu from "../components/ImStuckMenu";
 import useAiStatus from "../hooks/useAiStatus";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 
@@ -17,7 +18,6 @@ const AUTOSAVE_DEBOUNCE_MS = 2000;
 const TYPE_LABEL = { MCQ: "Multiple Choice", FILL_BLANK: "Fill in the Blank", CODING: "Coding", DEBUG: "Debugging", OUTPUT_PREDICTION: "Output Prediction" };
 
 export default function LessonView() {
-  const aiAvailable = useAiStatus();
   const { slug, lessonId } = useParams();
   const navigate = useNavigate();
   const { notify } = useGamification();
@@ -447,6 +447,12 @@ function ModuleTestBlock({ lessonId, questions, alreadyPassed, onPassed }) {
 
 function PracticeQuestionCard({ question }) {
   const { notify } = useGamification();
+  // Own call, not a prop from LessonView — this is a sibling top-level function, not nested
+  // inside LessonView, so it has no access to that component's own `aiAvailable` local. The old
+  // hint UI here referenced `aiAvailable` directly, which was a real ReferenceError waiting to
+  // fire the moment a student submitted a wrong CODING answer (ai/status is cached module-level
+  // in useAiStatus.js, so this second call costs nothing extra).
+  const aiAvailable = useAiStatus();
   const [selected, setSelected] = useState(null);
   const [textAnswer, setTextAnswer] = useState("");
   const [result, setResult] = useState(null);
@@ -460,9 +466,6 @@ function PracticeQuestionCard({ question }) {
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState(null); // { totalAttempts, solved, latestVerdict }
   const [draftLoaded, setDraftLoaded] = useState(false);
-  const [hint, setHint] = useState("");
-  const [hintError, setHintError] = useState("");
-  const [gettingHint, setGettingHint] = useState(false);
   const autosaveTimerRef = useRef(null);
   const codeRef = useRef(code);
   const languageRef = useRef(language);
@@ -564,8 +567,6 @@ function PracticeQuestionCard({ question }) {
   async function submitCode() {
     setSubmitting(true);
     setSubmitResult(null);
-    setHint("");
-    setHintError("");
     try {
       const { data } = await api.post(`/learning/practice/${question.id}/submit`, { language, code });
       setSubmitResult(data);
@@ -575,19 +576,6 @@ function PracticeQuestionCard({ question }) {
       alert(err.response?.data?.error || "Submission failed");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function getHint() {
-    setGettingHint(true);
-    setHintError("");
-    try {
-      const { data } = await api.post(`/learning/practice/${question.id}/hint`, { language, code });
-      setHint(data.hint);
-    } catch (err) {
-      setHintError(err.response?.data?.error || "Failed to get a hint");
-    } finally {
-      setGettingHint(false);
     }
   }
 
@@ -632,23 +620,10 @@ function PracticeQuestionCard({ question }) {
           {submitResult && (
             <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: submitResult.verdict === "ACCEPTED" ? "var(--success-bg)" : "var(--danger-bg)" }}>
               <CodeResultBlock title="Submission result" result={submitResult} />
-              {submitResult.verdict !== "ACCEPTED" && aiAvailable !== false && (
-                <div style={{ marginTop: 10 }}>
-                  {!hint && (
-                    <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} disabled={gettingHint || aiAvailable !== true} onClick={getHint}>
-                      {gettingHint ? "Thinking…" : "Get a Hint"}
-                    </button>
-                  )}
-                  {hint && (
-                    <div className="card" style={{ padding: 10, marginTop: 6, fontSize: 13 }}>
-                      <strong style={{ fontSize: 11, color: "var(--ink-dim)" }}>HINT</strong>
-                      <p style={{ marginTop: 4 }}>{hint}</p>
-                    </div>
-                  )}
-                  {hintError && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 6 }}>{hintError}</p>}
-                </div>
-              )}
             </div>
+          )}
+          {submitResult?.verdict !== "ACCEPTED" && !history?.solved && (
+            <ImStuckMenu endpoint={`/learning/practice/${question.id}/assist`} code={code} language={language} aiAvailable={aiAvailable} />
           )}
         </>
       ) : question.type === "FILL_BLANK" ? (

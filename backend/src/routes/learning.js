@@ -27,6 +27,7 @@ const {
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 const { computeConceptMastery } = require("../utils/conceptMastery");
+const { STUCK_CATEGORIES, generateMentorAssist } = require("../utils/learningMentor");
 
 // True once every lesson in a module (including its practice test) is COMPLETED for this
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
@@ -804,6 +805,33 @@ router.post("/practice/:id/hint", authenticate, requireRole("STUDENT"), hintLimi
     res.json({ hint });
   } catch (err) {
     sendAiError(res, err, "Failed to generate hint");
+  }
+});
+
+// STUDENT: "I'm Stuck" (spec section 18) — the same AI mentor as the hint route above, but with
+// the full 5-option menu (concept/not-working/requirement/hint/example), reusing the exact same
+// Institute.aiHintsEnabled gate and rate limiter. Only the HINT category still requires a prior
+// wrong attempt (matching the older /hint route's own intent — a hint before ever trying isn't
+// really a hint); the other four categories are proactive help, available any time.
+router.post("/practice/:id/assist", authenticate, requireRole("STUDENT"), hintLimiter, async (req, res) => {
+  try {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, institute: { select: { aiHintsEnabled: true } } } });
+    if (!student?.institute?.aiHintsEnabled) return res.status(403).json({ error: "AI hints aren't enabled for your institute" });
+
+    const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
+    if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
+
+    const { category, code, language } = req.body;
+    const cat = STUCK_CATEGORIES[category] || STUCK_CATEGORIES.HINT;
+    if (cat.requiresPriorAttempt) {
+      const lastAttempt = await prisma.practiceRunLog.findFirst({ where: { studentId: req.user.id, questionId: q.id }, orderBy: { createdAt: "desc" } });
+      if (!lastAttempt || lastAttempt.verdict === "ACCEPTED") return res.status(400).json({ error: "Hints are only available after a wrong submission attempt" });
+    }
+
+    const result = await generateMentorAssist({ category, taskPrompt: q.prompt, studentCode: code, language, userId: req.user.id, instituteId: student.instituteId });
+    res.json(result);
+  } catch (err) {
+    sendAiError(res, err, "Failed to get help");
   }
 });
 
@@ -2380,6 +2408,34 @@ router.post("/tasks/:id/submit", authenticate, requireRole("STUDENT"), attachReq
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Submission failed" });
+  }
+});
+
+// STUDENT: "I'm Stuck" for a project task — same AI mentor/gate/rate-limit as
+// /practice/:id/assist above, just resolved through loadTaskAccess so it also respects the
+// project's own institute-isolation and module-lock rules (a student can't get AI help on a task
+// under a locked module any more than they could open the task itself).
+router.post("/tasks/:id/assist", authenticate, requireRole("STUDENT"), hintLimiter, async (req, res) => {
+  try {
+    let access;
+    try { access = await loadTaskAccess(req, req.params.id); }
+    catch (e) { return res.status(e.status || 500).json({ error: e.error || "Failed to load task" }); }
+    const { task } = access;
+
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, institute: { select: { aiHintsEnabled: true } } } });
+    if (!student?.institute?.aiHintsEnabled) return res.status(403).json({ error: "AI hints aren't enabled for your institute" });
+
+    const { category, code, language } = req.body;
+    const cat = STUCK_CATEGORIES[category] || STUCK_CATEGORIES.HINT;
+    if (cat.requiresPriorAttempt) {
+      const progress = await prisma.projectTaskProgress.findUnique({ where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } } });
+      if (!progress || progress.status === "COMPLETED") return res.status(400).json({ error: "Hints are only available after a wrong submission attempt" });
+    }
+
+    const result = await generateMentorAssist({ category, taskPrompt: task.instructions, studentCode: code, language, userId: req.user.id, instituteId: student.instituteId });
+    res.json(result);
+  } catch (err) {
+    sendAiError(res, err, "Failed to get help");
   }
 });
 
