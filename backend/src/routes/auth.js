@@ -178,7 +178,13 @@ router.post("/login", loginLimiter, async (req, res) => {
       profileComplete = computeMandatoryCompletion(user, decryptProfile(studentProfile), resume, documents).unlocked;
     }
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete, emailVerified: user.emailVerified, pendingEmail: user.pendingEmail } });
+    // Institute Customization: institute name/logo, so a logged-in user can see THEIR institute's
+    // own branding somewhere beyond the marksheet PDF (MarksheetView.jsx was previously the only
+    // place logoUrl was ever rendered anywhere on the platform). `institute` was already fetched
+    // above (include: { institute: true }, used for singleSessionOnly) -- no extra query needed.
+    // No /auth/me refresh endpoint exists (see AuthContext.jsx's own comment on that), so this only
+    // takes effect on next login/re-auth, same staleness as every other field in this response.
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, instituteId: user.instituteId, mustChangePassword, requireProfileCompletion, profileComplete, emailVerified: user.emailVerified, pendingEmail: user.pendingEmail, institute: user.institute ? { name: user.institute.name, logoUrl: user.institute.logoUrl } : null } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Login failed" });

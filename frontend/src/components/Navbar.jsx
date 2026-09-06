@@ -67,8 +67,18 @@ export default function Navbar() {
           </button>
         )}
         <Link to="/" style={{ textDecoration: "none", color: "var(--chalk)" }}>
-          <div style={{ background: "#fdfbf5", borderRadius: 8, padding: "3px 10px", display: "flex", alignItems: "center" }}>
+          <div style={{ background: "#fdfbf5", borderRadius: 8, padding: "3px 10px", display: "flex", alignItems: "center", gap: 8 }}>
             <img src="/branding/logo.png" alt="CodeArena" style={{ height: 34, width: "auto", display: "block" }} />
+            {/* Institute Customization: a logged-in user's own institute logo, shown alongside (not
+                instead of) the platform brand -- MarksheetView.jsx was previously the only place
+                Institute.logoUrl was ever rendered anywhere on the platform. Login-only staleness:
+                see AuthContext.jsx's comment on why there's no /auth/me refresh. */}
+            {user?.institute?.logoUrl && (
+              <>
+                <div style={{ width: 1, height: 22, background: "var(--line)" }} />
+                <img src={user.institute.logoUrl} alt={user.institute.name || ""} title={user.institute.name || ""} style={{ height: 26, width: "auto", maxWidth: 90, objectFit: "contain", display: "block" }} />
+              </>
+            )}
           </div>
         </Link>
 
