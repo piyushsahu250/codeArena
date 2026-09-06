@@ -27,7 +27,12 @@ async function computeSkillGraph(studentId, courseId) {
     getModuleLockMap(prisma, studentId, courseId),
     computeConceptMastery(prisma, studentId),
   ]);
-  const needsPracticeTags = new Set(mastery.filter((m) => m.strength === "NEEDS_PRACTICE").map((m) => m.tag));
+  // The Skill Graph only has 4 states (Mastered/Learning/Needs Practice/Locked) — Concept Mastery's
+  // own 3-tier Strong/Developing/Needs-Practice (conceptMastery.js) collapses onto it as: only a
+  // STRONG-rated concept (or no coding questions at all) counts toward MASTERED here. Calling a
+  // lesson "Mastered" when its own practice questions are merely DEVELOPING (50-79% solved) would
+  // overclaim — "not yet fully solid" is closer to Needs Practice than to Mastered.
+  const notYetStrongTags = new Set(mastery.filter((m) => m.strength === "DEVELOPING" || m.strength === "NEEDS_PRACTICE").map((m) => m.tag));
 
   const allLessonIds = modules.flatMap((m) => m.lessons.map((l) => l.id));
   const progress = allLessonIds.length
@@ -50,7 +55,7 @@ async function computeSkillGraph(studentId, courseId) {
       // coding practice questions, both mean the student finished it without really landing it.
       const lowQuizScore = lesson.isModuleTest && p.score != null && p.score < LOW_QUIZ_SCORE_THRESHOLD;
       const lessonTags = lesson.questions.flatMap((q) => (Array.isArray(q.tags) ? q.tags : []));
-      const hasWeakConcept = lessonTags.some((t) => needsPracticeTags.has(t));
+      const hasWeakConcept = lessonTags.some((t) => notYetStrongTags.has(t));
       const status = lowQuizScore || hasWeakConcept ? "NEEDS_PRACTICE" : "MASTERED";
       return { id: lesson.id, title: lesson.title, status };
     });
