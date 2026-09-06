@@ -7,7 +7,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { computeCompletion, computeAtsScore, ATS_ENGINE_VERSION } = require("../utils/resumeAts");
 const { generateResumePdf } = require("../utils/resumePdf");
 const { generateResumeDocx } = require("../utils/resumeDocx");
-const { buildAutofillData } = require("../utils/resumeAutofill");
+const { buildAutofillData, getCompletedProjects } = require("../utils/resumeAutofill");
 const { parseResumeFile } = require("../utils/resumeParser");
 const { improveText } = require("../utils/resumeImprove");
 const aiService = require("../services/ai/aiService");
@@ -520,6 +520,7 @@ router.post("/me/autofill", authenticate, requireRole("STUDENT"), requireFeature
     if ((!existing?.skills || existing.skills.length === 0) && auto.skills.length) data.skills = auto.skills;
     if ((!existing?.certifications || existing.certifications.length === 0) && auto.certifications.length) data.certifications = auto.certifications;
     if ((!existing?.achievements || existing.achievements.length === 0) && auto.achievements.length) data.achievements = auto.achievements;
+    if ((!existing?.projects || existing.projects.length === 0) && auto.projects.length) data.projects = auto.projects;
 
     const resume = await prisma.resume.upsert({
       where: { studentId: req.user.id },
@@ -531,6 +532,53 @@ router.post("/me/autofill", authenticate, requireRole("STUDENT"), requireFeature
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to auto-fill resume" });
+  }
+});
+
+// STUDENT: every CourseProject this student has genuinely finished (every ProjectTask
+// COMPLETED), for the "My Portfolio" view (LMS master-spec section 34) — project name,
+// technologies (from the project's own authored skillsRequired, never invented), and whether it's
+// already been added to this student's resume (by title match against Resume.projects).
+router.get("/me/portfolio", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
+  try {
+    const [completed, resume] = await Promise.all([
+      getCompletedProjects(req.user.id),
+      prisma.resume.findUnique({ where: { studentId: req.user.id }, select: { projects: true } }),
+    ]);
+    const existingTitles = new Set((resume?.projects || []).map((p) => p.title));
+    res.json({ projects: completed.map((p) => ({ ...p, addedToResume: existingTitles.has(p.title) })) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load portfolio" });
+  }
+});
+
+// STUDENT: explicit, per-project "Add to Resume" (LMS master-spec section 35) — never automatic
+// on project completion. Idempotent by title: re-clicking an already-added project is a no-op,
+// not a duplicate row. `projectTitle` must match a project this student has genuinely completed
+// (recomputed server-side via getCompletedProjects, never trusted from the request body) — a
+// student can't add an unfinished or nonexistent project by guessing a title.
+router.post("/me/portfolio/add", authenticate, requireRole("STUDENT"), requireFeature("resume_builder"), async (req, res) => {
+  try {
+    const { projectTitle } = req.body;
+    if (!projectTitle) return res.status(400).json({ error: "projectTitle is required" });
+    const completed = await getCompletedProjects(req.user.id);
+    const entry = completed.find((p) => p.title === projectTitle);
+    if (!entry) return res.status(400).json({ error: "This project isn't fully completed by you yet, or doesn't exist" });
+
+    const existing = await prisma.resume.upsert({ where: { studentId: req.user.id }, update: {}, create: { studentId: req.user.id } });
+    const currentProjects = Array.isArray(existing.projects) ? existing.projects : [];
+    if (currentProjects.some((p) => p.title === projectTitle)) {
+      return res.json({ added: false, alreadyPresent: true, resume: existing });
+    }
+    await saveVersion(existing.id, existing);
+    const resume = await prisma.resume.update({ where: { studentId: req.user.id }, data: { projects: [...currentProjects, entry] } });
+    await saveVersion(resume.id, resume);
+    const config = await getFieldConfig();
+    res.json({ added: true, alreadyPresent: false, resume, completion: computeCompletion(resume, config.mandatorySections) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add project to resume" });
   }
 });
 

@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   PlayCircle, Code2, LineChart, Trophy, FileText, Mic, UserCircle,
   ClipboardList, CheckCircle2, Clock, BarChart3, ListChecks, BookOpen, Flame, Award, Lock, Bell, Target,
-  Activity, Sparkles,
+  Activity, Sparkles, Briefcase,
 } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -490,6 +490,9 @@ function QuickActions({ learningResumeId, style }) {
       <Link to="/achievements" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Trophy size={15} /> Achievements</Link>
       {isFeatureEnabled("resume_builder") && (
         <Link to="/resume" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><FileText size={15} /> Resume Builder</Link>
+      )}
+      {isFeatureEnabled("resume_builder") && isFeatureEnabled("lms") && (
+        <Link to="/portfolio" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Briefcase size={15} /> My Portfolio</Link>
       )}
       {isFeatureEnabled("ai_mock_interview") && (
         <Link to="/interview" className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Mic size={15} /> AI Mock Interview</Link>

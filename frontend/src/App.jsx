@@ -93,6 +93,7 @@ import LearningManagement from "./pages/LearningManagement";
 import Achievements from "./pages/Achievements";
 import GamificationManagement from "./pages/GamificationManagement";
 import ResumeBuilder from "./pages/ResumeBuilder";
+import MyPortfolio from "./pages/MyPortfolio";
 import ResumeAdmin from "./pages/ResumeAdmin";
 import InterviewHub from "./pages/InterviewHub";
 import ReadinessHub from "./pages/ReadinessHub";
@@ -271,6 +272,7 @@ export default function App() {
           <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Weekly Challenge. Reloading usually fixes this."><WeeklyChallenge /></ErrorBoundary></FeatureProtected></Protected>} />
           <Route path="/company-tests" element={<Protected roles={["STUDENT"]}><CompanyTests /></Protected>} />
           <Route path="/resume" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="resume_builder" featureLabel="Resume Builder"><ResumeBuilder /></FeatureProtected></Protected>} />
+          <Route path="/portfolio" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="resume_builder" featureLabel="Resume Builder"><MyPortfolio /></FeatureProtected></Protected>} />
           <Route path="/readiness" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="readiness_test"><ReadinessHub /></FeatureProtected></Protected>} />
           <Route
             path="/readiness/take/:assessmentId"

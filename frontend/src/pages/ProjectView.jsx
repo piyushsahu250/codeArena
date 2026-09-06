@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
+import { CheckCircle2, PlusCircle } from "lucide-react";
 import api from "../api";
 import { useGamification } from "../context/GamificationContext";
+import { useFeatures } from "../context/FeatureContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import CodeResultBlock from "../components/CodeResultBlock";
@@ -21,19 +23,42 @@ const STATUS_COLOR = { COMPLETED: "var(--mint)", IN_PROGRESS: "var(--amber-dark)
 export default function ProjectView() {
   const { slug, moduleId, projectId } = useParams();
   const { notify } = useGamification();
+  const { isFeatureEnabled } = useFeatures();
   const [project, setProject] = useState(null);
   const [error, setError] = useState("");
   const [activeTaskId, setActiveTaskId] = useState(null);
+  const [resumeStatus, setResumeStatus] = useState(null); // null (unknown) | { addedToResume } | "adding"
+
+  async function checkResumeStatus(title) {
+    if (!isFeatureEnabled("resume_builder")) return;
+    try {
+      const { data } = await api.get("/resume/me/portfolio");
+      const entry = data.projects.find((p) => p.title === title);
+      setResumeStatus(entry ? { addedToResume: entry.addedToResume } : null);
+    } catch { setResumeStatus(null); }
+  }
+
+  async function addToResume(title) {
+    setResumeStatus("adding");
+    try {
+      await api.post("/resume/me/portfolio/add", { projectTitle: title });
+      setResumeStatus({ addedToResume: true });
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to add to resume");
+      setResumeStatus(null);
+    }
+  }
 
   function load() {
     api.get(`/learning/projects/${projectId}`)
       .then((res) => {
         setProject(res.data);
         setActiveTaskId((prev) => prev || res.data.tasks.find((t) => t.status !== "COMPLETED")?.id || res.data.tasks[0]?.id);
+        if (res.data.tasks.length > 0 && res.data.tasks.every((t) => t.status === "COMPLETED")) checkResumeStatus(res.data.title);
       })
       .catch((err) => setError(err.response?.data?.error || "Failed to load project"));
   }
-  useEffect(() => { setProject(null); setError(""); load(); }, [projectId]);
+  useEffect(() => { setProject(null); setError(""); setResumeStatus(null); load(); }, [projectId]);
 
   if (error) return <div><Navbar /><div style={{ maxWidth: 900, margin: "0 auto", padding: 48 }}><p style={{ color: "var(--rust)" }}>{error}</p></div></div>;
   if (!project) return <div><Navbar /><div style={{ maxWidth: 900, margin: "0 auto", padding: 48 }} className="mono">Loading…</div></div>;
@@ -83,6 +108,21 @@ export default function ProjectView() {
         <div style={{ height: 8, borderRadius: 4, background: "var(--line)", marginTop: 8, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${project.tasks.length ? (completedCount / project.tasks.length) * 100 : 0}%`, background: "var(--mint)", transition: "width 0.3s" }} />
         </div>
+
+        {project.tasks.length > 0 && completedCount === project.tasks.length && isFeatureEnabled("resume_builder") && resumeStatus && (
+          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--mint)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ fontSize: 13 }}>🎉 Project complete — showcase it on your resume?</span>
+            {resumeStatus === "adding" ? (
+              <span className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }}>Adding…</span>
+            ) : resumeStatus.addedToResume ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--mint)" }}><CheckCircle2 size={14} /> Added to Resume</span>
+            ) : (
+              <button className="btn btn-primary" style={{ fontSize: 12, padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: 6 }} onClick={() => addToResume(project.title)}>
+                <PlusCircle size={13} /> Add to Resume
+              </button>
+            )}
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 20, marginTop: 20, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 6 }}>

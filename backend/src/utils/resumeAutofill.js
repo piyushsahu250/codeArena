@@ -5,9 +5,10 @@ const EXAM_QUIZ_TYPES = ["MCQ", "TRUE_FALSE", "MULTISELECT"];
 
 // Builds a starter draft from data the platform already has: profile, class/institute (as a
 // best-guess education record), languages solved successfully (as skills), earned course
-// certificates, and gamification badges/coding-volume (as achievements). Returns only the
-// fields there's real signal for — projects, work experience, and languages-spoken have no
-// platform source and are left for the student to fill in themselves.
+// certificates, gamification badges/coding-volume (as achievements), and — since Project-Based
+// Learning shipped (LMS master-spec sections 14-17/34-35) — fully-completed CourseProjects (every
+// ProjectTask COMPLETED) as real, platform-verified `projects` entries. Work experience and
+// languages-spoken still have no platform source and are left for the student to fill in.
 async function buildAutofillData(studentId) {
   const student = await prisma.user.findUnique({
     where: { id: studentId },
@@ -15,7 +16,7 @@ async function buildAutofillData(studentId) {
   });
   if (!student) return null;
 
-  const [certificates, badges, acceptedRuns, acceptedSubmissions] = await Promise.all([
+  const [certificates, badges, acceptedRuns, acceptedSubmissions, completedProjects] = await Promise.all([
     prisma.certificate.findMany({ where: { studentId }, include: { course: true } }),
     prisma.studentBadge.findMany({ where: { studentId }, include: { badge: true } }),
     prisma.practiceRunLog.findMany({
@@ -26,6 +27,7 @@ async function buildAutofillData(studentId) {
       where: { studentId, verdict: "ACCEPTED" },
       select: { language: true },
     }),
+    getCompletedProjects(studentId),
   ]);
 
   const langSet = new Set();
@@ -77,7 +79,37 @@ async function buildAutofillData(studentId) {
     skills,
     certifications,
     achievements,
+    projects: completedProjects,
   };
 }
 
-module.exports = { buildAutofillData };
+// Every CourseProject this student has genuinely finished (every one of its ProjectTasks is
+// COMPLETED — never a partial project) mapped onto Resume.projects' own existing shape
+// ({ title, description, technologies, role, duration, githubUrl, liveUrl }). Nothing invented:
+// `technologies` comes straight from the project's authored `skillsRequired`, `description` from
+// its authored `objective`/`description` — never AI-generated, never guessed.
+async function getCompletedProjects(studentId) {
+  const projects = await prisma.courseProject.findMany({
+    where: { isActive: true, tasks: { some: {} } },
+    select: { id: true, title: true, description: true, objective: true, skillsRequired: true, tasks: { select: { id: true } } },
+  });
+  if (projects.length === 0) return [];
+
+  const allTaskIds = projects.flatMap((p) => p.tasks.map((t) => t.id));
+  const completed = await prisma.projectTaskProgress.findMany({
+    where: { studentId, taskId: { in: allTaskIds }, status: "COMPLETED" },
+    select: { taskId: true },
+  });
+  const completedSet = new Set(completed.map((c) => c.taskId));
+
+  return projects
+    .filter((p) => p.tasks.length > 0 && p.tasks.every((t) => completedSet.has(t.id)))
+    .map((p) => ({
+      title: p.title,
+      description: p.objective || p.description || "",
+      technologies: Array.isArray(p.skillsRequired) ? p.skillsRequired.join(", ") : "",
+      role: "Student", duration: "", githubUrl: "", liveUrl: "",
+    }));
+}
+
+module.exports = { buildAutofillData, getCompletedProjects };
