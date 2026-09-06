@@ -8,8 +8,11 @@
 // What this DOES cover: institute isolation, basic RBAC, data-integrity read-only scans (never
 // deletes anything, only reports), email/AI/compiler live status, a per-role smoke test of a
 // handful of key endpoints, an LMS-unlocking regression guard (an active gating test with zero
-// questions -- the exact bug class that already happened live once, see learningLock.js), and
-// published coding questions below the platform's hidden-test-case minimum. What this does NOT
+// questions -- the exact bug class that already happened live once, see learningLock.js),
+// published coding questions below the platform's hidden-test-case minimum, and that the
+// platform's own on-demand backup mechanism (pg_dump, routes/backup.js) is actually installed
+// and produces a complete dump -- NOT a full restore-test, and not a substitute for Neon's own
+// managed automated backups (see checkBackupCapability's own comment). What this does NOT
 // cover (see docs/PLATFORM_HEALTH.md for why): a real
 // automated test suite (none exists in this codebase), true P95 latency (needs real traffic
 // sampling, not a handful of on-demand requests), staging/canary deployment, AI-based support-ticket
@@ -20,6 +23,7 @@ const { createSession } = require("../src/utils/sessions");
 const bcrypt = require("bcryptjs");
 const { judgeSubmission } = require("../src/utils/judge");
 const aiService = require("../src/services/ai/aiService");
+const { spawn } = require("child_process");
 
 const API_BASE = process.env.HEALTH_CHECK_API_BASE || "http://127.0.0.1:4000/api";
 const SLOW_WARN_MS = 1000, SLOW_HIGH_MS = 2000, SLOW_CRITICAL_MS = 5000;
@@ -214,6 +218,61 @@ async function checkAi() {
 }
 
 // ============================================================
+// 4b. Backup capability — the platform's OWN on-demand backup mechanism (routes/backup.js,
+// GET /admin/backup/database, Super-Admin-only "Download Backup" button) shells out to pg_dump.
+// Nothing has ever verified that binary is actually present and working in the deployed
+// container -- if a base-image change ever silently dropped it, or DATABASE_URL/credentials
+// drifted, nobody would find out until an admin actually needed a real backup during an
+// emergency, which is the worst possible time to discover it's broken. This runs the same
+// pg_dump against the same DATABASE_URL with --schema-only (fast, no real data transferred/
+// stored, matching this check's read-only philosophy) and confirms it exits 0 AND produces a
+// complete dump (pg_dump always writes "-- PostgreSQL database dump complete" as literally its
+// last line on success; a truncated/failed dump won't have it even if the process exits 0).
+// The production database itself is managed Postgres (Neon, per backend/CLOUD_RUN.md) which
+// already runs its own automated point-in-time-recovery backups server-side -- this check is a
+// defense-in-depth verification of this platform's OWN supplementary backup path, not a
+// replacement for Neon's, and deliberately doesn't attempt a full restore-test (that needs a
+// disposable scratch database to restore into, which isn't safely provisionable from here).
+// ============================================================
+async function checkBackupCapability() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    record("P2", "BACKUP", "backup_configured", "DATABASE_URL is not set — the on-demand backup route (GET /admin/backup/database) cannot function.");
+    return;
+  }
+  const started = Date.now();
+  try {
+    const parsed = new URL(dbUrl);
+    const pgEnv = { ...process.env, PGPASSWORD: decodeURIComponent(parsed.password || ""), PGSSLMODE: parsed.searchParams.get("sslmode") || "require" };
+    const pgArgs = [
+      "-h", parsed.hostname, "-p", parsed.port || "5432",
+      "-U", decodeURIComponent(parsed.username || ""), "-d", decodeURIComponent(parsed.pathname.replace(/^\//, "")),
+      "--no-owner", "--no-privileges", "--schema-only",
+    ];
+    const output = await new Promise((resolve, reject) => {
+      const chunks = [];
+      const errChunks = [];
+      const child = spawn("pg_dump", pgArgs, { env: pgEnv });
+      child.stdout.on("data", (d) => chunks.push(d));
+      child.stderr.on("data", (d) => errChunks.push(d));
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code !== 0) return reject(new Error(`pg_dump exited ${code}: ${Buffer.concat(errChunks).toString().slice(0, 300)}`));
+        resolve(Buffer.concat(chunks).toString());
+      });
+    });
+    const ms = Date.now() - started;
+    if (!output.includes("PostgreSQL database dump complete")) {
+      record("P1", "BACKUP", "backup_dump_complete", "pg_dump exited 0 but its output is missing the completion marker — the dump may be truncated. The on-demand backup route may be producing incomplete backups.");
+    }
+    const p = latencyPriority(ms);
+    if (p) record(p, "PERFORMANCE", "backup_latency", `pg_dump (schema-only) took ${ms}ms.`);
+  } catch (err) {
+    record("P0", "BACKUP", "backup_smoke_test", `The platform's on-demand backup mechanism (pg_dump) failed: ${err.message}. If this is real, GET /admin/backup/database is currently broken.`);
+  }
+}
+
+// ============================================================
 // 5. Per-role smoke test — a handful of real, read-only key endpoints
 // ============================================================
 async function checkRoleWorkflows(institute, cleanup) {
@@ -265,6 +324,7 @@ async function main() {
     await checkLmsUnlockingIntegrity();
     await checkCompiler();
     await checkAi();
+    await checkBackupCapability();
   } finally {
     const jtis = cleanup.map((c) => c.jti);
     const userIds = cleanup.map((c) => c.user.id);

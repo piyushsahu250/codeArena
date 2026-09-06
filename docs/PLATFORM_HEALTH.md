@@ -30,6 +30,12 @@ writes one row to `PlatformHealthReport`. Every "fix" it might reveal is a human
     and passes — a genuine smoke test, not a status flag.
   - Calls the real AI service with a 10-token "reply with ok" prompt (only if `GEMINI_API_KEY` is
     configured) to confirm the provider is reachable and not silently broken.
+  - Runs the platform's own on-demand backup tool (`pg_dump --schema-only`, same code path as
+    `GET /admin/backup/database`) and confirms it exits 0 and its output ends with pg_dump's own
+    completion marker — catches the pg_dump binary or DB credentials silently breaking before an
+    admin discovers it mid-emergency. Not a full restore-test, and not a substitute for the
+    production database's own automated backups (it's managed Postgres — Neon — which already runs
+    its own point-in-time recovery independent of anything in this app).
   - Hits a handful of real per-role endpoints (STUDENT/STAFF/INSTITUTE_ADMIN) and flags 5xx/4xx
     responses and response times over 1s/2s/5s (P3/P2/P1).
   - Assigns each finding a priority (P0 critical / P1 high / P2 medium / P3 low), assembles an
