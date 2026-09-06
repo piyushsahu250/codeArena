@@ -94,6 +94,7 @@ import Achievements from "./pages/Achievements";
 import GamificationManagement from "./pages/GamificationManagement";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import MyPortfolio from "./pages/MyPortfolio";
+import SkillGraph from "./pages/SkillGraph";
 import ResumeAdmin from "./pages/ResumeAdmin";
 import InterviewHub from "./pages/InterviewHub";
 import ReadinessHub from "./pages/ReadinessHub";
@@ -321,6 +322,7 @@ export default function App() {
             }
           />
           <Route path="/learning/notes" element={<Protected roles={["STUDENT"]}><MyNotes /></Protected>} />
+          <Route path="/learning/:slug/skill-graph" element={<Protected roles={["STUDENT"]}><SkillGraph /></Protected>} />
           <Route path="/learning/:slug/certificate" element={<Protected roles={["STUDENT"]}><CourseCertificate /></Protected>} />
           <Route
             path="/learning/:slug/module/:moduleId/coding-assessment"

@@ -73,7 +73,10 @@ export default function CourseOverview() {
             <h1>{course.name} Learning Path</h1>
             <ChalkUnderline />
           </div>
-          <Link to="/learning" className="btn btn-ghost">← All courses</Link>
+          <div style={{ display: "flex", gap: 8 }}>
+            {isStudent && <Link to={`/learning/${slug}/skill-graph`} className="btn btn-ghost">Skill Map →</Link>}
+            <Link to="/learning" className="btn btn-ghost">← All courses</Link>
+          </div>
         </div>
         {course.description && <p style={{ color: "var(--ink-dim)", marginTop: 12 }}>{course.description}</p>}
 

@@ -27,6 +27,7 @@ const {
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
 const { computeConceptMastery } = require("../utils/conceptMastery");
+const { computeSkillGraph } = require("../utils/skillGraph");
 const { STUCK_CATEGORIES, generateMentorAssist } = require("../utils/learningMentor");
 const { validateCourse } = require("../utils/courseValidation");
 const { computeCourseAnalytics } = require("../utils/lmsFacultyAnalytics");
@@ -554,6 +555,25 @@ router.get("/mastery", authenticate, requireRole("STUDENT"), requireFeature("lms
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load concept mastery" });
+  }
+});
+
+// STUDENT: Skill Graph (spec section 33) — see utils/skillGraph.js's own header comment for why
+// this is built on the real Course->Module->Lesson tree rather than an invented tag taxonomy.
+// Same eligibility gate as GET /courses/:slug (PUBLISHED + institute/group-assigned) so a student
+// can't probe a course they can't otherwise see.
+router.get("/courses/:slug/skill-graph", authenticate, requireRole("STUDENT"), requireFeature("lms"), async (req, res) => {
+  try {
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+    const course = await prisma.course.findFirst({ where: { slug: req.params.slug, status: "PUBLISHED" }, select: { id: true } });
+    if (!course || isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId) || !(await studentCanAccessCourse(prisma, course.id, student?.instituteId, student?.academicGroupId))) {
+      return res.status(404).json({ error: "Course not found" });
+    }
+    const graph = await cached(`skill-graph:${req.user.id}:${course.id}`, 5 * 60 * 1000, () => computeSkillGraph(req.user.id, course.id));
+    res.json(graph);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load skill graph" });
   }
 });
 
