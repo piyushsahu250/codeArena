@@ -1,6 +1,22 @@
 const { sendMailLogged, wrapBranded } = require("./mailer");
+const cache = require("./cache");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
+
+// Institute name lookup for wrapBranded()'s "for <Institute>" line -- cached (institute names
+// change rarely, this fires on every single notification email) rather than looked up fresh each
+// time. Takes the SAME `prisma` handle its caller already has (could be a transaction client, not
+// necessarily the global singleton) rather than requiring its own reference. Every caller of
+// emailStudent() below passes whatever fields IT happened to select on `student`; this never
+// assumes instituteId was one of them -- a student object without it just falls back to the
+// platform-only branding that shipped before this existed, not an error.
+async function lookupInstituteName(prisma, instituteId) {
+  if (!instituteId) return null;
+  return cache.cached(`institute-name:${instituteId}`, 10 * 60 * 1000, async () => {
+    const inst = await prisma.institute.findUnique({ where: { id: instituteId }, select: { name: true } });
+    return inst?.name || null;
+  });
+}
 
 // Best-effort, non-throwing — same posture as logAudit() (a side-channel write must never fail
 // the request it's describing). Writes the persisted in-app Notification row; the email half is
@@ -26,8 +42,9 @@ async function notifyMany(prisma, recipientIds, { type, message, link, meta }) {
 
 async function emailStudent(prisma, student, subject, bodyHtml, emailType) {
   if (!student?.email) return;
+  const instituteName = await lookupInstituteName(prisma, student.instituteId).catch(() => null);
   await sendMailLogged(prisma, {
-    to: student.email, name: student.name, subject, html: wrapBranded(bodyHtml), emailType, studentId: student.id,
+    to: student.email, name: student.name, subject, html: wrapBranded(bodyHtml, instituteName), emailType, studentId: student.id,
   }).catch(() => {});
 }
 

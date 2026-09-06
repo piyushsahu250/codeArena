@@ -49,12 +49,24 @@ const transporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.e
 
 // Wraps an email body with a consistent CodeArena-branded header/footer. The logo is referenced
 // by its deployed frontend URL (not embedded) since that's how email clients reliably load
-// images — inline attachments/data-URIs are stripped or degraded by most webmail providers.
-function wrapBranded(bodyHtml) {
+// images — inline attachments/data-URIs are stripped or degraded by most webmail providers. This
+// is exactly why `instituteName` below is deliberately plain text, never Institute.logoUrl's own
+// image: that field is stored as a data URL (see its own schema comment), so putting it straight
+// into an <img src> here would hit the same stripped/degraded-image problem this comment already
+// warns about for the platform's own logo — a text line always renders everywhere, an <img
+// src="data:..."> often silently doesn't.
+//
+// `instituteName`, when given, adds a small "for <Institute>" line under the platform logo — every
+// system email (credentials, password reset, announcements, notifications) was previously
+// identical CodeArena-only branding regardless of which institute the recipient belongs to, even
+// though Institute.logoUrl already exists for certificate branding. Optional and additive: every
+// existing call site that doesn't pass it renders exactly as before.
+function wrapBranded(bodyHtml, instituteName) {
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 560px; margin: 0 auto;">
       <div style="text-align: center; padding: 24px 0 8px;">
         <img src="${LOGO_URL}" alt="CodeArena" width="160" style="width:160px; max-width:100%; height:auto;" />
+        ${instituteName ? `<div style="font-size: 12px; color: #666; margin-top: 6px;">for ${escapeHtml(instituteName)}</div>` : ""}
       </div>
       <div style="padding: 8px 24px 24px; color: #1C1B18; line-height: 1.6; font-size: 14px;">
         ${bodyHtml}
@@ -65,6 +77,13 @@ function wrapBranded(bodyHtml) {
       </div>
     </div>
   `;
+}
+
+// Institute names are free-text admin input (InstituteManagement.jsx), not developer-authored
+// content, unlike the rest of this template — escaped here since this is the one interpolation
+// into wrapBranded() that isn't.
+function escapeHtml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 const { isValidEmail } = require("./emailValidation");

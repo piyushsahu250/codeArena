@@ -571,7 +571,7 @@ router.post("/announcements", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
       // not a way to message other admins.
     const where = { ...roleWhere, isActive: true, ...(req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {}) };
 
-    const recipients = await prisma.user.findMany({ where, select: { id: true, name: true, email: true } });
+    const recipients = await prisma.user.findMany({ where, select: { id: true, name: true, email: true, institute: { select: { name: true } } } });
     if (recipients.length === 0) return res.json({ recipientCount: 0, emailQueued: false });
 
     await notifyMany(prisma, recipients.map((r) => r.id), {
@@ -594,7 +594,7 @@ router.post("/announcements", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
         sendMailLogged(prisma, {
           to: r.email, name: r.name, studentId: r.id, emailType: "SYSTEM_ANNOUNCEMENT",
           subject: subject?.trim() || "Announcement from CodeArena",
-          html: wrapBranded(`<p>Hi ${r.name},</p><p>${message.trim().replace(/\n/g, "<br/>")}</p>`),
+          html: wrapBranded(`<p>Hi ${r.name},</p><p>${message.trim().replace(/\n/g, "<br/>")}</p>`, r.institute?.name),
         }).catch((e) => ({ ok: false, error: e.message }))
       ).catch((err) => console.error("[admin.announcements] background email batch failed:", err));
     }
