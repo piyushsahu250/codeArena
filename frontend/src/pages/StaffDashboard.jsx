@@ -401,6 +401,11 @@ export default function StaffDashboard() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <h3 style={{ fontSize: 18 }}>{test.title}</h3>
                       <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: status.color }}>● {status.label}</span>
+                      {!test.isPublished && test.scheduledPublishAt && (
+                        <span className="badge" title="Publishes automatically at this time — no need to click Publish yourself">
+                          Scheduled for {new Date(test.scheduledPublishAt).toLocaleString()}
+                        </span>
+                      )}
                       {isShared && (
                         <span className="badge" style={{ background: "var(--amber)" }}>Shared with you</span>
                       )}

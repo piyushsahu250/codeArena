@@ -422,6 +422,14 @@ model Test {
   // deliberately only bumped by the content-editing PATCH route itself.
   version      Int      @default(0)
 
+  // Scheduled Publishing: an admin/staff sets a future timestamp instead of clicking Publish
+  // themselves at that exact moment. Only meaningful while isPublished is still false -- the
+  // scheduler (utils/testScheduledPublishScheduler.js) finds tests where this has passed and runs
+  // the exact same publish path the manual PATCH /:id/publish route uses (same validation, same
+  // in-app-only notification -- see notifyTestAssigned's own "stop automatic email" comment),
+  // clearing this field once actually published (or once manually published early, or unset).
+  scheduledPublishAt DateTime?
+
   questions TestQuestion[]
   attempts  TestAttempt[]
   classes   TestClass[] // empty = open to all classes (legacy/unscoped tests)

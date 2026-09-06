@@ -235,6 +235,9 @@ startTalentPoolReminderScheduler();
 const { startChallengeScheduler } = require("./utils/challengeScheduler");
 startChallengeScheduler();
 
+const { startTestScheduledPublishScheduler } = require("./utils/testScheduledPublishScheduler");
+startTestScheduledPublishScheduler();
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`CodeArena API running on port ${PORT}`);

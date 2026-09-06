@@ -13,6 +13,7 @@ const { resolveSubjectUnitTopic, canStaffUseSubject } = require("../utils/subjec
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { notifyTestAssigned, notifyMany, emailStudent } = require("../utils/notifications");
 const { mapWithConcurrency } = require("../utils/queue");
+const { validateTestForPublish, TEST_PUBLISH_VALIDATION_INCLUDE } = require("../utils/testPublishValidation");
 const NOTIFY_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const aiService = require("../services/ai/aiService");
@@ -291,8 +292,26 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       shuffleQuestions, shuffleOptions,
       questionSelectionMode, randomBankFolderId, randomQuestionsPerStudent, difficultyDistribution,
       company, instituteId: bodyInstituteId, subject, unit, program,
-      subjectId, unitId,
+      subjectId, unitId, scheduledPublishAt,
     } = req.body;
+
+    // Scheduled Publishing: only meaningful for a test that isn't already live, and only ever a
+    // future moment -- a past/now timestamp would just mean "publish immediately," which is what
+    // the actual Publish button is for. null explicitly clears it (e.g. "actually, I'll publish
+    // this myself").
+    let resolvedScheduledPublishAt = existing.scheduledPublishAt;
+    if (scheduledPublishAt !== undefined) {
+      if (scheduledPublishAt === null) {
+        resolvedScheduledPublishAt = null;
+      } else {
+        if (existing.isPublished) return res.status(400).json({ error: "This test is already published — unpublish it first if you want to schedule a re-publish." });
+        const parsed = new Date(scheduledPublishAt);
+        if (isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+          return res.status(400).json({ error: "Scheduled publish time must be a valid moment in the future." });
+        }
+        resolvedScheduledPublishAt = parsed;
+      }
+    }
 
     let resolvedSubject = { subjectId: existing.subjectId, unitId: existing.unitId };
     if (subjectId !== undefined || unitId !== undefined) {
@@ -362,6 +381,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       randomBankFolderId: effectiveBankFolderId,
       randomQuestionsPerStudent: effectivePerStudent != null ? Number(effectivePerStudent) : null,
       difficultyDistribution: effectiveDistribution || null,
+      scheduledPublishAt: resolvedScheduledPublishAt,
       version: { increment: 1 },
     };
 
@@ -481,15 +501,7 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
     // publish/unpublish any test by id. Now matches every other staff-reachable route's gate.
     const existing = await prisma.test.findUnique({
       where: { id: req.params.id },
-      include: {
-        shares: { select: { staffId: true } },
-        questions: {
-          select: {
-            id: true,
-            question: { select: { questionNumber: true, title: true, questionType: true, points: true, correctAnswer: true, testCases: { select: { id: true } } } },
-          },
-        },
-      },
+      include: { shares: { select: { staffId: true } }, ...TEST_PUBLISH_VALIDATION_INCLUDE },
     });
     if (!existing) return res.status(404).json({ error: "Test not found" });
     if (req.requesterInstituteId && existing.instituteId !== req.requesterInstituteId) {
@@ -504,39 +516,16 @@ router.patch("/:id/publish", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
     // or an inverted schedule could be published with no error at all. Unpublishing always
     // succeeds unconditionally: taking a test down is never something to block on validation.
     if (req.body.isPublished) {
-      const problems = [];
-      // RANDOM mode still requires questions[] populated (see Test.questionSelectionMode's schema
-      // comment — it's the bank random subsets are drawn from, not shown to students directly), so
-      // this check applies the same way regardless of mode.
-      if (existing.questions.length === 0) problems.push("Add at least one question before publishing.");
-      if (!(existing.durationMin > 0)) problems.push("Set a test duration greater than 0 minutes.");
-      if (existing.startTime && existing.endTime && new Date(existing.startTime) >= new Date(existing.endTime)) {
-        problems.push("End time must be after start time.");
-      }
-      if (existing.questionSelectionMode === "RANDOM" && !(existing.randomQuestionsPerStudent > 0)) {
-        problems.push("Set how many random questions each student should receive.");
-      }
-      // Per-question validity (spec section 21's own worked example: "Question 7 has no correct
-      // answer.") — every question on the test must have real marks and, depending on type, an
-      // actually-gradable answer key. RANDOM mode still checks every question in the bank folder,
-      // since any of them could be drawn for a student.
-      const questionLabel = (q) => `Question ${q.question.questionNumber}${q.question.title ? ` ("${q.question.title}")` : ""}`;
-      for (const tq of existing.questions) {
-        const q = tq.question;
-        if (!(q.points > 0)) problems.push(`${questionLabel(tq)} has no marks set.`);
-        if (["MCQ", "TRUE_FALSE", "MULTISELECT", "SQL"].includes(q.questionType)) {
-          const correct = Array.isArray(q.correctAnswer) ? q.correctAnswer : [];
-          if (correct.length === 0) problems.push(`${questionLabel(tq)} has no correct answer selected.`);
-        } else if (q.questionType === "CODING") {
-          if (!q.testCases || q.testCases.length === 0) problems.push(`${questionLabel(tq)} has no test cases.`);
-        }
-      }
+      const problems = validateTestForPublish(existing);
       if (problems.length) return res.status(400).json({ error: "Cannot publish — please fix the following:", problems });
     }
 
     const test = await prisma.test.update({
       where: { id: req.params.id },
-      data: { isPublished: !!req.body.isPublished },
+      // A manual publish always clears any pending scheduled-publish time -- there's nothing left
+      // for the scheduler to do once a human already published it, and leaving it set would be
+      // stale/misleading in the UI.
+      data: { isPublished: !!req.body.isPublished, scheduledPublishAt: null },
     });
     if (test.isPublished && !existing.isPublished) {
       await logAudit({

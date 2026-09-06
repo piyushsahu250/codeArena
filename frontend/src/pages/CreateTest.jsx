@@ -16,7 +16,7 @@ import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
 const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
 
 const emptyForm = {
-  title: "", code: "", description: "", instructions: "", company: "", durationMin: 60, passingMarks: "", showResults: true, startTime: "", endTime: "",
+  title: "", code: "", description: "", instructions: "", company: "", durationMin: 60, passingMarks: "", showResults: true, startTime: "", endTime: "", scheduledPublishAt: "",
   subject: "", unit: "", program: "",
   requireFullscreen: true, requireWebcam: false, requireMicrophone: false, attendanceMandatory: false,
   shuffleQuestions: true, shuffleOptions: false,
@@ -96,6 +96,7 @@ export default function CreateTest() {
   // simultaneously") — the version read when this test was loaded; sent back on save so the
   // backend can detect someone else saved in between (see tests.js's PATCH /:id).
   const [version, setVersion] = useState(0);
+  const [isPublished, setIsPublished] = useState(false); // for gating the Scheduled Publish field -- publishing itself happens on StaffDashboard, not here
   const { setGuard } = useUnsavedChangesGuard() || {};
 
   useEffect(() => {
@@ -159,6 +160,7 @@ export default function CreateTest() {
         instructions: t.instructions || "", company: t.company || "", durationMin: t.durationMin, passingMarks: t.passingMarks ?? "",
         subject: t.subject || "", unit: t.unit || "", program: t.program || "",
         showResults: t.showResults, startTime: toLocalInputValue(t.startTime), endTime: toLocalInputValue(t.endTime),
+        scheduledPublishAt: toLocalInputValue(t.scheduledPublishAt),
         requireFullscreen: t.requireFullscreen !== false, requireWebcam: !!t.requireWebcam, requireMicrophone: !!t.requireMicrophone,
         attendanceMandatory: !!t.attendanceMandatory,
         shuffleQuestions: t.shuffleQuestions !== false, shuffleOptions: !!t.shuffleOptions,
@@ -171,6 +173,7 @@ export default function CreateTest() {
       });
       setAcademicGroupIds((t.academicGroups || []).map((g) => g.academicGroupId));
       setVersion(t.version || 0);
+      setIsPublished(!!t.isPublished);
       setSubjectId(t.subjectId || null);
       setUnitId(t.unitId || null);
       setInstituteId(t.instituteId || "");
@@ -299,6 +302,7 @@ export default function CreateTest() {
         passingMarks: form.passingMarks === "" ? "" : Number(form.passingMarks),
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
+        scheduledPublishAt: form.scheduledPublishAt ? new Date(form.scheduledPublishAt).toISOString() : null,
         questionIds: isRandomMode ? undefined : selected,
         questionAiAllowed: isRandomMode ? undefined : aiAllowedMap,
         subjectId, unitId,
@@ -462,6 +466,20 @@ export default function CreateTest() {
               <input style={inputStyle} type="datetime-local" required value={form.endTime} onChange={updateField("endTime")} />
             </div>
           </div>
+
+          {!isPublished && (
+            <div>
+              <label style={labelStyle}>
+                Schedule publish (optional) — automatically publishes at this moment instead of you clicking Publish yourself
+              </label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input style={{ ...inputStyle, flex: 1 }} type="datetime-local" value={form.scheduledPublishAt} onChange={updateField("scheduledPublishAt")} />
+                {form.scheduledPublishAt && (
+                  <button type="button" className="btn btn-ghost" onClick={() => setForm({ ...form, scheduledPublishAt: "" })}>Clear</button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
