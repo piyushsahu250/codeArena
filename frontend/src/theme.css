@@ -539,6 +539,23 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
    more focused version of CodeArena, not a different product. Purely visual/structural; none of
    this touches the timer/autosave/proctoring/submission logic living in TestTaking.jsx itself. */
 
+/* Root exam-page shell. Was an inline `height: "100vh"` in TestTaking.jsx -- moved to a real CSS
+   rule specifically to get a unit fallback, which an inline React style object cannot express (two
+   entries under the same "height" key can't coexist; the second just overwrites the first, so
+   there's no way to say "prefer dvh, fall back to vh" from a style={{}} object). 100vh reports the
+   LARGEST possible viewport (as if the browser chrome were fully hidden) on every mobile browser
+   that shows/hides an address bar on scroll -- Safari iOS and Chrome Android both do this -- so the
+   exam shell was reserving more vertical space than was ever actually visible, pushing content
+   (including the code editor lower in the same flex column) partly off-screen. 100dvh tracks the
+   real, current visible viewport instead. The plain `height: 100vh` line stays first and is simply
+   ignored by any browser new enough to understand dvh -- browsers that don't understand dvh treat
+   an unrecognized value as invalid and keep the previous (vh) declaration, so this degrades safely
+   rather than breaking on an older engine. */
+.exam-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
 .exam-header {
   background: var(--slate-900);
   color: var(--chalk);

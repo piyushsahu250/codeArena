@@ -1719,7 +1719,7 @@ export default function TestTaking() {
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+    <div className="exam-shell" style={{ display: "flex", flexDirection: "column" }}>
       {/* Exam header -- CodeArena wordmark, test name, question progress, timer, autosave status,
           Submit. Kept compact per spec: one row of controls plus a 4px progress bar, not a whole
           extra header section. */}
@@ -2090,6 +2090,14 @@ export default function TestTaking() {
                     wordWrap: editorWordWrap ? "on" : "off",
                     minimap: { enabled: false },
                     fontFamily: "JetBrains Mono, monospace",
+                    // Makes Monaco re-measure and re-layout itself whenever its container's actual
+                    // size changes (orientation change, the mobile keyboard opening/closing and
+                    // resizing the visual viewport, the exam-shell's own dvh-driven resize) instead
+                    // of only ever sizing itself once at mount. height="100%" above already gives
+                    // it a real, non-zero size to start from (see the minHeight fix on this panel's
+                    // wrapper further down) -- this option is what keeps it correctly sized as that
+                    // available space keeps changing afterward, on both mobile and desktop.
+                    automaticLayout: true,
                   }}
                 />
               </div>
