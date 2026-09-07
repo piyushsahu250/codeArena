@@ -779,6 +779,14 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
     where = { AND: [instituteWhere, staffTestAccessWhere(req)] };
   } else {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
+    // A syntactically valid, still-active session can outlive the User row itself (e.g. the
+    // account was deleted after this token was issued, before the token naturally expired or was
+    // explicitly signed out) — authenticate() only verifies the JWT and session-active flag, never
+    // that the underlying user still exists. Confirmed live in production: this exact null
+    // dereference was crashing this route (as an uncaught unhandledRejection, since this handler
+    // has no try/catch) every ~10-40s for one such stale session. Treat it exactly like any other
+    // dead session, via the same authExpired discriminator the frontend already forces a logout on.
+    if (!student) return res.status(401).json({ error: "This account no longer exists. Please log in again.", authExpired: true });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
     where = { isPublished: true, ...testEligibilityWhere(student.academicGroupId, student.classId, [...memberPoolIds], student.instituteId) };
   }
@@ -960,6 +968,7 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
     }
   } else {
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
+    if (!student) return res.status(401).json({ error: "This account no longer exists. Please log in again.", authExpired: true });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
     const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId, memberPoolIds, student.instituteId);
     if (!allowed) return res.status(404).json({ error: "Test not found" });
@@ -1049,6 +1058,7 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     if (!test || !test.isPublished) return res.status(404).json({ error: "Test not available" });
 
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { classId: true, academicGroupId: true, instituteId: true } });
+    if (!student) return res.status(401).json({ error: "This account no longer exists. Please log in again.", authExpired: true });
     const memberPoolIds = await getStudentPoolIds(prisma, req.user.id);
     // Eligibility relations are now loaded above in the same query as the test itself, so this
     // uses the synchronous, already-loaded check (isTestVisibleToStudent) instead of the
@@ -1262,6 +1272,7 @@ router.post("/attempts/:attemptId/ai-assist", authenticate, requireRole("STUDENT
     }
 
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true } });
+    if (!student) return res.status(401).json({ error: "This account no longer exists. Please log in again.", authExpired: true });
     const q = testQuestion.question;
     const questionContext = [
       `Question type: ${q.questionType}`,
