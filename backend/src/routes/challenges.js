@@ -123,14 +123,29 @@ function buildAdminChallengeWhere({ q, subjectId, topicId, difficulty, status })
 // schedule from) carry a real instituteId — an institute-scoped ADMIN/STAFF must not see, edit,
 // toggle, delete, or duplicate another institute's scheduled challenge, and a scoped requester
 // creating a new one must not be able to target an arbitrary instituteId from the request body.
-// Same null-means-global, scoped-requesters-excluded-from-global-writes convention as
-// questionVisibility.js's ownsQuestionRow (Question Bank) — kept local here since these two
-// models have no createdById column to also check.
+// A null instituteId means global/platform-wide: visible to every institute in list views AND
+// actionable (preview/analytics/edit/toggle/delete/duplicate) by any institute-scoped admin —
+// same null-means-global convention, and the same "actionable, not just visible" precedent, as
+// questionVisibility.js's ownsQuestionRow (Question Bank; see its 2026-09-02 fix comment) — kept
+// local here since these two models have no createdById column to also check.
 function instituteScopedWhere(requesterInstituteId) {
   return requesterInstituteId ? { OR: [{ instituteId: requesterInstituteId }, { instituteId: null }] } : {};
 }
 function ownsChallengeRow(req, row) {
-  return !req.requesterInstituteId || row.instituteId === req.requesterInstituteId;
+  // Bug fixed 2026-09-07 (same class already fixed 2026-09-02 in questionVisibility.js's
+  // ownsQuestionRow — see its comment): this used a strict `===` check, rejecting a row the
+  // instant its instituteId wasn't an exact match — including instituteId: null, even though
+  // instituteScopedWhere just above (which every list route already goes through) explicitly
+  // treats null as "global, visible to every institute." Confirmed live: a Global-scoped Daily
+  // Challenge showed up correctly in an institute-scoped STAFF/ADMIN's schedule list, but its
+  // preview/analytics/toggle/delete/duplicate all 404'd with "Scheduled challenge not found" —
+  // this single-row check disagreed with the list-view rule it's supposed to mirror. Only reject
+  // when the row actually belongs to a genuinely different institute — a null one is never a
+  // mismatch. (The header comment above, about scoped requesters being excluded from global
+  // writes, described the pre-fix behavior and was never updated when questionVisibility.js's
+  // sibling got this same fix — global rows are writable by any institute-scoped admin, matching
+  // that already-shipped precedent.)
+  return !req.requesterInstituteId || !row.instituteId || row.instituteId === req.requesterInstituteId;
 }
 
 // Hard-blocks scheduling a question with no way to grade it at all; everything else is a
