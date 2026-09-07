@@ -919,12 +919,39 @@ export default function TestTaking() {
   // tab-switch detection above. Browsers reserve some of these (Ctrl+T/N/W/Tab, Print Screen) and
   // won't let a page preventDefault() them; those are blocked where the browser allows it and
   // otherwise just can't be intercepted from JS at all.
+  //
+  // Gap fixed 2026-09-07: every one of these was already being BLOCKED (preventDefault, never
+  // weakened here), but never REPORTED — proctoringSeverity.js's shared taxonomy already defines
+  // COPY/PASTE/CUT/RIGHT_CLICK/DRAG_ATTEMPT/BROWSER_SHORTCUT as real, correctly-classified
+  // SUSPICIOUS types (soft warning once, penalized only after repeating — same escalation policy
+  // already proven for SCREEN_OVERLAY_DETECTED above), but nothing on this page ever called
+  // reportViolation() for them, so a student who repeatedly tried to copy/paste left no trace in
+  // the audit log at all, even though the attempt itself was harmlessly blocked either time.
+  // reportViolation()'s own 1500ms cross-type debounce (see its definition) already protects the
+  // server from a burst of held-key or repeated-attempt spam, so no separate throttling is needed
+  // here.
   useEffect(() => {
     if (!started) return;
     function blockContextMenu(e) {
       e.preventDefault();
+      reportViolation("RIGHT_CLICK", "right-click / context menu is disabled during the test");
     }
-    function blockClipboard(e) {
+    function blockClipboard(type, reason) {
+      return (e) => {
+        e.preventDefault();
+        reportViolation(type, reason);
+      };
+    }
+    const onCopy = blockClipboard("COPY", "copying text is disabled during the test");
+    const onPaste = blockClipboard("PASTE", "pasting text is disabled during the test");
+    const onCut = blockClipboard("CUT", "cutting text is disabled during the test");
+    const onDragStart = blockClipboard("DRAG_ATTEMPT", "dragging content out of the test is disabled");
+    const onDrop = blockClipboard("DRAG_ATTEMPT", "dropping content into the test is disabled");
+    function onDragOver(e) {
+      // Fires continuously (many times/second) for the duration of a drag — onDragStart above
+      // already reports the gesture once; reporting here too would just spam reportViolation's
+      // own debounce window with no additional signal. Still preventDefault()'d every time,
+      // since that's what actually keeps the drop blocked for the whole gesture.
       e.preventDefault();
     }
     function blockKeys(e) {
@@ -932,34 +959,79 @@ export default function TestTaking() {
       const blockedWithCtrl = ["s", "p", "u", "w", "n", "t", "r", "tab"];
       if ((e.ctrlKey || e.metaKey) && blockedWithCtrl.includes(k)) {
         e.preventDefault();
+        reportViolation("BROWSER_SHORTCUT", `the ${e.ctrlKey ? "Ctrl" : "Cmd"}+${e.key} shortcut is disabled during the test`);
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["t", "i", "j", "c"].includes(k)) {
         e.preventDefault();
+        reportViolation("BROWSER_SHORTCUT", "developer-tools shortcuts are disabled during the test");
         return;
       }
       if (k === "f5" || k === "f11" || k === "f12") {
         e.preventDefault();
+        reportViolation("BROWSER_SHORTCUT", `${k.toUpperCase()} is disabled during the test`);
       }
     }
     document.addEventListener("contextmenu", blockContextMenu);
-    document.addEventListener("copy", blockClipboard);
-    document.addEventListener("paste", blockClipboard);
-    document.addEventListener("cut", blockClipboard);
-    document.addEventListener("dragstart", blockClipboard);
-    document.addEventListener("drop", blockClipboard);
-    document.addEventListener("dragover", blockClipboard);
+    document.addEventListener("copy", onCopy);
+    document.addEventListener("paste", onPaste);
+    document.addEventListener("cut", onCut);
+    document.addEventListener("dragstart", onDragStart);
+    document.addEventListener("drop", onDrop);
+    document.addEventListener("dragover", onDragOver);
     document.addEventListener("keydown", blockKeys);
     return () => {
       document.removeEventListener("contextmenu", blockContextMenu);
-      document.removeEventListener("copy", blockClipboard);
-      document.removeEventListener("paste", blockClipboard);
-      document.removeEventListener("cut", blockClipboard);
-      document.removeEventListener("dragstart", blockClipboard);
-      document.removeEventListener("drop", blockClipboard);
-      document.removeEventListener("dragover", blockClipboard);
+      document.removeEventListener("copy", onCopy);
+      document.removeEventListener("paste", onPaste);
+      document.removeEventListener("cut", onCut);
+      document.removeEventListener("dragstart", onDragStart);
+      document.removeEventListener("drop", onDrop);
+      document.removeEventListener("dragover", onDragOver);
       document.removeEventListener("keydown", blockKeys);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started]);
+
+  // DEVTOOLS heuristic (desktop only — mobile browsers don't expose a docked devtools panel the
+  // same way, and are already covered by the SCREEN_OVERLAY_DETECTED viewport heuristic above).
+  // proctoringSeverity.js already defines DEVTOOLS as a real, correctly-classified SUSPICIOUS type
+  // ("docked-devtools size heuristic — best-effort, not proof") but nothing on this page actually
+  // detected it — the keydown blocker above stops the common shortcuts that OPEN devtools, but a
+  // student who already had it docked open before the test started, or who opens it via the
+  // browser's own menu (not a shortcut, can't be preventDefault()'d), was never flagged at all.
+  // Same well-known, honestly-limited technique as the overlay heuristic: when devtools is docked
+  // (not floating in a separate window), outerWidth/outerHeight (the whole browser chrome) stays
+  // the same while innerWidth/innerHeight (the actual page viewport) shrinks by the panel's size —
+  // a gap past a generous threshold is a strong signal, not proof (a snapped/tiled window manager
+  // can also produce a large gap; the threshold and the "same flagged debounce" pattern below are
+  // deliberately generous to keep false positives rare, matching this file's existing philosophy
+  // of never turning an ambiguous heuristic into an unpenalized first strike).
+  useEffect(() => {
+    if (!started || isTouchDevice()) return;
+    const THRESHOLD_PX = 160;
+    let flagged = false;
+    function check() {
+      const widthGap = window.outerWidth - window.innerWidth;
+      const heightGap = window.outerHeight - window.innerHeight;
+      const likelyDevtools = widthGap > THRESHOLD_PX || heightGap > THRESHOLD_PX;
+      if (likelyDevtools) {
+        if (!flagged) {
+          flagged = true;
+          reportViolation("DEVTOOLS", "developer tools appear to be open during the test");
+        }
+      } else {
+        flagged = false;
+      }
+    }
+    check();
+    const interval = setInterval(check, 2000);
+    window.addEventListener("resize", check);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("resize", check);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
   const answer = current ? answers[current.id] : null;

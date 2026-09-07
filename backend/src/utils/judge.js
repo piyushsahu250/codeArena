@@ -121,7 +121,17 @@ function checkNetworkDenialAvailable() {
     probe.on("error", () => { networkDenialAvailable = false; resolve(false); });
     probe.on("close", (code) => {
       networkDenialAvailable = code === 0;
-      if (!networkDenialAvailable) console.warn("judge: `unshare -n` unavailable on this host — running submissions without network-namespace isolation");
+      // Live-verified 2026-09-07 against this exact production container: this fallback message
+      // used to read "running submissions without network-namespace isolation" on its own, with
+      // no mention of the real defense that's still in effect -- alarming out of context (it
+      // prompted a full live incident-response check) even though the surrounding comment above
+      // already documents this as expected. Confirmed live: `iptables-legacy -L OUTPUT` shows the
+      // DROP rule for SANDBOX_UID is installed and has already blocked real packets (nonzero
+      // packet/byte counters), and a real curl attempt AS SANDBOX_UID times out while the same
+      // curl as the normal process uid succeeds. This log message now says so explicitly, so it
+      // reads as "one specific, expected, non-fatal mechanism is off" rather than "network
+      // isolation is off."
+      if (!networkDenialAvailable) console.warn("judge: `unshare -n` unavailable on this host (expected under this container's minimal capability set — see comment above) — falling back to the iptables-legacy DROP rule for SANDBOX_UID as the actual network defense (installed by docker-entrypoint.sh; this is the real, confirmed-active mechanism, not this per-namespace one)");
       resolve(networkDenialAvailable);
     });
   });

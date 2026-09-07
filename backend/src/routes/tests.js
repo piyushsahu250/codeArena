@@ -1151,7 +1151,18 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
 // an admin reviewing a flagged attempt sees the real event history, not just a count. After
 // MAX_VIOLATIONS penalized events, the attempt is auto-submitted server-side. ---
 const MAX_TAB_VIOLATIONS = 3;
-router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
+// Gap fixed 2026-09-07: this route had no rate limit at all -- reportViolation() on the frontend
+// already self-throttles to one call per 1500ms regardless of type (see TestTaking.jsx), but that
+// is a client-side courtesy, not a server-side guarantee (a modified/replayed request can ignore
+// it entirely). A burst of requests here is cheap per-call (no judge/compute involved) but each
+// one is still a DB write (testViolation.create, sometimes inside a transaction with a
+// testAttempt.update) -- same per-student (not per-IP) keying as execLimiter/examAiAssistLimiter
+// above and in submissions.js, for the same reason: a shared lab/campus network IP must not share
+// one budget across every student on it. Generous relative to the frontend's own ~1/1.5s natural
+// rate (40/min) so a legitimately fast run of real violations is never itself the thing that gets
+// rate-limited.
+const violationLimiter = rateLimit({ windowMs: 60 * 1000, max: 40, keyGenerator: (req) => req.user.id });
+router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT"), violationLimiter, async (req, res) => {
   try {
     const attempt = await prisma.testAttempt.findUnique({ where: { id: req.params.attemptId } });
     if (!attempt || attempt.studentId !== req.user.id) {
