@@ -2270,13 +2270,14 @@ router.post("/modules/:id/projects", authenticate, requireRole("ADMIN", "SUPER_A
     if (!ownsLmsInstitute(req, moduleInstituteId)) {
       return res.status(403).json({ error: "You can only manage courses under your own institute" });
     }
-    const { title, description, objective, realWorldScenario, requirements, expectedOutput, skillsRequired, level, difficulty, order } = req.body;
+    const { title, description, objective, realWorldScenario, requirements, expectedOutput, skillsRequired, interviewQuestions, possibleImprovements, level, difficulty, order } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const project = await prisma.courseProject.create({
       data: {
         moduleId: req.params.id, title,
         description: description || null, objective: objective || null, realWorldScenario: realWorldScenario || null,
         requirements: requirements ?? undefined, expectedOutput: expectedOutput || null, skillsRequired: skillsRequired ?? undefined,
+        interviewQuestions: interviewQuestions ?? undefined, possibleImprovements: possibleImprovements ?? undefined,
         level: level || "MINI_PROJECT", difficulty: difficulty || "EASY", order: Number(order) || 0,
       },
     });
@@ -2299,7 +2300,7 @@ router.patch("/projects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
     if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
     const body = req.body;
     const data = {};
-    for (const f of ["title", "description", "objective", "realWorldScenario", "expectedOutput", "level", "difficulty", "requirements", "skillsRequired"]) {
+    for (const f of ["title", "description", "objective", "realWorldScenario", "expectedOutput", "level", "difficulty", "requirements", "skillsRequired", "interviewQuestions", "possibleImprovements"]) {
       if (body[f] !== undefined) data[f] = body[f];
     }
     if (body.order !== undefined) data.order = Number(body.order);
@@ -2466,7 +2467,8 @@ router.get("/projects/:id", authenticate, requireRole("STUDENT"), async (req, re
     res.json({
       id: project.id, title: project.title, description: project.description, objective: project.objective,
       realWorldScenario: project.realWorldScenario, requirements: project.requirements || [], expectedOutput: project.expectedOutput,
-      skillsRequired: project.skillsRequired || [], level: project.level, difficulty: project.difficulty,
+      skillsRequired: project.skillsRequired || [], interviewQuestions: project.interviewQuestions || [],
+      possibleImprovements: project.possibleImprovements || [], level: project.level, difficulty: project.difficulty,
       tasks: tasks.map((t) => sanitizeProjectTask(t, progressByTask.get(t.id))),
     });
   } catch (err) {

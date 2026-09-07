@@ -2693,6 +2693,7 @@ function ProjectDetailPanel({ project, onBack }) {
     title: project.title, description: project.description || "", objective: project.objective || "",
     realWorldScenario: project.realWorldScenario || "", expectedOutput: project.expectedOutput || "",
     requirements: (project.requirements || []).join("\n"), skillsRequired: (project.skillsRequired || []).join(", "),
+    interviewQuestions: (project.interviewQuestions || []).join("\n"), possibleImprovements: (project.possibleImprovements || []).join("\n"),
     level: project.level, difficulty: project.difficulty,
   });
   const [saving, setSaving] = useState(false);
@@ -2705,6 +2706,8 @@ function ProjectDetailPanel({ project, onBack }) {
         ...form,
         requirements: form.requirements.split("\n").map((r) => r.trim()).filter(Boolean),
         skillsRequired: form.skillsRequired.split(",").map((s) => s.trim()).filter(Boolean),
+        interviewQuestions: form.interviewQuestions.split("\n").map((r) => r.trim()).filter(Boolean),
+        possibleImprovements: form.possibleImprovements.split("\n").map((r) => r.trim()).filter(Boolean),
       });
       alert("Project saved.");
     } catch (err) {
@@ -2739,6 +2742,10 @@ function ProjectDetailPanel({ project, onBack }) {
           <textarea style={{ ...inputStyle, minHeight: 50 }} disabled={!isAdmin} value={form.expectedOutput} onChange={(e) => setForm({ ...form, expectedOutput: e.target.value })} />
           <label style={labelStyle}>Skills required (comma-separated)</label>
           <input style={inputStyle} disabled={!isAdmin} value={form.skillsRequired} onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })} placeholder="OOP, Collections, File I/O" />
+          <label style={labelStyle}>Possible improvements (one per line)</label>
+          <textarea style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.possibleImprovements} onChange={(e) => setForm({ ...form, possibleImprovements: e.target.value })} placeholder="Add input validation for negative amounts&#10;Persist data to a file instead of memory" />
+          <label style={labelStyle}>Interview questions based on this project (one per line)</label>
+          <textarea style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.interviewQuestions} onChange={(e) => setForm({ ...form, interviewQuestions: e.target.value })} placeholder="Why did you choose a HashMap here instead of an ArrayList?" />
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Level</label>

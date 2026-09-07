@@ -102,6 +102,25 @@ export default function ProjectView() {
           </div>
         )}
 
+        {Array.isArray(project.possibleImprovements) && project.possibleImprovements.length > 0 && (
+          <div className="card" style={{ padding: 20, marginTop: 16 }}>
+            <p style={{ fontSize: 14, fontWeight: 600 }}>Possible improvements</p>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>Once your tasks pass, try extending the project with one of these — good for a portfolio writeup.</p>
+            <ul style={{ marginTop: 10, paddingLeft: 18, fontSize: 13 }}>
+              {project.possibleImprovements.map((imp, i) => <li key={i}>{imp}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {Array.isArray(project.interviewQuestions) && project.interviewQuestions.length > 0 && (
+          <div className="card" style={{ padding: 20, marginTop: 16 }}>
+            <p style={{ fontSize: 14, fontWeight: 600 }}>Interview questions based on this project</p>
+            <ul style={{ marginTop: 10, paddingLeft: 18, fontSize: 13 }}>
+              {project.interviewQuestions.map((q, i) => <li key={i} style={{ marginTop: i > 0 ? 6 : 0 }}>{q}</li>)}
+            </ul>
+          </div>
+        )}
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>
           <div className="mono" style={{ fontSize: 13, color: completedCount === project.tasks.length ? "var(--mint)" : "var(--ink-dim)" }}>
             {completedCount === project.tasks.length ? "✓ All tasks complete" : `${completedCount} / ${project.tasks.length} tasks completed`}

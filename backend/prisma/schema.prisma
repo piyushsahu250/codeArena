@@ -1602,6 +1602,8 @@ model CourseProject {
   requirements       Json?    // string[]
   expectedOutput     String?
   skillsRequired     Json?    // string[] — informational, shown to student before starting
+  interviewQuestions Json?    // string[] — "interview questions based on the project" — spec section 23
+  possibleImprovements Json?  // string[] — "possible improvements" — spec section 23
   level              String   @default("MINI_PROJECT") // MICRO_TASK|MINI_TASK|MINI_PROJECT|COURSE_PROJECT|CAPSTONE — spec section 14
   difficulty         Difficulty @default(EASY)
   order              Int      @default(0)
