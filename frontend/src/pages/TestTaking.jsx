@@ -1885,8 +1885,18 @@ export default function TestTaking() {
         </>
         )}
 
-        {/* Answer panel: code editor for Coding, options for quiz types */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Answer panel: code editor for Coding, options for quiz types.
+            Bug fixed 2026-09-07: on mobile the outer exam body switches to a column flex layout
+            (see its own comment) and the question panel above this is flex-shrink:0 with an
+            unbounded content height -- for any reasonably long problem statement it consumed the
+            entire 100vh-bounded column, leaving this panel's "flex: 1" (which React's inline-style
+            shorthand resolves to flex-basis: 0%, not "auto") with zero leftover space to grow
+            into. It rendered at 0px tall -- present in the DOM, invisible on screen -- which is
+            exactly the "compiler not visible on mobile" report this fixes. minHeight gives it a
+            floor that flex-grow can't shrink below regardless of how tall the question panel gets;
+            the outer body's existing overflow:auto (mobile) already lets the student scroll down
+            to it, same pattern this file already uses to cap resultsPanelHeight on mobile. */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: isMobile ? 480 : undefined }}>
           {isQuiz ? (
             <>
               <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
