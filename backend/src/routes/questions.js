@@ -16,6 +16,7 @@ const { canStaffUseSubject, resolveSubjectUnitTopic, staffAuthorizedSubjectIds }
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { cached } = require("../utils/cache");
+const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -606,6 +607,15 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
           explanation: tc.explanation || null,
         })),
       };
+
+      if (data.starterCodeByLanguage) {
+        const guardError = await guardStarterCodeIsNotSolution({
+          starterCodeByLanguage: data.starterCodeByLanguage, testCases: cases,
+          evaluationType: data.evaluationType, functionSignature: data.functionSignature,
+          timeLimitMs: data.timeLimitMs, memoryLimitKb: data.memoryLimitKb,
+        });
+        if (guardError) return res.status(400).json({ error: guardError, starterCodeIsSolution: true });
+      }
     } else if (type === "SQL") {
       if (!sqlSchema || !sqlSchema.trim()) {
         return res.status(400).json({ error: "SQL questions need setup SQL (schema + seed data)" });
@@ -2354,6 +2364,20 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
           deleteMany: {},
           create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden ?? true, explanation: tc.explanation || null })),
         };
+      }
+
+      // Only when THIS request actually supplies starterCodeByLanguage -- see
+      // guardStarterCodeIsNotSolution's own comment for why an edit that doesn't touch starter
+      // code must never re-trigger this against a question's pre-existing (possibly already-bad)
+      // starter code.
+      if (starterCodeByLanguage !== undefined && data.starterCodeByLanguage) {
+        const guardCases = testCases || (await prisma.testCase.findMany({ where: { questionId: existing.id } }));
+        const guardError = await guardStarterCodeIsNotSolution({
+          starterCodeByLanguage: data.starterCodeByLanguage, testCases: guardCases,
+          evaluationType: data.evaluationType, functionSignature: data.functionSignature,
+          timeLimitMs: data.timeLimitMs, memoryLimitKb: data.memoryLimitKb,
+        });
+        if (guardError) return res.status(400).json({ error: guardError, starterCodeIsSolution: true });
       }
     } else if (type === "SQL") {
       data.sqlSchema = sqlSchema !== undefined ? sqlSchema : existing.sqlSchema;

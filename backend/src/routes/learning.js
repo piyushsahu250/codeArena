@@ -4,6 +4,7 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
+const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
 const { issueCertificate } = require("../utils/certificates");
@@ -2367,6 +2368,19 @@ router.post("/projects/:id/tasks", authenticate, requireRole("ADMIN", "SUPER_ADM
     if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
     const { title, instructions, hints, starterCode, starterCodeByLanguage, language, evaluationType, functionSignature, testCases, order } = req.body;
     if (!title || !instructions) return res.status(400).json({ error: "title and instructions are required" });
+
+    // Same guard as Question Bank's routes/questions.js -- see starterCodeGuard.js's own comment
+    // for the full rationale. A task with no testCases is a MANUAL task by design (self-marked
+    // complete, nothing to judge — see this file's own header comment on that) and the guard
+    // already no-ops when there are no test cases to run against, so this never blocks a
+    // legitimate MANUAL task.
+    if (starterCodeByLanguage) {
+      const guardError = await guardStarterCodeIsNotSolution({
+        starterCodeByLanguage, testCases, evaluationType: evaluationType || "STDIO", functionSignature,
+      });
+      if (guardError) return res.status(400).json({ error: guardError, starterCodeIsSolution: true });
+    }
+
     let taskOrder = order;
     if (taskOrder === undefined) {
       const max = await prisma.projectTask.aggregate({ where: { projectId: req.params.id }, _max: { order: true } });
@@ -2401,6 +2415,27 @@ router.patch("/tasks/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
       if (body[f] !== undefined) data[f] = body[f];
     }
     if (body.order !== undefined) data.order = Number(body.order);
+
+    // Same guard as Question Bank's routes/questions.js -- only when THIS request actually
+    // supplies starterCodeByLanguage (see starterCodeGuard.js's own comment on why an edit that
+    // doesn't touch starter code must never re-trigger this against a task's pre-existing
+    // content). testCases/evaluationType/functionSignature fall back to whatever's already saved
+    // on the task whenever this specific request doesn't also update them, so the check always
+    // runs against the task's real, effective post-save state.
+    if (body.starterCodeByLanguage !== undefined && data.starterCodeByLanguage) {
+      const existingTask = await prisma.projectTask.findUnique({
+        where: { id: req.params.id },
+        select: { testCases: true, evaluationType: true, functionSignature: true },
+      });
+      const guardError = await guardStarterCodeIsNotSolution({
+        starterCodeByLanguage: data.starterCodeByLanguage,
+        testCases: data.testCases !== undefined ? data.testCases : existingTask?.testCases,
+        evaluationType: data.evaluationType || existingTask?.evaluationType || "STDIO",
+        functionSignature: data.functionSignature !== undefined ? data.functionSignature : existingTask?.functionSignature,
+      });
+      if (guardError) return res.status(400).json({ error: guardError, starterCodeIsSolution: true });
+    }
+
     const task = await prisma.projectTask.update({ where: { id: req.params.id }, data });
     res.json(task);
   } catch (err) {
