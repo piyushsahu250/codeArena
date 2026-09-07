@@ -2600,6 +2600,32 @@ router.post("/tasks/:id/complete", authenticate, requireRole("STUDENT"), async (
     if (Array.isArray(task.testCases) && task.testCases.length > 0) {
       return res.status(400).json({ error: "This task is auto-graded — submit your code instead of marking it complete" });
     }
+
+    // Minimum-effort gate, checked only on the actual NOT_STARTED/IN_PROGRESS -> COMPLETED
+    // transition (never on a harmless repeat call against an already-completed task, so no
+    // completion recorded before this check existed is ever retroactively invalidated). A MANUAL
+    // task has no auto-gradable criteria, so self-marking is the only completion signal that can
+    // exist for it — but nothing previously stopped a student from clicking Mark Complete without
+    // writing anything at all. Requires a real, saved draft (the same generic CodeDraft/autosave
+    // record already used by graded tasks — reused rather than adding a new column) that isn't
+    // just the untouched starter template. This can't fully verify the *content* is good (no
+    // auto-grader exists for a free-form task by definition), but it does close the "never opened
+    // the editor" gap, entirely server-side — the request body isn't trusted for this at all.
+    const existingProgress = await prisma.projectTaskProgress.findUnique({
+      where: { studentId_taskId: { studentId: req.user.id, taskId: task.id } },
+      select: { status: true },
+    });
+    if (existingProgress?.status !== "COMPLETED") {
+      const draft = await prisma.codeDraft.findUnique({
+        where: { studentId_contextType_contextId: { studentId: req.user.id, contextType: "PROJECT_TASK", contextId: task.id } },
+      });
+      const written = (draft?.code || "").trim();
+      const starter = (task.starterCode || "").trim();
+      if (written.length < 15 || written === starter) {
+        return res.status(400).json({ error: "Write your solution in the editor before marking this task complete." });
+      }
+    }
+
     const isFirstCompletion = await markProjectTaskCompletedIfFirstTime(req.user.id, task.id);
     let gamification = null;
     try {

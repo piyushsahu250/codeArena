@@ -214,18 +214,19 @@ function ProjectTaskCard({ task, onProgress }) {
   }, [task.id]);
 
   function flushAutosave() {
-    if (task.isManual) return;
     api.post(`/learning/tasks/${task.id}/autosave`, { code: codeRef.current, language: languageRef.current }).catch(() => {});
   }
   useEffect(() => {
-    if (!draftLoaded || task.isManual) return;
+    // Autosaves for a MANUAL task too (not just auto-graded ones) — the backend now requires a
+    // real, saved draft here before /tasks/:id/complete will accept the transition to COMPLETED,
+    // so a MANUAL task's editor needs the same autosave wiring graded tasks already had.
+    if (!draftLoaded) return;
     clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(flushAutosave, AUTOSAVE_DEBOUNCE_MS);
     return () => clearTimeout(autosaveTimerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, language, draftLoaded]);
   useEffect(() => {
-    if (task.isManual) return;
     const handler = () => flushAutosave();
     window.addEventListener("beforeunload", handler);
     window.addEventListener("pagehide", handler);
@@ -270,11 +271,29 @@ function ProjectTaskCard({ task, onProgress }) {
 
       {task.isManual ? (
         <div style={{ marginTop: 20 }}>
-          <button className="btn btn-primary" onClick={markComplete} disabled={completing || task.status === "COMPLETED"}>
+          {/* This task has no auto-gradable test cases, so the server can't verify a correct
+              answer the way it does for graded tasks — self-marking is the only completion
+              signal that can exist for it. To stop Mark Complete being clickable with nothing
+              written at all, the editor below autosaves a real draft (same CodeDraft/autosave
+              path graded tasks use) and the backend now requires it to hold real, non-starter
+              content before it accepts the transition to COMPLETED. */}
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid var(--line)" }}>
+            {supportedLanguages(task).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+          </select>
+          <div style={{ marginTop: 10, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
+            <Editor
+              height="220px"
+              language={LANGUAGES.find((l) => l.id === language)?.monaco}
+              value={code}
+              onChange={(v) => setCode(v || "")}
+              options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
+            />
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={markComplete} disabled={completing || task.status === "COMPLETED"}>
             {task.status === "COMPLETED" ? "✓ Completed" : completing ? "Saving…" : "Mark Complete"}
           </button>
           {task.status !== "COMPLETED" && (
-            <ImStuckMenu endpoint={`/learning/tasks/${task.id}/assist`} code={null} language={null} aiAvailable={aiAvailable} />
+            <ImStuckMenu endpoint={`/learning/tasks/${task.id}/assist`} code={code} language={language} aiAvailable={aiAvailable} />
           )}
         </div>
       ) : (
