@@ -739,4 +739,11 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
   return { passedCases: passed, totalCases: testCases.length, verdict, details, errorSummary, maxTimeMs, maxMemoryKb: maxMemoryKb || null };
 }
 
-module.exports = { judgeSubmission, warmUpCompilers };
+// SANDBOX_UID/SANDBOX_GID/DROP_PRIVILEGES/JUDGE_ENV are also exported for reuse by any OTHER code
+// that needs to run untrusted or CVE-exposed input processing in the same already-proven isolated
+// identity (dedicated unprivileged uid, network-denied via the iptables rule docker-entrypoint.sh
+// installs for this exact uid, whitelisted env) — see resumeOcr.js's sandboxed PDF renderer, added
+// specifically because pdfjs-dist has a known "arbitrary JS execution on a malicious file" CVE
+// class with no available non-breaking fix. Reusing this platform's one proven sandboxing identity
+// for a second real use case, rather than re-deriving the same uid/permission choreography twice.
+module.exports = { judgeSubmission, warmUpCompilers, SANDBOX_UID, SANDBOX_GID, DROP_PRIVILEGES, JUDGE_ENV, cleanupTmpDir };
