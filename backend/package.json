@@ -24,7 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.8.0",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.15",
+    "nodemailer": "^10.0.0",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "3.11.174",
     "pdfkit": "^0.15.0",
@@ -35,5 +35,8 @@
   "devDependencies": {
     "nodemon": "^3.1.4",
     "prisma": "^5.19.1"
+  },
+  "overrides": {
+    "qs": "6.16.0"
   }
 }
