@@ -66,9 +66,28 @@ export default function LearningManagement() {
     loadCourses();
   }
 
+  // Every drill-down level here (course -> module -> chapter/project/lesson/coding-assessment) is
+  // local React state, not a URL change — so the Navbar's shared Back button (plain browser-
+  // history-back by default) has no way to unwind it one step at a time; it either does nothing
+  // (no new history entry was ever pushed) or jumps straight out of the page. This pops exactly
+  // one level of THIS page's own drill-down stack, deepest first, falling back to real
+  // history-back only once nothing here is left to close.
+  function handleBack() {
+    if (chapter) return setChapter(null);
+    if (project) return setProject(null);
+    if (lessonId) return setLessonId(null);
+    if (chaptersModuleId) return setChaptersModuleId(null);
+    if (projectsModuleId) return setProjectsModuleId(null);
+    if (codingTestModuleId) return setCodingTestModuleId(null);
+    if (moduleId) return setModuleId(null);
+    if (courseId) return setCourseId(null);
+    if (progressLookup) return setProgressLookup(false);
+    navigate(-1);
+  }
+
   return (
     <div>
-      <Navbar />
+      <Navbar onBack={handleBack} />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

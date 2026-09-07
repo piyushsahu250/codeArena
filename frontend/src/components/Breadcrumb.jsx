@@ -47,7 +47,18 @@ function isOpaqueId(seg) {
 // etc.) are shown titlecased rather than with their true display name (e.g. a lesson's actual
 // title), since that data isn't available from the URL alone. A richer version would need each
 // page to report its current item's display name via a small context — not built in this pass.
-export default function Breadcrumb() {
+//
+// `onBack`: optional per-page override for the Back button. Several pages (LearningManagement,
+// and others with the same shape) drill down through several visual "levels" — course -> module ->
+// chapter -> lesson, etc. — entirely via local React state, never pushing a new browser-history
+// entry or changing the URL. Plain `navigate(-1)` has no way to know that happened: it pops ONE
+// real history entry, which can jump straight past the whole in-page drill-down and out of the
+// page entirely (reported live: clicking Back from deep inside Learning Management's course view
+// went all the way back to the Dashboard in one click, skipping every intermediate level the user
+// had actually drilled through). A page that manages this kind of state passes its own handler
+// here — pop one level of ITS stack, falling back to real history navigation only once there's
+// nothing left to pop — so Back always undoes exactly the user's last visible step.
+export default function Breadcrumb({ onBack }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -67,7 +78,7 @@ export default function Breadcrumb() {
 
   return (
     <div className="ca-breadcrumb-row">
-      <button className="ca-back-btn" onClick={() => navigate(-1)}>
+      <button className="ca-back-btn" onClick={() => (onBack ? onBack() : navigate(-1))}>
         <ArrowLeft size={14} /> Back
       </button>
       <span style={{ opacity: 0.3 }}>|</span>

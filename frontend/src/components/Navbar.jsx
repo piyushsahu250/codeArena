@@ -8,7 +8,9 @@ import GlobalSearch from "./GlobalSearch";
 import Breadcrumb from "./Breadcrumb";
 import api from "../api";
 
-export default function Navbar() {
+// `onBack`: optional override for the breadcrumb's Back button — see Breadcrumb.jsx's own comment
+// on why plain browser-history-back breaks for pages with in-page, state-driven drill-down levels.
+export default function Navbar({ onBack } = {}) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -162,7 +164,7 @@ export default function Navbar() {
           </div>
         )}
       </nav>
-      {user && <Breadcrumb />}
+      {user && <Breadcrumb onBack={onBack} />}
     </>
   );
 }
