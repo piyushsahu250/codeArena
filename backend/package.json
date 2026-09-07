@@ -30,7 +30,7 @@
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.3",
     "tesseract.js": "*",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "nodemon": "^3.1.4",
