@@ -226,7 +226,15 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
         isModuleTest: l.isModuleTest, status: "NOT_STARTED", bookmarked: false,
       });
     }
-    for (const m of modules) m.lessons = lessonsByModule.get(m.id) || [];
+    // `totalCount` above was computed from `lessonMeta`, which is only ever populated on the
+    // STUDENT path (line ~156) — for every other role it silently stayed at the {total:0} fallback,
+    // so every module in the admin/staff Learning Management tree showed "0 lessons" regardless of
+    // how much real content existed (confirmed live: modules with 11+ real lessons showed 0).
+    // Recompute it here from the real lesson list this branch just fetched, now that it exists.
+    for (const m of modules) {
+      m.lessons = lessonsByModule.get(m.id) || [];
+      m.totalCount = m.lessons.length;
+    }
   }
 
   res.json({
