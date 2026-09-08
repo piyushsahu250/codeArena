@@ -38,7 +38,16 @@ export default function WeeklyChallenge() {
   codeRef.current = code;
   languageRef.current = language;
 
-  useEffect(() => {
+  // Bug fixed 2026-09-08: previously inlined directly in the mount effect below with no way to
+  // re-invoke it -- an API failure left the student on a dead-end error message with no recourse
+  // but a full page reload (section 2's explicit "Retry" requirement). Pulled out so the Retry
+  // button below can call it again. Also: `res.data.question.starterCodeByLanguage` used to read
+  // `question` with no optional-chaining -- if a challenge row's question reference were ever
+  // missing (e.g. a data-integrity issue), this threw inside the async handler, which .catch()
+  // below does still catch (so it wasn't the white-screen cause), but it surfaced the same generic
+  // "failed to load" message a real network failure would, instead of anything more specific.
+  function loadChallenge() {
+    setError("");
     api.get("/challenges/weekly/current")
       .then(async (res) => {
         setData(res.data);
@@ -47,7 +56,7 @@ export default function WeeklyChallenge() {
           const sub = res.data.submission;
           const lang = sub?.language || "java";
           setLanguage(lang);
-          setCode(sub?.code || res.data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+          setCode(sub?.code || res.data.question?.starterCodeByLanguage?.[lang] || defaultStarter(lang));
           if (sub?.solvedAt) loadLeaderboard(res.data.challenge.id);
           try {
             const { data: draft } = await api.get(`/challenges/weekly/${res.data.challenge.id}/draft`);
@@ -55,9 +64,14 @@ export default function WeeklyChallenge() {
           } catch { /* no draft yet */ }
         }
       })
-      .catch(() => setError("Failed to load this week's challenge"))
+      .catch(() => setError("Unable to load the Weekly Challenge."))
       .finally(() => setDraftLoaded(true));
+  }
+
+  useEffect(() => {
+    loadChallenge();
     api.get("/challenges/stats").then((res) => setStats(res.data)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function flushAutosave() {
@@ -89,7 +103,7 @@ export default function WeeklyChallenge() {
     if (lang === language) return;
     langDraftsRef.current[language] = code;
     const draft = langDraftsRef.current[lang];
-    const nextCode = draft !== undefined ? draft : (data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+    const nextCode = draft !== undefined ? draft : (data?.question?.starterCodeByLanguage?.[lang] || defaultStarter(lang));
     setLanguage(lang);
     setCode(nextCode);
     setRunResult(null);
@@ -145,7 +159,21 @@ export default function WeeklyChallenge() {
           </div>
         )}
 
-        {error && <p style={{ color: "var(--rust)", marginTop: 20 }}>{error}</p>}
+        {/* Bug fixed 2026-09-08: neither this loading state nor the Retry button below existed --
+            between mount and the API response landing, `data` was still null and neither this nor
+            the `data?.challenge`/`data && !data.challenge` blocks further down rendered anything,
+            so the only visible content on the whole page was the static header above. On a slow
+            connection that's a long, genuinely empty-looking stretch -- not the literal crash this
+            page's ErrorBoundary guards against, but the same "user sees nothing informative"
+            symptom class the reported white-screen bug describes. */}
+        {!data && !error && <p style={{ color: "var(--ink-dim)", marginTop: 20 }}>Loading Weekly Challenge…</p>}
+
+        {error && (
+          <div className="card" style={{ padding: 24, marginTop: 20, textAlign: "center" }}>
+            <p style={{ color: "var(--rust)" }}>{error}</p>
+            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={loadChallenge}>Retry</button>
+          </div>
+        )}
 
         {data && !data.challenge && (
           <div className="card" style={{ padding: 24, marginTop: 24, textAlign: "center" }}>

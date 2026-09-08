@@ -13,8 +13,24 @@ export default function FeatureProtected({ featureKey, featureLabel, children })
   const { user } = useAuth();
   const { isFeatureEnabled, loaded } = useFeatures();
 
-  // Don't flash the "unavailable" screen before the initial /features/me fetch resolves.
-  if (!loaded) return null;
+  // Bug fixed 2026-09-08: this returned null (nothing at all -- not a spinner, not a message,
+  // literally blank) for the entire window before the initial /features/me fetch resolves. On a
+  // slow connection, right after login, or a hard refresh directly on a feature-gated route (this
+  // component is the FIRST thing to remount, since FeatureProvider's own `loaded` state resets to
+  // false on every fresh mount), that window is long enough to read as "the page is just blank" --
+  // exactly the reported Weekly Challenge white-screen symptom. Used by 23 routes across the
+  // dashboard (Daily/Weekly Challenge among them), so this was never specific to one page -- it's
+  // the same underlying gap on every feature-gated route, just most noticeable on whichever one a
+  // student happened to be testing. A real loading message closes it everywhere at once, matching
+  // this file's own comment above about never flashing the wrong state -- a visible "Loading..."
+  // is never wrong, unlike briefly showing "unavailable" would be.
+  if (!loaded) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: 24 }}>
+        <p style={{ color: "var(--ink-dim)" }}>Loading…</p>
+      </div>
+    );
+  }
 
   if (!isFeatureEnabled(featureKey)) {
     return (

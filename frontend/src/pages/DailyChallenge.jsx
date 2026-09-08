@@ -93,7 +93,12 @@ export default function DailyChallenge() {
   codeRef.current = code;
   languageRef.current = language;
 
-  useEffect(() => {
+  // Bug fixed 2026-09-08: same fix as WeeklyChallenge.jsx's identical twin function -- pulled out
+  // of the mount effect so a failed load can be retried without a full page reload, `question` is
+  // now optional-chained, and the initial-loading window between mount and this resolving now
+  // shows a real "Loading..." message below instead of rendering nothing.
+  function loadChallenge() {
+    setError("");
     api.get("/challenges/daily/today")
       .then(async (res) => {
         setData(res.data);
@@ -102,7 +107,7 @@ export default function DailyChallenge() {
           const sub = res.data.submission;
           const lang = sub?.language || "java";
           setLanguage(lang);
-          setCode(sub?.code || res.data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+          setCode(sub?.code || res.data.question?.starterCodeByLanguage?.[lang] || defaultStarter(lang));
           // Already solved before this page load (returning visitor) — show the leaderboard right
           // away rather than only after a fresh Submit.
           if (sub?.solvedAt) loadLeaderboard(res.data.challenge.id);
@@ -114,10 +119,15 @@ export default function DailyChallenge() {
           } catch { /* no draft yet */ }
         }
       })
-      .catch(() => setError("Failed to load today's challenge"))
+      .catch(() => setError("Unable to load the Daily Challenge."))
       .finally(() => setDraftLoaded(true));
+  }
+
+  useEffect(() => {
+    loadChallenge();
     api.get("/challenges/daily/history").then((res) => setHistory(res.data)).catch(() => {});
     api.get("/challenges/stats").then((res) => setStats(res.data)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function flushAutosave() {
@@ -151,7 +161,7 @@ export default function DailyChallenge() {
     if (lang === language) return;
     langDraftsRef.current[language] = code;
     const draft = langDraftsRef.current[lang];
-    const nextCode = draft !== undefined ? draft : (data.question.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+    const nextCode = draft !== undefined ? draft : (data?.question?.starterCodeByLanguage?.[lang] || defaultStarter(lang));
     setLanguage(lang);
     setCode(nextCode);
     setRunResult(null);
@@ -218,7 +228,14 @@ export default function DailyChallenge() {
           </details>
         )}
 
-        {error && <p style={{ color: "var(--rust)", marginTop: 20 }}>{error}</p>}
+        {!data && !error && <p style={{ color: "var(--ink-dim)", marginTop: 20 }}>Loading Daily Challenge…</p>}
+
+        {error && (
+          <div className="card" style={{ padding: 24, marginTop: 20, textAlign: "center" }}>
+            <p style={{ color: "var(--rust)" }}>{error}</p>
+            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={loadChallenge}>Retry</button>
+          </div>
+        )}
 
         {data && !data.challenge && (
           <div className="card" style={{ padding: 24, marginTop: 24, textAlign: "center" }}>

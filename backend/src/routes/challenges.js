@@ -232,6 +232,19 @@ router.get("/daily/today", authenticate, requireRole("STUDENT"), attachRequester
     if (!dcRow) return res.json({ challenge: null });
     const dc = await prisma.dailyChallenge.findUnique({ where: { id: dcRow.id }, include: { question: { include: { testCases: true } } } });
     if (!dc) return res.json({ challenge: null });
+    // Bug fixed 2026-09-08: sanitizeQuestion(dc.question) has no null-check of its own (it reads
+    // q.id unconditionally) -- if this row's questionId ever pointed at a Question that no longer
+    // exists, this threw inside the try block below and surfaced as a generic 500 to every
+    // student who opened the page, which the frontend then showed as an unhelpful "failed to
+    // load" error. An orphaned reference is a content/data problem the SCHEDULE should be fixed
+    // for (re-point it at a real question, or unschedule it) -- from a student's perspective it is
+    // functionally identical to nothing being scheduled at all, so this responds the same way
+    // that case already does, and logs loudly so an admin actually sees it instead of the error
+    // only ever reaching a browser console.
+    if (!dc.question) {
+      console.error(`DailyChallenge ${dc.id} (date ${dc.date.toISOString().slice(0, 10)}) references a missing/deleted question (questionId=${dc.questionId}) -- treating as no challenge scheduled`);
+      return res.json({ challenge: null });
+    }
 
     const submission = await prisma.dailyChallengeSubmission.findUnique({
       where: { dailyChallengeId_studentId: { dailyChallengeId: dc.id, studentId: req.user.id } },
@@ -442,6 +455,14 @@ router.get("/weekly/current", authenticate, requireRole("STUDENT"), attachReques
     if (!wcRow) return res.json({ challenge: null });
     const wc = await prisma.weeklyChallenge.findUnique({ where: { id: wcRow.id }, include: { question: { include: { testCases: true } } } });
     if (!wc) return res.json({ challenge: null });
+    // Bug fixed 2026-09-08: see the identical check in GET /daily/today for the full rationale --
+    // sanitizeQuestion(wc.question) has no null-check of its own, so an orphaned questionId here
+    // used to surface as a generic 500 (and, on the frontend, an unhelpful error) instead of being
+    // treated the same as nothing being scheduled.
+    if (!wc.question) {
+      console.error(`WeeklyChallenge ${wc.id} (week ${wc.weekStart.toISOString().slice(0, 10)}) references a missing/deleted question (questionId=${wc.questionId}) -- treating as no challenge scheduled`);
+      return res.json({ challenge: null });
+    }
 
     const submission = await prisma.weeklyChallengeSubmission.findUnique({
       where: { weeklyChallengeId_studentId: { weeklyChallengeId: wc.id, studentId: req.user.id } },
