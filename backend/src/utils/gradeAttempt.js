@@ -20,7 +20,8 @@ async function gradeCodingSubmission(sub, question) {
     judgeSubmission({
       language: gradingLanguage, code: sub.code, testCases: gradingCases, timeLimitMs: question.timeLimitMs,
       memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
-      sqlSchema: question.sqlSchema,
+      sqlSchema: question.sqlSchema, comparisonMode: question.comparisonMode,
+      floatAbsoluteTolerance: question.floatAbsoluteTolerance, floatRelativeTolerance: question.floatRelativeTolerance,
     })
   );
   const score =

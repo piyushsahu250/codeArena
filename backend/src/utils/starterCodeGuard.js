@@ -29,14 +29,19 @@
 const { judgeSubmission } = require("./judge");
 const { runQueued } = require("./queue");
 
-async function guardStarterCodeIsNotSolution({ starterCodeByLanguage, testCases, evaluationType, functionSignature, timeLimitMs, memoryLimitKb }) {
+async function guardStarterCodeIsNotSolution({ starterCodeByLanguage, testCases, evaluationType, functionSignature, timeLimitMs, memoryLimitKb, comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance }) {
   if (!starterCodeByLanguage || typeof starterCodeByLanguage !== "object") return null;
   const cases = Array.isArray(testCases) ? testCases : [];
   if (cases.length === 0) return null;
   for (const [language, code] of Object.entries(starterCodeByLanguage)) {
     if (!code || !code.trim()) continue;
+    // Graded with the SAME comparisonMode the question will actually use for students -- checking
+    // with a stricter default (TRIM) than the question's real, looser configured mode (e.g.
+    // FLOAT_TOLERANCE) could let a starter template through that a student's identical output
+    // would score ACCEPTED on for real, since the guard would have been comparing under different
+    // rules than actual grading ever will.
     const result = await runQueued(() =>
-      judgeSubmission({ language, code, testCases: cases, timeLimitMs: timeLimitMs || 2000, memoryLimitKb: memoryLimitKb || undefined, evaluationType, functionSignature })
+      judgeSubmission({ language, code, testCases: cases, timeLimitMs: timeLimitMs || 2000, memoryLimitKb: memoryLimitKb || undefined, evaluationType, functionSignature, comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance })
     );
     if (result.verdict === "ACCEPTED") {
       return `The starter code for ${language} already passes every test case -- it looks like a working solution, not a starting template. Replace it with a non-solving template (e.g. "// Write your solution here"), or move the real solution to the Reference Solution field instead, which is never shown to students.`;

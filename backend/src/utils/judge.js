@@ -606,11 +606,88 @@ async function warmUpCompilers() {
   }
 }
 
+// Output comparison — added to support Question.comparisonMode (see its own schema comment for
+// the full rationale). Every mode before FLOAT_TOLERANCE existed implicitly as this file's one
+// hardcoded behavior (`String(expected).trim(); actual === expected`) before this function
+// existed; TRIM below reproduces that exact behavior byte-for-byte, and is still the default for
+// every question that doesn't explicitly opt into a different mode — this function changes
+// nothing about how an existing question is graded unless its comparisonMode is set to something
+// other than TRIM/undefined.
+//   EXACT                — raw, byte-for-byte match. No normalization at all.
+//   TRIM                 — trim leading/trailing whitespace from the WHOLE string once, then
+//                           exact match. This platform's original, only-ever comparison — kept as
+//                           the default for exactly that reason.
+//   IGNORE_TRAILING_SPACES — trims the whole string, AND strips trailing whitespace from each
+//                           individual line, while still comparing line count/order/leading
+//                           whitespace exactly. For a program whose per-line trailing spaces are
+//                           an artifact of how it built the string, not a meaningful part of the
+//                           expected output.
+//   TOKEN                — splits both strings on any run of whitespace (spaces, tabs, newlines)
+//                           and compares the resulting token lists — every other whitespace
+//                           difference (extra blank lines, extra spaces between values, trailing
+//                           newline or not) stops mattering; only the actual content and its order
+//                           does.
+//   FLOAT_TOLERANCE       — same tokenization as TOKEN, but a token pair where BOTH sides parse as
+//                           a finite number is compared with tolerance (absolute OR relative,
+//                           either one passing is enough — the standard competitive-programming
+//                           convention, since a pure absolute or pure relative check alone breaks
+//                           down at the opposite end of the value's magnitude) instead of a string
+//                           compare; a token pair where either side isn't numeric still falls back
+//                           to an exact string compare, so a FLOAT_TOLERANCE question can still
+//                           mix numeric and text output (e.g. "Area: 12.500001") and grade sanely.
+function compareOutputs(actual, expected, mode, absTol, relTol) {
+  const rawExpected = String(expected);
+  switch (mode) {
+    case "EXACT":
+      return actual === rawExpected;
+    case "IGNORE_TRAILING_SPACES": {
+      // Bug fixed by live testing (not just reasoning about it): a full `.trim()` here strips
+      // whitespace from BOTH ends of the whole string, which silently ate meaningful LEADING
+      // indentation on the first line too -- e.g. "  6\n7" wrongly normalized the same as "6\n7".
+      // `replace(/\s+$/, "")` only strips the trailing end of the whole string (matching TRIM
+      // mode's own only-the-end behavior), leaving leading whitespace on the first line
+      // untouched; each line's own trailing spaces are still stripped by the per-line map below,
+      // including the last line's (that map runs after the whole-string right-trim, so nothing
+      // is missed there either).
+      const norm = (s) => s.replace(/\s+$/, "").split("\n").map((line) => line.replace(/[ \t]+$/, "")).join("\n");
+      return norm(actual) === norm(rawExpected);
+    }
+    case "TOKEN":
+    case "FLOAT_TOLERANCE": {
+      const actualTokens = actual.trim().split(/\s+/).filter(Boolean);
+      const expectedTokens = rawExpected.trim().split(/\s+/).filter(Boolean);
+      if (actualTokens.length !== expectedTokens.length) return false;
+      const tolAbs = typeof absTol === "number" && absTol >= 0 ? absTol : 0.000001;
+      const tolRel = typeof relTol === "number" && relTol >= 0 ? relTol : 0.000001;
+      return actualTokens.every((tok, i) => {
+        const exp = expectedTokens[i];
+        if (mode === "FLOAT_TOLERANCE") {
+          const a = Number(tok);
+          const b = Number(exp);
+          // Number("") is 0 and Number(" ") is 0 -- filter(Boolean) above already removed empty
+          // tokens, but an actually-empty-string token can't occur here regardless; the real
+          // guard these Number.isFinite checks provide is against a non-numeric token (e.g. "abc")
+          // silently coercing to NaN and then failing every comparison, versus correctly falling
+          // through to the exact-string branch below for genuinely non-numeric output.
+          if (Number.isFinite(a) && Number.isFinite(b)) {
+            const diff = Math.abs(a - b);
+            return diff <= tolAbs || diff <= tolRel * Math.max(Math.abs(a), Math.abs(b));
+          }
+        }
+        return tok === exp;
+      });
+    }
+    case "TRIM":
+    default:
+      return actual === rawExpected.trim();
+  }
+}
+
 /**
  * Runs `code` against a list of test cases: [{ input, expected }]
  * Returns { passedCases, totalCases, verdict, details: [...] }
  */
-async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, memoryLimitKb = MEMORY_LIMIT_KB, evaluationType, functionSignature, sqlSchema }) {
+async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, memoryLimitKb = MEMORY_LIMIT_KB, evaluationType, functionSignature, sqlSchema, comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance }) {
   // SQL questions run on a completely separate path — no compile/run subprocess, no ulimits,
   // an in-process (worker-thread-isolated) SQLite engine instead. See sqlJudge.js.
   if (language === "sql") {
@@ -694,7 +771,7 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
       }
       const actual = result.stdout;
       const expected = String(tc.expected).trim();
-      const isMatch = actual === expected;
+      const isMatch = compareOutputs(actual, tc.expected, comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance);
       return {
         input: tc.input,
         expected,
@@ -756,4 +833,4 @@ async function judgeSubmission({ language, code, testCases, timeLimitMs = 2000, 
 // specifically because pdfjs-dist has a known "arbitrary JS execution on a malicious file" CVE
 // class with no available non-breaking fix. Reusing this platform's one proven sandboxing identity
 // for a second real use case, rather than re-deriving the same uid/permission choreography twice.
-module.exports = { judgeSubmission, warmUpCompilers, SANDBOX_UID, SANDBOX_GID, DROP_PRIVILEGES, JUDGE_ENV, cleanupTmpDir };
+module.exports = { judgeSubmission, warmUpCompilers, SANDBOX_UID, SANDBOX_GID, DROP_PRIVILEGES, JUDGE_ENV, cleanupTmpDir, compareOutputs };

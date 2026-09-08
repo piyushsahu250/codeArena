@@ -84,6 +84,7 @@ async function runAgainstVisible(question, language, code) {
     judgeSubmission({
       language, code, testCases: visible, timeLimitMs: question.timeLimitMs,
       memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
+      comparisonMode: question.comparisonMode, floatAbsoluteTolerance: question.floatAbsoluteTolerance, floatRelativeTolerance: question.floatRelativeTolerance,
     })
   );
 }
@@ -95,6 +96,7 @@ async function gradeAgainstHidden(question, language, code) {
     judgeSubmission({
       language, code, testCases: gradingCases, timeLimitMs: question.timeLimitMs,
       memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
+      comparisonMode: question.comparisonMode, floatAbsoluteTolerance: question.floatAbsoluteTolerance, floatRelativeTolerance: question.floatRelativeTolerance,
     })
   );
 }

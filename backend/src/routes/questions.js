@@ -29,6 +29,9 @@ const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
 // Employability & Subject Readiness module — see Question.btlLevel/questionStatus schema comments.
 const BTL_LEVELS = [1, 2, 3, 4, 5, 6];
 const QUESTION_STATUSES = ["DRAFT", "UNDER_REVIEW", "VERIFIED", "PUBLISHED", "ARCHIVED"];
+// See Question.comparisonMode's own schema comment and judge.js's compareOutputs() for what each
+// mode actually does at grading time — this list is only the authoring-time validation allowlist.
+const COMPARISON_MODES = ["EXACT", "TRIM", "IGNORE_TRAILING_SPACES", "TOKEN", "FLOAT_TOLERANCE"];
 
 // Column order matches what a faculty member actually fills in first (the question + its options),
 // with the rarely-touched/advanced columns (Question Type, Marks, BTL, Question Name) trailing —
@@ -353,19 +356,25 @@ router.post("/preview-starter-code", authenticate, requireRole("ADMIN", "SUPER_A
 // mirroring how starter code is authored/previewed per-language.
 router.post("/validate-test-cases", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), requireFeature("question_bank"), async (req, res) => {
   try {
-    const { language, code, testCases, evaluationType, functionSignature, sqlSchema, timeLimitMs, memoryLimitKb } = req.body;
+    const { language, code, testCases, evaluationType, functionSignature, sqlSchema, timeLimitMs, memoryLimitKb, comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance } = req.body;
     if (!language || !code || !code.trim()) {
       return res.status(400).json({ error: "A reference solution is required to validate" });
     }
     const cases = Array.isArray(testCases) ? testCases : [];
     if (cases.length === 0) return res.status(400).json({ error: "No test cases to validate against" });
 
+    // Validates using whatever comparisonMode the question is actually being authored with —
+    // otherwise an author drafting a FLOAT_TOLERANCE question could see their own correct
+    // reference solution reported as WRONG_ANSWER here (exact/trim comparison is stricter, not
+    // looser, than every other mode this file supports), which would be a confusing, wrong signal
+    // during authoring even though the question would have graded students correctly regardless.
     const result = await runQueued(() =>
       judgeSubmission({
         language, code, testCases: cases,
         timeLimitMs: timeLimitMs || 2000,
         memoryLimitKb: memoryLimitKb || undefined,
         evaluationType, functionSignature, sqlSchema,
+        comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance,
       })
     );
 
@@ -497,6 +506,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       title, description, subject, topic, questionType, difficulty, points, explanation,
       timeLimitMs, starterCode, testCases, options, correctAnswer, folderId,
       evaluationType, functionSignature, starterCodeByLanguage, referenceSolution, memoryLimitKb, tags, sqlSchema,
+      comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       allowDuplicate, subtopic, btlLevel, skillTested, questionStatus, aiGenerated,
@@ -590,10 +600,19 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       if (cases.filter((tc) => tc.isHidden).length < 5) {
         return res.status(400).json({ error: "Each coding question needs at least 5 hidden test cases for final evaluation" });
       }
+      if (comparisonMode !== undefined && !COMPARISON_MODES.includes(comparisonMode)) {
+        return res.status(400).json({ error: `comparisonMode must be one of: ${COMPARISON_MODES.join(", ")}` });
+      }
       data.timeLimitMs = timeLimitMs ?? 2000;
       data.memoryLimitKb = memoryLimitKb || null;
       data.starterCode = starterCode || "";
       data.tags = Array.isArray(tags) && tags.length > 0 ? tags : undefined;
+      data.comparisonMode = COMPARISON_MODES.includes(comparisonMode) ? comparisonMode : "TRIM";
+      // Only meaningful for FLOAT_TOLERANCE, but stored regardless (harmless — compareOutputs()
+      // simply ignores them for every other mode) so switching a question TO FLOAT_TOLERANCE
+      // later doesn't need a separate migration step for values that were already sane defaults.
+      if (typeof floatAbsoluteTolerance === "number" && floatAbsoluteTolerance >= 0) data.floatAbsoluteTolerance = floatAbsoluteTolerance;
+      if (typeof floatRelativeTolerance === "number" && floatRelativeTolerance >= 0) data.floatRelativeTolerance = floatRelativeTolerance;
       const resolved = resolveCodingFields({ evaluationType, functionSignature, starterCodeByLanguage });
       data.evaluationType = resolved.evaluationType;
       data.functionSignature = resolved.functionSignature;
@@ -613,6 +632,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
           starterCodeByLanguage: data.starterCodeByLanguage, testCases: cases,
           evaluationType: data.evaluationType, functionSignature: data.functionSignature,
           timeLimitMs: data.timeLimitMs, memoryLimitKb: data.memoryLimitKb,
+          comparisonMode: data.comparisonMode, floatAbsoluteTolerance: data.floatAbsoluteTolerance, floatRelativeTolerance: data.floatRelativeTolerance,
         });
         if (guardError) return res.status(400).json({ error: guardError, starterCodeIsSolution: true });
       }
@@ -2259,6 +2279,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       title, description, subject, topic, questionType, difficulty, points, explanation,
       timeLimitMs, starterCode, testCases, options, correctAnswer, folderId,
       evaluationType, functionSignature, starterCodeByLanguage, referenceSolution, memoryLimitKb, tags, sqlSchema,
+      comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes,
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       subtopic, btlLevel, skillTested, questionStatus,
@@ -2326,9 +2347,15 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
     };
 
     if (type === "CODING") {
+      if (comparisonMode !== undefined && !COMPARISON_MODES.includes(comparisonMode)) {
+        return res.status(400).json({ error: `comparisonMode must be one of: ${COMPARISON_MODES.join(", ")}` });
+      }
       data.timeLimitMs = timeLimitMs ?? existing.timeLimitMs;
       data.memoryLimitKb = memoryLimitKb !== undefined ? (memoryLimitKb || null) : existing.memoryLimitKb;
       data.starterCode = starterCode ?? existing.starterCode;
+      data.comparisonMode = comparisonMode !== undefined ? comparisonMode : existing.comparisonMode;
+      data.floatAbsoluteTolerance = typeof floatAbsoluteTolerance === "number" && floatAbsoluteTolerance >= 0 ? floatAbsoluteTolerance : existing.floatAbsoluteTolerance;
+      data.floatRelativeTolerance = typeof floatRelativeTolerance === "number" && floatRelativeTolerance >= 0 ? floatRelativeTolerance : existing.floatRelativeTolerance;
       data.tags = tags !== undefined ? (Array.isArray(tags) && tags.length > 0 ? tags : null) : undefined;
       data.options = null;
       data.correctAnswer = null;
@@ -2376,6 +2403,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
           starterCodeByLanguage: data.starterCodeByLanguage, testCases: guardCases,
           evaluationType: data.evaluationType, functionSignature: data.functionSignature,
           timeLimitMs: data.timeLimitMs, memoryLimitKb: data.memoryLimitKb,
+          comparisonMode: data.comparisonMode, floatAbsoluteTolerance: data.floatAbsoluteTolerance, floatRelativeTolerance: data.floatRelativeTolerance,
         });
         if (guardError) return res.status(400).json({ error: guardError, starterCodeIsSolution: true });
       }

@@ -786,6 +786,19 @@ model Question {
   // backend/src/utils/functionHarness.js. Only meaningful for CODING questions.
   evaluationType   String @default("STDIO")
   functionSignature Json? // { methodName, returnType, params: [{name, type}] } — see functionHarness.js SUPPORTED_TYPES
+  // Output-comparison mode (CODING/STDIO only — FUNCTION mode already gets a shape-aware compare
+  // for free from functionHarness.js's own driver-generated output, and SQL has its own dedicated
+  // comparison in sqlJudge.js). EXACT|TRIM|IGNORE_TRAILING_SPACES|TOKEN|FLOAT_TOLERANCE — see
+  // judge.js's compareOutputs() for what each mode actually does. Defaults to TRIM, the exact
+  // behavior every existing question already got before this field existed (trim the whole
+  // string, then compare) — so this is purely additive: no existing question's grading changes
+  // unless a question author explicitly opts into a different mode. Only meaningful when
+  // comparisonMode is FLOAT_TOLERANCE; ignored otherwise. Defaults (1e-6 both) are a common,
+  // conservative choice for typical floating-point precision needs — deliberately not zero, since
+  // zero tolerance on floats is just EXACT/TRIM with extra steps and defeats the point of the mode.
+  comparisonMode   String  @default("TRIM")
+  floatAbsoluteTolerance Float @default(0.000001)
+  floatRelativeTolerance Float @default(0.000001)
 
   // MCQ / TRUE_FALSE / MULTISELECT fields
   options       Json? // array of option strings

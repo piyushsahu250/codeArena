@@ -111,7 +111,7 @@ router.post("/run", authenticate, requireRole("STUDENT"), attachRequesterInstitu
 
     const runLanguage = question.questionType === "SQL" ? "sql" : language;
     const result = await runQueued(() =>
-      judgeSubmission({ language: runLanguage, code, testCases: question.testCases, timeLimitMs: question.timeLimitMs, memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature, sqlSchema: question.sqlSchema })
+      judgeSubmission({ language: runLanguage, code, testCases: question.testCases, timeLimitMs: question.timeLimitMs, memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature, sqlSchema: question.sqlSchema, comparisonMode: question.comparisonMode, floatAbsoluteTolerance: question.floatAbsoluteTolerance, floatRelativeTolerance: question.floatRelativeTolerance })
     );
     res.json(result);
   } catch (err) {
