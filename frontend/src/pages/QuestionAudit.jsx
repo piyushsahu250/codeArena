@@ -29,10 +29,12 @@ export default function QuestionAudit() {
         </div>
 
         <p style={{ fontSize: 13, color: "var(--ink-dim)", marginTop: 16 }}>
-          Every coding question on the platform, checked against the same mandatory-field bar new questions are
-          already held to at creation (description, input/output format, constraints, tags, starter code, 2+
-          visible / 5+ hidden test cases). This only reports gaps — it never fills them in, since generating
-          missing content on a question no one has reviewed isn't something to do silently.
+          Every question on the platform (Coding, SQL, MCQ, True/False, Multiple Select), checked against the same
+          mandatory-field bar new questions of that type are already held to at creation — for Coding/SQL:
+          description, input/output format or schema, constraints, tags, starter code, 2+ visible / 5+ hidden test
+          cases; for MCQ/True-False/Multiple Select: question text, 2+ non-blank and non-duplicate options, and a
+          correct answer that actually points at one of them. This only reports gaps — it never fills them in,
+          since generating missing content on a question no one has reviewed isn't something to do silently.
         </p>
 
         {data && (

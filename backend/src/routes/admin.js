@@ -14,6 +14,7 @@ const { credentialsResendTemplate } = require("../utils/emailTemplates");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
 const { revokeAllSessions } = require("../utils/sessions");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
+const { auditQuestionCompleteness } = require("../utils/questionValidation");
 const geminiProvider = require("../services/ai/geminiProvider");
 const aiRateLimits = require("../services/ai/rateLimits");
 
@@ -78,51 +79,57 @@ router.get("/stats", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
   }
 });
 
-// Shared by the audit route below — same "mandatory field" set the admin CRUD routes already
-// enforce at creation time (2 visible / 5 hidden test cases, description, etc., see
-// moduleCoding.js/questions.js/learning.js/interview.js's own validation) plus a few fields those
-// routes leave optional but a genuinely complete question should still have (inputFormat,
-// outputFormat, constraints, tags, starter code). Deliberately read-only and non-destructive: this
-// only reports what's missing, it never invents content to fill the gap — an admin who hasn't
-// reviewed a question shouldn't have Claude-authored placeholder text silently attributed to them.
-// The hidden-test minimum was lowered platform-wide from 10 to 5 (explicit product decision, not a
-// bug fix) — the 138 existing questions authored under the old 10-minimum are unaffected and keep
-// every one of their existing hidden cases; this only changes what's required of NEW ones.
-function auditQuestion(q) {
-  const missing = [];
-  if (!q.title || !String(q.title).trim()) missing.push("title");
-  if (!q.description && !q.prompt) missing.push("description");
-  if (!q.inputFormat) missing.push("inputFormat");
-  if (!q.outputFormat) missing.push("outputFormat");
-  if (!q.constraints) missing.push("constraints");
-  if (!Array.isArray(q.tags) || q.tags.length === 0) missing.push("tags");
-  const testCases = Array.isArray(q.testCases) ? q.testCases : [];
-  const visible = testCases.filter((tc) => !tc.isHidden).length;
-  const hidden = testCases.filter((tc) => tc.isHidden).length;
-  if (visible < 2) missing.push(`visible test cases (has ${visible}, needs 2)`);
-  if (hidden < 5) missing.push(`hidden test cases (has ${hidden}, needs 5)`);
-  const hasStarter = (q.starterCodeByLanguage && Object.keys(q.starterCodeByLanguage).length > 0) || !!q.starterCode;
-  if (!hasStarter) missing.push("starter code");
-  if (q.evaluationType === "FUNCTION" && !q.functionSignature) missing.push("function signature");
-  return missing;
-}
-
-// ADMIN: read-only completeness report across every coding question on the platform (Question,
+// ADMIN: read-only completeness report across every question on the platform (Question,
 // PracticeQuestion, InterviewQuestion) — flags which mandatory fields each one is missing, so an
 // admin can find and fix incomplete questions instead of discovering them one at a time when a
-// student hits a confusing gap. Never writes anything.
+// student hits a confusing gap. Never writes anything, and always computed fresh from current data
+// on every request (no cached/denormalized "isComplete" flag anywhere to go stale).
+//
+// Was previously CODING-only (only ever queried questionType/type/category: "CODING") — SQL
+// questions were entirely invisible to it despite having their own real completeness requirements
+// (schema + test cases, enforced at creation but never re-checked here), and MCQ/TRUE_FALSE/
+// MULTISELECT questions had no completeness check anywhere on the platform at all. Both fixed by
+// routing every row through the one shared engine in utils/questionValidation.js instead of this
+// file's own (now-removed) hand-rolled auditQuestion() — see that file's header comment for the
+// full rationale. `kind` below classifies each source's raw type/category value into CODING / SQL
+// / CHOICE before dispatching, since PracticeQuestion (`type`) and InterviewQuestion (`category`)
+// don't share Question's own field name or exact value set for "what kind of question is this."
+//
+// Deliberately out of scope: InterviewQuestion's HR/TECHNICAL/SYSTEM_DESIGN/BEHAVIORAL/MANAGERIAL
+// categories are free-text, rubric-graded prompts (prompt + expectedKeywords + modelAnswer) with
+// no analogous "required fields" defined anywhere in the product to check them against — inventing
+// a completeness rule for those would be exactly the "requirements that conflict with the current
+// product" this audit is supposed to avoid, not a fix.
+function classifyQuestionKind(source, q) {
+  const type = source === "PracticeQuestion" ? q.type : source === "InterviewQuestion" ? q.category : q.questionType;
+  if (type === "CODING") return "CODING";
+  if (type === "SQL") return "SQL";
+  if (source === "InterviewQuestion") return type === "APTITUDE" ? "CHOICE" : null;
+  // Question: MCQ/TRUE_FALSE/MULTISELECT. PracticeQuestion: MCQ/OUTPUT_PREDICTION/DEBUG — all
+  // three are options+correctAnswer shaped exactly like an MCQ under a different product-facing name.
+  return "CHOICE";
+}
+
 router.get("/question-audit", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
     const [questions, practiceQuestions, interviewQuestions] = await Promise.all([
-      prisma.question.findMany({ where: { questionType: "CODING" }, include: { testCases: true } }),
-      prisma.practiceQuestion.findMany({ where: { type: "CODING" } }),
-      prisma.interviewQuestion.findMany({ where: { category: "CODING" } }),
+      prisma.question.findMany({ include: { testCases: true } }),
+      prisma.practiceQuestion.findMany(),
+      prisma.interviewQuestion.findMany(),
     ]);
 
     const items = [];
+    let scanned = 0;
     for (const [rows, source] of [[questions, "Question"], [practiceQuestions, "PracticeQuestion"], [interviewQuestions, "InterviewQuestion"]]) {
       for (const q of rows) {
-        const missingFields = auditQuestion(q);
+        const kind = classifyQuestionKind(source, q);
+        if (!kind) continue; // out-of-scope type/category for this source — see comment above
+        scanned++;
+        // PracticeQuestion/InterviewQuestion store test cases as an inline JSON array on the row
+        // itself; Question's are a separate related table fetched via `include` above — either way
+        // it lands on `q.testCases`, and auditQuestionCompleteness just wants whatever array of
+        // {input, expected, isHidden} that source actually has.
+        const missingFields = auditQuestionCompleteness(q, q.testCases, kind);
         if (missingFields.length > 0) {
           items.push({ id: q.id, source, title: q.title || (q.description || q.prompt || "").slice(0, 60) || "(untitled)", missingFields });
         }
@@ -130,7 +137,7 @@ router.get("/question-audit", authenticate, requireRole("ADMIN", "SUPER_ADMIN"),
     }
 
     res.json({
-      summary: { totalScanned: questions.length + practiceQuestions.length + interviewQuestions.length, incompleteCount: items.length },
+      summary: { totalScanned: scanned, incompleteCount: items.length },
       items,
     });
   } catch (err) {

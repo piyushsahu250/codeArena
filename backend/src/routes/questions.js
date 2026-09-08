@@ -115,7 +115,17 @@ function parseBtlLevel(raw) {
 // Normalizes/validates the type-specific fields (options + correctAnswer) for
 // MCQ / TRUE_FALSE / MULTISELECT questions. Returns { options, correctAnswer }
 // or throws a descriptive error.
-function normalizeOptions(questionType, rawOptions, rawCorrectAnswer) {
+//
+// `checkDuplicates` (default true) rejects two options that are the same text (case/whitespace-
+// insensitive) — closes a real gap the Question Completeness Audit surfaced: nothing anywhere
+// ever rejected duplicate MCQ options, at creation or import. Defaults on for every FRESH
+// submission (create, bulk-import) but the PATCH /:id route explicitly turns it off when the
+// caller isn't touching options at all (falls back to the question's own already-stored values) —
+// otherwise an unrelated edit (fixing a typo in the difficulty field, say) to a legacy question
+// that predates this check would suddenly become unsavable until someone fixed options they never
+// asked to change. New/actually-edited options are always held to the new rule; untouched legacy
+// data is only ever reported by the audit, never silently rewritten or blocked from unrelated edits.
+function normalizeOptions(questionType, rawOptions, rawCorrectAnswer, { checkDuplicates = true } = {}) {
   if (questionType === "TRUE_FALSE") {
     const options = ["True", "False"];
     const idx = normalizeCorrectIndices(rawCorrectAnswer, options, false)[0];
@@ -127,6 +137,10 @@ function normalizeOptions(questionType, rawOptions, rawCorrectAnswer) {
     .map((o) => String(o ?? "").trim())
     .filter(Boolean);
   if (options.length < 2) throw new Error("Provide at least 2 options");
+  if (checkDuplicates) {
+    const lower = options.map((o) => o.toLowerCase());
+    if (new Set(lower).size !== lower.length) throw new Error("Options must be unique — this question has a duplicate option");
+  }
 
   const isMulti = questionType === "MULTISELECT";
   const correctAnswer = normalizeCorrectIndices(rawCorrectAnswer, options, isMulti);
@@ -2542,7 +2556,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
         };
       }
     } else {
-      const normalized = normalizeOptions(type, options ?? existing.options, correctAnswer ?? existing.correctAnswer);
+      // See normalizeOptions' own comment: only enforce the duplicate-option check when this
+      // request is actually the one supplying options — never against a legacy question's
+      // untouched, already-stored options just because some other field on it is being edited.
+      const normalized = normalizeOptions(type, options ?? existing.options, correctAnswer ?? existing.correctAnswer, { checkDuplicates: options !== undefined });
       data.options = normalized.options;
       data.correctAnswer = normalized.correctAnswer;
       // Clear stale values left over if this question used to be type CODING or SQL.
