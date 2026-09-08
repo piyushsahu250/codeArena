@@ -2214,6 +2214,112 @@ router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "S
   }
 });
 
+// Reads a workbook's "MCQ" and "CODING" sheets independently (as opposed to parseUploadedFile's
+// single-sheet pick) — the combined-import counterpart to the Combined Template download
+// (bulk-template?type=combined), which is the ONLY thing that put both sheets in one file to
+// begin with. No Notepad/.txt equivalent by design (see BulkQuestionImport.jsx's own comment on
+// why): a combined upload always requires a real spreadsheet.
+function parseUploadedFileBothSheets(file) {
+  const ext = String(file.originalname || "").toLowerCase().split(".").pop();
+  if (ext === "txt") {
+    return { error: "Combined import needs a spreadsheet file (.xlsx/.csv) with separate MCQ and CODING sheets — Notepad format only holds one question type per file. Use the Quiz or Coding option instead for a .txt upload." };
+  }
+  try {
+    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const mcqSheetName = workbook.SheetNames.find((n) => ["mcq", "questions", "quiz"].includes(normalizeHeader(n)));
+    const codingSheetName = workbook.SheetNames.find((n) => ["coding", "code"].includes(normalizeHeader(n)));
+    if (!mcqSheetName && !codingSheetName) {
+      return { error: 'Could not find an "MCQ" or "CODING" sheet in this file. Combined import expects the Combined Template\'s sheet names — download it below and copy your data in.' };
+    }
+    const mcqRows = mcqSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[mcqSheetName], { defval: "" }) : [];
+    const codingRows = codingSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[codingSheetName], { defval: "" }) : [];
+    return { mcqRows, codingRows, error: null };
+  } catch {
+    return { error: "Could not read this file. Please upload a valid .xlsx or .csv file." };
+  }
+}
+
+const EMPTY_BULK_RESULT = { total: 0, createdCount: 0, skippedCount: 0, errorCount: 0, skipped: [], errors: [], created: [], validRows: [] };
+
+// Tags each error/skipped-row reason with which sheet it came from — MCQ and CODING each number
+// their own rows starting at 2, so "Row 5" alone would be ambiguous once the two sheets' issues
+// are merged into one list.
+function tagSheet(rows, label) {
+  return (rows || []).map((r) => ({ ...r, reason: `[${label}] ${r.reason}` }));
+}
+
+// Combined import: one upload, both sheets — the real gap a Combined Template download alone
+// doesn't close. Without this, importing a Combined-Template file meant uploading it twice (once
+// under Quiz, once under Coding), with nothing telling a staff member the file even had a second
+// sheet worth importing; easy to silently import only the MCQs and never notice the CODING sheet
+// was skipped. Runs both sheets' existing, unmodified import logic (runQuizBulkImport /
+// runCodingBulkImport) side by side and merges the two summaries into one preview/result.
+router.post("/bulk-import-combined/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { mcqRows, codingRows, error } = parseUploadedFileBothSheets(req.file);
+    if (error) return res.status(400).json({ error });
+    if (mcqRows.length === 0 && codingRows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows in either sheet." });
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    // Preview only reads — safe to run concurrently, unlike confirm below.
+    const [mcqResult, codingResult] = await Promise.all([
+      mcqRows.length ? runQuizBulkImport(req, { rows: mcqRows, folderId, duplicateAction }, false) : EMPTY_BULK_RESULT,
+      codingRows.length ? runCodingBulkImport(req, { rows: codingRows, defaultFolderId: folderId, duplicateAction }, false) : EMPTY_BULK_RESULT,
+    ]);
+    if (mcqResult.error) return res.status(400).json({ error: `MCQ sheet: ${mcqResult.error}` });
+    if (codingResult.error) return res.status(400).json({ error: `CODING sheet: ${codingResult.error}` });
+    res.json({
+      total: mcqResult.total + codingResult.total,
+      createdCount: mcqResult.createdCount + codingResult.createdCount,
+      skippedCount: mcqResult.skippedCount + codingResult.skippedCount,
+      errorCount: mcqResult.errorCount + codingResult.errorCount,
+      mcqCount: mcqResult.createdCount,
+      codingCount: codingResult.createdCount,
+      errors: [...tagSheet(mcqResult.errors, "MCQ"), ...tagSheet(codingResult.errors, "Coding")],
+      skipped: [...tagSheet(mcqResult.skipped, "MCQ"), ...tagSheet(codingResult.skipped, "Coding")],
+      structureHint: mcqResult.structureHint || null,
+      // Kept separate (not flattened into one `validRows`) so confirm can route each half back
+      // through the import logic that actually knows how to create that question type.
+      mcqValidRows: mcqResult.validRows || [],
+      codingValidRows: codingResult.validRows || [],
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Preview failed" });
+  }
+});
+
+router.post("/bulk-import-combined/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
+  try {
+    const mcqRows = Array.isArray(req.body.mcqRows) ? req.body.mcqRows : [];
+    const codingRows = Array.isArray(req.body.codingRows) ? req.body.codingRows : [];
+    if (mcqRows.length === 0 && codingRows.length === 0) return res.status(400).json({ error: "No rows to import" });
+    const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
+    // Sequential, not Promise.all: both halves write real rows via prisma.question.create, and
+    // this is a rare, small-volume action — no reason to risk interleaved writes for it.
+    const mcqResult = mcqRows.length ? await runQuizBulkImport(req, { rows: mcqRows, folderId, duplicateAction }, true) : EMPTY_BULK_RESULT;
+    const codingResult = codingRows.length ? await runCodingBulkImport(req, { rows: codingRows, defaultFolderId: folderId, duplicateAction }, true) : EMPTY_BULK_RESULT;
+    if (mcqResult.error) return res.status(400).json({ error: `MCQ sheet: ${mcqResult.error}` });
+    if (codingResult.error) return res.status(400).json({ error: `CODING sheet: ${codingResult.error}` });
+    res.json({
+      total: mcqResult.total + codingResult.total,
+      createdCount: mcqResult.createdCount + codingResult.createdCount,
+      errorCount: mcqResult.errorCount + codingResult.errorCount,
+      mcqCount: mcqResult.createdCount,
+      codingCount: codingResult.createdCount,
+      created: [...(mcqResult.created || []), ...(codingResult.created || [])],
+      errors: [...tagSheet(mcqResult.errors, "MCQ"), ...tagSheet(codingResult.errors, "Coding")],
+    });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Import failed" });
+  }
+});
+
 // Duplicate: clone a single question (incl. test cases) right where it already lives — the
 // single-row counterpart to bulk-copy above. Unlike bulk-copy (which exists to move a question
 // into a DIFFERENT bank, and deliberately skips a same-folder target to avoid exact

@@ -9,11 +9,13 @@ const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, borde
 // behavior for free. Nothing is ever created on disk until the staff member explicitly clicks
 // "Confirm Import" after reviewing the preview summary — the /preview endpoint only validates.
 //
-// `allowCoding` controls whether the Quiz/Coding kind toggle shows at all (Question Bank's plain
-// import only offers quiz types today, matching its existing UX; the test-builder's bulk upload
-// offers both, matching its existing UX).
+// `allowCoding` controls whether the Quiz/Coding/Combined kind toggle shows at all. Combined
+// mode reads one uploaded file's "MCQ" and "CODING" sheets together (bulk-import-combined/*) and
+// imports both in one Preview -> Confirm — without it, a Combined Template download (both sheets
+// in one file, for convenience) had no matching "combined upload": a staff member had to upload
+// the same file twice, once per kind, with nothing surfacing that the other sheet even existed.
 export default function BulkQuestionImport({ allowCoding = false, folders, onCreateFolder, onImported, defaultFolderId = "" }) {
-  const [questionKind, setQuestionKind] = useState("quiz"); // "quiz" | "coding"
+  const [questionKind, setQuestionKind] = useState("quiz"); // "quiz" | "coding" | "combined"
   const [uploadFormat, setUploadFormat] = useState("spreadsheet"); // "spreadsheet" | "notepad"
   const [file, setFile] = useState(null);
   const [folderId, setFolderId] = useState(defaultFolderId);
@@ -34,8 +36,10 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
     setError("");
   }
 
-  const previewEndpoint = questionKind === "coding" ? "/questions/bulk-import-coding/preview" : "/questions/bulk-import/preview";
-  const confirmEndpoint = questionKind === "coding" ? "/questions/bulk-import-coding/confirm" : "/questions/bulk-import/confirm";
+  const previewEndpoint = questionKind === "combined" ? "/questions/bulk-import-combined/preview"
+    : questionKind === "coding" ? "/questions/bulk-import-coding/preview" : "/questions/bulk-import/preview";
+  const confirmEndpoint = questionKind === "combined" ? "/questions/bulk-import-combined/confirm"
+    : questionKind === "coding" ? "/questions/bulk-import-coding/confirm" : "/questions/bulk-import/confirm";
 
   async function resolveFolderId() {
     if (folderId) return folderId;
@@ -83,14 +87,15 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
   }
 
   async function handleConfirm() {
-    if (!preview?.validRows?.length) return;
+    if (!preview?.createdCount) return;
     setStage("confirming");
     setError("");
     try {
       const targetFolderId = await resolveFolderId();
-      const { data } = await api.post(confirmEndpoint, {
-        rows: preview.validRows, folderId: targetFolderId || undefined, duplicateAction,
-      });
+      const payload = questionKind === "combined"
+        ? { mcqRows: preview.mcqValidRows, codingRows: preview.codingValidRows, folderId: targetFolderId || undefined, duplicateAction }
+        : { rows: preview.validRows, folderId: targetFolderId || undefined, duplicateAction };
+      const { data } = await api.post(confirmEndpoint, payload);
       setResult(data);
       setStage("done");
       if (data.created?.length) onImported?.(data.created);
@@ -119,7 +124,7 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
   return (
     <div>
       {allowCoding && (
-        <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             <input type="radio" name="bulkKind" checked={questionKind === "quiz"} onChange={() => { setQuestionKind("quiz"); reset(); }} />
             Quiz (MCQ / True-False / Multi-select)
@@ -127,6 +132,13 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             <input type="radio" name="bulkKind" checked={questionKind === "coding"} onChange={() => { setQuestionKind("coding"); reset(); }} />
             Coding
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            <input
+              type="radio" name="bulkKind" checked={questionKind === "combined"}
+              onChange={() => { setQuestionKind("combined"); setUploadFormat("spreadsheet"); reset(); }}
+            />
+            Combined (MCQ + Coding, one file)
           </label>
         </div>
       )}
@@ -136,14 +148,18 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
           <input type="radio" name="bulkFormat" checked={uploadFormat === "spreadsheet"} onChange={() => { setUploadFormat("spreadsheet"); reset(); }} />
           Spreadsheet (.xlsx / .csv)
         </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="radio" name="bulkFormat" checked={uploadFormat === "notepad"} onChange={() => { setUploadFormat("notepad"); reset(); }} />
-          Notepad (.txt)
-        </label>
+        {questionKind !== "combined" && (
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            <input type="radio" name="bulkFormat" checked={uploadFormat === "notepad"} onChange={() => { setUploadFormat("notepad"); reset(); }} />
+            Notepad (.txt)
+          </label>
+        )}
       </div>
 
       <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
-        {questionKind === "coding"
+        {questionKind === "combined"
+          ? 'One spreadsheet with both an "MCQ" and a "CODING" sheet — both are read and imported together in a single Preview → Confirm, exactly like the Combined Template below.'
+          : questionKind === "coding"
           ? "Coding questions — title, problem statement, difficulty, BTL level, 2 sample cases, and at least 5 hidden test cases. Each row/block can name its own Question Bank, or leave it blank to use the picker below."
           : "Multiple Choice, True/False, and Multiple Select questions, including BTL level."}
         {" "}Nothing is saved until you review the preview and confirm.
@@ -219,7 +235,12 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
           )}
           <div style={{ fontSize: 13, marginTop: 4 }}>
             <div>Total rows: <strong>{preview.total}</strong></div>
-            <div style={{ color: "var(--mint)" }}>Ready to import: <strong>{preview.createdCount}</strong></div>
+            <div style={{ color: "var(--mint)" }}>
+              Ready to import: <strong>{preview.createdCount}</strong>
+              {questionKind === "combined" && (preview.mcqCount > 0 || preview.codingCount > 0) && (
+                <span style={{ color: "var(--ink-dim)", fontWeight: 400 }}> ({preview.mcqCount} MCQ, {preview.codingCount} Coding)</span>
+              )}
+            </div>
             {preview.skippedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>Duplicates (will skip): <strong>{preview.skippedCount}</strong></div>}
             {preview.errorCount > 0 && <div style={{ color: "var(--rust)" }}>Invalid (will not import): <strong>{preview.errorCount}</strong></div>}
           </div>
@@ -260,7 +281,12 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
         <div style={{ marginTop: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 700 }}>Import Complete</p>
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            <div><strong>{result.createdCount}</strong> question{result.createdCount === 1 ? "" : "s"} created out of {result.total}.</div>
+            <div>
+              <strong>{result.createdCount}</strong> question{result.createdCount === 1 ? "" : "s"} created out of {result.total}.
+              {questionKind === "combined" && (result.mcqCount > 0 || result.codingCount > 0) && (
+                <span style={{ color: "var(--ink-dim)" }}> ({result.mcqCount} MCQ, {result.codingCount} Coding)</span>
+              )}
+            </div>
             {result.errorCount > 0 && <div style={{ color: "var(--rust)" }}>{result.errorCount} failed at the last moment (state may have changed since preview).</div>}
           </div>
           {result.errors?.length > 0 && (
