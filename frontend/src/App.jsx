@@ -374,7 +374,7 @@ export default function App() {
           <Route path="/staff/resumes" element={<Protected roles={["ADMIN", "STAFF"]}><ResumeAdmin /></Protected>} />
           <Route path="/staff/interviews" element={<Protected roles={["ADMIN", "STAFF"]}><InterviewAdmin /></Protected>} />
           <Route path="/staff/interview-drafts" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="ai_draftview"><InterviewDraftReview /></FeatureProtected></Protected>} />
-          <Route path="/staff/challenges" element={<Protected roles={["ADMIN", "STAFF"]}><ChallengeAdmin /></Protected>} />
+          <Route path="/staff/challenges" element={<Protected roles={["ADMIN", "STAFF"]}><ErrorBoundary title="We hit a temporary problem" message="Unable to load Coding Challenges. Reloading usually fixes this."><ChallengeAdmin /></ErrorBoundary></Protected>} />
           <Route path="/staff/interview-reports" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><InterviewReports /></Suspense></Protected>} />
           <Route path="/staff/readiness-analytics" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><ReadinessAnalytics /></Suspense></Protected>} />
           <Route path="/staff/interview-reports/:sessionId" element={<Protected roles={["ADMIN", "STAFF"]}><InterviewReportDetail /></Protected>} />

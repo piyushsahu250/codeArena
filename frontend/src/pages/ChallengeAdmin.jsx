@@ -11,8 +11,19 @@ import ChalkUnderline from "../components/ChalkUnderline";
 const inputStyle = { width: "100%", padding: "9px 11px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 };
 const DIFF_COLOR = { EASY: "var(--mint)", MEDIUM: "var(--amber-dark)", HARD: "var(--rust)" };
 
+// Defensive as of 2026-09-08: this threw RangeError: Invalid time value on any input Date()
+// can't parse (undefined/null/garbage), which crashed the whole page with no ErrorBoundary catch
+// on this route -- see the ChallengeSchedule key={kind} fix for the actual root cause that fed it
+// a bad value, but this function itself had no business being able to bring down the page over a
+// single bad table cell either. A dash reads clearly as "no date available" without hiding a real
+// problem -- this still gets logged so it's visible in the console, not silently swallowed.
 function toDateInputValue(d) {
-  return new Date(d).toISOString().slice(0, 10);
+  const parsed = new Date(d);
+  if (Number.isNaN(parsed.getTime())) {
+    console.error("toDateInputValue: invalid date value", d);
+    return "—";
+  }
+  return parsed.toISOString().slice(0, 10);
 }
 
 // Mirrors backend/src/routes/challenges.js's isoWeekStart() so the week the admin sees selected
@@ -505,9 +516,25 @@ export default function ChallengeAdmin() {
         </div>
 
         <div style={{ marginTop: 16 }}>
+          {/* Bug fixed 2026-09-08: "Weekly Challenge" is this tab button, not a navigation link --
+              clicking it never changes the URL, it just flips `tab` in place. Without a `key` here,
+              React sees the SAME <ChallengeSchedule> component type in both ternary branches and
+              reuses the existing instance across the tab switch instead of remounting it (despite
+              that file's own comment claiming it "mounts fresh per tab" -- that was only true if a
+              genuine remount actually happened, which it never did). ChallengeSchedule's own
+              data-fetch effect depends on [page, q, difficulty, status], not `kind`, so switching
+              tabs re-rendered with kind="weekly" while still holding onto the DAILY tab's already-
+              fetched rows (which have a `.date` field, not `.weekStart`) until a later effect
+              happened to refire. Reading r.weekStart off a daily row is undefined, and
+              new Date(undefined).toISOString() throws "RangeError: Invalid time value" -- the
+              exact uncaught error reported, with no ErrorBoundary on this route to catch it.
+              key={kind} forces a real remount on every tab switch: fresh component instance, fresh
+              state, the mount-time fetch effect fires for the new kind before anything renders --
+              matching what the comment already claimed was happening, and incidentally fixing
+              filters/pagination not actually resetting between tabs either (same underlying gap). */}
           {tab === "daily"
-            ? <ChallengeSchedule kind="daily" isAdmin={isAdmin} initialQuestionId={initialQuestionId} />
-            : <ChallengeSchedule kind="weekly" isAdmin={isAdmin} initialQuestionId={initialQuestionId} />}
+            ? <ChallengeSchedule key="daily" kind="daily" isAdmin={isAdmin} initialQuestionId={initialQuestionId} />
+            : <ChallengeSchedule key="weekly" kind="weekly" isAdmin={isAdmin} initialQuestionId={initialQuestionId} />}
         </div>
       </div>
     </div>
