@@ -169,7 +169,29 @@ function Protected({ roles, children, noChrome = false }) {
   // authoritative either way — a page rendering here doesn't guarantee every API call inside it
   // has been extended yet; some may still 403 until that file's backend routes are rolled out.
   const roleSatisfied = !roles || roles.includes(user.role) || (roles.includes("ADMIN") && (user.role === "SUPER_ADMIN" || user.role === "INSTITUTE_ADMIN"));
-  if (!roleSatisfied) return <Navigate to="/" replace />;
+  // Bug fixed 2026-09-08: reported as "Weekly Challenge shows a white screen when signed in as
+  // Super Admin" -- /challenges/weekly is <Protected roles={["STUDENT"]}>, so a non-student role
+  // was never meant to render it at all. This branch used to silently chain two `replace`
+  // navigations in the same pass (here to "/", then Home() immediately to HOME_BY_ROLE[user.role])
+  // with nothing visible in between -- on a role this route was never going to admit, that reads
+  // exactly like the reported symptom even though the destination it eventually lands on (the
+  // user's own dashboard) is correct. Same "never leave a gap with nothing informative in it"
+  // principle as FeatureProtected's loading-state fix just above it in this same investigation --
+  // shows a clear, immediate message and a real link out instead of an invisible hop through
+  // another route entirely. This is a UX improvement everywhere Protected's role check fails, not
+  // special-cased to this one route.
+  if (!roleSatisfied) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: 24 }}>
+        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
+          <p style={{ fontSize: 16 }}>This page isn't available for your account type.</p>
+          <a href={HOME_BY_ROLE[user.role] || "/"} className="btn btn-primary" style={{ marginTop: 16, display: "inline-block" }}>
+            Go to Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
   return (
     <>
       {!noChrome && <Sidebar role={user.role} profileGateActive={profileGateActive(user)} />}
