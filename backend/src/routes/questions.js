@@ -138,8 +138,10 @@ function normalizeOptions(questionType, rawOptions, rawCorrectAnswer, { checkDup
     .filter(Boolean);
   if (options.length < 2) throw new Error("Provide at least 2 options");
   if (checkDuplicates) {
-    const lower = options.map((o) => o.toLowerCase());
-    if (new Set(lower).size !== lower.length) throw new Error("Options must be unique — this question has a duplicate option");
+    // Case-SENSITIVE: "HELLO" vs "hello" or "class" vs "Class" are legitimate distinct options for
+    // a question that's specifically testing case-sensitivity — only an exact-text repeat (after
+    // the trim already applied above) is a real duplicate, not a case fold.
+    if (new Set(options).size !== options.length) throw new Error("Options must be unique — this question has a duplicate option");
   }
 
   const isMulti = questionType === "MULTISELECT";

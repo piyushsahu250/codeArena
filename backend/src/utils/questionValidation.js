@@ -91,8 +91,17 @@ function auditChoiceCompleteness(question) {
     missing.push(`options (has ${nonBlankCount}, needs at least 2)`);
   } else {
     if (nonBlankCount !== options.length) missing.push("empty/whitespace-only option");
-    const lower = trimmed.filter(Boolean).map((o) => o.toLowerCase());
-    if (new Set(lower).size !== lower.length) missing.push("duplicate options");
+    // RAW exact-match only — no trimming, no case-folding. Confirmed against real production
+    // data: a programming quiz routinely relies on an EXACT case or whitespace difference as the
+    // entire point of two options — "HELLO" vs "hello" testing whether toUpperCase() mutates in
+    // place, or "Java " vs "Java" vs " Programming" vs "Programming" as substring()-boundary
+    // distractors where the leading/trailing space IS the correct-vs-wrong distinction. An
+    // earlier, more aggressive version of this check (trim + lowercase before comparing) flagged
+    // every one of those real, well-designed questions as having "duplicate options" — a false
+    // positive that would have led to actually breaking correct content. Only a byte-for-byte
+    // identical option string (e.g. the same text pasted in twice by mistake) counts as a
+    // duplicate now.
+    if (new Set(options).size !== options.length) missing.push("duplicate options");
   }
 
   const correctRaw = question.correctAnswer;
