@@ -742,6 +742,26 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 }
 .exam-option.selected .exam-option-badge { background: var(--mint); border-color: var(--mint); color: #fff; }
 
+/* Locks down the question content (problem statement, MCQ options) against mobile long-press
+   text selection -- the actual gap that let a student long-press the question, get the native
+   iOS/Android "Copy / Search / Share" callout, and search the exact question text in Google. The
+   page's existing oncontextmenu/oncopy/onpaste handlers (see TestTaking.jsx) only fire AFTER a
+   selection or copy already started; on mobile that native callout menu is a browser/OS-level UI
+   those DOM events never see. -webkit-touch-callout specifically is what suppresses it on iOS
+   Safari -- there is no equivalent JS event to preventDefault() here, CSS is the only lever.
+   Deliberately NOT applied to the Monaco editor or its container: coding answers must stay fully
+   selectable/editable, and this class is only ever added to the problem-statement/options panels. */
+.exam-protected-content {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* iOS Safari long-press callout (Copy/Share/Search) */
+}
+/* Answer inputs inside a protected panel (radio/checkbox labels) must stay clickable/tappable --
+   user-select:none never blocks pointer events, only text selection, so no exception is needed
+   for the exam-option labels/inputs themselves. */
+
 /* Network status banner -- spec #12: never claim "Saved" until the server actually confirmed it. */
 .exam-network-banner {
   padding: 8px 20px;

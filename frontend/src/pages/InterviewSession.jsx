@@ -723,7 +723,7 @@ export default function InterviewSession() {
           ))}
         </div>
 
-        <div className="ip-glass" style={{ padding: 24, marginTop: 16 }}>
+        <div className="ip-glass exam-protected-content" style={{ padding: 24, marginTop: 16 }}>
           <span className="badge">{CATEGORY_LABEL[q.category]}{q.subject ? ` · ${q.subject}` : ""}{q.aptitudeCategory ? ` · ${q.aptitudeCategory}` : ""}</span>
           {q.category === "CODING" ? (
             <div style={{ marginTop: 12 }}>

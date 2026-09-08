@@ -914,6 +914,18 @@ export default function TestTaking() {
     return () => target.removeEventListener("resize", handleResize);
   }, [started]);
 
+  // Best-effort multi-monitor check — Chrome's experimental, permission-free screen.isExtended
+  // boolean. Ported from useProctoring.js (used by ModuleCodingAssessment/InterviewSession) to
+  // this page's own inline implementation for parity — the two had drifted apart, with this exam
+  // surface missing a check the newer shared hook already had. Most browsers simply don't expose
+  // isExtended, in which case this never fires.
+  useEffect(() => {
+    if (!started) return;
+    if (typeof window.screen?.isExtended === "boolean" && window.screen.isExtended) {
+      reportViolation("MULTI_MONITOR", "using multiple monitors during a test is not allowed");
+    }
+  }, [started]);
+
   // Block clipboard/context-menu/browser-chrome shortcuts for the duration of the test. This is
   // always on, independent of the webcam/mic/fullscreen proctoring flags — same treatment as
   // tab-switch detection above. Browsers reserve some of these (Ctrl+T/N/W/Tab, Print Screen) and
@@ -1886,7 +1898,7 @@ export default function TestTaking() {
         {/* Question description */}
         {showQuestionPanel && (
         <>
-        <div style={{ width: isMobile ? "100%" : questionPanelWidth, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0 }}>
+        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : questionPanelWidth, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0 }}>
           {current && (
             <>
               <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{current.points} points</p>
@@ -2007,7 +2019,7 @@ export default function TestTaking() {
               <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", padding: "6px 16px 0" }}>
                 Your selection is saved automatically — change it any time before you submit the whole test.
               </p>
-              <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+              <div className="exam-protected-content" style={{ flex: 1, overflowY: "auto", padding: 24 }}>
                 {(current.options || []).map((opt, idx) => {
                   const selected = (answer?.selected || []).includes(idx);
                   return (
