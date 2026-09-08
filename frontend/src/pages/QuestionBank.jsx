@@ -7,6 +7,7 @@ import ChalkUnderline from "../components/ChalkUnderline";
 import { SkeletonGrid } from "../components/Skeleton";
 import SubjectUnitPicker from "../components/SubjectUnitPicker";
 import BulkQuestionImport from "../components/BulkQuestionImport";
+import GenerateAiDrafts from "../components/GenerateAiDrafts";
 import ShareQuestionBank from "../components/ShareQuestionBank";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
@@ -78,6 +79,7 @@ export default function QuestionBank() {
   const [aiGeneratedOnly, setAiGeneratedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [moveTargetId, setMoveTargetId] = useState("");
@@ -1006,6 +1008,9 @@ export default function QuestionBank() {
               <button className="btn btn-ghost" onClick={() => setShowImport((s) => !s)}>
                 {showImport ? "Hide import" : "⬆ Bulk import"}
               </button>
+              <button className="btn btn-ghost" onClick={() => setShowGenerate((s) => !s)}>
+                {showGenerate ? "Hide AI Draft Review" : "🤖 AI Draft Review"}
+              </button>
             </div>
 
             {showImport && (
@@ -1022,6 +1027,18 @@ export default function QuestionBank() {
                   onCreateFolder={createFolderForImport}
                   onImported={handleBulkImported}
                 />
+              </div>
+            )}
+
+            {/* Closes the one real gap found auditing "AI Draft Review" against the Question Bank
+                (see GenerateAiDrafts.jsx's own header comment for the full audit) -- generation now
+                persists real DRAFT questions instead of only pre-filling a form the generating
+                staff member had to save themselves in the same session. Everything else this
+                needs (the "AI-generated only" + status filters below, the Draft badge on each row,
+                bulk publish/archive) already existed on this exact page before this change. */}
+            {showGenerate && (
+              <div style={{ marginTop: 12 }}>
+                <GenerateAiDrafts onGenerated={() => { setAiGeneratedOnly(true); setQuestionStatus("DRAFT"); load(); }} />
               </div>
             )}
 
