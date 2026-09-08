@@ -390,9 +390,19 @@ export default function CreateTest() {
     { id: "step-security", label: "Security", done: true },
   ];
 
+  // The breadcrumb's default Back is plain browser-history-back. With the Question Bank picker
+  // (or bulk-import) modal open, that's wrong: those modals aren't a route change, so navigate(-1)
+  // would exit this entire in-progress test form (losing whatever's been filled in) instead of
+  // just closing the modal on top of it. Close the modal first; only fall through otherwise.
+  function handleBack() {
+    if (showBankModal) { setShowBankModal(false); return; }
+    if (showBulkModal) { setShowBulkModal(false); return; }
+    navigate(-1);
+  }
+
   return (
     <div>
-      <Navbar />
+      <Navbar onBack={handleBack} />
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
         <h1>{isEdit ? "Edit test" : "New test"}</h1>
 

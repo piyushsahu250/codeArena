@@ -358,9 +358,18 @@ export default function ReadinessSubjects() {
     }
   }
 
+  // The breadcrumb's default Back is plain browser-history-back, which is wrong here: opening
+  // an edit/create view never pushes a new history entry (it's local `editingId` state, not a
+  // route), so navigate(-1) from inside that view jumps past this whole page to whatever was
+  // open before it, not just back to the test list. Step out of the local view first instead.
+  function handleBack() {
+    if (editingId !== null) { setEditingId(null); return; }
+    navigate(-1);
+  }
+
   return (
     <div>
-      <Navbar />
+      <Navbar onBack={handleBack} />
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
