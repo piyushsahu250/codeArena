@@ -14,7 +14,7 @@ import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from 
 import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
-import { applyPlainTextInputHints } from "../utils/monacoSetup";
+import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -164,10 +164,17 @@ export default function TestTaking() {
   const preflightVideoRef = useRef(null);
   const liveVideoRef = useRef(null);
   const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
+  // See watchForNonAsciiInput's own comment: no webpage can force off a student's active
+  // third-party keyboard/IME app, so applyPlainTextInputHints below is a hint, not a guarantee.
+  // This state instead catches the actual observable moment it fails — a composed non-English
+  // character landing in the code — and surfaces it immediately instead of leaving the student to
+  // discover it only when Run/Submit fails on an inexplicable syntax error.
+  const [imeWarning, setImeWarning] = useState(false);
 
   function handleEditorMount(editor) {
     monacoEditorRef.current = editor;
     applyPlainTextInputHints(editor);
+    watchForNonAsciiInput(editor, () => setImeWarning(true));
   }
 
   const [faceMissing, setFaceMissing] = useState(false);
@@ -2121,6 +2128,12 @@ export default function TestTaking() {
                   </div>
                 )}
               </div>
+              {imeWarning && (
+                <div style={{ background: "var(--danger-bg)", color: "var(--rust)", padding: "8px 12px", fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span>⚠ Non-English character detected in your code — your keyboard may be set to a regional/transliteration input mode. Switch it to plain English before continuing (on Gboard: long-press the spacebar or tap the globe key).</span>
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
+                </div>
+              )}
               <div style={{ flex: 1, minHeight: 0 }}>
                 <Editor
                   height="100%"

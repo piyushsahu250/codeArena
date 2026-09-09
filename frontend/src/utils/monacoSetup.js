@@ -55,3 +55,32 @@ export function applyPlainTextInputHints(editor) {
   // can't silently reintroduce this.
   textarea.setAttribute("inputmode", "text");
 }
+
+// IMPORTANT LIMIT, stated plainly rather than papered over: applyPlainTextInputHints above sets
+// hints a browser/IME MAY honor -- it cannot be a 100% fix. If a student's ACTIVE system keyboard
+// is a dedicated third-party transliteration IME app (not just a language setting inside Gboard),
+// no webpage can force it off or select a different one -- that is an OS-level app choice, exactly
+// like a website cannot silently switch which app you're using to type. This is the same "layered
+// controls, not an absolute guarantee" honesty this platform's own exam-security work (mobile
+// long-press lockdown, screen-overlay detection) already commits to elsewhere -- claiming 100%
+// prevention here would be the same false claim that work explicitly avoids making.
+//
+// What IS fully achievable: never let it fail SILENTLY again. Call as
+// `<Editor onMount={(editor) => watchForNonAsciiInput(editor, onDetected)}>` (return value is a
+// cleanup function) -- fires `onDetected()` the first time the editor's content contains any
+// non-ASCII character, which is the actual observable moment an IME's composition COMMITTED a
+// converted word (Devanagari, etc.) into the code instead of the plain letter that was pressed.
+// Catches it the instant it happens, mid-test, instead of the student only discovering something
+// is wrong when Run/Submit fails on a syntax error they can't explain.
+export function watchForNonAsciiInput(editor, onDetected) {
+  let warned = false;
+  const disposable = editor.onDidChangeModelContent(() => {
+    if (warned) return;
+    // eslint-disable-next-line no-control-regex -- deliberately matching outside the ASCII range
+    if (/[^\x00-\x7F]/.test(editor.getValue())) {
+      warned = true;
+      onDetected();
+    }
+  });
+  return () => disposable.dispose();
+}

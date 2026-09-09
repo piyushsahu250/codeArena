@@ -16,7 +16,7 @@ import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
-import { applyPlainTextInputHints } from "../utils/monacoSetup";
+import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const JUDGE_TIMEOUT_MS = 20000;
@@ -47,10 +47,12 @@ export default function InterviewSession() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
 
   function handleEditorMount(editor) {
     monacoEditorRef.current = editor;
     applyPlainTextInputHints(editor);
+    watchForNonAsciiInput(editor, () => setImeWarning(true));
   }
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -793,6 +795,12 @@ export default function InterviewSession() {
                     onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>
                     ⇤ Outdent
                   </button>
+                </div>
+              )}
+              {imeWarning && (
+                <div style={{ background: "var(--danger-bg)", color: "var(--rust)", padding: "8px 12px", fontSize: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 8 }}>
+                  <span>⚠ Non-English character detected in your answer — your keyboard may be set to a regional/transliteration input mode. Switch it to plain English before continuing (on Gboard: long-press the spacebar or tap the globe key).</span>
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
                 </div>
               )}
               <div style={{ marginTop: 10, border: "1px solid var(--ip-glass-border)", borderRadius: 8, overflow: "hidden" }}>

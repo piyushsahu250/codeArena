@@ -13,7 +13,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
-import { applyPlainTextInputHints } from "../utils/monacoSetup";
+import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
 
@@ -81,10 +81,16 @@ export default function ModuleCodingAssessment() {
   const resizingRef = useRef(false);
 
   const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
+  // See watchForNonAsciiInput's own comment: no webpage can force off a student's active
+  // third-party keyboard/IME app, so applyPlainTextInputHints below is a hint, not a guarantee.
+  // This state instead catches the actual observable moment it fails — a composed non-English
+  // character landing in the code — and surfaces it immediately.
+  const [imeWarning, setImeWarning] = useState(false);
 
   function handleEditorMount(editor) {
     monacoEditorRef.current = editor;
     applyPlainTextInputHints(editor);
+    watchForNonAsciiInput(editor, () => setImeWarning(true));
   }
 
   const deadlineRef = useRef(null);
@@ -896,6 +902,12 @@ export default function ModuleCodingAssessment() {
               >
                 ⇤ Outdent
               </button>
+            </div>
+          )}
+          {imeWarning && (
+            <div style={{ background: "var(--danger-bg)", color: "var(--rust)", padding: "8px 16px", fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span>⚠ Non-English character detected in your code — your keyboard may be set to a regional/transliteration input mode. Switch it to plain English before continuing (on Gboard: long-press the spacebar or tap the globe key).</span>
+              <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
             </div>
           )}
           <div style={{ height: isMobile ? Math.min(editorHeight, 320) : editorHeight, minHeight: 0, flexShrink: 0 }}>

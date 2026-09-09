@@ -7,7 +7,7 @@ import MathText from "../components/MathText";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
-import { applyPlainTextInputHints } from "../utils/monacoSetup";
+import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import useIsMobile from "../hooks/useIsMobile";
 import api from "../api";
 
@@ -37,10 +37,12 @@ export default function ReadinessAssessment() {
   const [loadError, setLoadError] = useState("");
   const autoFinalizedRef = useRef(false);
   const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
 
   function handleEditorMount(editor) {
     monacoEditorRef.current = editor;
     applyPlainTextInputHints(editor);
+    watchForNonAsciiInput(editor, () => setImeWarning(true));
   }
   const isMobile = useIsMobile();
 
@@ -292,6 +294,12 @@ export default function ReadinessAssessment() {
                       onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>
                       ⇤ Outdent
                     </button>
+                  </div>
+                )}
+                {imeWarning && (
+                  <div style={{ background: "var(--danger-bg)", color: "var(--rust)", padding: "8px 12px", fontSize: 12, borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                    <span>⚠ Non-English character detected in your code — your keyboard may be set to a regional/transliteration input mode. Switch it to plain English before continuing (on Gboard: long-press the spacebar or tap the globe key).</span>
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
                   </div>
                 )}
                 <div style={{ border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
