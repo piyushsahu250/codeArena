@@ -164,6 +164,13 @@ export default function TestTaking() {
   const preflightVideoRef = useRef(null);
   const liveVideoRef = useRef(null);
   const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
+  // Whatever compiler language the student is already using on this test — set the first time any
+  // coding question resolves a language (default or explicit pick) and again on every explicit
+  // switch (setLanguage below), then reused as the default for every subsequent not-yet-opened
+  // question instead of each one independently resetting to the platform default. A ref, not
+  // state: it must be current the instant a new question's initializing effect reads it, with no
+  // extra render in between.
+  const preferredLanguageRef = useRef(null);
   // See watchForNonAsciiInput's own comment: no webpage can force off a student's active
   // third-party keyboard/IME app, so applyPlainTextInputHints below is a hint, not a guarantee.
   // This state instead catches the actual observable moment it fails — a composed non-English
@@ -610,6 +617,12 @@ export default function TestTaking() {
           for (const [qid, langs] of Object.entries(restoredDrafts)) merged[qid] = { ...langs, ...merged[qid] };
           return merged;
         });
+        // Resuming after a refresh: carry the most recently-autosaved coding language forward as
+        // the preference for any question not yet opened this session too, same as picking it live
+        // would — otherwise a refresh would silently reset the "same compiler for every question"
+        // behavior back to the platform default the moment the page reloads.
+        const lastCodingLang = existingSubs.slice().reverse().find((s) => !["MCQ", "TRUE_FALSE", "MULTISELECT", "sql"].includes(s.language))?.language;
+        if (lastCodingLang) preferredLanguageRef.current = lastCodingLang;
       }
       try {
         setMarkedForReview(JSON.parse(localStorage.getItem(`markedForReview:${startRes.data.id}`) || "{}"));
@@ -668,18 +681,38 @@ export default function TestTaking() {
         // Question.starterCode (the legacy single-language field) has no associated language on
         // this model — unlike PracticeQuestion/InterviewQuestion, there's no way to know what
         // language it was authored in, so it must never be used as a per-language fallback here.
-        // Using it for "javascript" specifically was the actual cause of Java/other-language code
-        // appearing mislabeled as JavaScript the first time a legacy question was opened.
-        const code = current.starterCodeByLanguage?.javascript || defaultStarter("javascript");
-        return { ...prev, [current.id]: { language: "javascript", code } };
+        // Using it for a hardcoded language specifically was the actual cause of Java/other-
+        // language code appearing mislabeled the first time a legacy question was opened.
+        //
+        // Whatever language the student is already using (explicitly picked via the dropdown, or
+        // just the resolved default from an earlier question) carries forward to every
+        // not-yet-opened question — preferredLanguageRef is set here on first use and again
+        // whenever setLanguage() runs, so this always reflects "whatever Q1 (or the most recent
+        // switch) ended up using," never resets per question. Only questions with no answer yet
+        // (the `if (prev[current.id]) return prev;` guard above) are ever touched by this — a
+        // question the student already started in a different language is never silently changed.
+        //
+        // A rare FUNCTION-mode question can restrict which languages it even offers (see
+        // supportedLanguages) — if the carried-forward preference isn't one of them, this ONE
+        // question falls back to whatever it does support, without corrupting the preference
+        // itself: the NEXT question still gets the student's real preference back, not this
+        // question's one-off substitute.
+        const supported = supportedLanguages(current).map((l) => l.id);
+        const preferred = preferredLanguageRef.current;
+        const lang = preferred && supported.includes(preferred) ? preferred
+          : supported.includes("python") ? "python" // platform-wide default compiler
+          : supported[0];
+        if (!preferred || supported.includes(preferred)) preferredLanguageRef.current = lang;
+        const code = current.starterCodeByLanguage?.[lang] || defaultStarter(lang);
+        return { ...prev, [current.id]: { language: lang, code } };
       }
       return { ...prev, [current.id]: { selected: [] } };
     });
     if (current.questionType === "SQL" || current.questionType === "CODING") {
-      const lang = current.questionType === "SQL" ? "sql" : "javascript";
+      const lang = current.questionType === "SQL" ? "sql" : (preferredLanguageRef.current || "python");
       setLangDrafts((prev) => {
         if (prev[current.id]?.[lang] !== undefined) return prev; // already seeded — first-open only
-        const code = current.questionType === "SQL" ? "" : (current.starterCodeByLanguage?.javascript || defaultStarter("javascript"));
+        const code = current.questionType === "SQL" ? "" : (current.starterCodeByLanguage?.[lang] || defaultStarter(lang));
         return { ...prev, [current.id]: { ...prev[current.id], [lang]: code } };
       });
     }
@@ -1125,6 +1158,9 @@ export default function TestTaking() {
     const code = draft !== undefined ? draft : (current.starterCodeByLanguage?.[language] || defaultStarter(language));
     setAnswers((prev) => ({ ...prev, [current.id]: { language, code } }));
     setLangDrafts((prev) => ({ ...prev, [current.id]: { ...prev[current.id], [language]: code } }));
+    // An explicit switch becomes the new preference for every not-yet-opened question too — see
+    // preferredLanguageRef's own comment.
+    preferredLanguageRef.current = language;
     setRunResult(null);
     setSubmitResultMsg(null);
     scheduleCodeAutoSave(current.id, language, code);
@@ -1132,7 +1168,7 @@ export default function TestTaking() {
 
   function setCode(code) {
     if (!current) return;
-    const language = answer?.language || "javascript";
+    const language = answer?.language || preferredLanguageRef.current || "python";
     setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], code } }));
     setLangDrafts((prev) => ({ ...prev, [current.id]: { ...prev[current.id], [language]: code } }));
     scheduleCodeAutoSave(current.id, language, code);
@@ -2071,7 +2107,7 @@ export default function TestTaking() {
                   {isSql ? (
                     <span className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", padding: "6px 10px" }}>SQL</span>
                   ) : (
-                    <select value={answer?.language || "javascript"} onChange={(e) => setLanguage(e.target.value)} className="mono" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line)" }}>
+                    <select value={answer?.language || "python"} onChange={(e) => setLanguage(e.target.value)} className="mono" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line)" }}>
                       {supportedLanguages(current).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                     </select>
                   )}

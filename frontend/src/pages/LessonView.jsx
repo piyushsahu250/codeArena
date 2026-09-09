@@ -469,7 +469,7 @@ function PracticeQuestionCard({ question }) {
   const [result, setResult] = useState(null);
   const [checking, setChecking] = useState(false);
 
-  const [language, setLanguage] = useState(question.language || "java");
+  const [language, setLanguage] = useState(question.language || "python"); // platform-wide default compiler
   const [code, setCode] = useState(question.starterCode || "");
   const [runResult, setRunResult] = useState(null);
   const [running, setRunning] = useState(false);

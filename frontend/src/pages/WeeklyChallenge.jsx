@@ -23,7 +23,7 @@ export default function WeeklyChallenge() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [stats, setStats] = useState(null);
-  const [language, setLanguage] = useState("java");
+  const [language, setLanguage] = useState("python"); // platform-wide default compiler
   const [code, setCode] = useState("");
   const [runResult, setRunResult] = useState(null);
   const [running, setRunning] = useState(false);
@@ -63,7 +63,7 @@ export default function WeeklyChallenge() {
         if (res.data.challenge) {
           challengeIdRef.current = res.data.challenge.id;
           const sub = res.data.submission;
-          const lang = sub?.language || "java";
+          const lang = sub?.language || "python"; // platform-wide default compiler
           setLanguage(lang);
           setCode(sub?.code || res.data.question?.starterCodeByLanguage?.[lang] || defaultStarter(lang));
           if (sub?.solvedAt) loadLeaderboard(res.data.challenge.id);

@@ -37,6 +37,11 @@ export default function ReadinessAssessment() {
   const [loadError, setLoadError] = useState("");
   const autoFinalizedRef = useRef(false);
   const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+  // Whatever compiler language the student is already using on this assessment — set the first
+  // time any coding question resolves a language (default or explicit pick) and again on every
+  // explicit switch (setLanguage below), then reused as the default for every subsequent
+  // not-yet-opened question instead of each one independently resetting to the platform default.
+  const preferredLanguageRef = useRef(null);
   const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
 
   function handleEditorMount(editor) {
@@ -57,18 +62,48 @@ export default function ReadinessAssessment() {
       setSubjectName(a.subject?.name || "");
       setQuestions(qs);
       const initial = {};
+      let lastKnownLang = null;
       for (const q of qs) {
         const ans = q.answer || {};
-        initial[q.id] = {
-          selected: Array.isArray(ans.selectedOptions) ? ans.selectedOptions : [],
-          code: ans.code ?? (q.questionType === "SQL" ? (q.starterCode || "") : (q.starterCodeByLanguage?.java || q.starterCode || defaultStarter("java"))),
-          language: ans.language || "java",
-          skipped: ans.skipped !== false,
-          score: ans.skipped === false ? ans.score : null,
-          isCorrect: ans.isCorrect ?? null,
-        };
+        if (q.questionType === "SQL") {
+          initial[q.id] = {
+            selected: Array.isArray(ans.selectedOptions) ? ans.selectedOptions : [],
+            code: ans.code ?? (q.starterCode || ""),
+            language: "sql",
+            skipped: ans.skipped !== false,
+            score: ans.skipped === false ? ans.score : null,
+            isCorrect: ans.isCorrect ?? null,
+          };
+        } else if (q.questionType === "CODING" && !ans.language) {
+          // Deliberately left without a language/code here — only a question with a REAL saved
+          // answer gets one at load time. A not-yet-answered coding question is resolved lazily
+          // the first time it's actually opened (see the activeIdx effect below), against whatever
+          // language the student is already using elsewhere in this attempt, instead of every
+          // question independently defaulting and a later switch having nothing left to propagate to.
+          initial[q.id] = {
+            selected: [],
+            code: undefined,
+            language: undefined,
+            skipped: ans.skipped !== false,
+            score: ans.skipped === false ? ans.score : null,
+            isCorrect: ans.isCorrect ?? null,
+          };
+        } else {
+          initial[q.id] = {
+            selected: Array.isArray(ans.selectedOptions) ? ans.selectedOptions : [],
+            code: ans.code,
+            language: ans.language,
+            skipped: ans.skipped !== false,
+            score: ans.skipped === false ? ans.score : null,
+            isCorrect: ans.isCorrect ?? null,
+          };
+          if (q.questionType === "CODING" && ans.language) lastKnownLang = ans.language;
+        }
       }
       setAnswers(initial);
+      // Resuming after a refresh carries the most recently-known coding language forward as the
+      // preference for any question not yet opened this session, same as picking it live would.
+      if (lastKnownLang) preferredLanguageRef.current = lastKnownLang;
       if (a.durationMin) {
         const elapsedSec = Math.floor((Date.now() - new Date(a.startedAt).getTime()) / 1000);
         setRemainingSec(Math.max(0, a.durationMin * 60 - elapsedSec));
@@ -80,6 +115,24 @@ export default function ReadinessAssessment() {
   const current = questions[activeIdx];
   const isQuiz = current && QUIZ_TYPES.includes(current.questionType);
   const isMulti = current?.questionType === "MULTISELECT";
+
+  // Lazily resolves THIS question's language/code the first time it's actually opened with no
+  // language set yet (no real saved answer) — using whatever language the student is already
+  // using elsewhere in this attempt (preferredLanguageRef, seeded on resume and updated on every
+  // explicit setLanguage switch) instead of independently falling back to a fixed default. Only
+  // ever touches a question with no language at all — an already-answered question is never
+  // silently changed underneath the student.
+  useEffect(() => {
+    if (!current || current.questionType !== "CODING") return;
+    setAnswers((prev) => {
+      const a = prev[current.id];
+      if (a?.language) return prev;
+      const lang = preferredLanguageRef.current || "python"; // platform-wide default compiler
+      preferredLanguageRef.current = lang;
+      const code = current.starterCodeByLanguage?.[lang] || current.starterCode || defaultStarter(lang);
+      return { ...prev, [current.id]: { ...a, language: lang, code } };
+    });
+  }, [current]);
 
   useEffect(() => {
     if (remainingSec == null) return;
@@ -157,6 +210,9 @@ export default function ReadinessAssessment() {
     const a = answers[current.id];
     const code = a.code && a.code.trim() && a.code !== defaultStarter(a.language) ? a.code : (current.starterCodeByLanguage?.[language] || defaultStarter(language));
     setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], language, code } }));
+    // An explicit switch becomes the new preference for every not-yet-opened question too — see
+    // preferredLanguageRef's own comment.
+    preferredLanguageRef.current = language;
   }
 
   const answeredCount = useMemo(() => Object.values(answers).filter((a) => !a.skipped).length, [answers]);
@@ -273,7 +329,7 @@ export default function ReadinessAssessment() {
                   {current.questionType === "SQL" ? (
                     <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>SQL</span>
                   ) : (
-                    <select value={ans.language || "java"} onChange={(e) => setLanguage(e.target.value)} className="mono" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line)" }}>
+                    <select value={ans.language || "python"} onChange={(e) => setLanguage(e.target.value)} className="mono" style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--line)" }}>
                       {CODE_LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                     </select>
                   )}
@@ -305,7 +361,7 @@ export default function ReadinessAssessment() {
                 <div style={{ border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
                   <Editor
                     height={isMobile ? "360px" : "520px"}
-                    language={current.questionType === "SQL" ? "sql" : (CODE_LANGUAGES.find((l) => l.id === ans.language)?.monaco || "java")}
+                    language={current.questionType === "SQL" ? "sql" : (CODE_LANGUAGES.find((l) => l.id === ans.language)?.monaco || "python")}
                     theme="vs-dark"
                     value={ans.code || ""}
                     onChange={(v) => setCode(v ?? "")}

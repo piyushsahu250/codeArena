@@ -78,7 +78,7 @@ export default function DailyChallenge() {
   const [error, setError] = useState("");
   const [history, setHistory] = useState(null);
   const [stats, setStats] = useState(null);
-  const [language, setLanguage] = useState("java");
+  const [language, setLanguage] = useState("python"); // platform-wide default compiler
   const [code, setCode] = useState("");
   const [runResult, setRunResult] = useState(null);
   const [running, setRunning] = useState(false);
@@ -114,7 +114,7 @@ export default function DailyChallenge() {
         if (res.data.challenge) {
           challengeIdRef.current = res.data.challenge.id;
           const sub = res.data.submission;
-          const lang = sub?.language || "java";
+          const lang = sub?.language || "python"; // platform-wide default compiler
           setLanguage(lang);
           setCode(sub?.code || res.data.question?.starterCodeByLanguage?.[lang] || defaultStarter(lang));
           // Already solved before this page load (returning visitor) — show the leaderboard right

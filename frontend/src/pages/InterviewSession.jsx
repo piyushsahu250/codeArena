@@ -47,6 +47,11 @@ export default function InterviewSession() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+  // Whatever compiler language the student is already using on this session — set the first time
+  // any coding question resolves a language (default or explicit pick) and again on every
+  // explicit switch (handleLanguageChange below), then reused as the default for every subsequent
+  // not-yet-opened coding question instead of each one independently resetting to the default.
+  const preferredLanguageRef = useRef(null);
   const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
 
   function handleEditorMount(editor) {
@@ -117,14 +122,20 @@ export default function InterviewSession() {
       setData(res.data);
       setViolationCount(res.data.session.violationCount || 0);
       if (typeof res.data.serverTime === "number") clockOffsetRef.current = res.data.serverTime - Date.now();
+      // Deliberately does NOT assign every CODING question a language/code upfront — only ones
+      // with a real saved answer (below) or a restored draft (further below) get one here. A
+      // not-yet-answered question is left without a language at all so the lazy per-question-open
+      // effect (see activeQuestion's own effect) can resolve it against whatever language the
+      // student is already using elsewhere in this session, instead of every question
+      // independently defaulting and a later language switch having nothing left to propagate to.
       const initial = {};
       for (const q of res.data.questions) {
         initial[q.id] = {
           answerText: q.category !== "APTITUDE" ? (q.answer?.answerText || "") : "",
           code: q.answer?.code || q.starterCode || "",
-          language: q.answer?.language || q.language || "java",
           selected: q.category === "APTITUDE" && q.answer?.answerText != null && q.answer.answerText !== "" ? Number(q.answer.answerText) : null,
         };
+        if (q.category === "CODING" && q.answer?.language) initial[q.id].language = q.answer.language;
       }
       // A leftover autosaved draft (unsaved code from before a refresh/crash) takes precedence
       // over the last officially-saved answer, since it's more recent in-progress work.
@@ -140,8 +151,12 @@ export default function InterviewSession() {
       setDrafts(initial);
       const initialLangDrafts = {};
       for (const q of res.data.questions) {
-        if (q.category === "CODING") initialLangDrafts[q.id] = { [initial[q.id].language]: initial[q.id].code };
+        if (q.category === "CODING" && initial[q.id].language) initialLangDrafts[q.id] = { [initial[q.id].language]: initial[q.id].code };
       }
+      // Resuming after a refresh carries the most recently-known coding language forward as the
+      // preference for any question not yet opened this session, same as picking it live would.
+      const lastKnownLang = codingQuestions.map((q) => initial[q.id]?.language).filter(Boolean).pop();
+      if (lastKnownLang) preferredLanguageRef.current = lastKnownLang;
       setLangDrafts(initialLangDrafts);
       const durationMin = res.data.session.config?.durationMin;
       if (durationMin && res.data.session.status === "IN_PROGRESS") {
@@ -182,6 +197,32 @@ export default function InterviewSession() {
   const activeDraft = activeQuestion ? drafts[activeQuestion.id] || {} : {};
   useEffect(() => {
     activeQuestionIdRef.current = activeQuestion?.id ?? null;
+    // Lazily resolves THIS question's language/code the first time it's actually opened with no
+    // language set yet (no saved answer, no restored draft) — using whatever language the
+    // student is already using elsewhere in this session (preferredLanguageRef, seeded on resume
+    // and updated on every explicit handleLanguageChange switch below) instead of independently
+    // falling back to a fixed default. Only ever touches a question with no language at all — an
+    // already-answered or already-opened question is never silently changed underneath the student.
+    if (activeQuestion?.category === "CODING") {
+      setDrafts((prev) => {
+        const d = prev[activeQuestion.id];
+        if (d?.language) return prev;
+        // A rare FUNCTION-mode question can restrict which languages it even offers (see
+        // supportedLanguages) — if the carried-forward preference isn't one of them, this ONE
+        // question falls back to whatever it does support, without corrupting the preference
+        // itself for later questions.
+        const supported = supportedLanguages(activeQuestion).map((l) => l.id);
+        const preferred = preferredLanguageRef.current;
+        const lang = preferred && supported.includes(preferred) ? preferred
+          : supported.includes(activeQuestion.language) ? activeQuestion.language
+          : supported.includes("python") ? "python" // platform-wide default compiler
+          : supported[0];
+        if (!preferred || supported.includes(preferred)) preferredLanguageRef.current = lang;
+        const code = d?.code || activeQuestion.starterCode || defaultStarter(lang);
+        setLangDrafts((ld) => (ld[activeQuestion.id]?.[lang] !== undefined ? ld : { ...ld, [activeQuestion.id]: { ...ld[activeQuestion.id], [lang]: code } }));
+        return { ...prev, [activeQuestion.id]: { ...d, language: lang, code } };
+      });
+    }
   }, [activeQuestion]);
   useEffect(() => {
     if (phase !== "active" || !activeQuestion || activeQuestion.category !== "CODING") return;
@@ -418,6 +459,9 @@ export default function InterviewSession() {
     const saved = langDrafts[q.id]?.[lang];
     const code = saved !== undefined ? saved : (lang === q.language ? (q.starterCode || defaultStarter(lang)) : defaultStarter(lang));
     updateDraft({ language: lang, code });
+    // An explicit switch becomes the new preference for every not-yet-opened question too — see
+    // preferredLanguageRef's own comment.
+    preferredLanguageRef.current = lang;
     setRunResult(null);
     setCodeSubmittedResult(false);
   }
@@ -777,7 +821,7 @@ export default function InterviewSession() {
                   without it, the language picker and Run/Submit buttons sit on one unwrapped line
                   and get squeezed/cut off on a narrow mobile screen (this page was missing it). */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
-                <select className="ip-select" value={draft.language} onChange={(e) => handleLanguageChange(e.target.value)}>
+                <select className="ip-select" value={draft.language || "python"} onChange={(e) => handleLanguageChange(e.target.value)}>
                   {supportedLanguages(q).map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                 </select>
                 <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={saving} runDisabled={micBlocked} submitDisabled={micBlocked} />

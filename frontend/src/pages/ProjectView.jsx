@@ -198,8 +198,8 @@ export default function ProjectView() {
 
 function ProjectTaskCard({ task, onProgress }) {
   const aiAvailable = useAiStatus();
-  const [language, setLanguage] = useState(task.language || "java");
-  const [code, setCode] = useState(task.starterCode || defaultStarter(task.language || "java"));
+  const [language, setLanguage] = useState(task.language || "python"); // platform-wide default compiler
+  const [code, setCode] = useState(task.starterCode || defaultStarter(task.language || "python"));
   const [runResult, setRunResult] = useState(null);
   const [running, setRunning] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
@@ -217,7 +217,7 @@ function ProjectTaskCard({ task, onProgress }) {
     api.get(`/learning/tasks/${task.id}/draft`)
       .then((res) => {
         if (res.data) { setCode(res.data.code); setLanguage(res.data.language); }
-        else { setCode(task.starterCode || defaultStarter(task.language || "java")); setLanguage(task.language || "java"); }
+        else { setCode(task.starterCode || defaultStarter(task.language || "python")); setLanguage(task.language || "python"); }
       })
       .catch(() => {})
       .finally(() => setDraftLoaded(true));

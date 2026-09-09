@@ -81,6 +81,11 @@ export default function ModuleCodingAssessment() {
   const resizingRef = useRef(false);
 
   const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
+  // Whatever compiler language the student is already using on this assessment — set the first
+  // time any coding question resolves a language (default or explicit pick) and again on every
+  // explicit switch (setLanguage below), then reused as the default for every subsequent
+  // not-yet-opened question instead of each one independently resetting to the platform default.
+  const preferredLanguageRef = useRef(null);
   // See watchForNonAsciiInput's own comment: no webpage can force off a student's active
   // third-party keyboard/IME app, so applyPlainTextInputHints below is a hint, not a guarantee.
   // This state instead catches the actual observable moment it fails — a composed non-English
@@ -196,13 +201,24 @@ export default function ModuleCodingAssessment() {
       // On resume (page refresh, dropped connection, etc.), the server returns whatever was last
       // autosaved per question — restore that instead of wiping back to starter code, otherwise
       // real, already-saved progress would appear to vanish from the editor.
+      //
+      // Deliberately only pre-populates `initialAnswers` for questions with real saved progress —
+      // a NOT-yet-saved question is left unset here on purpose (undefined, not defaulted to
+      // allowedLanguages[0]) so the lazy per-question-open effect below can resolve it against
+      // whatever language the student is already using elsewhere in this attempt, the moment it's
+      // actually opened. Populating every question upfront with a fixed default was the actual
+      // cause of "picked Python on Q1, Q2 still shows Java" — every question already had its own
+      // independent answer entry before the student ever touched anything, so a later language
+      // switch on Q1 had nothing left to propagate to.
       const initialAnswers = {};
       const restoredVerdicts = {};
       const restoredVisited = {};
       const initialDrafts = {};
+      let lastRestoredCodingLang = null;
       data.questions.forEach((q) => {
         const saved = data.savedAnswers?.[q.id];
-        const lang = saved?.language || (Array.isArray(data.allowedLanguages) && data.allowedLanguages[0]) || "java";
+        if (!saved) return;
+        const lang = saved.language;
         // Deliberately does NOT fall back to the legacy single-language q.starterCode field (unlike
         // an earlier version of this line) — two independent problems with it: it only ever matches
         // ONE language, so using it regardless of the selected language showed a wrong-language
@@ -213,17 +229,19 @@ export default function ModuleCodingAssessment() {
         // as a fallback could hand a student starter code that's guaranteed to fail to compile the
         // moment they submit it, through no fault of their own. setLanguage() below already made
         // this same call for language switches; this is the matching fix for the initial load.
-        const code = saved?.code ?? (q.starterCodeByLanguage?.[lang] || defaultStarter(lang));
+        const code = saved.code ?? (q.starterCodeByLanguage?.[lang] || defaultStarter(lang));
         initialAnswers[q.id] = { language: lang, code };
         initialDrafts[q.id] = { [lang]: code };
-        if (saved) {
-          lastSavedCodeRef.current[q.id] = `${lang}:${code}`;
-          restoredVisited[q.id] = true;
-          if (saved.verdict) {
-            restoredVerdicts[q.id] = { verdict: saved.verdict, passedCases: saved.passedCases, totalCases: saved.totalCases };
-          }
+        lastSavedCodeRef.current[q.id] = `${lang}:${code}`;
+        restoredVisited[q.id] = true;
+        if (saved.verdict) {
+          restoredVerdicts[q.id] = { verdict: saved.verdict, passedCases: saved.passedCases, totalCases: saved.totalCases };
         }
+        if (lang !== "sql") lastRestoredCodingLang = lang;
       });
+      // Resuming after a refresh carries the most recently-autosaved coding language forward as
+      // the preference for any question not yet opened this session, same as picking it live would.
+      if (lastRestoredCodingLang) preferredLanguageRef.current = lastRestoredCodingLang;
       setAnswers(initialAnswers);
       setLangDrafts(initialDrafts);
       setCodeVerdicts(restoredVerdicts);
@@ -303,12 +321,32 @@ export default function ModuleCodingAssessment() {
   // navigator). Verdicts persist across switches on purpose — only the ephemeral Run/Submit
   // banners reset, not the graded status.
   useEffect(() => {
-    const id = questions[activeIdx]?.id;
+    const q = questions[activeIdx];
+    const id = q?.id;
     activeQuestionIdRef.current = id ?? null;
     if (!id) return;
     setVisited((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
     setRunResult(null);
     setSubmitResultMsg(null);
+
+    // Lazily resolves THIS question's language/code the first time it's actually opened with no
+    // saved/previously-set answer — using whatever language the student is already using
+    // elsewhere in this attempt (preferredLanguageRef, seeded on resume and updated on every
+    // explicit setLanguage() switch) instead of independently resetting to a fixed default. Only
+    // ever touches a question with no existing answer at all — an already-answered or
+    // already-opened question is never silently changed underneath the student.
+    setAnswers((prev) => {
+      if (prev[id]) return prev;
+      const allowed = Array.isArray(allowedLanguages) && allowedLanguages.length > 0 ? allowedLanguages : ["python"];
+      const preferred = preferredLanguageRef.current;
+      const lang = (preferred && allowed.includes(preferred)) ? preferred
+        : allowed.includes("python") ? "python" // platform-wide default compiler
+        : allowed[0];
+      preferredLanguageRef.current = lang;
+      const code = q.starterCodeByLanguage?.[lang] || defaultStarter(lang);
+      setLangDrafts((d) => (d[id]?.[lang] !== undefined ? d : { ...d, [id]: { ...d[id], [lang]: code } }));
+      return { ...prev, [id]: { language: lang, code } };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx, questions.length]);
 
@@ -402,7 +440,7 @@ export default function ModuleCodingAssessment() {
 
   function setCode(code) {
     if (!current) return;
-    const language = answer?.language || allowedLanguages[0];
+    const language = answer?.language || preferredLanguageRef.current || allowedLanguages[0];
     setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], code } }));
     setLangDrafts((prev) => ({ ...prev, [current.id]: { ...prev[current.id], [language]: code } }));
   }
@@ -419,6 +457,9 @@ export default function ModuleCodingAssessment() {
     const code = draft !== undefined ? draft : (current.starterCodeByLanguage?.[language] || defaultStarter(language));
     setAnswers((prev) => ({ ...prev, [current.id]: { language, code } }));
     setLangDrafts((prev) => ({ ...prev, [current.id]: { ...prev[current.id], [language]: code } }));
+    // An explicit switch becomes the new preference for every not-yet-opened question too — see
+    // preferredLanguageRef's own comment.
+    preferredLanguageRef.current = language;
     setRunResult(null);
     setSubmitResultMsg(null);
   }
