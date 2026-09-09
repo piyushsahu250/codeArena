@@ -13,6 +13,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
+import { applyPlainTextInputHints } from "../utils/monacoSetup";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
 
@@ -874,6 +875,7 @@ export default function ModuleCodingAssessment() {
               language={ALL_LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
               value={answer?.code || ""}
               onChange={(v) => setCode(v || "")}
+              onMount={applyPlainTextInputHints}
               theme="vs-dark"
               options={{ fontSize: 14, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
             />

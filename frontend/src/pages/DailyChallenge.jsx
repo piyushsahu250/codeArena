@@ -9,6 +9,7 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import CodeResultBlock from "../components/CodeResultBlock";
 import ChallengeLeaderboard from "../components/ChallengeLeaderboard";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { applyPlainTextInputHints } from "../utils/monacoSetup";
 import useIsMobile from "../hooks/useIsMobile";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
@@ -265,6 +266,7 @@ export default function DailyChallenge() {
                 language={LANGUAGES.find((l) => l.id === language)?.monaco}
                 value={code}
                 onChange={(v) => setCode(v || "")}
+                onMount={applyPlainTextInputHints}
                 options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
               />
             </div>

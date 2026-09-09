@@ -15,6 +15,7 @@ import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
 import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
+import { applyPlainTextInputHints } from "../utils/monacoSetup";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const JUDGE_TIMEOUT_MS = 20000;
@@ -777,6 +778,7 @@ export default function InterviewSession() {
                   language={LANGUAGES.find((l) => l.id === draft.language)?.monaco}
                   value={draft.code}
                   onChange={(v) => updateDraft({ code: v || "" })}
+                  onMount={applyPlainTextInputHints}
                   theme={dark ? "vs-dark" : "light"}
                   options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
                 />

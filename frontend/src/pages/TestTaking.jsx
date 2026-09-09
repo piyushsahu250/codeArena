@@ -14,6 +14,7 @@ import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from 
 import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
+import { applyPlainTextInputHints } from "../utils/monacoSetup";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -2096,6 +2097,7 @@ export default function TestTaking() {
                   language={isSql ? "sql" : LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
                   value={answer?.code || ""}
                   onChange={(v) => setCode(v || "")}
+                  onMount={applyPlainTextInputHints}
                   theme={editorTheme}
                   options={{
                     fontSize: editorFontSize,

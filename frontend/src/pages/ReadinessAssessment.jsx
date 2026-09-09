@@ -7,6 +7,7 @@ import MathText from "../components/MathText";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
+import { applyPlainTextInputHints } from "../utils/monacoSetup";
 import useIsMobile from "../hooks/useIsMobile";
 import api from "../api";
 
@@ -279,6 +280,7 @@ export default function ReadinessAssessment() {
                     theme="vs-dark"
                     value={ans.code || ""}
                     onChange={(v) => setCode(v ?? "")}
+                    onMount={applyPlainTextInputHints}
                     options={{ fontSize: 13, minimap: { enabled: false } }}
                   />
                 </div>

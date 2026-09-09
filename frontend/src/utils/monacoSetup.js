@@ -27,3 +27,31 @@ self.MonacoEnvironment = {
 };
 
 loader.config({ monaco });
+
+// Pass as `<Editor onMount={applyPlainTextInputHints}>` on every code editor. Root cause this
+// closes: reported live during a mobile test — a, s, d (and potentially other letters) silently
+// not appearing while typing code. Nothing in this app's own keyboard handling blocks bare
+// letters (TestTaking.jsx/useProctoring.js only intercept Ctrl/Cmd+letter combos) — the actual
+// cause is the device's own on-screen keyboard: an active Indic-language transliteration input
+// method (e.g. Android's Marathi/Hindi phonetic Gboard mode, consistent with the Marathi search
+// suggestions seen on this same device in an earlier report) intercepts certain Latin letters —
+// commonly vowels like "a" — while composing a candidate Devanagari word, and doesn't commit
+// anything to the field until the composition resolves. Code needs raw ASCII, never a composed
+// script, so this looks exactly like "the key does nothing."
+//
+// This is fundamentally a client keyboard-language setting, not something a webpage can force —
+// these are hints a browser/IME MAY honor, not a guarantee. If it recurs, the actual fix is on the
+// student's device: switch the on-screen keyboard's input language to English before typing code
+// (on Gboard: long-press the spacebar, or tap the globe/language-switch key).
+export function applyPlainTextInputHints(editor) {
+  const textarea = editor.getDomNode?.()?.querySelector("textarea");
+  if (!textarea) return;
+  textarea.setAttribute("lang", "en");
+  textarea.setAttribute("autocapitalize", "off");
+  textarea.setAttribute("autocorrect", "off");
+  textarea.setAttribute("autocomplete", "off");
+  textarea.setAttribute("spellcheck", "false");
+  // Already Monaco's default -- set explicitly so a future Monaco upgrade changing that default
+  // can't silently reintroduce this.
+  textarea.setAttribute("inputmode", "text");
+}

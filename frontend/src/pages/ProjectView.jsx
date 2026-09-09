@@ -13,6 +13,7 @@ import ProblemStatement from "../components/ProblemStatement";
 import ImStuckMenu from "../components/ImStuckMenu";
 import useAiStatus from "../hooks/useAiStatus";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
+import { applyPlainTextInputHints } from "../utils/monacoSetup";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 const STATUS_ICON = { COMPLETED: "✓", IN_PROGRESS: "◐", NOT_STARTED: "○" };
@@ -286,6 +287,7 @@ function ProjectTaskCard({ task, onProgress }) {
               language={LANGUAGES.find((l) => l.id === language)?.monaco}
               value={code}
               onChange={(v) => setCode(v || "")}
+              onMount={applyPlainTextInputHints}
               options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
             />
           </div>
@@ -310,6 +312,7 @@ function ProjectTaskCard({ task, onProgress }) {
               language={LANGUAGES.find((l) => l.id === language)?.monaco}
               value={code}
               onChange={(v) => setCode(v || "")}
+              onMount={applyPlainTextInputHints}
               options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
             />
           </div>
