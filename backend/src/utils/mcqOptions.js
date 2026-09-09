@@ -21,7 +21,10 @@
 function normalizeOptions(questionType, rawOptions, rawCorrectAnswer, { checkDuplicates = true } = {}) {
   if (questionType === "TRUE_FALSE") {
     const options = ["True", "False"];
-    const idx = normalizeCorrectIndices(rawCorrectAnswer, options, false)[0];
+    // Deliberately takes the first resolved index only — "True" and "False" both marked correct is
+    // a malformed row, but True/False has no "switch to MULTISELECT" escape hatch the way a plain
+    // MCQ does, so the historical lenient behavior (pick one) is kept here rather than rejected.
+    const idx = normalizeCorrectIndices(rawCorrectAnswer, options)[0];
     if (idx === undefined) throw new Error("True/False questions need a correct answer of True or False");
     return { options, correctAnswer: [idx] };
   }
@@ -38,16 +41,30 @@ function normalizeOptions(questionType, rawOptions, rawCorrectAnswer, { checkDup
   }
 
   const isMulti = questionType === "MULTISELECT";
-  const correctAnswer = normalizeCorrectIndices(rawCorrectAnswer, options, isMulti);
+  const correctAnswer = normalizeCorrectIndices(rawCorrectAnswer, options);
   if (correctAnswer.length === 0) throw new Error("Select at least one correct answer");
-  if (!isMulti && correctAnswer.length > 1) throw new Error("Multiple Choice questions can only have one correct answer");
+  // Hard reject — NOT silent truncation. normalizeCorrectIndices deliberately returns every
+  // distinct valid index it parsed (it used to slice non-MULTISELECT down to the first, which made
+  // this check unreachable dead code and let a bulk-import row that mistakenly listed two correct
+  // answers through with an unannounced answer-key change). This mirrors the read-only audit rule
+  // in utils/questionValidation.js ("only one correct answer is allowed for this question type") —
+  // the two are meant to agree on every row. On bulk import the message surfaces per-row in the
+  // preview, telling staff to fix the row or set its type to MULTISELECT.
+  if (!isMulti && correctAnswer.length > 1) {
+    throw new Error("Multiple Choice questions can only have one correct answer — mark just one option correct, or set the question type to MULTISELECT");
+  }
 
   return { options, correctAnswer };
 }
 
 // Accepts correctAnswer as an array of 0-based indices (from the app UI) or
 // as text (from spreadsheet import: option text or 1-based numbers, comma/pipe separated).
-function normalizeCorrectIndices(raw, options, isMulti) {
+// Returns EVERY distinct valid index it can resolve, in first-seen order — it does not decide
+// how many correct answers a question type is allowed. That arity rule belongs to the caller:
+// normalizeOptions rejects >1 for anything that isn't MULTISELECT; its TRUE_FALSE branch takes
+// the first. (An earlier version sliced non-MULTISELECT down to the first index here, which
+// silently swallowed malformed multi-answer rows before normalizeOptions could reject them.)
+function normalizeCorrectIndices(raw, options) {
   let tokens;
   if (Array.isArray(raw)) {
     tokens = raw;
@@ -71,7 +88,7 @@ function normalizeCorrectIndices(raw, options, isMulti) {
     .filter((i) => i >= 0 && i < options.length);
 
   const unique = [...new Set(indices)];
-  if (unique.length > 0) return isMulti ? unique : unique.slice(0, 1);
+  if (unique.length > 0) return unique;
 
   // Confirmed live on a real bulk import: this splits on comma AND pipe to support
   // MULTISELECT's "OptionA, OptionB" convention, but that collides with a perfectly legitimate

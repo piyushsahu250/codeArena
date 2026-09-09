@@ -49,15 +49,30 @@ describe("normalizeOptions — MCQ", () => {
     assert.throws(() => normalizeOptions("MCQ", ["A", "B"], []), /at least one correct answer/);
   });
 
-  // NOTE: normalizeCorrectIndices itself already truncates to the first index whenever isMulti is
-  // false (`unique.slice(0, 1)`), before normalizeOptions's own "only one correct answer" check
-  // ever sees more than one — so that check can never actually throw via this path today. Asserting
-  // the REAL current behavior here (silent truncation, not a rejection) rather than the behavior
-  // the dead code implies, so this test can't give a false sense that multi-answer MCQ input is
-  // being rejected when it's actually just quietly narrowed to the first answer.
-  test("plain MCQ with multiple indices silently keeps only the first (documented current behavior, not a rejection)", () => {
-    const result = normalizeOptions("MCQ", ["A", "B", "C"], [0, 1]);
-    assert.deepEqual(result.correctAnswer, [0]);
+  // A plain MCQ must REJECT input that marks more than one option correct — it does NOT silently
+  // narrow to the first. normalizeCorrectIndices now returns every distinct parsed index (it used
+  // to slice non-MULTISELECT down to one, which made this check unreachable dead code), so the
+  // "only one correct answer" guard in normalizeOptions actually fires. This deliberately mirrors
+  // the read-only audit rule in utils/questionValidation.js ("only one correct answer is allowed
+  // for this question type") — the write-time gate and the audit are meant to agree on every row.
+  // Practical effect: a staff member bulk-importing a row that lists two correct answers for a
+  // plain MCQ gets a clear, actionable error instead of an unannounced answer-key change.
+  test("plain MCQ with multiple correct indices is rejected, not silently truncated", () => {
+    assert.throws(
+      () => normalizeOptions("MCQ", ["A", "B", "C"], [0, 1]),
+      /only have one correct answer/
+    );
+  });
+
+  test("plain MCQ rejects multi-answer bulk-import text (\"1,2\") the same way", () => {
+    assert.throws(
+      () => normalizeOptions("MCQ", ["A", "B", "C"], "1,2"),
+      /only have one correct answer/
+    );
+  });
+
+  test("the rejection message points staff at MULTISELECT", () => {
+    assert.throws(() => normalizeOptions("MCQ", ["A", "B", "C"], [0, 1]), /MULTISELECT/);
   });
 
   test("rejects a correct-answer index outside the option range", () => {
@@ -99,23 +114,29 @@ describe("normalizeCorrectIndices — bulk-import text parsing", () => {
   const options = ["Alpha", "Beta", "Gamma", "Delta"];
 
   test("resolves a 1-based option number from spreadsheet text", () => {
-    assert.deepEqual(normalizeCorrectIndices("2", options, false), [1]);
+    assert.deepEqual(normalizeCorrectIndices("2", options), [1]);
   });
 
   test("resolves option text case-insensitively", () => {
-    assert.deepEqual(normalizeCorrectIndices("gamma", options, false), [2]);
+    assert.deepEqual(normalizeCorrectIndices("gamma", options), [2]);
   });
 
   test("resolves comma-separated multi-select answers", () => {
-    assert.deepEqual(normalizeCorrectIndices("Alpha, Gamma", options, true).sort(), [0, 2]);
+    assert.deepEqual(normalizeCorrectIndices("Alpha, Gamma", options).sort(), [0, 2]);
+  });
+
+  test("returns EVERY distinct parsed index — arity is the caller's rule, not this function's", () => {
+    // It no longer slices down to the first index for the single-answer case; normalizeOptions is
+    // what rejects >1 for a non-MULTISELECT type. Asserting that contract directly here.
+    assert.deepEqual(normalizeCorrectIndices("1,2", options).sort(), [0, 1]);
   });
 
   test("falls back to matching the WHOLE raw string when comma-splitting finds nothing — a single-answer option that itself contains a comma", () => {
     const listOptions = ["Samkhya, Yoga, Nyaya", "Vedanta", "Mimamsa"];
-    assert.deepEqual(normalizeCorrectIndices("Samkhya, Yoga, Nyaya", listOptions, false), [0]);
+    assert.deepEqual(normalizeCorrectIndices("Samkhya, Yoga, Nyaya", listOptions), [0]);
   });
 
   test("an out-of-range numeric answer resolves to nothing (not silently wrong)", () => {
-    assert.deepEqual(normalizeCorrectIndices("99", options, false), []);
+    assert.deepEqual(normalizeCorrectIndices("99", options), []);
   });
 });
