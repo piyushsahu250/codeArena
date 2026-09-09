@@ -4,6 +4,7 @@ import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL, performExpiredRedirect } from "../api";
 import { Mic, Square, Move } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
+import useIsMobile from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -44,6 +45,13 @@ const VIOLATION_LABEL = {
 export default function InterviewSession() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+
+  function handleEditorMount(editor) {
+    monacoEditorRef.current = editor;
+    applyPlainTextInputHints(editor);
+  }
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [phase, setPhase] = useState("preflight"); // preflight | active | terminated
@@ -772,13 +780,28 @@ export default function InterviewSession() {
                 </select>
                 <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={saving} runDisabled={micBlocked} submitDisabled={micBlocked} />
               </div>
+              {/* A touch keyboard has no physical Tab key — these trigger Monaco's own built-in
+                  tab/outdent commands directly. onPointerDown preventDefaults so tapping never
+                  steals focus/selection away from the editor first. */}
+              {isMobile && (
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                    onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "tab", null)}>
+                    ⇥ Indent
+                  </button>
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                    onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>
+                    ⇤ Outdent
+                  </button>
+                </div>
+              )}
               <div style={{ marginTop: 10, border: "1px solid var(--ip-glass-border)", borderRadius: 8, overflow: "hidden" }}>
                 <Editor
                   height="260px"
                   language={LANGUAGES.find((l) => l.id === draft.language)?.monaco}
                   value={draft.code}
                   onChange={(v) => updateDraft({ code: v || "" })}
-                  onMount={applyPlainTextInputHints}
+                  onMount={handleEditorMount}
                   theme={dark ? "vs-dark" : "light"}
                   options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
                 />

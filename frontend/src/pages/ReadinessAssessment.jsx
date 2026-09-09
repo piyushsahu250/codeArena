@@ -36,6 +36,12 @@ export default function ReadinessAssessment() {
   const [remainingSec, setRemainingSec] = useState(null);
   const [loadError, setLoadError] = useState("");
   const autoFinalizedRef = useRef(false);
+  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+
+  function handleEditorMount(editor) {
+    monacoEditorRef.current = editor;
+    applyPlainTextInputHints(editor);
+  }
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -273,6 +279,21 @@ export default function ReadinessAssessment() {
                     {saving ? "Saving…" : "Save Answer"}
                   </button>
                 </div>
+                {/* A touch keyboard has no physical Tab key — these trigger Monaco's own built-in
+                    tab/outdent commands directly. onPointerDown preventDefaults so tapping never
+                    steals focus/selection away from the editor first. */}
+                {isMobile && (
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                      onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "tab", null)}>
+                      ⇥ Indent
+                    </button>
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                      onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>
+                      ⇤ Outdent
+                    </button>
+                  </div>
+                )}
                 <div style={{ border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
                   <Editor
                     height={isMobile ? "360px" : "520px"}
@@ -280,7 +301,7 @@ export default function ReadinessAssessment() {
                     theme="vs-dark"
                     value={ans.code || ""}
                     onChange={(v) => setCode(v ?? "")}
-                    onMount={applyPlainTextInputHints}
+                    onMount={handleEditorMount}
                     options={{ fontSize: 13, minimap: { enabled: false } }}
                   />
                 </div>

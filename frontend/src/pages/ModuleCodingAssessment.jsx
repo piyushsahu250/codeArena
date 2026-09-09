@@ -80,6 +80,13 @@ export default function ModuleCodingAssessment() {
   const [editorHeight, setEditorHeight] = useState(() => Number(localStorage.getItem("moduleCodingEditorHeight")) || 420);
   const resizingRef = useRef(false);
 
+  const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
+
+  function handleEditorMount(editor) {
+    monacoEditorRef.current = editor;
+    applyPlainTextInputHints(editor);
+  }
+
   const deadlineRef = useRef(null);
   const clockOffsetRef = useRef(0); // serverTime - Date.now() at start/resume; corrects a skewed device clock
   const finalizingRef = useRef(false); // in-flight guard for the auto-submit tick, distinct from finalizedRef
@@ -869,13 +876,35 @@ export default function ModuleCodingAssessment() {
             Your code is auto-saved every 10 seconds. "Run" checks against sample cases only — "Submit" grades this
             question against all test cases, including hidden ones, right away.
           </p>
+          {/* A touch keyboard has no physical Tab key at all, and indentation-sensitive languages
+              (Python) are unwritable on mobile without one — these trigger Monaco's own built-in
+              tab/outdent commands directly. onPointerDown (not onClick) preventDefaults so tapping
+              the button never steals focus/selection away from the editor first. */}
+          {isMobile && (
+            <div style={{ display: "flex", gap: 6, padding: "6px 16px 0" }}>
+              <button
+                type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => monacoEditorRef.current?.trigger("toolbar", "tab", null)}
+              >
+                ⇥ Indent
+              </button>
+              <button
+                type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}
+              >
+                ⇤ Outdent
+              </button>
+            </div>
+          )}
           <div style={{ height: isMobile ? Math.min(editorHeight, 320) : editorHeight, minHeight: 0, flexShrink: 0 }}>
             <Editor
               height="100%"
               language={ALL_LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
               value={answer?.code || ""}
               onChange={(v) => setCode(v || "")}
-              onMount={applyPlainTextInputHints}
+              onMount={handleEditorMount}
               theme="vs-dark"
               options={{ fontSize: 14, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
             />

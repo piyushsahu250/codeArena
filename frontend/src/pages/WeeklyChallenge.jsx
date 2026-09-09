@@ -36,6 +36,12 @@ export default function WeeklyChallenge() {
   const codeRef = useRef(code);
   const languageRef = useRef(language);
   const challengeIdRef = useRef(null);
+  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+
+  function handleEditorMount(editor) {
+    monacoEditorRef.current = editor;
+    applyPlainTextInputHints(editor);
+  }
   codeRef.current = code;
   languageRef.current = language;
 
@@ -198,13 +204,28 @@ export default function WeeklyChallenge() {
               </select>
               <RunSubmitButtons onRun={runCode} onSubmit={submitCode} running={running} submitting={submitting} />
             </div>
+            {/* A touch keyboard has no physical Tab key — these trigger Monaco's own built-in
+                tab/outdent commands directly. onPointerDown preventDefaults so tapping never
+                steals focus/selection away from the editor first. */}
+            {isMobile && (
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                  onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "tab", null)}>
+                  ⇥ Indent
+                </button>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
+                  onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>
+                  ⇤ Outdent
+                </button>
+              </div>
+            )}
             <div style={{ marginTop: 10, border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
               <Editor
                 height={isMobile ? "260px" : "320px"}
                 language={LANGUAGES.find((l) => l.id === language)?.monaco}
                 value={code}
                 onChange={(v) => setCode(v || "")}
-                onMount={applyPlainTextInputHints}
+                onMount={handleEditorMount}
                 options={{ fontSize: 13, minimap: { enabled: false }, fontFamily: "JetBrains Mono, monospace" }}
               />
             </div>
