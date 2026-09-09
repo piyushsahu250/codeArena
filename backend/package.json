@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "test": "node --test test/"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
