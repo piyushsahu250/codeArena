@@ -39,7 +39,6 @@ const VIOLATION_SEVERITY = {
   SCREEN_OVERLAY_DETECTED: "SUSPICIOUS", // viewport-shrink heuristic — can false-positive on pinch-zoom
   MULTI_MONITOR: "SUSPICIOUS",
   DEVTOOLS: "SUSPICIOUS", // docked-devtools size heuristic — best-effort, not proof
-  BROWSER_SHORTCUT: "SUSPICIOUS",
   COPY: "SUSPICIOUS",
   PASTE: "SUSPICIOUS",
   CUT: "SUSPICIOUS",
@@ -52,6 +51,14 @@ const VIOLATION_SEVERITY = {
   MULTIPLE_FACES: "INTERRUPTION",
   REFRESH_ATTEMPT: "INTERRUPTION", // the browser's own confirm dialog is the real deterrent
   NETWORK_LOSS: "INTERRUPTION",
+  // Moved out of SUSPICIOUS on 2026-09-09: a Test/Coding Assessment's own Monaco editor uses
+  // ordinary keyboard shortcuts for real editing (Ctrl+S save-muscle-memory, Ctrl+/ comment,
+  // Ctrl+F find, Ctrl+D duplicate-line, etc.) — TestTaking.jsx/useProctoring.js's blockKeys only
+  // matches a narrow allowlist (Ctrl+S/P/U/W/N/T/R/Tab, F5/F11), but a student legitimately using
+  // even a few of those while coding hit SUSPICIOUS_ESCALATION_THRESHOLD and got penalized a
+  // strike for normal typing, on a live exam. Still blocked (preventDefault) and still logged for
+  // admin review — just never counted toward the violation limit, no matter how often it recurs.
+  BROWSER_SHORTCUT: "INTERRUPTION",
 };
 
 // Every SUSPICIOUS_ESCALATION_THRESHOLD-th SUSPICIOUS event on one attempt/session escalates into
