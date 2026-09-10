@@ -886,7 +886,11 @@ export default function ModuleCodingAssessment() {
           })}
         </div>
 
-        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : 380, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0, borderRight: isMobile ? "none" : "1px solid var(--line)", borderBottom: isMobile ? "1px solid var(--line)" : "none" }}>
+        {/* maxHeight on mobile: without it this panel rendered at its full problem-statement
+            content height and pushed the code editor far down the scrolling column — the
+            "compiler not fully visible on mobile" report. Capped so it scrolls internally
+            instead, leaving the editor on screen. */}
+        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : 380, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0, maxHeight: isMobile ? "38vh" : undefined, borderRight: isMobile ? "none" : "1px solid var(--line)", borderBottom: isMobile ? "1px solid var(--line)" : "none" }}>
           {current && (
             <>
               <ProblemStatement question={current} />
@@ -951,7 +955,10 @@ export default function ModuleCodingAssessment() {
               <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
             </div>
           )}
-          <div style={{ height: isMobile ? Math.min(editorHeight, 320) : editorHeight, minHeight: 0, flexShrink: 0 }}>
+          {/* On mobile the question panel above is now capped at 38vh, so the editor gets a
+              generous fixed height (was Math.min(editorHeight, 320) — too short); the outer
+              column scrolls so a taller editor just means less empty space, never a cut-off. */}
+          <div style={{ height: isMobile ? 460 : editorHeight, minHeight: 0, flexShrink: 0 }}>
             <Editor
               height="100%"
               language={ALL_LANGUAGES.find((l) => l.id === answer?.language)?.monaco}

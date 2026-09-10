@@ -1951,10 +1951,26 @@ export default function TestTaking() {
           </button>
         )}
 
+        {/* Mobile only: the desktop "Hide questions / Hide results" panel toggles were never
+            rendered on mobile, so a phone student had the question panel (full, uncapped height)
+            permanently stacked above a squeezed code editor with no way to collapse it — the
+            "compiler not fully visible on mobile" report. These give the student the same control:
+            collapse the question and/or results panel to hand the editor the whole screen. */}
+        {isMobile && !isQuiz && (
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", flexWrap: "wrap" }}>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setShowQuestionPanel((v) => !v)}>
+              {showQuestionPanel ? "▾ Hide question" : "▸ Show question"}
+            </button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setShowResultsPanel((v) => !v)}>
+              {showResultsPanel ? "▾ Hide results" : "▸ Show results"}
+            </button>
+          </div>
+        )}
+
         {/* Question description */}
         {showQuestionPanel && (
         <>
-        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : questionPanelWidth, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0 }}>
+        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : questionPanelWidth, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0, maxHeight: isMobile ? "42vh" : undefined }}>
           {current && (
             <>
               <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{current.points} points</p>
@@ -2036,7 +2052,7 @@ export default function TestTaking() {
             floor that flex-grow can't shrink below regardless of how tall the question panel gets;
             the outer body's existing overflow:auto (mobile) already lets the student scroll down
             to it, same pattern this file already uses to cap resultsPanelHeight on mobile. */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: isMobile ? 480 : undefined }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: isMobile ? 560 : undefined }}>
           {isQuiz ? (
             <>
               <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -2176,7 +2192,12 @@ export default function TestTaking() {
                   <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
                 </div>
               )}
-              <div style={{ flex: 1, minHeight: 0 }}>
+              {/* minHeight floor on mobile: the two editor toolbar rows above wrap onto 3-4 lines
+                  on a narrow screen, and `flex: 1` alone would let them squeeze the editor down to
+                  a sliver. 320px keeps a genuinely usable amount of code on screen no matter how
+                  much the toolbars wrap; the parent column's minHeight (560) + the outer
+                  overflow:auto absorb the extra height. */}
+              <div style={{ flex: 1, minHeight: isMobile ? 320 : 0 }}>
                 <Editor
                   height="100%"
                   language={isSql ? "sql" : LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
