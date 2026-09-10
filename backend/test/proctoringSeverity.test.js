@@ -14,15 +14,18 @@ describe("VIOLATION_SEVERITY classification", () => {
     }
   });
 
-  test("BROWSER_SHORTCUT is INTERRUPTION, never SUSPICIOUS — the exact live-test bug fixed this session", () => {
-    // Was SUSPICIOUS until 2026-09-09: a student legitimately using coding-editor keyboard
-    // shortcuts (Ctrl+S, etc.) hit the 3-occurrence escalation threshold and got penalized a real
-    // strike for normal typing, on a live exam. Must stay logged-but-never-penalized.
+  test("keyboard-triggered / mobile-keyboard-shaped types are INTERRUPTION, never counted — the live-exam false positives fixed this session", () => {
+    // BROWSER_SHORTCUT (2026-09-09): a student using ordinary coding-editor shortcuts (Ctrl+S etc.)
+    // hit the escalation threshold and got a strike for normal typing.
+    // SCREEN_OVERLAY_DETECTED (2026-09-10): a viewport-shrink heuristic that fires identically when
+    // a phone's on-screen keyboard opens — students got strikes just for focusing the editor.
+    // Both must stay logged-but-never-penalized.
     assert.equal(VIOLATION_SEVERITY.BROWSER_SHORTCUT, "INTERRUPTION");
+    assert.equal(VIOLATION_SEVERITY.SCREEN_OVERLAY_DETECTED, "INTERRUPTION");
   });
 
   test("SUSPICIOUS types — restricted actions / heuristics with a real false-positive rate", () => {
-    for (const type of ["SCREEN_OVERLAY_DETECTED", "MULTI_MONITOR", "DEVTOOLS", "COPY", "PASTE", "CUT", "RIGHT_CLICK", "DRAG_ATTEMPT", "PRINT_SCREEN_ATTEMPT"]) {
+    for (const type of ["MULTI_MONITOR", "DEVTOOLS", "COPY", "PASTE", "CUT", "RIGHT_CLICK", "DRAG_ATTEMPT", "PRINT_SCREEN_ATTEMPT"]) {
       assert.equal(VIOLATION_SEVERITY[type], "SUSPICIOUS", `${type} should be SUSPICIOUS`);
     }
   });
