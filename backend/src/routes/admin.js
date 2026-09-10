@@ -104,6 +104,7 @@ function classifyQuestionKind(source, q) {
   const type = source === "PracticeQuestion" ? q.type : source === "InterviewQuestion" ? q.category : q.questionType;
   if (type === "CODING") return "CODING";
   if (type === "SQL") return "SQL";
+  if (type === "NUMERICAL") return "NUMERICAL";
   if (source === "InterviewQuestion") return type === "APTITUDE" ? "CHOICE" : null;
   // Question: MCQ/TRUE_FALSE/MULTISELECT. PracticeQuestion: MCQ/OUTPUT_PREDICTION/DEBUG — all
   // three are options+correctAnswer shaped exactly like an MCQ under a different product-facing name.

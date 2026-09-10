@@ -8,7 +8,7 @@ const { instituteWhere } = require("./questionVisibility");
 // grading path anywhere on this platform; adding a fabricated/heuristic grader for those here
 // would be new, unreviewed scope, not a reuse of existing infrastructure — so Readiness
 // assessments are scoped to exactly the types Question already supports and can score reliably.
-const GRADABLE_QUESTION_TYPES = ["MCQ", "MULTISELECT", "TRUE_FALSE", "CODING", "SQL"];
+const GRADABLE_QUESTION_TYPES = ["MCQ", "MULTISELECT", "TRUE_FALSE", "CODING", "SQL", "NUMERICAL"];
 
 const INTERVIEW_ANTI_REPEAT_DAYS = 90; // same default as interview.js's pickQuestions, reused here
 

@@ -12,7 +12,7 @@ import ShareQuestionBank from "../components/ShareQuestionBank";
 import { useConfirm } from "../context/ConfirmContext";
 import { useAuth } from "../context/AuthContext";
 
-const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
+const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select", SQL: "SQL Query", NUMERICAL: "Numerical answer" };
 
 function Stat({ label, value }) {
   return (

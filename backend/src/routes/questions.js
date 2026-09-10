@@ -13,6 +13,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const { validateQuestionForVerification } = require("../utils/questionValidation");
 const { normalizeOptions } = require("../utils/mcqOptions");
+const { normalizeExpectedNumeric } = require("../utils/numericAnswer");
 const { canStaffUseSubject, resolveSubjectUnitTopic, staffAuthorizedSubjectIds } = require("../utils/subjectAccess");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
@@ -25,7 +26,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // route on the platform keeps using the spreadsheet-only `upload` above.
 const uploadQuestionFile = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetOrTextFileFilter });
 
-const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL"];
+const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL", "NUMERICAL"];
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
 // Employability & Subject Readiness module — see Question.btlLevel/questionStatus schema comments.
 const BTL_LEVELS = [1, 2, 3, 4, 5, 6];
@@ -447,6 +448,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       allowDuplicate, subtopic, btlLevel, skillTested, questionStatus, aiGenerated,
       subjectId, unitId, topicId,
+      numericAnswer, numericTolerance,
     } = req.body;
 
     if (!description) return res.status(400).json({ error: "Question text is required" });
@@ -595,6 +597,15 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
           explanation: tc.explanation || null,
         })),
       };
+    } else if (type === "NUMERICAL") {
+      const { numericAnswer: normVal, numericAnswerDisplay } = normalizeExpectedNumeric(numericAnswer);
+      const tol = Number(numericTolerance);
+      if (numericTolerance !== undefined && numericTolerance !== null && numericTolerance !== "" && (!Number.isFinite(tol) || tol < 0)) {
+        return res.status(400).json({ error: "Tolerance must be a non-negative number (use 0 for an exact match)" });
+      }
+      data.numericAnswer = normVal;
+      data.numericAnswerDisplay = numericAnswerDisplay;
+      data.numericTolerance = Number.isFinite(tol) && tol > 0 ? tol : 0;
     } else {
       const normalized = normalizeOptions(type, options, correctAnswer);
       data.options = normalized.options;
@@ -2326,6 +2337,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       edgeCases, problemExplanation, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
       subtopic, btlLevel, skillTested, questionStatus,
       subjectId, unitId, topicId,
+      numericAnswer, numericTolerance,
     } = req.body;
 
     if (folderId !== undefined && folderId !== null && folderId !== existing.folderId) {
@@ -2477,6 +2489,27 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
           create: testCases.map((tc) => ({ input: tc.input || "", expected: tc.expected, isHidden: tc.isHidden ?? true, explanation: tc.explanation || null })),
         };
       }
+    } else if (type === "NUMERICAL") {
+      // Only re-parse the expected answer when this request is actually supplying one — an edit
+      // that only touches, say, difficulty keeps the stored numericAnswer untouched.
+      if (numericAnswer !== undefined && numericAnswer !== null && String(numericAnswer).trim() !== "") {
+        const { numericAnswer: normVal, numericAnswerDisplay } = normalizeExpectedNumeric(numericAnswer);
+        data.numericAnswer = normVal;
+        data.numericAnswerDisplay = numericAnswerDisplay;
+      }
+      if (numericTolerance !== undefined) {
+        const tol = Number(numericTolerance);
+        if (numericTolerance !== null && numericTolerance !== "" && (!Number.isFinite(tol) || tol < 0)) {
+          return res.status(400).json({ error: "Tolerance must be a non-negative number (use 0 for an exact match)" });
+        }
+        data.numericTolerance = Number.isFinite(tol) && tol > 0 ? tol : 0;
+      }
+      // Clear stale values left over if this question used to be another type.
+      data.options = null;
+      data.correctAnswer = null;
+      data.sqlSchema = null;
+      data.evaluationType = "STDIO";
+      data.functionSignature = null;
     } else {
       // See normalizeOptions' own comment: only enforce the duplicate-option check when this
       // request is actually the one supplying options — never against a legacy question's

@@ -8,6 +8,7 @@ const { runQueued, getQueueStatus } = require("../utils/queue");
 const { gradePendingCodingSubmissions, gradeCodingSubmission, recomputeAttemptScore } = require("../utils/gradeAttempt");
 const { processGamification } = require("../utils/gamification");
 const { safeErrorMessage } = require("../utils/errors");
+const { gradeNumericAnswer } = require("../utils/numericAnswer");
 
 const router = express.Router();
 
@@ -307,7 +308,7 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
 // most recently selected option is always what counts.
 router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async (req, res) => {
   try {
-    const { attemptId, questionId, selectedOptions } = req.body;
+    const { attemptId, questionId, selectedOptions, numericResponse } = req.body;
 
     const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, include: { test: { select: { durationMin: true } } } });
     if (!attempt || attempt.studentId !== req.user.id) {
@@ -320,12 +321,18 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
 
     const question = await prisma.question.findUnique({ where: { id: questionId } });
     if (!question) return res.status(404).json({ error: "Question not found" });
-    if (question.questionType === "CODING") {
-      return res.status(400).json({ error: "Coding questions are auto-saved via /autosave, not /submit" });
+    if (question.questionType === "CODING" || question.questionType === "SQL") {
+      return res.status(400).json({ error: "Coding/SQL questions are auto-saved via /autosave, not /submit" });
     }
 
-    const originalIndices = toOriginalIndices(selectedOptions, attempt.optionOrder?.[questionId]);
-    const result = gradeQuizAnswer(question, originalIndices);
+    // NUMERICAL questions grade a typed value (integer/decimal/fraction) against the stored
+    // expected answer + tolerance; every other type here is options-based. Option shuffle never
+    // touches a NUMERICAL question (it has no options array), so toOriginalIndices is skipped.
+    const isNumeric = question.questionType === "NUMERICAL";
+    const rawStored = isNumeric ? String(numericResponse ?? "") : JSON.stringify(selectedOptions || []);
+    const result = isNumeric
+      ? gradeNumericAnswer(question, numericResponse)
+      : gradeQuizAnswer(question, toOriginalIndices(selectedOptions, attempt.optionOrder?.[questionId]));
     const score =
       result.verdict === "ACCEPTED"
         ? question.points
@@ -347,7 +354,7 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
           questionId,
           studentId: req.user.id,
           language: question.questionType,
-          code: JSON.stringify(selectedOptions || []),
+          code: rawStored,
           score,
           passedCases: result.passedCases,
           totalCases: result.totalCases,

@@ -17,6 +17,7 @@ const QUESTION_TYPES = [
   { value: "MCQ", label: "Multiple Choice" },
   { value: "TRUE_FALSE", label: "True/False" },
   { value: "MULTISELECT", label: "Multiple Select" },
+  { value: "NUMERICAL", label: "Numerical answer" },
   { value: "SQL", label: "SQL Query" },
 ];
 
@@ -31,6 +32,10 @@ const emptyForm = {
   // this question is never picked for a Readiness assessment, everything else about it is
   // unaffected. questionStatus defaults PUBLISHED, matching the backend default.
   subtopic: "", btlLevel: "", skillTested: "", questionStatus: "PUBLISHED",
+  // NUMERICAL-only: expected answer as typed by the author (integer / 0.5 / 1/2, optionally
+  // negative) and an absolute tolerance (0 = exact match; set a real value like 0.001 for a
+  // decimal answer such as pi).
+  numericAnswer: "", numericTolerance: "0",
 };
 
 // Bloom's Taxonomy levels — the description is the actual cognitive task a question at that level
@@ -174,6 +179,8 @@ export default function CreateQuestion() {
         notes: q.notes || "", edgeCases: q.edgeCases || "", problemExplanation: q.problemExplanation || "",
         subtopic: q.subtopic || "", btlLevel: q.btlLevel ?? "", skillTested: q.skillTested || "",
         questionStatus: q.questionStatus || "PUBLISHED",
+        numericAnswer: q.numericAnswerDisplay ?? (q.numericAnswer != null ? String(q.numericAnswer) : ""),
+        numericTolerance: q.numericTolerance != null ? String(q.numericTolerance) : "0",
       });
       setAiGenerated(!!q.aiGenerated);
       if (q.functionSignature) setSignature(q.functionSignature);
@@ -280,6 +287,9 @@ export default function CreateQuestion() {
       } else if (form.questionType === "SQL") {
         payload.testCases = testCases;
         payload.sqlSchema = form.sqlSchema;
+      } else if (form.questionType === "NUMERICAL") {
+        payload.numericAnswer = form.numericAnswer;
+        payload.numericTolerance = form.numericTolerance;
       } else {
         payload.options = options.map((o) => o.trim()).filter(Boolean);
         payload.correctAnswer = correctIndices;
@@ -342,7 +352,8 @@ export default function CreateQuestion() {
     functionSignature: form.evaluationType === "FUNCTION" ? signature : null,
     testCases: testCases.filter((tc) => !tc.isHidden).map((tc) => ({ input: tc.input, expected: tc.expected, explanation: tc.explanation })),
   };
-  const isQuiz = form.questionType !== "CODING" && !isSql;
+  const isNumerical = form.questionType === "NUMERICAL";
+  const isQuiz = form.questionType !== "CODING" && !isSql && !isNumerical;
   const isMulti = form.questionType === "MULTISELECT";
   const isTrueFalse = form.questionType === "TRUE_FALSE";
 
@@ -582,6 +593,27 @@ export default function CreateQuestion() {
                 minVisible={1}
                 minHidden={5}
               />
+            </>
+          )}
+
+          {isNumerical && (
+            <>
+              <label style={{ ...labelStyle, marginTop: 20 }}>Expected answer</label>
+              <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
+                An integer, a decimal (<span className="mono">0.5</span>), or a fraction (<span className="mono">1/2</span>) — a leading minus is fine.
+                The student's typed answer is parsed the same way, so <span className="mono">1/2</span>, <span className="mono">0.5</span> and <span className="mono">2/4</span> are all accepted for the same question.
+              </p>
+              <input style={inputStyle} value={form.numericAnswer} onChange={updateField("numericAnswer")} placeholder="e.g. 5   or   -3/4   or   3.14159" />
+
+              <label style={{ ...labelStyle, marginTop: 16 }}>Tolerance (absolute)</label>
+              <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
+                <span className="mono">0</span> means an exact match — correct for integer and fraction answers. For a decimal answer like π, set a real value such as <span className="mono">0.001</span> so a rounded answer still scores.
+              </p>
+              <input style={{ ...inputStyle, maxWidth: 200 }} type="number" min="0" step="any" value={form.numericTolerance} onChange={updateField("numericTolerance")} placeholder="0" />
+
+              <label style={{ ...labelStyle, marginTop: 20 }}>Explanation (optional)</label>
+              <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.explanation} onChange={updateField("explanation")} placeholder="Shown to staff for review; not shown to students during the test." />
+              <MathLivePreview text={form.explanation} />
             </>
           )}
 

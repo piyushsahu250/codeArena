@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import MathText from "../components/MathText";
 
-const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select" };
+const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "True/False", MULTISELECT: "Multiple Select", SQL: "SQL Query", NUMERICAL: "Numerical answer" };
 
 export default function TestPreview() {
   const { id } = useParams();
@@ -53,7 +53,23 @@ export default function TestPreview() {
               </div>
               <p style={{ whiteSpace: "pre-wrap", fontSize: 14, marginTop: 10, lineHeight: 1.6 }}><MathText text={tq.question.description} /></p>
 
-              {tq.question.questionType === "CODING" ? (
+              {tq.question.questionType === "NUMERICAL" ? (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>EXPECTED ANSWER (shown to you only)</div>
+                  <div style={{ fontSize: 14, color: "var(--mint)", fontWeight: 700, marginTop: 4 }} className="mono">
+                    {tq.question.numericAnswerDisplay ?? tq.question.numericAnswer}
+                    {tq.question.numericTolerance ? ` (± ${tq.question.numericTolerance})` : " (exact match)"}
+                  </div>
+                  <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
+                    The student's typed answer is parsed the same way — 1/2, 0.5 and 2/4 all match a "1/2" answer.
+                  </p>
+                  {tq.question.explanation && (
+                    <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 10 }}>
+                      <strong>Explanation:</strong> <MathText text={tq.question.explanation} />
+                    </p>
+                  )}
+                </div>
+              ) : tq.question.questionType === "CODING" || tq.question.questionType === "SQL" ? (
                 <div style={{ marginTop: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>TEST CASES ({tq.question.testCases.length})</div>
                   {tq.question.testCases.map((tc) => (

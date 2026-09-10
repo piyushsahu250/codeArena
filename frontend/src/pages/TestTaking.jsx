@@ -589,7 +589,10 @@ export default function TestTaking() {
         const restoredDrafts = {};
         existingSubs.forEach((s) => {
           restoredVisited[s.questionId] = true;
-          if (["MCQ", "TRUE_FALSE", "MULTISELECT"].includes(s.language)) {
+          if (s.language === "NUMERICAL") {
+            // NUMERICAL stores the student's typed answer verbatim in `code` (not JSON).
+            restoredAnswers[s.questionId] = { numericResponse: s.code ?? "" };
+          } else if (["MCQ", "TRUE_FALSE", "MULTISELECT"].includes(s.language)) {
             try {
               restoredAnswers[s.questionId] = { selected: JSON.parse(s.code) };
             } catch {
@@ -642,7 +645,8 @@ export default function TestTaking() {
   const questions = test?.questions || [];
   const current = questions[activeIdx]?.question;
   const isSql = current?.questionType === "SQL";
-  const isQuiz = current && current.questionType !== "CODING" && !isSql;
+  const isNumerical = current?.questionType === "NUMERICAL";
+  const isQuiz = current && current.questionType !== "CODING" && !isSql && !isNumerical;
   const isMulti = current?.questionType === "MULTISELECT";
   useEffect(() => { activeQuestionIdRef.current = current?.id ?? null; }, [current]);
 
@@ -705,6 +709,9 @@ export default function TestTaking() {
         if (!preferred || supported.includes(preferred)) preferredLanguageRef.current = lang;
         const code = current.starterCodeByLanguage?.[lang] || defaultStarter(lang);
         return { ...prev, [current.id]: { language: lang, code } };
+      }
+      if (current.questionType === "NUMERICAL") {
+        return { ...prev, [current.id]: { numericResponse: "" } };
       }
       return { ...prev, [current.id]: { selected: [] } };
     });
@@ -1126,7 +1133,11 @@ export default function TestTaking() {
   function questionStatus(q) {
     const isCoding = q.questionType === "CODING" || q.questionType === "SQL";
     const a = answers[q.id];
-    const answered = isCoding ? !!visited[q.id] : (a?.selected || []).length > 0;
+    const answered = isCoding
+      ? !!visited[q.id]
+      : q.questionType === "NUMERICAL"
+      ? String(a?.numericResponse ?? "").trim() !== ""
+      : (a?.selected || []).length > 0;
     return { answered, marked: !!markedForReview[q.id] };
   }
 
@@ -1191,14 +1202,20 @@ export default function TestTaking() {
       ? (prevSelected.includes(idx) ? prevSelected.filter((i) => i !== idx) : [...prevSelected, idx])
       : [idx];
     setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], selected: nextSelected } }));
-    scheduleAutoSave(current.id, nextSelected);
+    scheduleAutoSave(current.id, { selected: nextSelected });
   }
 
-  // Debounced background save for MCQ/TRUE_FALSE/MULTISELECT — coalesces rapid successive
-  // clicks (e.g. ticking several MULTISELECT checkboxes) into one request instead of firing
-  // on every click, while still feeling instantaneous to the candidate.
-  function scheduleAutoSave(questionId, selected) {
-    pendingAutoSaveRef.current = { questionId, selected };
+  function setNumericResponse(value) {
+    if (!current) return;
+    setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], numericResponse: value } }));
+    scheduleAutoSave(current.id, { numericResponse: value });
+  }
+
+  // Debounced background save for MCQ/TRUE_FALSE/MULTISELECT/NUMERICAL — coalesces rapid
+  // successive changes (ticking several MULTISELECT checkboxes, typing a numeric answer) into one
+  // request instead of firing on every keystroke/click, while still feeling instantaneous.
+  function scheduleAutoSave(questionId, payload) {
+    pendingAutoSaveRef.current = { questionId, ...payload };
     clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(flushAutoSave, 600);
   }
@@ -1210,7 +1227,10 @@ export default function TestTaking() {
     pendingAutoSaveRef.current = null;
     setSavingAnswer(true);
     try {
-      await api.post("/submissions/submit", { attemptId, questionId: pending.questionId, selectedOptions: pending.selected });
+      const body = pending.numericResponse !== undefined
+        ? { attemptId, questionId: pending.questionId, numericResponse: pending.numericResponse }
+        : { attemptId, questionId: pending.questionId, selectedOptions: pending.selected };
+      await api.post("/submissions/submit", body);
       flashSaved();
     } catch {
       // The selection stays in local state and gets retried on the next change, or flushed again
@@ -1285,7 +1305,10 @@ export default function TestTaking() {
     function flushOnUnload() {
       if (finalizedRef.current || !attemptId) return;
       if (pendingAutoSaveRef.current) {
-        keepaliveSave("/submissions/submit", { attemptId, questionId: pendingAutoSaveRef.current.questionId, selectedOptions: pendingAutoSaveRef.current.selected });
+        const p = pendingAutoSaveRef.current;
+        keepaliveSave("/submissions/submit", p.numericResponse !== undefined
+          ? { attemptId, questionId: p.questionId, numericResponse: p.numericResponse }
+          : { attemptId, questionId: p.questionId, selectedOptions: p.selected });
       }
       if (pendingCodeAutoSaveRef.current) {
         keepaliveSave("/submissions/autosave", { attemptId, questionId: pendingCodeAutoSaveRef.current.questionId, language: pendingCodeAutoSaveRef.current.language, code: pendingCodeAutoSaveRef.current.code, seq: pendingCodeAutoSaveRef.current.seq });
@@ -1358,7 +1381,7 @@ export default function TestTaking() {
   }, [running]);
 
   async function handleRun() {
-    if (!answer || isQuiz) return;
+    if (!answer || isQuiz || isNumerical) return;
     const questionId = current.id;
     setRunning(true);
     setRunResult(null);
@@ -1388,7 +1411,7 @@ export default function TestTaking() {
     // (or two independent callers, e.g. a keyboard-shortcut path added later) weren't actually
     // prevented from both firing, only incidentally slowed by React's own render timing.
     if (submittingCodeRef.current) return;
-    if (!answer || isQuiz || !attemptId) return;
+    if (!answer || isQuiz || isNumerical || !attemptId) return;
     const questionId = current.id;
     clearTimeout(codeAutoSaveTimeoutRef.current);
     pendingCodeAutoSaveRef.current = null;
@@ -2108,6 +2131,42 @@ export default function TestTaking() {
                     </label>
                   );
                 })}
+              </div>
+            </>
+          ) : isNumerical ? (
+            <>
+              <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(-1)} disabled={activeIdx === 0}>◀ Previous</button>
+                  {activeIdx === questions.length - 1 ? (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => setShowSubmitReview(true)}>Review &amp; Submit ▶</button>
+                  ) : (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={() => goToQuestion(1)}>Next ▶</button>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <span className={`exam-save-pill ${savingAnswer ? "saving" : saveFailed ? "failed" : "saved"}`}>
+                    {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : "Autosaved ✓"}
+                  </span>
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px", color: markedForReview[current.id] ? "#8b5cf6" : undefined }} onClick={toggleMarkForReview}>
+                    {markedForReview[current.id] ? "⚑ Marked" : "⚑ Mark for review"}
+                  </button>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+                <label className="mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>Your answer</label>
+                <input
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  value={answer?.numericResponse ?? ""}
+                  onChange={(e) => setNumericResponse(e.target.value)}
+                  placeholder="Type a number — e.g. 5, -3.5, or 1/2"
+                  style={{ display: "block", width: "100%", maxWidth: 320, marginTop: 8, padding: "10px 12px", fontSize: 16, borderRadius: 8, border: "1px solid var(--line)", fontFamily: "var(--font-mono)" }}
+                />
+                <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>
+                  Enter an integer, a decimal (0.5), or a fraction (1/2). A leading minus is allowed. Saved automatically as you type.
+                </p>
               </div>
             </>
           ) : (

@@ -948,6 +948,12 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
               functionSignature: true,
               options: true,
               correctAnswer: isStaff,
+              // NUMERICAL answer key — staff only, exactly like correctAnswer. A student's payload
+              // never carries the expected value or tolerance (the select is an allowlist, and
+              // `isStaff` is false for them, so Prisma drops these fields entirely).
+              numericAnswer: isStaff,
+              numericTolerance: isStaff,
+              numericAnswerDisplay: isStaff,
               explanation: isStaff,
               testCases: { where: isStaff ? {} : { isHidden: false } },
             },
@@ -999,6 +1005,7 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
             questionType: true, difficulty: true, points: true, timeLimitMs: true, starterCode: true,
             starterCodeByLanguage: true, evaluationType: true, functionSignature: true, options: true,
             correctAnswer: isStaff, explanation: isStaff,
+            numericAnswer: isStaff, numericTolerance: isStaff, numericAnswerDisplay: isStaff,
             testCases: { where: isStaff ? {} : { isHidden: false } },
           },
         });

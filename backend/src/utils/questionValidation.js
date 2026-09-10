@@ -116,6 +116,19 @@ function auditChoiceCompleteness(question) {
   return missing;
 }
 
+// NUMERICAL completeness — a math-test "type the value" question. The only hard requirement is a
+// stored expected value (numericAnswer, already normalised to a float at save time); tolerance is
+// optional (0 = exact match, the default). Question text is required like every other type.
+function auditNumericCompleteness(question) {
+  const missing = [];
+  if (isBlank(question.description) && isBlank(question.prompt)) missing.push("question text");
+  if (typeof question.numericAnswer !== "number" || !Number.isFinite(question.numericAnswer)) missing.push("expected answer");
+  if (question.numericTolerance != null && (typeof question.numericTolerance !== "number" || question.numericTolerance < 0)) {
+    missing.push("tolerance must be a non-negative number");
+  }
+  return missing;
+}
+
 // Dispatches to the right per-type check above. `kind` lets a caller override what "CODING" vs
 // "CHOICE" means for a row whose type field isn't literally Question.questionType (PracticeQuestion
 // uses `type`, InterviewQuestion uses `category` — see admin.js's question-audit route for how each
@@ -124,6 +137,7 @@ function auditQuestionCompleteness(question, testCases, kind) {
   if (kind === "CODING") return auditCodingCompleteness(question, testCases);
   if (kind === "SQL") return auditSqlCompleteness(question, testCases);
   if (kind === "CHOICE") return auditChoiceCompleteness(question);
+  if (kind === "NUMERICAL") return auditNumericCompleteness(question);
   return [];
 }
 

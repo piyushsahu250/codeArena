@@ -65,6 +65,7 @@ enum QuestionType {
   TRUE_FALSE
   MULTISELECT
   SQL
+  NUMERICAL
 }
 
 // Employability & Subject Readiness module's question-quality workflow (Question.questionStatus).
@@ -803,6 +804,21 @@ model Question {
   // MCQ / TRUE_FALSE / MULTISELECT fields
   options       Json? // array of option strings
   correctAnswer Json? // array of correct option indices
+
+  // NUMERICAL-only (math tests: "solve 2x+5=15", "evaluate the integral", etc.). numericAnswer is
+  // the expected value as a float — a fraction like "1/2" and a decimal "0.5" are both normalised
+  // to 0.5 when the question is saved, and the grader parses the student's typed answer the same
+  // way, so equivalent forms (1/2, 0.5, 2/4) are all accepted automatically without a separate
+  // flag (spec: "accept mathematically equivalent forms"). numericTolerance is an ABSOLUTE
+  // tolerance: 0 (the default) means exact match — correct for integer/fraction answers where a
+  // near-miss is simply wrong; a decimal answer such as pi sets a real tolerance (e.g. 0.001).
+  // numericAnswerDisplay keeps the exact text the author typed ("1/2", "-3.14159") for preview
+  // and review screens, since showing "0.5" back to a staff member who entered "1/2" reads as a
+  // bug even though grading is identical. All nullable — every existing non-NUMERICAL question is
+  // completely unaffected.
+  numericAnswer        Float?
+  numericTolerance     Float?  @default(0)
+  numericAnswerDisplay String?
 
   // SQL-only: DDL + seed data (CREATE TABLE ...; INSERT INTO ...;) run once against a fresh
   // in-memory SQLite database before each test case, shared across all of this question's cases.
