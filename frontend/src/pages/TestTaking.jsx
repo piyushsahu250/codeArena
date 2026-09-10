@@ -1970,7 +1970,7 @@ export default function TestTaking() {
         {/* Question description */}
         {showQuestionPanel && (
         <>
-        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : questionPanelWidth, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0, maxHeight: isMobile ? "42vh" : undefined }}>
+        <div className="exam-protected-content" style={{ width: isMobile ? "100%" : questionPanelWidth, padding: isMobile ? 16 : 24, overflowY: "auto", flexShrink: 0, maxHeight: isMobile ? "32vh" : undefined }}>
           {current && (
             <>
               <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{current.points} points</p>
@@ -2192,14 +2192,15 @@ export default function TestTaking() {
                   <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", flexShrink: 0 }} onClick={() => setImeWarning(false)}>Dismiss</button>
                 </div>
               )}
-              {/* minHeight floor on mobile: the two editor toolbar rows above wrap onto 3-4 lines
-                  on a narrow screen, and `flex: 1` alone would let them squeeze the editor down to
-                  a sliver. 320px keeps a genuinely usable amount of code on screen no matter how
-                  much the toolbars wrap; the parent column's minHeight (560) + the outer
-                  overflow:auto absorb the extra height. */}
-              <div style={{ flex: 1, minHeight: isMobile ? 320 : 0 }}>
+              {/* On mobile the editor gets an EXPLICIT pixel height, not `flex: 1` + `height="100%"`.
+                  That combo was the "compiler not fully visible for a few students" bug: on some
+                  mobile browsers a percentage height inside a flex item whose own height is
+                  flex-resolved (`auto`) collapses to 0, so Monaco rendered as a blank/tiny box.
+                  An explicit number on the wrapper AND on <Editor> removes that dependency
+                  entirely; the outer column's overflow:auto lets the student scroll past it. */}
+              <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? 380 : undefined, minHeight: 0 }}>
                 <Editor
-                  height="100%"
+                  height={isMobile ? 380 : "100%"}
                   language={isSql ? "sql" : LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
                   value={answer?.code || ""}
                   onChange={(v) => setCode(v || "")}
