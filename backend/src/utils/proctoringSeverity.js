@@ -36,7 +36,6 @@ const VIOLATION_SEVERITY = {
   MIC_DROPPED: "CONFIRMED_VIOLATION",
 
   // SUSPICIOUS — a restricted action, or a heuristic with a real false-positive rate.
-  SCREEN_OVERLAY_DETECTED: "SUSPICIOUS", // viewport-shrink heuristic — can false-positive on pinch-zoom
   MULTI_MONITOR: "SUSPICIOUS",
   DEVTOOLS: "SUSPICIOUS", // docked-devtools size heuristic — best-effort, not proof
   COPY: "SUSPICIOUS",
@@ -51,6 +50,15 @@ const VIOLATION_SEVERITY = {
   MULTIPLE_FACES: "INTERRUPTION",
   REFRESH_ATTEMPT: "INTERRUPTION", // the browser's own confirm dialog is the real deterrent
   NETWORK_LOSS: "INTERRUPTION",
+  // Moved out of SUSPICIOUS on 2026-09-10: this is a viewport-shrink heuristic, and the shrink an
+  // on-screen keyboard opening produces is byte-for-byte the same signal — on a phone/tablet it
+  // fired every time a student focused the code editor, and enough of those in one attempt
+  // escalated into a penalized strike for nothing but typing, on a live exam. The client-side
+  // check tries to exclude "an input/editor is focused," but the keyboard-open animation and the
+  // moment focus moves away with the keyboard still closing both slip past it. Still logged for
+  // admin review — just never counted toward the violation limit. A genuine "switched away to
+  // search" still shows up as TAB_SWITCH (document.hidden), which is unaffected.
+  SCREEN_OVERLAY_DETECTED: "INTERRUPTION",
   // Moved out of SUSPICIOUS on 2026-09-09: a Test/Coding Assessment's own Monaco editor uses
   // ordinary keyboard shortcuts for real editing (Ctrl+S save-muscle-memory, Ctrl+/ comment,
   // Ctrl+F find, Ctrl+D duplicate-line, etc.) — TestTaking.jsx/useProctoring.js's blockKeys only

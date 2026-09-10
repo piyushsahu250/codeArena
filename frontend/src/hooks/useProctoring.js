@@ -124,11 +124,17 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
       const isFs = !!getFullscreenElement();
       setFullscreenOk(isFs);
       if (!isFs) {
-        // Not hidden + keyboard-shrink signal on a recently-focused editable == the platform's own
-        // fullscreen-vs-keyboard conflict, not a real exit. Logged distinctly, never counted as a
-        // violation, and recovery is deferred to onKeyboardClose above instead of retried here.
-        if (!document.hidden && keyboardSignalRef.current?.isKeyboardLikelyOpen()) {
-          console.info("[proctoring] KEYBOARD_VIEWPORT_CHANGE: fullscreen exit attributed to the on-screen keyboard, not counted as a violation");
+        // On a touch device, a fullscreen exit while the tab is still visible (not `document.hidden`)
+        // is the on-screen keyboard opening or an OS gesture — Android Chrome drops fullscreen the
+        // instant the code editor's input is focused. Never counted as a violation: the
+        // `isKeyboardLikelyOpen()` viewport signal it used to be gated on is timing-fragile (misses
+        // the keyboard-open animation frame, null on iOS Safari where fullscreen isn't supported),
+        // and a real "switched away to cheat" on mobile shows up as `document.hidden` → TAB_SWITCH
+        // instead, which still counts. Recovery is still attempted (and deferred to onKeyboardClose
+        // above once the keyboard closes).
+        if (isTouchDevice() && !document.hidden) {
+          console.info("[proctoring] fullscreen exit on a touch device with the tab still visible — attributed to the on-screen keyboard / an OS gesture, not counted as a violation");
+          requestFullscreen();
           return;
         }
         report("FULLSCREEN_EXIT");

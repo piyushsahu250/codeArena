@@ -890,11 +890,17 @@ export default function TestTaking() {
       const active = !!getFullscreenElement();
       setFullscreenOk(active);
       if (!active && !finalizedRef.current) {
-        // Not hidden + keyboard-shrink signal on a recently-focused editable == the platform's own
-        // fullscreen-vs-keyboard conflict, not a real exit. Logged distinctly, never counted as a
-        // violation, and recovery is deferred to onKeyboardClose above instead of retried here.
-        if (!document.hidden && keyboardSignalRef.current?.isKeyboardLikelyOpen()) {
-          console.info("[exam] KEYBOARD_VIEWPORT_CHANGE: fullscreen exit attributed to the on-screen keyboard, not counted as a violation");
+        // On a touch device, a fullscreen exit while the tab is still visible (not `document.hidden`)
+        // is the on-screen keyboard opening or an OS gesture — Android Chrome drops fullscreen the
+        // instant the code editor's input is focused. It is never counted as a violation: the
+        // `isKeyboardLikelyOpen()` viewport signal it used to be gated on is timing-fragile (misses
+        // the keyboard-open animation frame, and iOS Safari where fullscreen isn't supported at all
+        // leaves that signal null), and a real "switched away to cheat" on mobile shows up as
+        // `document.hidden` → TAB_SWITCH instead, which still counts. Recovery is still attempted
+        // (and deferred to onKeyboardClose above once the keyboard closes).
+        if (isTouchDevice() && !document.hidden) {
+          console.info("[exam] fullscreen exit on a touch device with the tab still visible — attributed to the on-screen keyboard / an OS gesture, not counted as a violation");
+          requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch(() => {});
           return;
         }
         reportViolation("FULLSCREEN_EXIT", "exiting fullscreen during a test is not allowed");
