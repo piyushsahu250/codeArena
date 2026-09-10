@@ -22,11 +22,13 @@ const UNICODE_FOLD = [
   [/[÷∕⁄／]/g, "/"], // ÷, ∕, ⁄, fullwidth / -> /
   [/½/g, "1/2"], [/⅓/g, "1/3"], [/⅔/g, "2/3"], [/¼/g, "1/4"], [/¾/g, "3/4"],
   [/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xFF10 + 0x30)], // fullwidth digits
-  [/[\s ]+/g, ""], // all whitespace (incl. nbsp)
 ];
 
 function foldToAscii(raw) {
-  let s = String(raw);
+  // Trim SURROUNDING whitespace only. Internal whitespace is deliberately NOT collapsed, so
+  // "1 2" stays two tokens and is correctly rejected as "not one number" rather than silently
+  // becoming 12.
+  let s = String(raw).replace(/^\s+|\s+$/g, "");
   for (const [re, rep] of UNICODE_FOLD) s = s.replace(re, rep);
   return s;
 }
