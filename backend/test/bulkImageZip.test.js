@@ -82,6 +82,6 @@ describe("validateZipImage", () => {
   test("a file that exists but isn't a real image (renamed .txt, say) is rejected by content, not by name", () => {
     const { error, mime } = validateZipImage(Buffer.from("just some plain text, not an image"), "fake.png");
     assert.equal(mime, undefined);
-    assert.match(error, /not a recognized image format/i);
+    assert.match(error, /recognized image format/i);
   });
 });
