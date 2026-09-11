@@ -5,6 +5,38 @@ import useAiStatus from "../hooks/useAiStatus";
 
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 4 };
 const labelStyle = { fontSize: 11, fontWeight: 600, color: "var(--ink-dim)" };
+const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
+const DIFFICULTY_LABEL = { EASY: "Easy", MEDIUM: "Medium", HARD: "Hard" };
+const MAX_BLUEPRINT_TOTAL = 20; // matches the shared per-user AI rate budget's realistic ceiling -- see postWithRateLimitRetry below
+
+// Fisher-Yates -- client-side only, purely cosmetic (so a blueprint batch doesn't visibly
+// generate "all the Easy ones, then all the Medium ones, then all the Hard ones" in a row);
+// never anything security- or fairness-sensitive the way the server-side option shuffle is.
+function shuffleClientSide(array) {
+  const arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Retries once on a 429 from the shared per-user AI rate limit (aiQuestions.js's generateLimiter,
+// 5/min) instead of counting it as a hard failure -- a batch of more than 5 items (now more likely
+// than ever, since independent answer verification roughly doubles each call's latency) could
+// previously exhaust that budget partway through and have the rest of the batch fail outright.
+// Waits for the server's own Retry-After header when present, else a fixed fallback -- never a
+// tight retry loop that just re-triggers the same limit immediately.
+async function postWithRateLimitRetry(url, body) {
+  try {
+    return await api.post(url, body);
+  } catch (err) {
+    if (err.response?.status !== 429) throw err;
+    const retryAfterSec = Number(err.response.headers?.["retry-after"]) || 15;
+    await new Promise((resolve) => setTimeout(resolve, (retryAfterSec + 1) * 1000));
+    return api.post(url, body); // one retry only -- a second 429 is a real failure, not silently retried forever
+  }
+}
 
 // Closes the one real gap found auditing "AI Draft Review" against the Question Bank: the
 // existing InterviewQuestionDraft/InterviewDraftReview.jsx pair already gives Interview Prep
@@ -46,33 +78,56 @@ export default function GenerateAiDrafts({ onGenerated }) {
   const [skillTested, setSkillTested] = useState("");
   const [subtopic, setSubtopic] = useState("");
   const [count, setCount] = useState(3);
+  // Batch difficulty blueprint (spec: "20 questions -> Easy 6, Medium 10, Hard 4" instead of one
+  // difficulty per batch). Off by default -- the common case (a few questions at one difficulty)
+  // stays exactly as simple as it always was; this is the "Advanced Options" equivalent.
+  const [blueprintMode, setBlueprintMode] = useState(false);
+  const [blueprint, setBlueprint] = useState({ EASY: 4, MEDIUM: 4, HARD: 2 });
   const [working, setWorking] = useState(false);
+  const [progress, setProgress] = useState(null); // { done, total } while working
   const [result, setResult] = useState(null);
 
-  async function generate() {
-    if (!subjectId || !unitId) return alert("Pick a Subject and Unit first — every Question Bank row needs one, drafts included.");
-    const n = Math.min(10, Math.max(1, Number(count) || 1));
-    setWorking(true);
-    setResult(null);
+  const blueprintTotal = DIFFICULTIES.reduce((sum, d) => sum + (Number(blueprint[d]) || 0), 0);
+
+  // The actual per-slot difficulty sequence this run will generate against -- single-difficulty
+  // mode is just a degenerate one-entry blueprint, so both modes share one generation path below.
+  function buildPlan() {
+    if (!blueprintMode) {
+      const n = Math.min(10, Math.max(1, Number(count) || 1));
+      return Array(n).fill(difficulty);
+    }
+    const plan = DIFFICULTIES.flatMap((d) => Array(Math.max(0, Number(blueprint[d]) || 0)).fill(d));
+    return shuffleClientSide(plan).slice(0, MAX_BLUEPRINT_TOTAL);
+  }
+
+  // Runs one plan and returns its own tally (never touches component state directly) -- both a
+  // fresh Generate and a "+N more X" top-up share this, with the caller deciding whether the
+  // result replaces or merges into whatever's already displayed.
+  async function executePlan(plan) {
+    setProgress({ done: 0, total: plan.length });
     let created = 0;
     let failed = 0;
     let needsReview = 0;
     const errors = [];
     const flagged = []; // per-item notices worth showing even though the draft still saved fine
+    const byDifficulty = { EASY: { requested: 0, created: 0 }, MEDIUM: { requested: 0, created: 0 }, HARD: { requested: 0, created: 0 } };
+    for (const d of plan) byDifficulty[d].requested++;
+
     // Sequential, not Promise.all: each generation call is itself a real AI request already
     // subject to the shared per-user rate limit (5/min, see aiQuestions.js's generateLimiter) --
     // firing a batch in parallel would just burn that whole budget in one request and fail the
     // rest with 429s, which is a worse experience than a few extra seconds of sequential waiting.
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < plan.length; i++) {
+      const slotDifficulty = plan[i];
       try {
-        const { data: draft } = await api.post("/ai/questions/generate-question", {
+        const { data: draft } = await postWithRateLimitRetry("/ai/questions/generate-question", {
           questionType,
           // Real Subject/Unit names (from the picker above, not a disconnected free-text field) as
           // the AI's authoritative context -- subtopic/skillTested only ever refine within that,
           // never replace it. subjectId/unitId let the backend pre-check for a likely duplicate
           // before this even tries to save.
           subject: subjectName || "General", topic: unitName || undefined,
-          subtopic: subtopic || undefined, difficulty, skillTested: skillTested || undefined,
+          subtopic: subtopic || undefined, difficulty: slotDifficulty, skillTested: skillTested || undefined,
           subjectId, unitId,
         });
         // Verification never blocks the save (a NEEDS_REVIEW/NOT_VERIFIED draft still lands as a
@@ -90,11 +145,12 @@ export default function GenerateAiDrafts({ onGenerated }) {
           ...draft,
           questionType: draft.questionType || questionType,
           subjectId, unitId, topicId: topicId || undefined,
-          difficulty,
+          difficulty: slotDifficulty,
           aiGenerated: true,
           questionStatus: "DRAFT",
         });
         created++;
+        byDifficulty[slotDifficulty].created++;
       } catch (err) {
         failed++;
         // A duplicate rejection from POST /questions has no `.error` string at all (just
@@ -103,13 +159,52 @@ export default function GenerateAiDrafts({ onGenerated }) {
         errors.push(
           err.response?.data?.duplicate
             ? `Duplicate of an existing question: "${err.response.data.existing?.title || err.response.data.existing?.description || "(untitled)"}"`
-            : err.response?.data?.error || "Unknown error"
+            : err.response?.data?.error || (err.response?.status === 429 ? "Rate-limited twice in a row — try again in a minute" : "Unknown error")
         );
       }
+      setProgress({ done: i + 1, total: plan.length });
     }
+    return { created, failed, needsReview, errors, flagged, byDifficulty };
+  }
+
+  async function generate() {
+    if (!subjectId || !unitId) return alert("Pick a Subject and Unit first — every Question Bank row needs one, drafts included.");
+    const plan = buildPlan();
+    if (plan.length === 0) return alert("Set at least one question count above zero.");
+    setWorking(true);
+    setResult(null);
+    const outcome = await executePlan(plan);
     setWorking(false);
-    setResult({ created, failed, needsReview, errors, flagged });
-    if (created > 0) onGenerated?.();
+    setResult({ ...outcome, usedBlueprint: blueprintMode });
+    if (outcome.created > 0) onGenerated?.();
+  }
+
+  // "Generate N more Medium" etc. -- tops up a shortfall from the last run (some rows failed/were
+  // duplicates) by MERGING into the existing summary, rather than replacing it -- the questions
+  // the first run already created are still sitting in the Question Bank; the displayed counts
+  // must keep reflecting that, not reset to only whatever this follow-up run did.
+  async function topUp(diff, howMany) {
+    setWorking(true);
+    const outcome = await executePlan(Array(howMany).fill(diff));
+    setWorking(false);
+    setResult((prev) => {
+      if (!prev) return { ...outcome, usedBlueprint: true };
+      const byDifficulty = { ...prev.byDifficulty };
+      byDifficulty[diff] = {
+        requested: (prev.byDifficulty[diff]?.requested || 0) + outcome.byDifficulty[diff].requested,
+        created: (prev.byDifficulty[diff]?.created || 0) + outcome.byDifficulty[diff].created,
+      };
+      return {
+        created: prev.created + outcome.created,
+        failed: prev.failed + outcome.failed,
+        needsReview: prev.needsReview + outcome.needsReview,
+        errors: [...prev.errors, ...outcome.errors],
+        flagged: [...prev.flagged, ...outcome.flagged],
+        byDifficulty,
+        usedBlueprint: true,
+      };
+    });
+    if (outcome.created > 0) onGenerated?.();
   }
 
   return (
@@ -141,14 +236,16 @@ export default function GenerateAiDrafts({ onGenerated }) {
             <option value="CODING">Coding</option>
           </select>
         </div>
-        <div>
-          <label style={labelStyle}>Difficulty</label>
-          <select style={inputStyle} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-            <option value="EASY">Easy</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HARD">Hard</option>
-          </select>
-        </div>
+        {!blueprintMode && (
+          <div>
+            <label style={labelStyle}>Difficulty</label>
+            <select style={inputStyle} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+              <option value="EASY">Easy</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HARD">Hard</option>
+            </select>
+          </div>
+        )}
         <div>
           <label style={labelStyle}>Subtopic (optional — narrows within the Subject/Unit above)</label>
           <input style={inputStyle} value={subtopic} onChange={(e) => setSubtopic(e.target.value)} placeholder="e.g. Binary Search Trees" />
@@ -157,14 +254,46 @@ export default function GenerateAiDrafts({ onGenerated }) {
           <label style={labelStyle}>Skill tested (optional)</label>
           <input style={inputStyle} value={skillTested} onChange={(e) => setSkillTested(e.target.value)} placeholder="e.g. Recursion" />
         </div>
-        <div>
-          <label style={labelStyle}>How many (1–10)</label>
-          <input type="number" min="1" max="10" style={inputStyle} value={count} onChange={(e) => setCount(e.target.value)} />
-        </div>
+        {!blueprintMode && (
+          <div>
+            <label style={labelStyle}>How many (1–10)</label>
+            <input type="number" min="1" max="10" style={inputStyle} value={count} onChange={(e) => setCount(e.target.value)} />
+          </div>
+        )}
       </div>
 
-      <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={working || aiAvailable !== true} onClick={generate}>
-        {working ? "Generating…" : "🤖 Generate drafts"}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginTop: 14 }}>
+        <input type="checkbox" checked={blueprintMode} onChange={(e) => setBlueprintMode(e.target.checked)} />
+        Mixed-difficulty batch (set exactly how many Easy/Medium/Hard, instead of one difficulty for the whole batch)
+      </label>
+      {blueprintMode && (
+        <div style={{ marginTop: 8, padding: 12, borderRadius: 8, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            {DIFFICULTIES.map((d) => (
+              <div key={d}>
+                <label style={labelStyle}>{DIFFICULTY_LABEL[d]}</label>
+                <input
+                  type="number" min="0" max={MAX_BLUEPRINT_TOTAL} style={inputStyle}
+                  value={blueprint[d]}
+                  onChange={(e) => setBlueprint((b) => ({ ...b, [d]: Math.max(0, Number(e.target.value) || 0) }))}
+                />
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: blueprintTotal > MAX_BLUEPRINT_TOTAL ? "var(--rust)" : "var(--ink-dim)", marginTop: 8 }}>
+            Total: {blueprintTotal} question{blueprintTotal === 1 ? "" : "s"}
+            {blueprintTotal > MAX_BLUEPRINT_TOTAL && ` — max ${MAX_BLUEPRINT_TOTAL} per batch`}
+            . Each one is still generated, answer-verified, and duplicate-checked individually — a larger batch just takes longer (roughly {blueprintTotal * 5}–{blueprintTotal * 10} seconds).
+          </p>
+        </div>
+      )}
+
+      <button
+        className="btn btn-primary" style={{ marginTop: 14 }}
+        disabled={working || aiAvailable !== true || (blueprintMode && (blueprintTotal === 0 || blueprintTotal > MAX_BLUEPRINT_TOTAL))}
+        onClick={generate}
+      >
+        {working ? `Generating… (${progress?.done ?? 0}/${progress?.total ?? 0})` : "🤖 Generate drafts"}
       </button>
       {aiAvailable === false && (
         <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI generation isn't available on this server yet — set GEMINI_API_KEY to enable it.</p>
@@ -175,6 +304,33 @@ export default function GenerateAiDrafts({ onGenerated }) {
             Created {result.created} draft{result.created === 1 ? "" : "s"}.
             {result.failed > 0 && ` ${result.failed} failed: ${result.errors.slice(0, 3).join("; ")}${result.errors.length > 3 ? "…" : ""}`}
           </p>
+          {/* Coverage check (spec: "if actual distribution doesn't match requested, show it and
+              allow topping up") -- shown only in blueprint mode, since single-difficulty mode has
+              nothing to compare against (it either made the count or didn't, already shown above). */}
+          {result.usedBlueprint && (
+            <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {DIFFICULTIES.map((d) => {
+                const stat = result.byDifficulty[d];
+                if (!stat || stat.requested === 0) return null;
+                const short = stat.requested - stat.created;
+                return (
+                  <div key={d} style={{ fontSize: 11.5 }} className="mono">
+                    {DIFFICULTY_LABEL[d]}: {stat.created}/{stat.requested}
+                    {short > 0 && (
+                      <button
+                        type="button" className="btn btn-ghost"
+                        style={{ fontSize: 10, padding: "2px 6px", marginLeft: 6 }}
+                        disabled={working}
+                        onClick={() => topUp(d, short)}
+                      >
+                        +{short} more
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {/* Never silent -- a draft that saved fine but didn't pass automatic answer verification
               (or looks like it might duplicate an existing question) still needs a closer look
               before it's published, even though nothing here blocked it from being created. */}
