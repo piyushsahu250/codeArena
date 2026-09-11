@@ -33,6 +33,14 @@ export default function GenerateAiDrafts({ onGenerated }) {
   const [subjectId, setSubjectId] = useState(null);
   const [unitId, setUnitId] = useState(null);
   const [topicId, setTopicId] = useState(null);
+  // Real curriculum names from the picker (not just ids) — sent to the AI as the authoritative
+  // subject/topic context. Previously this component sent `subtopic || "General"` as the AI's
+  // *only* subject context, completely disconnected from the Subject/Unit actually picked above
+  // it — leaving "General" as the literal prompt subject whenever subtopic was left blank, so the
+  // AI could generate a question about anything while the question was filed under, say, "Java →
+  // Collections." Real root cause of "the generated question doesn't match the selected topic."
+  const [subjectName, setSubjectName] = useState(null);
+  const [unitName, setUnitName] = useState(null);
   const [questionType, setQuestionType] = useState("MCQ");
   const [difficulty, setDifficulty] = useState("MEDIUM");
   const [skillTested, setSkillTested] = useState("");
@@ -48,7 +56,9 @@ export default function GenerateAiDrafts({ onGenerated }) {
     setResult(null);
     let created = 0;
     let failed = 0;
+    let needsReview = 0;
     const errors = [];
+    const flagged = []; // per-item notices worth showing even though the draft still saved fine
     // Sequential, not Promise.all: each generation call is itself a real AI request already
     // subject to the shared per-user rate limit (5/min, see aiQuestions.js's generateLimiter) --
     // firing a batch in parallel would just burn that whole budget in one request and fail the
@@ -56,8 +66,26 @@ export default function GenerateAiDrafts({ onGenerated }) {
     for (let i = 0; i < n; i++) {
       try {
         const { data: draft } = await api.post("/ai/questions/generate-question", {
-          questionType, subject: subtopic || "General", difficulty, skillTested: skillTested || undefined,
+          questionType,
+          // Real Subject/Unit names (from the picker above, not a disconnected free-text field) as
+          // the AI's authoritative context -- subtopic/skillTested only ever refine within that,
+          // never replace it. subjectId/unitId let the backend pre-check for a likely duplicate
+          // before this even tries to save.
+          subject: subjectName || "General", topic: unitName || undefined,
+          subtopic: subtopic || undefined, difficulty, skillTested: skillTested || undefined,
+          subjectId, unitId,
         });
+        // Verification never blocks the save (a NEEDS_REVIEW/NOT_VERIFIED draft still lands as a
+        // normal Draft, same as any other AI-generated question -- it just needs a closer look
+        // before publishing) -- but it's surfaced here, at generation time, rather than silently
+        // dropped once the draft becomes just another Question Bank row.
+        if (draft.verificationStatus && draft.verificationStatus !== "VERIFIED") {
+          needsReview++;
+          flagged.push({ title: draft.title || draft.description?.slice(0, 60), reason: draft.verificationDetail });
+        }
+        if (draft.duplicateWarning) {
+          flagged.push({ title: draft.title || draft.description?.slice(0, 60), reason: `Looks like it may duplicate an existing question: "${draft.duplicateWarning.title || draft.duplicateWarning.description}"` });
+        }
         await api.post("/questions", {
           ...draft,
           questionType: draft.questionType || questionType,
@@ -69,11 +97,18 @@ export default function GenerateAiDrafts({ onGenerated }) {
         created++;
       } catch (err) {
         failed++;
-        errors.push(err.response?.data?.error || "Unknown error");
+        // A duplicate rejection from POST /questions has no `.error` string at all (just
+        // `{duplicate: true, existing: {...}}`) -- previously fell through to a bare "Unknown
+        // error" here with no indication of what actually happened.
+        errors.push(
+          err.response?.data?.duplicate
+            ? `Duplicate of an existing question: "${err.response.data.existing?.title || err.response.data.existing?.description || "(untitled)"}"`
+            : err.response?.data?.error || "Unknown error"
+        );
       }
     }
     setWorking(false);
-    setResult({ created, failed, errors });
+    setResult({ created, failed, needsReview, errors, flagged });
     if (created > 0) onGenerated?.();
   }
 
@@ -92,7 +127,9 @@ export default function GenerateAiDrafts({ onGenerated }) {
           <label style={labelStyle}>Subject / Unit (required)</label>
           <div style={{ marginTop: 4 }}>
             <SubjectUnitPicker subjectId={subjectId} unitId={unitId} topicId={topicId}
-              onChange={({ subjectId: s, unitId: u, topicId: t }) => { setSubjectId(s); setUnitId(u); setTopicId(t); }} />
+              onChange={({ subjectId: s, unitId: u, topicId: t, subjectName: sn, unitName: un }) => {
+                setSubjectId(s); setUnitId(u); setTopicId(t); setSubjectName(sn); setUnitName(un);
+              }} />
           </div>
         </div>
         <div>
@@ -113,7 +150,7 @@ export default function GenerateAiDrafts({ onGenerated }) {
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Subtopic (optional — becomes the AI subject prompt)</label>
+          <label style={labelStyle}>Subtopic (optional — narrows within the Subject/Unit above)</label>
           <input style={inputStyle} value={subtopic} onChange={(e) => setSubtopic(e.target.value)} placeholder="e.g. Binary Search Trees" />
         </div>
         <div>
@@ -133,10 +170,29 @@ export default function GenerateAiDrafts({ onGenerated }) {
         <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>AI generation isn't available on this server yet — set GEMINI_API_KEY to enable it.</p>
       )}
       {result && (
-        <p style={{ fontSize: 12, marginTop: 10, color: result.failed > 0 ? "var(--rust)" : "var(--mint)" }}>
-          Created {result.created} draft{result.created === 1 ? "" : "s"}.
-          {result.failed > 0 && ` ${result.failed} failed: ${result.errors.slice(0, 3).join("; ")}${result.errors.length > 3 ? "…" : ""}`}
-        </p>
+        <div style={{ marginTop: 10 }}>
+          <p style={{ fontSize: 12, color: result.failed > 0 ? "var(--rust)" : "var(--mint)" }}>
+            Created {result.created} draft{result.created === 1 ? "" : "s"}.
+            {result.failed > 0 && ` ${result.failed} failed: ${result.errors.slice(0, 3).join("; ")}${result.errors.length > 3 ? "…" : ""}`}
+          </p>
+          {/* Never silent -- a draft that saved fine but didn't pass automatic answer verification
+              (or looks like it might duplicate an existing question) still needs a closer look
+              before it's published, even though nothing here blocked it from being created. */}
+          {result.needsReview > 0 && (
+            <p style={{ fontSize: 12, color: "var(--amber-dark)", marginTop: 4 }}>
+              ⚠ {result.needsReview} draft{result.needsReview === 1 ? "" : "s"} saved but flagged for review — see below.
+            </p>
+          )}
+          {result.flagged?.length > 0 && (
+            <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
+              {result.flagged.map((f, i) => (
+                <div key={i} style={{ fontSize: 11, color: "var(--amber-dark)", marginTop: 2 }} className="mono">
+                  "{f.title}": {f.reason}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

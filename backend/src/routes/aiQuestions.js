@@ -1,17 +1,26 @@
 const express = require("express");
 const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
+const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
-const { shuffleQuestionOptions } = require("../utils/optionShuffle");
+const { shuffleQuestionOptions, answerIndexSetsMatch } = require("../utils/optionShuffle");
+const { questionVisibilityWhere } = require("../utils/questionVisibility");
+const { judgeSubmission } = require("../utils/judge");
+const { runQueued } = require("../utils/queue");
 
 const router = express.Router();
 
 // This route previously had no per-user AI rate limit at all — same 5/min budget as the sibling
 // generators (draftGenLimiter, hintLimiter) elsewhere on the platform, so no single staff member
-// can burn through the shared free-tier quota alone.
+// can burn through the shared free-tier quota alone. Verification (see verifyAnswer below) adds a
+// second AI call per MCQ/TRUE_FALSE/MULTISELECT generation, so this budget now covers up to 5
+// *verified* questions/minute, not 5 raw generations — an intentional cost/correctness trade,
+// not an oversight (spec: "answer verification is mandatory," "avoid unnecessary AI calls" was
+// about skipping AI for things a deterministic check already covers, never about skipping the one
+// check the whole feature exists to provide).
 const generateLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
 
 // Scoped to the four QuestionType values this platform can actually grade (CODING via the judge,
@@ -41,8 +50,86 @@ const BTL_TASK_DEFINITIONS = {
   6: "BTL 6 — Create: the question must require designing, constructing, or proposing a new solution, structure, or system from scratch — not selecting or applying an existing one.",
 };
 
+// Independent second-opinion answer check for MCQ/TRUE_FALSE/MULTISELECT — spec section 13's
+// "mandatory... run a second validation/reasoning pass" for conceptual questions. Deliberately
+// shown the question and options WITHOUT being told which one the generator claimed was correct —
+// asking a model "is X really the right answer?" invites it to just agree; asking it to solve the
+// question fresh and comparing the two independent answers actually catches a generator that
+// wrote a confident-sounding but wrong explanation. Never silently trusts either pass alone; a
+// disagreement is surfaced as NEEDS_REVIEW, never auto-resolved by picking one side.
+async function verifyChoiceAnswer({ userId, instituteId, description, options, claimedAnswer }) {
+  try {
+    const result = await aiService.generateJson({
+      feature: aiService.FEATURES.QUESTION_BANK_GENERATE, userId, instituteId,
+      system: "You are an independent exam-answer checker for a computer-science education platform. Solve the question yourself from scratch — you are not told which option anyone else picked. Respond with ONLY the requested JSON.",
+      prompt: `Question: ${description}\nOptions:\n${options.map((o, i) => `${i}: ${o}`).join("\n")}\n\nWhich option index/indices (0-based) are correct? Return JSON exactly shaped: {"correctAnswer": number[], "reasoning": string (one sentence)}.`,
+      maxTokens: 400,
+      injectionGuard: false,
+      validate: (v) => (!Array.isArray(v?.correctAnswer)) ? "missing correctAnswer array" : null,
+    });
+    const agree = answerIndexSetsMatch(result.correctAnswer, claimedAnswer);
+    return {
+      verificationStatus: agree ? "VERIFIED" : "NEEDS_REVIEW",
+      verificationDetail: agree
+        ? "An independent AI re-check, solving the question from scratch without seeing the generated answer, agreed with the stated correct answer."
+        : `An independent AI re-check disagreed: it computed option(s) ${result.correctAnswer.join(", ")} as correct instead of ${claimedAnswer.join(", ")} — reasoning: ${result.reasoning}. Review before publishing.`,
+    };
+  } catch (err) {
+    // A failed/unparseable second pass is inconclusive, not proof the question is wrong — never
+    // silently claim VERIFIED when the check itself didn't actually run.
+    return { verificationStatus: "NOT_VERIFIED", verificationDetail: "Automatic answer verification could not complete — review the answer manually before publishing." };
+  }
+}
+
+// Independent verification for CODING — spec section 18's "must not be marked READY unless the
+// reference solution works... hidden cases pass." The generator is asked for a reference solution
+// alongside the question itself; that solution is then actually executed against the generated
+// test cases through the exact same judge a student submission runs through (utils/judge.js),
+// never just asked "does this look right." A reference solution that fails its own test cases is
+// the single clearest signal a generated coding question is broken (wrong expected output, an
+// impossible constraint, a case that contradicts the problem statement).
+async function verifyCodingAnswer({ referenceSolution, testCases }) {
+  if (!referenceSolution || typeof referenceSolution !== "string" || !referenceSolution.trim()) {
+    return { verificationStatus: "NOT_VERIFIED", verificationDetail: "The AI did not provide a reference solution to verify against — review the test cases manually before publishing." };
+  }
+  try {
+    const result = await runQueued(() =>
+      judgeSubmission({ language: "python", code: referenceSolution, testCases, evaluationType: "STDIO", timeLimitMs: 3000 })
+    );
+    const allPassed = result.totalCases > 0 && result.passedCases === result.totalCases;
+    return {
+      verificationStatus: allPassed ? "VERIFIED" : "NEEDS_REVIEW",
+      verificationDetail: allPassed
+        ? `The AI's own reference solution was executed against all ${result.totalCases} generated test cases and passed every one.`
+        : `The AI's own reference solution only passed ${result.passedCases}/${result.totalCases} of its generated test cases (verdict: ${result.verdict}) — the problem statement, a test case, or the reference solution itself is likely wrong. Review before publishing.`,
+    };
+  } catch (err) {
+    return { verificationStatus: "NOT_VERIFIED", verificationDetail: "Automatic execution-based verification could not complete (judge unavailable) — review the test cases manually before publishing." };
+  }
+}
+
+// Pre-save duplicate check, scoped exactly like POST /questions's own real duplicate gate (same
+// Subject+Unit scoping, same case-insensitive exact-text match) — spec section 23: a staff member
+// should see "this looks like an existing question" AT GENERATION time, not discover it as a 409
+// only after clicking Save. Only runs when the caller supplies subjectId/unitId (both callers —
+// GenerateAiDrafts.jsx and CreateQuestion.jsx — already have them selected via SubjectUnitPicker
+// before generating); silently skipped otherwise rather than guessing an unscoped match, which
+// could otherwise flag two genuinely unrelated subjects' similarly-worded questions as duplicates.
+async function checkDuplicate(req, { description, subjectId, unitId }) {
+  if (!subjectId || !unitId) return null;
+  try {
+    const existing = await prisma.question.findFirst({
+      where: { ...questionVisibilityWhere(req), subjectId, unitId, description: { equals: description.trim(), mode: "insensitive" } },
+      select: { id: true, title: true, description: true },
+    });
+    return existing || null;
+  } catch {
+    return null; // never let a duplicate-check failure block generation itself
+  }
+}
+
 router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, generateLimiter, async (req, res) => {
-  const { questionType, subject, topic, difficulty, btlLevel, skillTested, subtopic } = req.body;
+  const { questionType, subject, topic, difficulty, btlLevel, skillTested, subtopic, subjectId, unitId } = req.body;
   const type = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT"].includes(questionType) ? questionType : "MCQ";
   if (!subject || !subject.trim()) return res.status(400).json({ error: "Subject is required" });
 
@@ -60,13 +147,27 @@ router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMI
         feature: aiService.FEATURES.QUESTION_BANK_GENERATE, userId: req.user.id, instituteId: req.requesterInstituteId,
         system: "You write programming exam questions for a computer-science education platform. Return only JSON matching the requested schema — no markdown formatting inside JSON string values.",
         prompt: `Write one ${difficulty || "MEDIUM"}-difficulty CODING question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. The student writes a complete stdin/stdout program in any language — no function-signature harness.${btlInstruction}${skillInstruction}
-Return JSON exactly shaped: {"title": string, "description": string (full problem statement including input/output format and constraints), "explanation": string (brief solution approach), "testCases": [{"input": string, "expected": string, "isHidden": boolean}]}.
+Return JSON exactly shaped: {"title": string, "description": string (full problem statement including input/output format and constraints), "explanation": string (brief solution approach), "testCases": [{"input": string, "expected": string, "isHidden": boolean}], "referenceSolution": string (a complete, correct Python 3 program reading from stdin and writing to stdout that solves the problem exactly as stated)}.
 Provide exactly 7 testCases: 2 with isHidden=false (visible samples shown to students) and 5 with isHidden=true (used only for grading — cover a basic case, a small/boundary case, a typical case, an edge case, and a large/stress case within the stated constraints).`,
-        maxTokens: 1500,
+        maxTokens: 2200,
         injectionGuard: false, // subject/topic/skillTested are short admin-typed labels, not free-form student content
         validate: (v) => (!v?.title || !v?.description || !Array.isArray(v?.testCases)) ? "missing title/description/testCases" : null,
       });
-      return res.json({ questionType: "CODING", btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null, ...draft });
+
+      const [verification, duplicate] = await Promise.all([
+        verifyCodingAnswer({ referenceSolution: draft.referenceSolution, testCases: draft.testCases }),
+        checkDuplicate(req, { description: draft.description, subjectId, unitId }),
+      ]);
+      const { referenceSolution, ...draftWithoutRawSolution } = draft;
+      return res.json({
+        questionType: "CODING", btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null,
+        ...draftWithoutRawSolution,
+        // Reshaped to the { [language]: code } map Question.referenceSolution/CreateQuestion.jsx's
+        // own referenceSolution state already use — not the bare string the AI returned.
+        referenceSolution: referenceSolution ? { python: referenceSolution } : undefined,
+        ...verification,
+        duplicateWarning: duplicate,
+      });
     }
 
     const shapeHint = type === "TRUE_FALSE"
@@ -102,6 +203,15 @@ Return JSON exactly shaped: {"title": string, "description": string (the questio
         return null;
       },
     });
+
+    // Independent second-opinion verification runs BEFORE the shuffle below, against the
+    // generator's own original option order/indices — position never affects what's being
+    // checked, only which options are the same set of strings.
+    const [verification, duplicate] = await Promise.all([
+      verifyChoiceAnswer({ userId: req.user.id, instituteId: req.requesterInstituteId, description: draft.description, options: draft.options, claimedAnswer: draft.correctAnswer }),
+      checkDuplicate(req, { description: draft.description, subjectId, unitId }),
+    ]);
+
     // Re-randomize option position with a real RNG (crypto.randomUUID() as the shuffle seed —
     // see utils/optionShuffle.js) — every generated MCQ/MULTISELECT gets an independently random
     // placement regardless of the model's own habits. TRUE_FALSE is left as-is (always exactly
@@ -111,7 +221,12 @@ Return JSON exactly shaped: {"title": string, "description": string (the questio
       draft.options = shuffled.options;
       draft.correctAnswer = shuffled.correctAnswer;
     }
-    res.json({ questionType: type, btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null, ...draft });
+    res.json({
+      questionType: type, btlLevel: BTL_TASK_DEFINITIONS[level] ? level : null, skillTested: skillTested || null, subtopic: subtopic || null,
+      ...draft,
+      ...verification,
+      duplicateWarning: duplicate,
+    });
   } catch (err) {
     sendAiError(res, err, "AI question generation failed — try again or write it manually");
   }

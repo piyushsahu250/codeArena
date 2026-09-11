@@ -71,4 +71,18 @@ function toOriginalSelection(selected, order) {
   return Array.isArray(selected) ? selected.map(map) : map(selected);
 }
 
-module.exports = { seededShuffle, shuffleQuestionOptions, toOriginalSelection };
+// Order-independent equality check for two correct-answer index arrays — used by
+// aiQuestions.js's independent answer-verification pass to compare the generator's own claimed
+// answer against a blind second AI opinion. Deliberately a plain numeric sort + pairwise compare,
+// not Array.prototype.sort()'s default lexicographic ordering (which happens to coincide with
+// numeric order for the small option counts this ever sees, but isn't a correct general index
+// comparison — e.g. [2, 10] would sort as [10, 2] lexicographically).
+function answerIndexSetsMatch(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  const numSort = (x, y) => x - y;
+  const sortedA = [...a].sort(numSort);
+  const sortedB = [...b].sort(numSort);
+  return sortedA.every((v, i) => v === sortedB[i]);
+}
+
+module.exports = { seededShuffle, shuffleQuestionOptions, toOriginalSelection, answerIndexSetsMatch };

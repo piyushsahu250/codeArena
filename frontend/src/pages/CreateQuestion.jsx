@@ -157,10 +157,25 @@ export default function CreateQuestion() {
   const [generating, setGenerating] = useState(false);
   const [aiError, setAiError] = useState("");
   const [aiGenerated, setAiGenerated] = useState(false);
+  // Names from the SubjectUnitPicker below (not just ids) -- used to auto-fill the AI Subject/
+  // Topic boxes above so the two can't silently diverge (an admin who picks "DBMS" in the real
+  // picker but left "Java" typed in the AI box from an earlier question would otherwise get a
+  // Java question filed under DBMS). Only fills a box that's still blank -- never overwrites
+  // something the admin already typed there themselves.
+  const [subjectName, setSubjectName] = useState(null);
+  const [unitName, setUnitName] = useState(null);
+  const [aiVerification, setAiVerification] = useState(null); // { status, detail } | null
+  const [aiDuplicateWarning, setAiDuplicateWarning] = useState(null);
 
   useEffect(() => {
     api.get("/ai/questions/status").then((res) => setAiConfigured(res.data.configured)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (subjectName && !aiSubject.trim()) setAiSubject(subjectName);
+    if (unitName && !aiTopic.trim()) setAiTopic(unitName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectName, unitName]);
 
   // Drafts a question via Claude into the form for review — never saves directly. The admin/staff
   // member is expected to read, edit, and only then click the existing Save button, same as if
@@ -178,6 +193,8 @@ export default function CreateQuestion() {
     if (!subject) return setAiError("Enter a subject to generate from");
     setGenerating(true);
     setAiError("");
+    setAiVerification(null);
+    setAiDuplicateWarning(null);
     try {
       const { data } = await api.post("/ai/questions/generate-question", {
         questionType: form.questionType,
@@ -187,6 +204,9 @@ export default function CreateQuestion() {
         btlLevel: aiBtlLevel || form.btlLevel || undefined,
         skillTested: form.skillTested || undefined,
         subtopic: form.subtopic || undefined,
+        // Lets the backend pre-check for a likely duplicate against the Question Bank before this
+        // is even saved -- only meaningful once a real Subject+Unit has actually been picked below.
+        subjectId: subjectId || undefined, unitId: unitId || undefined,
       });
       setForm((f) => ({
         ...f,
@@ -203,10 +223,21 @@ export default function CreateQuestion() {
         if (Array.isArray(data.testCases) && data.testCases.length > 0) {
           setTestCases(data.testCases.map((tc) => ({ input: tc.input ?? "", expected: tc.expected ?? "", isHidden: !!tc.isHidden, explanation: "" })));
         }
+        // The AI's own reference solution (already judge-verified server-side, see
+        // aiQuestions.js) -- pre-filled the same way a staff member would type one in themselves,
+        // so it's visible/editable rather than silently discarded.
+        if (data.referenceSolution && typeof data.referenceSolution === "object") {
+          setReferenceSolution((prev) => ({ ...prev, ...data.referenceSolution }));
+          if (data.referenceSolution.python) setRefLanguage("python");
+        }
       } else {
         if (Array.isArray(data.options) && data.options.length > 0) setOptions(data.options);
         if (Array.isArray(data.correctAnswer)) setCorrectIndices(data.correctAnswer);
       }
+      // Never claim more than what was actually checked -- VERIFIED/NEEDS_REVIEW/NOT_VERIFIED are
+      // shown as-is, with the specific reason, not collapsed into a single "done" state.
+      if (data.verificationStatus) setAiVerification({ status: data.verificationStatus, detail: data.verificationDetail });
+      if (data.duplicateWarning) setAiDuplicateWarning(data.duplicateWarning);
     } catch (err) {
       setAiError(err.response?.data?.error || "AI generation failed");
     } finally {
@@ -477,6 +508,20 @@ export default function CreateQuestion() {
                     ⚠ This question is AI-generated — verify its content and correctness, then update Review Status below before it's used in a live assessment.
                   </p>
                 )}
+                {/* Reports exactly what was actually checked — never a bare "verified" unless an
+                    independent check (a second AI re-solve for MCQ/True-False/Multi-select, or the
+                    AI's own reference solution actually executed against its test cases for
+                    Coding) genuinely passed. */}
+                {aiVerification && (
+                  <p className="mono" style={{ fontSize: 11, marginTop: 6, color: aiVerification.status === "VERIFIED" ? "var(--mint)" : "var(--amber-dark, #b45309)" }}>
+                    {aiVerification.status === "VERIFIED" ? "✓" : "⚠"} Answer verification: {aiVerification.status.replace("_", " ").toLowerCase()} — {aiVerification.detail}
+                  </p>
+                )}
+                {aiDuplicateWarning && (
+                  <p className="mono" style={{ fontSize: 11, marginTop: 6, color: "var(--amber-dark, #b45309)" }}>
+                    ⚠ Possible duplicate: this looks similar to an existing question, "{aiDuplicateWarning.title || aiDuplicateWarning.description}". Review before saving.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -489,7 +534,9 @@ export default function CreateQuestion() {
               subjectId={subjectId}
               unitId={unitId}
               topicId={topicId}
-              onChange={({ subjectId: s, unitId: u, topicId: t }) => { setSubjectId(s); setUnitId(u); setTopicId(t); }}
+              onChange={({ subjectId: s, unitId: u, topicId: t, subjectName: sn, unitName: un }) => {
+                setSubjectId(s); setUnitId(u); setTopicId(t); setSubjectName(sn); setUnitName(un);
+              }}
             />
           </div>
 
