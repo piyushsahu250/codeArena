@@ -15,6 +15,7 @@ const { validateQuestionForVerification } = require("../utils/questionValidation
 const { normalizeOptions } = require("../utils/mcqOptions");
 const { normalizeExpectedNumeric } = require("../utils/numericAnswer");
 const questionImages = require("../utils/questionImages");
+const { extractImageZip, validateZipImage } = require("../utils/bulkImageZip");
 const { canStaffUseSubject, resolveSubjectUnitTopic, staffAuthorizedSubjectIds } = require("../utils/subjectAccess");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
@@ -23,9 +24,6 @@ const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
-// Question bulk-import specifically also accepts .txt (Notepad format) — every other bulk-upload
-// route on the platform keeps using the spreadsheet-only `upload` above.
-const uploadQuestionFile = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetOrTextFileFilter });
 // Question-image upload: accepts anything up front (the real check is the magic-byte sniff on
 // the buffer in the route below, which is the only check that can't be fooled by a renamed file
 // or a spoofed Content-Type) — this filter only exists to reject non-image form fields fast.
@@ -34,6 +32,35 @@ const uploadQuestionImage = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype || "")),
 });
+// Bulk import with an OPTIONAL "images ZIP" alongside the spreadsheet -- a row's "Image File Name"
+// column names a file the ZIP must actually contain (see utils/bulkImageZip.js). Two named fields
+// instead of `.single(...)` because a bulk-import request can legitimately carry both files at
+// once; fileFilter branches on fieldname since "file" and "imagesZip" accept different formats.
+// 20MB cap (vs. 5MB for the spreadsheet alone) -- a ZIP of even a few dozen diagrams adds up
+// quickly; utils/bulkImageZip.js enforces its own tighter per-file/total-uncompressed limits on
+// top of this multer-level cap on the compressed upload itself.
+const uploadQuestionFileWithImages = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === "imagesZip") {
+      cb(null, /\.zip$/i.test(file.originalname || ""));
+      return;
+    }
+    spreadsheetOrTextFileFilter(req, file, cb);
+  },
+}).fields([{ name: "file", maxCount: 1 }, { name: "imagesZip", maxCount: 1 }]);
+// Confirm-step counterpart: no spreadsheet re-upload (the validated row data is posted as JSON/
+// form fields instead — see the /confirm routes below), just the same images ZIP again, since the
+// preview step never uploads any image to S3 and the actual bytes only ever existed in that ZIP.
+// When the request isn't multipart at all (the common, image-free case — still a plain JSON
+// POST, unchanged from before this feature existed), multer/busboy no-ops and simply calls
+// next() without touching req.body, so this is safe to apply unconditionally.
+const uploadImagesZipOnly = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /\.zip$/i.test(file.originalname || "")),
+}).fields([{ name: "imagesZip", maxCount: 1 }]);
 
 const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL", "NUMERICAL"];
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
@@ -56,6 +83,11 @@ const TEMPLATE_HEADERS = [
   "Question Text", "Option A", "Option B", "Option C", "Option D", "Correct Option",
   "Explanation", "Difficulty Level", "Subject", "Unit", "Topic",
   "Question Type", "Marks", "BTL", "Question Name",
+  // Optional. Names a file that must exist (matched by filename, not by folder path) inside a
+  // ZIP of images uploaded alongside this spreadsheet — see the Bulk Upload page's "Images (ZIP)"
+  // picker. Leave blank for a question with no diagram/figure. A referenced file that isn't
+  // actually found in the ZIP is a row ERROR, never a silently-imported question with no image.
+  "Image File Name",
 ];
 
 // Coding-question bulk import. A flat spreadsheet cell can't hold a nested test-case list, so
@@ -71,6 +103,9 @@ const CODING_TEMPLATE_HEADERS = [
   "Evaluation Mode (STDIO or Function)", "Function Name", "Return Type", "Parameters (name:type, comma separated)",
   "Starter Code (Java)", "Starter Code (Python)", "Starter Code (Cpp)", "Starter Code (C)",
   "Tags", "Question Bank",
+  // See TEMPLATE_HEADERS's identical column for the full rationale — same optional
+  // matched-against-the-uploaded-ZIP convention, here for a coding question's own diagram/figure.
+  "Image File Name",
 ];
 
 const CODING_IMPORT_HEADER_ALIASES = {
@@ -109,6 +144,7 @@ const CODING_IMPORT_HEADER_ALIASES = {
   tags: ["tags"],
   questionBank: ["question bank"],
   btl: ["btl", "btl level", "bloom s taxonomy level"],
+  imageFileName: ["image file name", "image filename", "image name", "image", "picture", "diagram", "figure"],
 };
 const SUPPORTED_CODING_LANGUAGES = ["java", "python", "cpp", "c", "javascript"];
 
@@ -1344,11 +1380,11 @@ OUTPUT: 1000000
 
 const MCQ_TEMPLATE_ROWS = [
   // Question Text, Option A-D, Correct Option, Explanation, Difficulty, Subject, Unit, Topic,
-  // [optional:] Question Type, Marks, BTL, Question Name — order matches TEMPLATE_HEADERS.
-  ["DELETE THESE 3 EXAMPLE ROWS BEFORE UPLOADING — they're here only to show the format", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-  ["What is 2 + 3?", "4", "5", "6", "7", "B", "2 + 3 = 5.", "Easy", "Java", "Java Basics", "Operators", "", "", "", ""],
-  ["Water boils at 100°C at sea level.", "True", "False", "", "", "A", "", "Easy", "Science", "Unit 1", "Physics", "", "", "", ""],
-  ["Which of the following are prime numbers?", "2", "3", "4", "9", "A,B", "2 and 3 are prime; 4 and 9 are not.", "Medium", "Math", "Unit 2", "Number Theory", "Multiple Select", 5, 2, ""],
+  // [optional:] Question Type, Marks, BTL, Question Name, Image File Name — order matches TEMPLATE_HEADERS.
+  ["DELETE THESE 3 EXAMPLE ROWS BEFORE UPLOADING — they're here only to show the format", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  ["What is 2 + 3?", "4", "5", "6", "7", "B", "2 + 3 = 5.", "Easy", "Java", "Java Basics", "Operators", "", "", "", "", ""],
+  ["Water boils at 100°C at sea level.", "True", "False", "", "", "A", "", "Easy", "Science", "Unit 1", "Physics", "", "", "", "", ""],
+  ["Which of the following are prime numbers?", "2", "3", "4", "9", "A,B", "2 and 3 are prime; 4 and 9 are not.", "Medium", "Math", "Unit 2", "Number Theory", "Multiple Select", 5, 2, "", ""],
 ];
 const CODING_TEMPLATE_ROWS = [
   [
@@ -1362,7 +1398,7 @@ const CODING_TEMPLATE_ROWS = [
     "a, b = map(int, input().split())\nprint(a + b)",
     "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b; cin >> a >> b;\n  cout << a + b;\n}",
     "#include <stdio.h>\nint main() {\n  int a, b; scanf(\"%d %d\", &a, &b);\n  printf(\"%d\", a + b);\n}",
-    "Math, Basics", "Java Coding Bank",
+    "Math, Basics", "Java Coding Bank", "",
   ],
   [
     // FUNCTION-mode test case inputs use one line per parameter (never space-separated on one
@@ -1375,7 +1411,7 @@ const CODING_TEMPLATE_ROWS = [
     "4\n6->10||100\n200->300||-5\n5->0||0\n0->0||1000000000\n1000000000->2000000000",
     "Function", "add", "int", "a:int, b:int",
     "", "", "", "",
-    "Math, Basics", "Java Coding Bank",
+    "Math, Basics", "Java Coding Bank", "",
   ],
 ];
 
@@ -1408,6 +1444,7 @@ router.get("/bulk-template", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
     ["5. Do not add formulas or macros."],
     ["6. Save as .xlsx before uploading."],
     ["7. Delete the example rows on each sheet before uploading your own questions."],
+    ["8. Image File Name is optional. If a question needs a diagram/figure, put the image's exact filename there (e.g. triangle.png) and also upload a ZIP containing that file on the Bulk Upload page's \"Images (ZIP)\" picker. A filename that isn't found in the ZIP is rejected as an error, not imported without its image."],
   ]);
   XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
 
@@ -1525,6 +1562,7 @@ const IMPORT_HEADER_ALIASES = {
   difficulty: ["difficulty level", "difficulty", "level"],
   explanation: ["explanation", "solution"],
   btl: ["btl", "btl level", "bloom s taxonomy level"],
+  imageFileName: ["image file name", "image filename", "image name", "image", "picture", "diagram", "figure"],
 };
 
 // Formula-injection defense for exported spreadsheets — a question's free-text fields (title,
@@ -1586,6 +1624,19 @@ function parseUploadedFile(file, { coding }) {
   }
 }
 
+// Reads the optional "imagesZip" field a bulk-import request may carry (see
+// uploadQuestionFileWithImages/uploadImagesZipOnly above) and extracts it via
+// utils/bulkImageZip.js. Returns { imageZip: null, error: null } when no zip was uploaded at all
+// -- a perfectly normal case, most bulk uploads have no images -- or { imageZip, error } once one
+// was. `imageZip` is the exact shape runQuizBulkImport/runCodingBulkImport expect.
+function extractImageZipFromRequest(req) {
+  const zipFile = req.files?.imagesZip?.[0];
+  if (!zipFile) return { imageZip: null, error: null };
+  const { filesByName, error } = extractImageZip(zipFile.buffer);
+  if (error) return { imageZip: null, error };
+  return { imageZip: { filesByName }, error: null };
+}
+
 // Shared core for quiz-type (MCQ/TRUE_FALSE/MULTISELECT) bulk import — used by all three routes
 // below (immediate file import, preview, and confirm-after-preview) so there is exactly one place
 // that decides what's valid, what's a duplicate, and what gets written. `commit: false` (preview)
@@ -1594,7 +1645,11 @@ function parseUploadedFile(file, { coding }) {
 // same rows would actually do. Duplicate-detection re-queries the DB fresh every call (never
 // trusts a cached "was valid at preview time" flag), so a confirm always reflects current state
 // even if something else changed in between.
-async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commit) {
+// `imageZip` is the { filesByName } map from utils/bulkImageZip.js's extractImageZip, or null if
+// no images ZIP was uploaded alongside this file at all. A row naming an Image File Name when
+// imageZip is null is exactly as much an error as one naming a file the zip doesn't contain --
+// spec: never import a question as if its image exists when it doesn't.
+async function runQuizBulkImport(req, { rows, folderId, duplicateAction, imageZip }, commit) {
   const headers = Object.keys(rows[0] || {});
   const headerMap = buildHeaderMap(headers);
   // Question Type is optional (auto-detected per row when the column/value is absent — see below);
@@ -1731,6 +1786,32 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
       continue;
     }
 
+    // Optional image attachment. A row that names one is validated up front (same "clear error,
+    // never a silent partial import" treatment as every other required field) -- never created
+    // as if the image existed when it didn't, per spec.
+    const imageFileNameRaw = field(row, "imageFileName");
+    let imageBuffer = null;
+    let imageMime = null;
+    if (imageFileNameRaw) {
+      if (commit && !questionImages.isConfigured()) {
+        errors.push({ row: rowNum, reason: "Image storage isn't configured on this server yet — remove the Image File Name or try again later" });
+        continue;
+      }
+      if (!imageZip) {
+        errors.push({ row: rowNum, reason: `Image "${imageFileNameRaw}" was referenced but no images ZIP was uploaded alongside this file` });
+        continue;
+      }
+      const basename = imageFileNameRaw.split("/").pop().split("\\").pop();
+      const found = imageZip.filesByName.get(basename.toLowerCase());
+      const { mime, error: imageError } = validateZipImage(found, imageFileNameRaw);
+      if (imageError) {
+        errors.push({ row: rowNum, reason: imageError });
+        continue;
+      }
+      imageBuffer = found;
+      imageMime = mime;
+    }
+
     const descKey = description.trim().toLowerCase();
     if (duplicateAction !== "import") {
       if (seenDescriptions.has(descKey)) {
@@ -1767,10 +1848,25 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
         createdById: req.user.id,
       };
       if (commit) {
-        const question = await prisma.question.create({ data });
+        let question = await prisma.question.create({ data });
+        if (imageBuffer) {
+          // Uploaded only now, after the question row itself exists (S3 keys are namespaced by
+          // question id) and only ever for a REAL commit -- a preview never touches S3 at all, so
+          // cancelling out of a preview never leaves an orphaned upload behind.
+          try {
+            const imageKey = await questionImages.uploadQuestionImage(question.id, imageBuffer, imageMime);
+            question = await prisma.question.update({ where: { id: question.id }, data: { imageKey, imageMimeType: imageMime } });
+          } catch (imgErr) {
+            // The question itself was already created successfully -- an image upload failure
+            // (S3 hiccup, not configured on this server) shouldn't un-create it or silently
+            // pretend the whole row failed. Surfaced as a warning-shaped error entry instead so
+            // staff can see it and re-attach the image via the question's own Edit screen.
+            errors.push({ row: rowNum, reason: `Question created, but its image failed to upload: ${safeErrorMessage(imgErr, "unknown error")}` });
+          }
+        }
         created.push(question);
       } else {
-        created.push({ row: rowNum, title: title || null, description, questionType, difficulty: data.difficulty, btlLevel });
+        created.push({ row: rowNum, title: title || null, description, questionType, difficulty: data.difficulty, btlLevel, hasImage: !!imageBuffer });
       }
       seenDescriptions.add(descKey);
       (await existingDescriptions(folderId, resolvedSubject.subjectId, resolvedSubject.unitId)).add(descKey);
@@ -1809,6 +1905,10 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
     total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
     skipped, errors, created, validRows, structureHint,
     autoFixedCount: autoFixed.length, autoFixed, unknownColumns,
+    // On preview, `created` holds the lightweight {row, ..., hasImage} marker; on a real commit
+    // it holds the actual created Question rows, which carry imageKey once the S3 upload inside
+    // the commit branch above succeeded — either shape is covered here.
+    imagesValidatedCount: created.filter((c) => c.hasImage || c.imageKey).length,
   };
 }
 
@@ -1828,15 +1928,18 @@ async function resolveFolderForBulkImport(req, folderId) {
 // UI uses /bulk-import/preview + /bulk-import/confirm below instead, per the platform's
 // Preview -> Validate -> Confirm requirement, so a staff member always sees what will be created
 // before anything is actually written.
-router.post("/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFileWithImages, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const file = req.files?.file?.[0];
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
-    const { rows, error } = parseUploadedFile(req.file, { coding: false });
+    const { rows, error } = parseUploadedFile(file, { coding: false });
     if (error) return res.status(400).json({ error });
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction }, true);
+    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction, imageZip }, true);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -1850,15 +1953,18 @@ router.post("/bulk-import", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
 // never writes to the database. Returns the same counts/errors/skipped summary plus `validRows`
 // (the original row data for everything that passed) for the frontend to show a Preview screen
 // and then re-post to /bulk-import/confirm once the staff member confirms.
-router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFileWithImages, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const file = req.files?.file?.[0];
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
-    const { rows, error } = parseUploadedFile(req.file, { coding: false });
+    const { rows, error } = parseUploadedFile(file, { coding: false });
     if (error) return res.status(400).json({ error });
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction }, false);
+    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction, imageZip }, false);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -1872,13 +1978,25 @@ router.post("/bulk-import/preview", authenticate, requireRole("ADMIN", "SUPER_AD
 // actually creates them — re-running every validation/duplicate check fresh against current DB
 // state rather than trusting the preview's snapshot, since something else may have changed in the
 // meantime. This is the only place either preview or confirm ever calls prisma.question.create.
-router.post("/bulk-import/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
+// uploadImagesZipOnly no-ops (does not touch req.body) on a plain JSON POST -- the overwhelmingly
+// common image-free case, completely unchanged from before this feature existed. Only a request
+// that actually re-attaches the images ZIP arrives as multipart, in which case `rows` (and
+// `folderId`/`duplicateAction`) arrive as plain string form fields rather than already-parsed
+// JSON -- see rows parsing below.
+router.post("/bulk-import/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadImagesZipOnly, async (req, res) => {
   try {
-    const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
-    if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
+    let rows;
+    try {
+      rows = Array.isArray(req.body.rows) ? req.body.rows : JSON.parse(req.body.rows || "[]");
+    } catch {
+      return res.status(400).json({ error: "Invalid rows payload" });
+    }
+    if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: "No rows to import" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction }, true);
+    const result = await runQuizBulkImport(req, { rows, folderId, duplicateAction, imageZip }, true);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -1932,7 +2050,7 @@ function parseHiddenTestCases(raw) {
 // named Question Bank folder that doesn't exist yet (resolveBankFolder below) — is suppressed
 // when commit is false, since Preview must never write anything; the folder is created for real
 // only when this same function is called again with commit: true at confirm time.
-async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, commit) {
+async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction, imageZip }, commit) {
   const codingHeaders = Object.keys(rows[0] || {});
   const headerMap = buildCodingHeaderMap(codingHeaders);
   if (!headerMap.title || !headerMap.description) {
@@ -2012,6 +2130,32 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
         continue;
       }
       const difficulty = DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || "EASY";
+
+      // Optional image attachment -- same validate-up-front, never-import-as-if-it-existed
+      // treatment as the quiz importer's identical block (see its own comment for the full
+      // rationale).
+      const imageFileNameRaw = field(row, "imageFileName");
+      let imageBuffer = null;
+      let imageMime = null;
+      if (imageFileNameRaw) {
+        if (commit && !questionImages.isConfigured()) {
+          errors.push({ row: rowNum, reason: "Image storage isn't configured on this server yet — remove the Image File Name or try again later" });
+          continue;
+        }
+        if (!imageZip) {
+          errors.push({ row: rowNum, reason: `Image "${imageFileNameRaw}" was referenced but no images ZIP was uploaded alongside this file` });
+          continue;
+        }
+        const basename = imageFileNameRaw.split("/").pop().split("\\").pop();
+        const found = imageZip.filesByName.get(basename.toLowerCase());
+        const { mime, error: imageError } = validateZipImage(found, imageFileNameRaw);
+        if (imageError) {
+          errors.push({ row: rowNum, reason: imageError });
+          continue;
+        }
+        imageBuffer = found;
+        imageMime = mime;
+      }
 
       const timeLimitSecRaw = field(row, "timeLimitSec");
       const timeLimitSec = timeLimitSecRaw ? Number(timeLimitSecRaw) : 2;
@@ -2141,10 +2285,18 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
           },
         };
         if (commit) {
-          const question = await prisma.question.create({ data });
+          let question = await prisma.question.create({ data });
+          if (imageBuffer) {
+            try {
+              const imageKey = await questionImages.uploadQuestionImage(question.id, imageBuffer, imageMime);
+              question = await prisma.question.update({ where: { id: question.id }, data: { imageKey, imageMimeType: imageMime } });
+            } catch (imgErr) {
+              errors.push({ row: rowNum, reason: `Question created, but its image failed to upload: ${safeErrorMessage(imgErr, "unknown error")}` });
+            }
+          }
           created.push(question);
         } else {
-          created.push({ row: rowNum, title, description, difficulty, btlLevel });
+          created.push({ row: rowNum, title, description, difficulty, btlLevel, hasImage: !!imageBuffer });
         }
         seenTitles.add(titleKey);
         titles.add(titleKey);
@@ -2164,21 +2316,25 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
   return {
     total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
     skipped, errors, created, validRows, unknownColumns,
+    imagesValidatedCount: created.filter((c) => c.hasImage || c.imageKey).length,
   };
 }
 
 // Bulk-import CODING questions from .xlsx/.csv/.txt, writing directly — kept for backward
 // compatibility, same as /bulk-import above. The in-app upload UI uses
 // /bulk-import-coding/preview + /bulk-import-coding/confirm instead.
-router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFileWithImages, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const file = req.files?.file?.[0];
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
     const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
-    const { rows, error } = parseUploadedFile(req.file, { coding: true });
+    const { rows, error } = parseUploadedFile(file, { coding: true });
     if (error) return res.status(400).json({ error });
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, true);
+    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction, imageZip }, true);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -2188,15 +2344,18 @@ router.post("/bulk-import-coding", authenticate, requireRole("ADMIN", "SUPER_ADM
   }
 });
 
-router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFileWithImages, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const file = req.files?.file?.[0];
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
     const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
-    const { rows, error } = parseUploadedFile(req.file, { coding: true });
+    const { rows, error } = parseUploadedFile(file, { coding: true });
     if (error) return res.status(400).json({ error });
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, false);
+    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction, imageZip }, false);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -2206,13 +2365,20 @@ router.post("/bulk-import-coding/preview", authenticate, requireRole("ADMIN", "S
   }
 });
 
-router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
+router.post("/bulk-import-coding/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadImagesZipOnly, async (req, res) => {
   try {
-    const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
-    if (rows.length === 0) return res.status(400).json({ error: "No rows to import" });
+    let rows;
+    try {
+      rows = Array.isArray(req.body.rows) ? req.body.rows : JSON.parse(req.body.rows || "[]");
+    } catch {
+      return res.status(400).json({ error: "Invalid rows payload" });
+    }
+    if (!Array.isArray(rows) || rows.length === 0) return res.status(400).json({ error: "No rows to import" });
     const defaultFolderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, true);
+    const result = await runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction, imageZip }, true);
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -2247,7 +2413,7 @@ function parseUploadedFileBothSheets(file) {
   }
 }
 
-const EMPTY_BULK_RESULT = { total: 0, createdCount: 0, skippedCount: 0, errorCount: 0, skipped: [], errors: [], created: [], validRows: [], autoFixedCount: 0, autoFixed: [], unknownColumns: [] };
+const EMPTY_BULK_RESULT = { total: 0, createdCount: 0, skippedCount: 0, errorCount: 0, skipped: [], errors: [], created: [], validRows: [], autoFixedCount: 0, autoFixed: [], unknownColumns: [], imagesValidatedCount: 0 };
 
 // Tags each error/skipped-row reason with which sheet it came from — MCQ and CODING each number
 // their own rows starting at 2, so "Row 5" alone would be ambiguous once the two sheets' issues
@@ -2262,18 +2428,23 @@ function tagSheet(rows, label) {
 // sheet worth importing; easy to silently import only the MCQs and never notice the CODING sheet
 // was skipped. Runs both sheets' existing, unmodified import logic (runQuizBulkImport /
 // runCodingBulkImport) side by side and merges the two summaries into one preview/result.
-router.post("/bulk-import-combined/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFile.single("file"), async (req, res) => {
+router.post("/bulk-import-combined/preview", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionFileWithImages, async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const file = req.files?.file?.[0];
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
-    const { mcqRows, codingRows, error } = parseUploadedFileBothSheets(req.file);
+    const { mcqRows, codingRows, error } = parseUploadedFileBothSheets(file);
     if (error) return res.status(400).json({ error });
     if (mcqRows.length === 0 && codingRows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows in either sheet." });
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
-    // Preview only reads — safe to run concurrently, unlike confirm below.
+    // Preview only reads — safe to run concurrently, unlike confirm below. Both sheets share the
+    // one uploaded images ZIP -- an image referenced from either an MCQ or a Coding row is looked
+    // up in the exact same file.
     const [mcqResult, codingResult] = await Promise.all([
-      mcqRows.length ? runQuizBulkImport(req, { rows: mcqRows, folderId, duplicateAction }, false) : EMPTY_BULK_RESULT,
-      codingRows.length ? runCodingBulkImport(req, { rows: codingRows, defaultFolderId: folderId, duplicateAction }, false) : EMPTY_BULK_RESULT,
+      mcqRows.length ? runQuizBulkImport(req, { rows: mcqRows, folderId, duplicateAction, imageZip }, false) : EMPTY_BULK_RESULT,
+      codingRows.length ? runCodingBulkImport(req, { rows: codingRows, defaultFolderId: folderId, duplicateAction, imageZip }, false) : EMPTY_BULK_RESULT,
     ]);
     if (mcqResult.error) return res.status(400).json({ error: `MCQ sheet: ${mcqResult.error}` });
     if (codingResult.error) return res.status(400).json({ error: `CODING sheet: ${codingResult.error}` });
@@ -2296,6 +2467,7 @@ router.post("/bulk-import-combined/preview", authenticate, requireRole("ADMIN", 
         ...(codingResult.autoFixed || []).map((f) => ({ ...f, field: `[Coding] ${f.field}` })),
       ],
       unknownColumns: [...new Set([...(mcqResult.unknownColumns || []), ...(codingResult.unknownColumns || [])])],
+      imagesValidatedCount: (mcqResult.imagesValidatedCount || 0) + (codingResult.imagesValidatedCount || 0),
       // Kept separate (not flattened into one `validRows`) so confirm can route each half back
       // through the import logic that actually knows how to create that question type.
       mcqValidRows: mcqResult.validRows || [],
@@ -2308,17 +2480,26 @@ router.post("/bulk-import-combined/preview", authenticate, requireRole("ADMIN", 
   }
 });
 
-router.post("/bulk-import-combined/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
+router.post("/bulk-import-combined/confirm", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadImagesZipOnly, async (req, res) => {
   try {
-    const mcqRows = Array.isArray(req.body.mcqRows) ? req.body.mcqRows : [];
-    const codingRows = Array.isArray(req.body.codingRows) ? req.body.codingRows : [];
+    let mcqRows, codingRows;
+    try {
+      mcqRows = Array.isArray(req.body.mcqRows) ? req.body.mcqRows : JSON.parse(req.body.mcqRows || "[]");
+      codingRows = Array.isArray(req.body.codingRows) ? req.body.codingRows : JSON.parse(req.body.codingRows || "[]");
+    } catch {
+      return res.status(400).json({ error: "Invalid rows payload" });
+    }
+    if (!Array.isArray(mcqRows)) mcqRows = [];
+    if (!Array.isArray(codingRows)) codingRows = [];
     if (mcqRows.length === 0 && codingRows.length === 0) return res.status(400).json({ error: "No rows to import" });
     const folderId = await resolveFolderForBulkImport(req, req.body.folderId || null);
+    const { imageZip, error: zipError } = extractImageZipFromRequest(req);
+    if (zipError) return res.status(400).json({ error: zipError });
     const duplicateAction = req.body.duplicateAction === "import" ? "import" : "skip";
     // Sequential, not Promise.all: both halves write real rows via prisma.question.create, and
     // this is a rare, small-volume action — no reason to risk interleaved writes for it.
-    const mcqResult = mcqRows.length ? await runQuizBulkImport(req, { rows: mcqRows, folderId, duplicateAction }, true) : EMPTY_BULK_RESULT;
-    const codingResult = codingRows.length ? await runCodingBulkImport(req, { rows: codingRows, defaultFolderId: folderId, duplicateAction }, true) : EMPTY_BULK_RESULT;
+    const mcqResult = mcqRows.length ? await runQuizBulkImport(req, { rows: mcqRows, folderId, duplicateAction, imageZip }, true) : EMPTY_BULK_RESULT;
+    const codingResult = codingRows.length ? await runCodingBulkImport(req, { rows: codingRows, defaultFolderId: folderId, duplicateAction, imageZip }, true) : EMPTY_BULK_RESULT;
     if (mcqResult.error) return res.status(400).json({ error: `MCQ sheet: ${mcqResult.error}` });
     if (codingResult.error) return res.status(400).json({ error: `CODING sheet: ${codingResult.error}` });
     res.json({

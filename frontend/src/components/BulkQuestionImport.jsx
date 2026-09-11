@@ -18,6 +18,12 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
   const [questionKind, setQuestionKind] = useState("quiz"); // "quiz" | "coding" | "combined"
   const [uploadFormat, setUploadFormat] = useState("spreadsheet"); // "spreadsheet" | "notepad"
   const [file, setFile] = useState(null);
+  // Optional images ZIP — only needed when at least one row fills in "Image File Name". Kept in
+  // state (not just attached to the preview request and forgotten) so it can be re-sent unchanged
+  // at Confirm time too: the preview step validates that every referenced image is actually in
+  // the zip and is a real image, but never uploads anything to storage -- only Confirm does, so
+  // the actual image bytes have to make the trip again.
+  const [imagesZip, setImagesZip] = useState(null);
   const [folderId, setFolderId] = useState(defaultFolderId);
   const [newFolderName, setNewFolderName] = useState("");
   const [duplicateAction, setDuplicateAction] = useState("skip");
@@ -30,6 +36,7 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
 
   function reset() {
     setFile(null);
+    setImagesZip(null);
     setStage("pick");
     setPreview(null);
     setResult(null);
@@ -75,6 +82,7 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
       const targetFolderId = await resolveFolderId();
       const formData = new FormData();
       formData.append("file", file);
+      if (imagesZip) formData.append("imagesZip", imagesZip);
       if (targetFolderId) formData.append("folderId", targetFolderId);
       formData.append("duplicateAction", duplicateAction);
       const { data } = await api.post(previewEndpoint, formData);
@@ -92,10 +100,22 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
     setError("");
     try {
       const targetFolderId = await resolveFolderId();
-      const payload = questionKind === "combined"
-        ? { mcqRows: preview.mcqValidRows, codingRows: preview.codingValidRows, folderId: targetFolderId || undefined, duplicateAction }
-        : { rows: preview.validRows, folderId: targetFolderId || undefined, duplicateAction };
-      const { data } = await api.post(confirmEndpoint, payload);
+      const rowsPayload = questionKind === "combined"
+        ? { mcqRows: preview.mcqValidRows, codingRows: preview.codingValidRows }
+        : { rows: preview.validRows };
+      // Only switch to multipart when there's actually an images ZIP to re-attach — the far more
+      // common image-free case keeps posting plain JSON, exactly as it always has.
+      let body;
+      if (imagesZip) {
+        body = new FormData();
+        for (const [key, value] of Object.entries(rowsPayload)) body.append(key, JSON.stringify(value));
+        body.append("imagesZip", imagesZip);
+        if (targetFolderId) body.append("folderId", targetFolderId);
+        body.append("duplicateAction", duplicateAction);
+      } else {
+        body = { ...rowsPayload, folderId: targetFolderId || undefined, duplicateAction };
+      }
+      const { data } = await api.post(confirmEndpoint, body);
       setResult(data);
       setStage("done");
       if (data.created?.length) onImported?.(data.created);
@@ -184,6 +204,23 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
         <form onSubmit={handlePreview} style={{ marginTop: 14 }}>
           <input type="file" accept={uploadFormat === "notepad" ? ".txt" : ".xlsx,.xls,.csv"} onChange={(e) => setFile(e.target.files?.[0] || null)} />
 
+          {uploadFormat === "spreadsheet" && (
+            <div style={{ marginTop: 14 }}>
+              <label style={{ display: "block", fontSize: 13 }}>
+                Images (ZIP) — optional, only needed if any row fills in "Image File Name"
+              </label>
+              <input
+                type="file"
+                accept=".zip"
+                style={{ marginTop: 6 }}
+                onChange={(e) => setImagesZip(e.target.files?.[0] || null)}
+              />
+              <p style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>
+                Each "Image File Name" cell must exactly match one file inside this ZIP (any folder structure inside it is fine — only the filename is matched). A row naming a file the ZIP doesn't contain is a row error, not a silently-imported question with no image.
+              </p>
+            </div>
+          )}
+
           {folders !== undefined && (
             <>
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 14 }}>
@@ -247,6 +284,7 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
               )}
             </div>
             {preview.autoFixedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>🔧 Auto-fixed: <strong>{preview.autoFixedCount}</strong></div>}
+            {preview.imagesValidatedCount > 0 && <div style={{ color: "var(--mint)" }}>🖼 Images validated: <strong>{preview.imagesValidatedCount}</strong></div>}
             {preview.skippedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>⚠ Duplicates (will skip): <strong>{preview.skippedCount}</strong></div>}
             {preview.errorCount > 0 && <div style={{ color: "var(--rust)" }}>✕ Invalid (will not import): <strong>{preview.errorCount}</strong></div>}
           </div>
