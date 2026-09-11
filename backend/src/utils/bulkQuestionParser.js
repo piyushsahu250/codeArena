@@ -108,6 +108,37 @@ function letterToOptionNumber(letter) {
   return idx === -1 ? "" : String(idx + 1);
 }
 
+// Multi-Selection's "Correct Options" cell may list its letters separated by a comma ("A,C,D"),
+// a comma+space ("A, C, D"), plain spaces ("A C D"), or a plus sign ("A+C+D") -- all four are
+// explicitly supported conventions, none of them changes what the row means (a list of option
+// letters is a list of option letters regardless of separator), so normalizing between them is a
+// safe, deterministic auto-fix, not a guess. Only triggers when the ENTIRE cell is nothing but
+// single A-F letters and separator characters -- if it returns null, the caller falls back to the
+// original comma/pipe-only split, so a genuine free-text answer that merely happens to be short
+// (a real single-answer MCQ whose correct choice is spelled out as an option's own text) is never
+// at risk of being misread as a letter list.
+function splitLetterList(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return null;
+  const tokens = trimmed.split(/[,|+]+|\s+/).map((s) => s.trim()).filter(Boolean);
+  if (tokens.length >= 2 && tokens.every((t) => /^[A-Fa-f]$/.test(t))) return tokens;
+  return null;
+}
+
+// Resolves ONE correct-answer token that names an option by letter (not by its actual option
+// text) to a 1-based option number, or returns null if the token isn't a recognizable letter
+// reference at all -- a free-text answer, an already-numeric index, anything else -- so the
+// caller passes it through completely untouched instead of risking a false match. Deterministic
+// and safe: an optional "Option "/"Answer "/"Choice " prefix, optional surrounding "()", and an
+// optional trailing "." or ")" are all just punctuation/wording around the same single letter,
+// never a second possible meaning. Covers "A", "a", " a ", "Option A", "Answer A", "Choice A",
+// "(A)", "A)", "A." -- all case-insensitive.
+function resolveCorrectLetterToken(token) {
+  const t = String(token || "").trim();
+  const m = t.match(/^(?:option|answer|choice)?\s*\(?([A-Fa-f])\)?\.?$/i);
+  return m ? letterToOptionNumber(m[1]) : null;
+}
+
 // BTL: BTL-3 / BTL: 3 / BTL: Level 3 -> "3". Returns "" (not a hard failure here — questions.js's
 // own row-level validation decides whether a missing/invalid BTL is acceptable) if no digit 1-6
 // is found.
@@ -213,4 +244,4 @@ function parseNotepadCodingText(text) {
   });
 }
 
-module.exports = { parseNotepadMcqText, parseNotepadCodingText, extractBtlDigit, letterToOptionNumber };
+module.exports = { parseNotepadMcqText, parseNotepadCodingText, extractBtlDigit, letterToOptionNumber, splitLetterList, resolveCorrectLetterToken };

@@ -7,7 +7,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
 const { validateSignature, generateStarterCode, languagesSupportedBy, resolveCodingFields } = require("../utils/functionHarness");
 const { spreadsheetFileFilter, spreadsheetOrTextFileFilter } = require("../utils/uploadFilters");
-const { parseNotepadMcqText, parseNotepadCodingText, letterToOptionNumber } = require("../utils/bulkQuestionParser");
+const { parseNotepadMcqText, parseNotepadCodingText, splitLetterList, resolveCorrectLetterToken } = require("../utils/bulkQuestionParser");
 const { questionVisibilityWhere, questionFolderVisibilityWhere, ownsQuestionRow } = require("../utils/questionVisibility");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
@@ -1487,8 +1487,13 @@ const TYPE_LABELS = { CODING: "Coding", MCQ: "Multiple Choice", TRUE_FALSE: "Tru
 const DIFFICULTY_LABELS = { EASY: "Easy", MEDIUM: "Medium", HARD: "Hard" };
 const TYPE_ALIASES = {
   "multiple choice": "MCQ", mcq: "MCQ",
-  "true false": "TRUE_FALSE", "true/false": "TRUE_FALSE", truefalse: "TRUE_FALSE",
-  "multiple select": "MULTISELECT", "multi select": "MULTISELECT", multiselect: "MULTISELECT",
+  "true false": "TRUE_FALSE", "true/false": "TRUE_FALSE", truefalse: "TRUE_FALSE", "true or false": "TRUE_FALSE",
+  // "Multiple Selection" (the exact wording used in this platform's own bulk-upload spec/UI copy)
+  // was previously NOT recognized here at all — normalizeHeader collapses it to "multiple
+  // selection", one word off from the only variants that were mapped ("multiple select"/"multi
+  // select"/"multiselect"), so a staff member typing the type name exactly as the template's own
+  // section header spells it got every single row rejected as an unrecognized Question Type.
+  "multiple select": "MULTISELECT", "multi select": "MULTISELECT", multiselect: "MULTISELECT", "multiple selection": "MULTISELECT",
   coding: "CODING",
 };
 const DIFFICULTY_ALIASES = { easy: "EASY", medium: "MEDIUM", hard: "HARD" };
@@ -1512,7 +1517,10 @@ const IMPORT_HEADER_ALIASES = {
   optionD: ["option d", "answer d", "choice d"],
   optionE: ["option e", "answer e", "choice e"],
   optionF: ["option f", "answer f", "choice f"],
-  correctAnswer: ["correct answer", "answer", "correct option", "correct"],
+  // "correct options" (plural) is the Multi-Selection template's own designated header — without
+  // it here, a Multi-Selection file using the exact column name the platform's own template spec
+  // calls for went completely undetected (every row's correct-answer column silently empty).
+  correctAnswer: ["correct answer", "answer", "correct option", "correct options", "correct"],
   points: ["marks", "points"],
   difficulty: ["difficulty level", "difficulty", "level"],
   explanation: ["explanation", "solution"],
@@ -1587,17 +1595,30 @@ function parseUploadedFile(file, { coding }) {
 // trusts a cached "was valid at preview time" flag), so a confirm always reflects current state
 // even if something else changed in between.
 async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commit) {
-  const headerMap = buildHeaderMap(Object.keys(rows[0] || {}));
+  const headers = Object.keys(rows[0] || {});
+  const headerMap = buildHeaderMap(headers);
   // Question Type is optional (auto-detected per row when the column/value is absent — see below);
   // only Question Text is a genuinely hard requirement to import anything at all.
   if (!headerMap.description) {
     return { error: "Missing required column. The file must include Question Text." };
   }
+  // A column that didn't map to anything this importer recognizes (a stray "Teacher Notes",
+  // "Comments", a leftover column from a different template) is never a reason to fail the whole
+  // upload — its data is simply never read. Surfaced once, file-level, so a staff member can
+  // confirm that was deliberate rather than silently wondering where a column went.
+  const mappedHeaders = new Set(Object.values(headerMap));
+  const unknownColumns = headers.filter((h) => !mappedHeaders.has(h));
 
   const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
   const created = [];
   const skipped = [];
   const errors = [];
+  // Deterministic, safe corrections actually applied while reading a row (whitespace/case/
+  // punctuation normalization only — never anything that could change what the row means) are
+  // recorded here so the preview can show staff exactly what was auto-fixed, per spec: "never
+  // silently change content" means never HIDING that a change happened, not never normalizing
+  // formatting at all. See recordAutoFix() below.
+  const autoFixed = [];
   let unrecognizedTypeCount = 0;
   let attemptedRowCount = 0; // non-blank rows actually evaluated -- the denominator for structureHint below
   const seenDescriptions = new Set();
@@ -1636,20 +1657,33 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
     const optionsRaw = separateOptions.length > 0
       ? separateOptions
       : field(row, "options").split("|").map((s) => s.trim()).filter(Boolean);
-    // Correct Option as a letter (A/B/C/D, case-insensitive, with or without an "Option "/"Answer "/
-    // "Choice " prefix) resolves against optionsRaw's own position — A is whichever option ended up
-    // first regardless of which column shape supplied it. Split on comma/pipe first so Multiple
-    // Select's "A, C" convention also converts per-token; anything that isn't a single letter
-    // (option text, a 1-based number) is passed through untouched to normalizeCorrectIndices, which
-    // already handles those.
-    const correctAnswerRaw = field(row, "correctAnswer")
-      .split(/[,|]/)
+    // Correct Option as a letter (A/B/C/D, case-insensitive, with an optional "Option "/"Answer "/
+    // "Choice " prefix, optional surrounding "()", and an optional trailing "." or ")" -- covers
+    // " a ", "a", "A.", "a)", "(A)", "option a", etc., all deterministically the same single
+    // answer) resolves against optionsRaw's own position — A is whichever option ended up first
+    // regardless of which column shape supplied it. Multiple Selection's "A,C,D" convention (and
+    // its "A, C, D" / "A C D" / "A+C+D" variants -- see splitLetterList above) is split into
+    // per-letter tokens first; anything that isn't a recognizable single letter (option text, a
+    // 1-based number) is passed through untouched to normalizeCorrectIndices, which already
+    // handles those.
+    const correctAnswerFieldRaw = field(row, "correctAnswer");
+    let letterFixApplied = false; // true only when a token was actually resolved as an A-F letter reference
+    const correctAnswerRaw = (splitLetterList(correctAnswerFieldRaw) || correctAnswerFieldRaw.split(/[,|]/))
       .map((tok) => {
-        const t = tok.trim();
-        const m = t.match(/^(?:option|answer|choice)?\s*([A-Fa-f])$/i);
-        return m ? letterToOptionNumber(m[1]) : t;
+        const resolved = resolveCorrectLetterToken(tok);
+        if (resolved !== null) { letterFixApplied = true; return resolved; }
+        return String(tok).trim();
       })
       .join(",");
+    // Recorded ONLY when a genuine letter-reference token was resolved (never for a free-text
+    // answer, which is passed through completely untouched above and can never set this flag) AND
+    // the resulting string actually differs from what was typed -- e.g. " a , c " -> "1,3",
+    // "A." -> "1". This is purely a transparency log (spec: "never silently change content" means
+    // the staff member reviewing the preview can always see exactly what was auto-fixed and why),
+    // not a second source of truth -- correctAnswerRaw above is what's actually used either way.
+    if (letterFixApplied && correctAnswerRaw !== correctAnswerFieldRaw.trim()) {
+      autoFixed.push({ row: rowNum, field: "Correct Option(s)", before: correctAnswerFieldRaw.trim(), after: correctAnswerRaw });
+    }
     const pointsRaw = field(row, "points");
     const difficultyRaw = field(row, "difficulty");
     const explanation = field(row, "explanation");
@@ -1686,6 +1720,16 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
     const topic = field(row, "topic");
     const resolvedSubject = await resolveSubjectUnitTopicByName(req, { subjectName: subject, unitName: unit, topicName: topic });
     if (resolvedSubject.error) { errors.push({ row: rowNum, reason: resolvedSubject.error }); continue; }
+
+    // An invalid (non-blank) Difficulty is a real data problem, not a safe default — silently
+    // becoming "Easy" would skew a Readiness/blueprint's difficulty distribution with no trace
+    // anywhere that the original value was actually garbled. Matches the coding-question bulk
+    // import's already-existing, stricter treatment of the exact same column (this quiz path used
+    // to silently default instead — the one inconsistency found auditing the two side by side).
+    if (difficultyRaw && !DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)]) {
+      errors.push({ row: rowNum, reason: `Invalid Difficulty "${difficultyRaw}" — use Easy, Medium, or Hard` });
+      continue;
+    }
 
     const descKey = description.trim().toLowerCase();
     if (duplicateAction !== "import") {
@@ -1764,6 +1808,7 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction }, commi
   return {
     total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
     skipped, errors, created, validRows, structureHint,
+    autoFixedCount: autoFixed.length, autoFixed, unknownColumns,
   };
 }
 
@@ -1888,10 +1933,14 @@ function parseHiddenTestCases(raw) {
 // when commit is false, since Preview must never write anything; the folder is created for real
 // only when this same function is called again with commit: true at confirm time.
 async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction }, commit) {
-  const headerMap = buildCodingHeaderMap(Object.keys(rows[0] || {}));
+  const codingHeaders = Object.keys(rows[0] || {});
+  const headerMap = buildCodingHeaderMap(codingHeaders);
   if (!headerMap.title || !headerMap.description) {
     return { error: "Missing required columns. The file must include Question Title and Problem Statement." };
   }
+  // Same file-level "we ignored this column" notice as the quiz importer — see its own comment.
+  const mappedCodingHeaders = new Set(Object.values(headerMap));
+  const unknownColumns = codingHeaders.filter((h) => !mappedCodingHeaders.has(h));
 
   const field = (row, key) => (headerMap[key] ? String(row[headerMap[key]] ?? "").trim() : "");
   const created = [];
@@ -2114,7 +2163,7 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
   const validRows = commit ? undefined : created.map((c) => rows[c.row - 2]);
   return {
     total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
-    skipped, errors, created, validRows,
+    skipped, errors, created, validRows, unknownColumns,
   };
 }
 

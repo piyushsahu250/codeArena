@@ -233,17 +233,41 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
               ⚠ {preview.structureHint}
             </div>
           )}
+          {preview.unknownColumns?.length > 0 && (
+            <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 8, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)", color: "var(--ink-dim)", fontSize: 12.5 }}>
+              ⚠ Unknown column{preview.unknownColumns.length === 1 ? "" : "s"} ignored (not imported): <strong>{preview.unknownColumns.join(", ")}</strong>
+            </div>
+          )}
           <div style={{ fontSize: 13, marginTop: 4 }}>
             <div>Total rows: <strong>{preview.total}</strong></div>
             <div style={{ color: "var(--mint)" }}>
-              Ready to import: <strong>{preview.createdCount}</strong>
+              ✓ Ready to import: <strong>{preview.createdCount}</strong>
               {questionKind === "combined" && (preview.mcqCount > 0 || preview.codingCount > 0) && (
                 <span style={{ color: "var(--ink-dim)", fontWeight: 400 }}> ({preview.mcqCount} MCQ, {preview.codingCount} Coding)</span>
               )}
             </div>
-            {preview.skippedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>Duplicates (will skip): <strong>{preview.skippedCount}</strong></div>}
-            {preview.errorCount > 0 && <div style={{ color: "var(--rust)" }}>Invalid (will not import): <strong>{preview.errorCount}</strong></div>}
+            {preview.autoFixedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>🔧 Auto-fixed: <strong>{preview.autoFixedCount}</strong></div>}
+            {preview.skippedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>⚠ Duplicates (will skip): <strong>{preview.skippedCount}</strong></div>}
+            {preview.errorCount > 0 && <div style={{ color: "var(--rust)" }}>✕ Invalid (will not import): <strong>{preview.errorCount}</strong></div>}
           </div>
+
+          {/* Every correction here was fully deterministic (a letter reference, a separator style,
+              surrounding whitespace) -- never a guess about what the question meant. Shown so a
+              staff member can see exactly what changed, per spec: never silently change content. */}
+          {preview.autoFixed?.length > 0 && (
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 700, color: "var(--amber-dark)" }}>
+                🔧 {preview.autoFixed.length} correction{preview.autoFixed.length === 1 ? "" : "s"} automatically applied — review
+              </summary>
+              <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
+                {preview.autoFixed.map((f, i) => (
+                  <div key={i} style={{ fontSize: 11.5, marginTop: 2 }} className="mono">
+                    Row {f.row} ({f.field}): <span style={{ color: "var(--ink-dim)" }}>"{f.before}"</span> → <strong>"{f.after}"</strong>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
 
           {(preview.errors?.length > 0 || preview.skipped?.length > 0) && (
             <div style={{ marginTop: 8 }}>
