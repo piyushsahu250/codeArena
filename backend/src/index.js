@@ -18,7 +18,9 @@ const crypto = require("crypto");
 const { timingMiddleware, recordProcessError } = require("./utils/metrics");
 const logger = require("./utils/logger");
 const aiService = require("./services/ai/aiService");
+const questionImages = require("./utils/questionImages");
 const { getClientIp } = require("./utils/clientIp");
+const prisma = require("./prisma");
 
 const authRoutes = require("./routes/auth");
 const testRoutes = require("./routes/tests");
@@ -129,6 +131,47 @@ app.use((req, res, next) => {
 // is present is the only way to tell "the service is up" apart from "the service is up but running
 // a stale build," since a health check with no version marker can't distinguish the two.
 app.get("/api/health", (req, res) => res.json({ status: "ok", service: "CodeArena API", commit: process.env.COMMIT_SHA || process.env.RENDER_GIT_COMMIT || null }));
+
+// Deeper, DELIBERATELY SEPARATE from /api/health above — that one stays a fast, dependency-free
+// liveness check exactly as it always was (any external uptime monitor / load balancer already
+// polling it keeps getting the same instant response, unaffected by this). This one actually
+// exercises each critical dependency so a real outage (DB unreachable, AI misconfigured, no email
+// path at all) shows up here instead of only being discovered when a student hits it live. No
+// secret VALUES are ever returned — only booleans/status strings, per the explicit "do not expose
+// sensitive configuration" requirement this was built against.
+app.get("/api/health/deep", async (req, res) => {
+  const checks = {};
+
+  try {
+    const started = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = { ok: true, latencyMs: Date.now() - started };
+  } catch (err) {
+    checks.database = { ok: false, error: "unreachable" };
+  }
+
+  checks.ai = { ok: aiService.isConfigured(), configured: aiService.isConfigured() };
+
+  checks.questionImageStorage = { ok: true, configured: questionImages.isConfigured() }; // not configured yet is a valid, non-broken state -- feature-gated, not a failure
+
+  const emailConfigured = !!(
+    (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD) ||
+    (process.env.APPS_SCRIPT_WEB_APP_URL && process.env.APPS_SCRIPT_SHARED_SECRET)
+  );
+  checks.email = { ok: true, configured: emailConfigured }; // same reasoning -- absence isn't this endpoint's failure to report on
+
+  // Presence-only, never the value itself -- a missing one of these is a genuine misconfiguration
+  // (auth/PII/compiler-adjacent secrets this platform cannot safely run without), unlike AI/email/
+  // image-storage above, which are optional features.
+  const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "PII_ENCRYPTION_KEY"];
+  checks.environment = {
+    ok: requiredEnv.every((k) => !!process.env[k]),
+    missing: requiredEnv.filter((k) => !process.env[k]),
+  };
+
+  const overallOk = Object.values(checks).every((c) => c.ok);
+  res.status(overallOk ? 200 : 503).json({ status: overallOk ? "ok" : "degraded", checks, checkedAt: new Date().toISOString() });
+});
 
 // Public, boolean-only — lets any page check whether GEMINI_API_KEY is set before showing an
 // AI-feature button, instead of the student clicking it and hitting a raw 503 error message.
