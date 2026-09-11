@@ -10,6 +10,7 @@ const { shuffleQuestionOptions, answerIndexSetsMatch } = require("../utils/optio
 const { questionVisibilityWhere } = require("../utils/questionVisibility");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
+const { checkNearDuplicate } = require("../utils/textSimilarity");
 
 const router = express.Router();
 
@@ -115,14 +116,36 @@ async function verifyCodingAnswer({ referenceSolution, testCases }) {
 // GenerateAiDrafts.jsx and CreateQuestion.jsx — already have them selected via SubjectUnitPicker
 // before generating); silently skipped otherwise rather than guessing an unscoped match, which
 // could otherwise flag two genuinely unrelated subjects' similarly-worded questions as duplicates.
-async function checkDuplicate(req, { description, subjectId, unitId }) {
+//
+// Two passes: (1) the original exact-text match -- a single indexed-shape DB query, essentially
+// free; (2) a NEAR-duplicate pass over a bounded, recency-ordered window of existing questions in
+// the same scope, using utils/textSimilarity.js's deterministic word-overlap check -- no AI call
+// (spec section 45: deterministic checks first). Added after a real generated batch produced two
+// Easy MCQs both titled "Java File Extension" whose bodies differed just enough that the exact
+// match missed the second one entirely (confirmed live, 2026-09-11) -- exactly the "same question,
+// reworded" case spec section 23 calls out that a pure exact-text match can never catch.
+const NEAR_DUPLICATE_SCAN_LIMIT = 200; // bounds the cost of pass 2 regardless of how large the bank is
+async function checkDuplicate(req, { title, description, subjectId, unitId }) {
   if (!subjectId || !unitId) return null;
   try {
-    const existing = await prisma.question.findFirst({
+    const exact = await prisma.question.findFirst({
       where: { ...questionVisibilityWhere(req), subjectId, unitId, description: { equals: description.trim(), mode: "insensitive" } },
       select: { id: true, title: true, description: true },
     });
-    return existing || null;
+    if (exact) return { ...exact, matchType: "exact" };
+
+    const candidates = await prisma.question.findMany({
+      where: { ...questionVisibilityWhere(req), subjectId, unitId },
+      select: { id: true, title: true, description: true },
+      orderBy: { createdAt: "desc" },
+      take: NEAR_DUPLICATE_SCAN_LIMIT,
+    });
+    let best = null;
+    for (const candidate of candidates) {
+      const { isMatch, similarity, reason } = checkNearDuplicate({ title, description }, candidate);
+      if (isMatch && (!best || similarity > best.similarity)) best = { ...candidate, matchType: "near", similarity, reason };
+    }
+    return best;
   } catch {
     return null; // never let a duplicate-check failure block generation itself
   }
@@ -156,7 +179,7 @@ Provide exactly 7 testCases: 2 with isHidden=false (visible samples shown to stu
 
       const [verification, duplicate] = await Promise.all([
         verifyCodingAnswer({ referenceSolution: draft.referenceSolution, testCases: draft.testCases }),
-        checkDuplicate(req, { description: draft.description, subjectId, unitId }),
+        checkDuplicate(req, { title: draft.title, description: draft.description, subjectId, unitId }),
       ]);
       const { referenceSolution, ...draftWithoutRawSolution } = draft;
       return res.json({
@@ -209,7 +232,7 @@ Return JSON exactly shaped: {"title": string, "description": string (the questio
     // checked, only which options are the same set of strings.
     const [verification, duplicate] = await Promise.all([
       verifyChoiceAnswer({ userId: req.user.id, instituteId: req.requesterInstituteId, description: draft.description, options: draft.options, claimedAnswer: draft.correctAnswer }),
-      checkDuplicate(req, { description: draft.description, subjectId, unitId }),
+      checkDuplicate(req, { title: draft.title, description: draft.description, subjectId, unitId }),
     ]);
 
     // Re-randomize option position with a real RNG (crypto.randomUUID() as the shuffle seed —

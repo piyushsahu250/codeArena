@@ -139,7 +139,12 @@ export default function GenerateAiDrafts({ onGenerated }) {
           flagged.push({ title: draft.title || draft.description?.slice(0, 60), reason: draft.verificationDetail });
         }
         if (draft.duplicateWarning) {
-          flagged.push({ title: draft.title || draft.description?.slice(0, 60), reason: `Looks like it may duplicate an existing question: "${draft.duplicateWarning.title || draft.duplicateWarning.description}"` });
+          // matchType/reason distinguish an exact-text match from the newer near-duplicate check
+          // (identical title, or a high word-overlap score) -- shown so staff can judge at a
+          // glance whether it's worth a closer look or just two questions sharing common phrasing.
+          const dup = draft.duplicateWarning;
+          const why = dup.matchType === "exact" ? "identical text" : dup.reason || "similar wording";
+          flagged.push({ title: draft.title || draft.description?.slice(0, 60), reason: `Looks like it may duplicate an existing question (${why}): "${dup.title || dup.description}"` });
         }
         await api.post("/questions", {
           ...draft,

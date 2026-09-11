@@ -519,7 +519,7 @@ export default function CreateQuestion() {
                 )}
                 {aiDuplicateWarning && (
                   <p className="mono" style={{ fontSize: 11, marginTop: 6, color: "var(--amber-dark, #b45309)" }}>
-                    ⚠ Possible duplicate: this looks similar to an existing question, "{aiDuplicateWarning.title || aiDuplicateWarning.description}". Review before saving.
+                    ⚠ Possible duplicate ({aiDuplicateWarning.matchType === "exact" ? "identical text" : aiDuplicateWarning.reason || "similar wording"}): this looks similar to an existing question, "{aiDuplicateWarning.title || aiDuplicateWarning.description}". Review before saving.
                   </p>
                 )}
               </>
