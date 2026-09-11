@@ -19,6 +19,7 @@ const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
 
 const VIOLATION_LABEL = {
   TAB_SWITCH: "switching tabs",
+  TAB_SWITCH_BRIEF: "the assessment screen losing focus briefly",
   FULLSCREEN_EXIT: "exiting fullscreen",
   COPY: "copying text",
   PASTE: "pasting text",
@@ -821,6 +822,12 @@ export default function ModuleCodingAssessment() {
       {suspiciousNotice && (
         <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 12, fontWeight: 700, textAlign: "center" }}>
           {suspiciousNotice}
+        </div>
+      )}
+      {/* Informational only, never a warning/violation styling -- a device rotating is normal. */}
+      {proctor.orientationNotice && (
+        <div className="mono" style={{ background: "var(--card-bg, #F7F7F5)", color: "var(--ink-dim)", padding: "8px 24px", fontSize: 12, textAlign: "center", borderBottom: "1px solid var(--line)" }}>
+          Screen orientation changed. Please continue your assessment.
         </div>
       )}
 

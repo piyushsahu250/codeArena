@@ -35,6 +35,7 @@ const CATEGORY_LABEL = { HR: "HR", TECHNICAL: "Technical", CODING: "Coding", APT
 const FREE_TEXT_CATEGORIES = ["HR", "TECHNICAL", "SYSTEM_DESIGN", "BEHAVIORAL", "MANAGERIAL"];
 const VIOLATION_LABEL = {
   TAB_SWITCH: "switching tabs",
+  TAB_SWITCH_BRIEF: "the interview screen losing focus briefly",
   FULLSCREEN_EXIT: "exiting fullscreen",
   CAMERA_DROPPED: "your camera being turned off or disconnected",
   MIC_DROPPED: "your microphone being turned off or disconnected",
@@ -735,6 +736,12 @@ export default function InterviewSession() {
         {proctor.noiseWarning && (
           <div className="mono" style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
             Please maintain a quiet interview environment.
+          </div>
+        )}
+        {/* Informational only, never a warning/violation styling -- a device rotating is normal. */}
+        {proctor.orientationNotice && (
+          <div className="mono" style={{ background: "var(--card-bg, #F7F7F5)", color: "var(--ink-dim)", padding: "8px 20px", fontSize: 11.5, textAlign: "center", marginTop: 12, borderRadius: 8, border: "1px solid var(--line)" }}>
+            Screen orientation changed. Please continue your interview.
           </div>
         )}
         {violationWarning && (

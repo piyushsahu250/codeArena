@@ -28,6 +28,15 @@
 // An event type this map doesn't recognize (a future addition, or a client sending garbage)
 // classifies as INTERRUPTION, not SUSPICIOUS or CONFIRMED_VIOLATION — the safe default is to
 // never penalize something this file doesn't explicitly know about.
+//
+// Mapping onto the "INFO / WARNING / SUSPICIOUS / VIOLATION / CRITICAL" 5-level language used in
+// the platform's proctoring policy docs: NORMAL = INFO, INTERRUPTION = WARNING, SUSPICIOUS stays
+// SUSPICIOUS, CONFIRMED_VIOLATION = VIOLATION. There is no separate CRITICAL tier as a distinct
+// *severity* value — MAX_VIOLATIONS auto-submit/termination (tests.js/moduleCoding.js/interview.js)
+// is what "critical" means in practice here: the consequence of enough CONFIRMED_VIOLATION-tier
+// events, not a 5th classification level. Four levels were kept (not renamed to five) specifically
+// so every existing TestViolation/ModuleCodingViolation/InterviewSession row already written under
+// the old names stays valid without a data migration.
 const VIOLATION_SEVERITY = {
   // CONFIRMED_VIOLATION — leaving or breaking the proctored environment itself.
   TAB_SWITCH: "CONFIRMED_VIOLATION",
@@ -44,12 +53,32 @@ const VIOLATION_SEVERITY = {
   RIGHT_CLICK: "SUSPICIOUS",
   DRAG_ATTEMPT: "SUSPICIOUS",
   PRINT_SCREEN_ATTEMPT: "SUSPICIOUS",
+  // Added 2026-09-11 as part of the mobile/desktop proctoring redesign: the page-hidden effect
+  // (TestTaking.jsx / useProctoring.js) used to have exactly one threshold — hidden < 3s said
+  // nothing, hidden >= 3s reported plain TAB_SWITCH (CONFIRMED_VIOLATION, penalized on the very
+  // first occurrence). That made a genuinely normal short interruption — answering an incoming
+  // call, dismissing a notification that needed a tap, an app-switcher glance — cost a full,
+  // immediate strike the instant it ran a few seconds past a benign glance, with nothing between
+  // "free" and "penalized" to reflect that it might not have been cheating at all. This is the
+  // graduated middle tier that gap needed: the page-hidden effect now reports TAB_SWITCH_BRIEF
+  // (not TAB_SWITCH) once the hide has lasted past the short grace window but is still under the
+  // long one, and only escalates to plain TAB_SWITCH if the page is STILL hidden once the long
+  // window elapses — see TAB_SWITCH_LONG_GRACE_MS in both frontend implementations. A single
+  // short absence never costs anything; the same SUSPICIOUS-escalation machinery below still
+  // turns a *repeated* pattern of short absences into a real strike, and a sustained absence past
+  // the long window is unaffected — still an immediate CONFIRMED_VIOLATION, exactly as before.
+  TAB_SWITCH_BRIEF: "SUSPICIOUS",
 
   // INTERRUPTION — environmental signals that are usually innocent.
   FACE_MISSING: "INTERRUPTION",
   MULTIPLE_FACES: "INTERRUPTION",
   REFRESH_ATTEMPT: "INTERRUPTION", // the browser's own confirm dialog is the real deterrent
   NETWORK_LOSS: "INTERRUPTION",
+  // A device rotating between portrait/landscape — logged so an admin reviewing an attempt sees
+  // it happened, never a basis for suspicion on its own (see the orientationchange handling next
+  // to the SCREEN_OVERLAY_DETECTED heuristic in both frontend implementations, which re-baselines
+  // on rotation specifically so the rotation itself is never misread as the overlay heuristic below).
+  ORIENTATION_CHANGE: "INTERRUPTION",
   // Moved out of SUSPICIOUS on 2026-09-10: this is a viewport-shrink heuristic, and the shrink an
   // on-screen keyboard opening produces is byte-for-byte the same signal — on a phone/tablet it
   // fired every time a student focused the code editor, and enough of those in one attempt

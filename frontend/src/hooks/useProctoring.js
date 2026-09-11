@@ -3,6 +3,8 @@ import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
 import { requestFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
+import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
+import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -21,11 +23,6 @@ const VIOLATION_DEDUPE_MS = 1200; // collapses e.g. fullscreenchange+visibilityc
 // done anything. This only suppresses the two transition-prone types, only for a few seconds
 // right after activation, and never suppresses a real mid-interview tab switch or fullscreen exit.
 const ACTIVATION_GRACE_MS = 3000;
-// How long the page must stay hidden before a tab-switch is actually reported -- see the
-// tab-switch effect below for why this exists (screen-off/notification-glance vs. a real switch
-// are indistinguishable at the instant `document.hidden` flips true; only elapsed time tells
-// them apart with any confidence).
-const TAB_SWITCH_GRACE_MS = 3000;
 
 // Shared proctoring primitives for a locked-down assessment — extracted so both the exam
 // (TestTaking.jsx, unchanged, still has its own inline copy) and the new module coding
@@ -57,7 +54,7 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     (type) => {
       if (!active) return;
       if (
-        (type === "FULLSCREEN_EXIT" || type === "TAB_SWITCH") &&
+        (type === "FULLSCREEN_EXIT" || type === "TAB_SWITCH" || type === "TAB_SWITCH_BRIEF") &&
         activatedAtRef.current &&
         Date.now() - activatedAtRef.current < ACTIVATION_GRACE_MS
       ) {
@@ -145,33 +142,22 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   }, [active, requireFullscreen, report, requestFullscreen]);
 
   // Tab switch / window blur. `document.hidden` fires identically whether the student actually
-  // switched to another app OR just locked/the screen timed out and woke back up -- browsers
-  // deliberately don't expose which, for privacy. Reporting on the instant would count a phone
-  // going to sleep the same as searching for answers in another tab. Instead this waits
-  // TAB_SWITCH_GRACE_MS with the page still hidden before actually filing anything; if the
-  // student is back before then, nothing is ever reported at all. A real switch-away-to-search
-  // overwhelmingly lasts well past a few seconds, so this costs essentially no real detection.
-  const tabSwitchGraceTimerRef = useRef(null);
+  // switched to another app OR just locked/the screen timed out and woke back up, took a phone
+  // call, or glanced at a notification -- browsers deliberately don't expose which, for privacy.
+  // Graduated via the shared tabSwitchSignal module (also used by TestTaking.jsx's exam surface):
+  // a brief hide reports the soft, non-escalating-on-its-own TAB_SWITCH_BRIEF; only a hide that's
+  // still going once the long grace window elapses reports plain TAB_SWITCH, exactly as strictly
+  // and immediately penalized as before. See tabSwitchSignal.js for the full root-cause writeup.
   useEffect(() => {
     if (!active) return;
-    function handleVisibility() {
-      if (document.hidden) {
-        clearTimeout(tabSwitchGraceTimerRef.current);
-        tabSwitchGraceTimerRef.current = setTimeout(() => {
-          if (document.hidden) report("TAB_SWITCH");
-        }, TAB_SWITCH_GRACE_MS);
-      } else {
-        clearTimeout(tabSwitchGraceTimerRef.current);
-        if (requireFullscreen && !getFullscreenElement()) {
-          requestFullscreen();
-        }
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      clearTimeout(tabSwitchGraceTimerRef.current);
-    };
+    const signal = createTabSwitchSignal({
+      onBrief: () => report("TAB_SWITCH_BRIEF"),
+      onSwitch: () => report("TAB_SWITCH"),
+      onVisible: () => {
+        if (requireFullscreen && !getFullscreenElement()) requestFullscreen();
+      },
+    });
+    return () => signal.destroy();
   }, [active, requireFullscreen, report, requestFullscreen]);
 
   // Copy / paste / cut — blocked outright, not just logged.
@@ -310,53 +296,25 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   // backgrounded, so neither `visibilitychange` nor `fullscreenchange` fires, which is exactly
   // what lets a student search a visible on-screen question without tripping tab-switch
   // detection above. The one side effect it can't avoid: the result sheet still has to occupy
-  // real screen space, so the visible viewport shrinks noticeably while it's open — the same
-  // signal a docked on-screen keyboard produces, which is why this is gated to touch devices and
-  // excludes any moment a text input/editor genuinely has focus. Not a perfect defense (nothing
-  // client-side can be, against an OS-level overlay) but it catches the actual, unavoidable
-  // footprint this class of overlay leaves on the page.
+  // real screen space, so the visible viewport shrinks noticeably while it's open. Gated to touch
+  // devices; excludes an on-screen keyboard, a device rotation, and pinch-zoom — see
+  // viewportOverlaySignal.js (also used by TestTaking.jsx's exam surface) for the full root-cause
+  // writeup of why rotation/zoom needed their own explicit handling, not just the editable-focus
+  // carve-out this used to rely on alone.
+  const [orientationNotice, setOrientationNotice] = useState(false);
+  const orientationNoticeTimeoutRef = useRef(null);
   useEffect(() => {
-    if (!active) return;
-    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia?.("(pointer: coarse)").matches;
-    if (!isTouchDevice) return;
-    const viewport = window.visualViewport;
-    const SHRINK_RATIO_THRESHOLD = 0.22;
-    let baseline = viewport ? viewport.height : window.innerHeight;
-    let flagged = false;
-
-    function isEditableFocused() {
-      const el = document.activeElement;
-      if (!el) return false;
-      return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
-    }
-
-    function handleResize() {
-      const height = viewport ? viewport.height : window.innerHeight;
-      if (isEditableFocused()) {
-        // Legitimate on-screen keyboard — re-baseline so its close doesn't look like a shrink.
-        baseline = Math.max(baseline, height);
-        flagged = false;
-        return;
-      }
-      if (height >= baseline) {
-        baseline = height;
-        flagged = false;
-        return;
-      }
-      const shrinkRatio = (baseline - height) / baseline;
-      if (shrinkRatio > SHRINK_RATIO_THRESHOLD) {
-        if (!flagged) {
-          flagged = true;
-          report("SCREEN_OVERLAY_DETECTED");
-        }
-      } else {
-        flagged = false;
-      }
-    }
-
-    const target = viewport || window;
-    target.addEventListener("resize", handleResize);
-    return () => target.removeEventListener("resize", handleResize);
+    if (!active || !isTouchDevice()) return;
+    const signal = createOverlaySignal({
+      onOverlayDetected: () => report("SCREEN_OVERLAY_DETECTED"),
+      onOrientationChange: () => {
+        report("ORIENTATION_CHANGE");
+        setOrientationNotice(true);
+        clearTimeout(orientationNoticeTimeoutRef.current);
+        orientationNoticeTimeoutRef.current = setTimeout(() => setOrientationNotice(false), 3500);
+      },
+    });
+    return () => signal.destroy();
   }, [active, report]);
 
   // ---- Webcam: face presence (missing / multiple) ----
@@ -615,5 +573,9 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     requestFullscreen, fullscreenOk,
     mediaGranted, mediaError, requestingMedia, requestMedia, stopMedia, videoRef: setVideoNode,
     faceStatus, faceModelStatus, cameraStatus, micStatus, noiseWarning,
+    // Purely informational -- true briefly right after a device rotation. Never a warning/
+    // violation state; a consumer page can show a small "Screen orientation changed" notice with
+    // it, same treatment TestTaking.jsx's exam surface gives its own equivalent state.
+    orientationNotice,
   };
 }

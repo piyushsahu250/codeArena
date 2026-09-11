@@ -14,6 +14,8 @@ import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from 
 import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
 import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
+import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
+import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
@@ -22,10 +24,6 @@ const FACE_CONFIDENCE_THRESHOLD = 0.7;
 // effect for why this needs its own timeout (same reasoning as useProctoring.js's identical
 // constant, kept in sync manually since this page still has its own inline proctoring copy).
 const FACE_MODEL_LOAD_TIMEOUT_MS = 15000;
-// See the tab-switch-detection effect for why this exists -- screen-off/notification-glance vs.
-// a real switch are indistinguishable at the instant `document.hidden` flips true.
-const TAB_SWITCH_GRACE_MS = 3000;
-
 const MAX_TAB_VIOLATIONS = 3;
 
 // Persists the split-screen panel sizes across reloads/navigations — a student who drags the
@@ -130,6 +128,11 @@ export default function TestTaking() {
   // penalized this time -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y"
   // counter (since it didn't actually count), and a note that repeating it will start counting.
   const [suspiciousNotice, setSuspiciousNotice] = useState(null);
+  // Purely informational -- shown the instant the device rotates, independent of (and faster
+  // than) the server round-trip reportViolation makes for the logged, never-penalized
+  // ORIENTATION_CHANGE event. Never a warning/violation banner; see the overlay-signal effect.
+  const [orientationNotice, setOrientationNotice] = useState(false);
+  const orientationNoticeTimeoutRef = useRef(null);
   const [showQuestionPanel, setShowQuestionPanel] = useState(true);
   const [showResultsPanel, setShowResultsPanel] = useState(true);
   const initialLayout = useState(loadLayout)[0];
@@ -746,24 +749,32 @@ export default function TestTaking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIdx]);
 
-  const lastViolationAtRef = useRef(0);
+  const lastViolationAtRef = useRef({});
   const tabWarningTimeoutRef = useRef(null);
   const suspiciousNoticeTimeoutRef = useRef(null);
   // `type` is reported to the server, which classifies it into one of four severities (see
   // backend/src/utils/proctoringSeverity.js) and decides -- never trusted client-side -- whether
   // THIS occurrence counts toward MAX_TAB_VIOLATIONS: CONFIRMED_VIOLATION (tab switch, fullscreen
-  // exit, camera/mic dropped) always does; SUSPICIOUS (currently only SCREEN_OVERLAY_DETECTED on
-  // this surface) only after repeating; INTERRUPTION (face missing) never does, no matter how
-  // often -- same "log don't penalize" policy the Interview surface already used for face
-  // signals, generalized. `reason` is purely the human-readable text for the on-page banner.
+  // exit, camera/mic dropped) always does; SUSPICIOUS (screen-overlay heuristic, a brief tab-hide,
+  // clipboard/right-click attempts) only after repeating; INTERRUPTION (face missing, orientation
+  // change) never does, no matter how often -- same "log don't penalize" policy the Interview
+  // surface already used for face signals, generalized. `reason` is purely the human-readable
+  // text for the on-page banner.
   function reportViolation(type, reason) {
     if (!attemptIdRef.current || finalizedRef.current) return;
-    // Exiting fullscreen via Escape/Alt-Tab fires both `fullscreenchange` and `visibilitychange`
-    // within the same instant — without this guard a single action was double-counted as 2
-    // violations, which made the 3-strike limit feel broken/erratic.
+    // Per-TYPE dedupe (matching useProctoring.js's identical map, used by Module Coding/Interview)
+    // -- collapses e.g. a browser refiring the same fullscreenchange event twice in a row into one
+    // report. Deliberately NOT a single shared timestamp across every type (the previous
+    // implementation here): that would silently drop a genuine, unrelated violation (say, a real
+    // COPY attempt) just for landing within 1.5s of an earlier FULLSCREEN_EXIT report — an actual
+    // detection gap, not a fix, once you account for the fact that TAB_SWITCH is already grace-
+    // delayed by several seconds (see the tab-switch-signal effect below) and so was never really
+    // "simultaneous" with FULLSCREEN_EXIT in the first place; a spurious same-instant duplicate of
+    // one specific type is exactly what per-type dedupe exists to catch.
     const now = Date.now();
-    if (now - lastViolationAtRef.current < 1500) return;
-    lastViolationAtRef.current = now;
+    const last = lastViolationAtRef.current[type] || 0;
+    if (now - last < 1500) return;
+    lastViolationAtRef.current[type] = now;
     api
       .post(`/tests/attempts/${attemptIdRef.current}/violation`, { type })
       .then(({ data }) => {
@@ -784,9 +795,11 @@ export default function TestTaking() {
           clearTimeout(tabWarningTimeoutRef.current);
           tabWarningTimeoutRef.current = setTimeout(() => setTabWarning(null), 6000);
         } else if (data.severity === "SUSPICIOUS") {
-          // A SUSPICIOUS-severity event (see backend/src/utils/proctoringSeverity.js — currently
-          // only SCREEN_OVERLAY_DETECTED reaches this on the exam surface) that didn't cross the
-          // escalation threshold this time -- a softer, distinct notice, not the strike banner.
+          // A SUSPICIOUS-severity event (see backend/src/utils/proctoringSeverity.js — the
+          // screen-overlay heuristic, clipboard/right-click/devtools attempts, and a page-hidden
+          // spell that stayed under the "sustained absence" threshold all reach this) that didn't
+          // cross the escalation threshold this time -- a softer, distinct notice, not the strike
+          // banner used for an actual penalized violation.
           const message = `Notice: ${reason}. This didn't count this time, but repeating it will.`;
           setSuspiciousNotice(message);
           clearTimeout(suspiciousNoticeTimeoutRef.current);
@@ -831,33 +844,24 @@ export default function TestTaking() {
   // into fullscreen on refocus" behavior is gated, since a test with requireFullscreen=false
   // never entered fullscreen at all.
   //
-  // `document.hidden` fires identically whether the candidate switched to another app OR their
-  // phone screen just locked/timed out and woke back up — browsers don't expose which, for
-  // privacy, and a screen-off blip was previously counted exactly like a real tab switch. This
-  // waits TAB_SWITCH_GRACE_MS with the page still hidden before actually filing a violation; if
-  // the candidate is back before then, nothing is reported. A genuine switch-away-to-search
-  // overwhelmingly outlasts a few seconds, so this costs essentially no real detection.
-  const tabSwitchGraceTimerRef = useRef(null);
+  // Graduated, via the shared tabSwitchSignal module (also used by useProctoring.js — Module
+  // Coding/Interview): a brief page-hidden spell (a call answered, a notification tapped, a
+  // screen-off/wake blip) reports the soft, non-escalating-on-its-own TAB_SWITCH_BRIEF; only a
+  // hide that's still going once the long grace window elapses reports plain TAB_SWITCH, exactly
+  // as strictly and immediately penalized as before this redesign. See tabSwitchSignal.js for the
+  // full root-cause writeup — this replaces what used to be a single flat grace window here.
   useEffect(() => {
     if (!started) return;
-    function handleVisibilityChange() {
-      if (document.hidden) {
-        clearTimeout(tabSwitchGraceTimerRef.current);
-        tabSwitchGraceTimerRef.current = setTimeout(() => {
-          if (document.hidden) reportViolation("TAB_SWITCH", "switching tabs during a test is not allowed");
-        }, TAB_SWITCH_GRACE_MS);
-      } else {
-        clearTimeout(tabSwitchGraceTimerRef.current);
+    const signal = createTabSwitchSignal({
+      onBrief: () => reportViolation("TAB_SWITCH_BRIEF", "the test screen lost focus briefly"),
+      onSwitch: () => reportViolation("TAB_SWITCH", "switching tabs during a test is not allowed"),
+      onVisible: () => {
         if (testMeta?.requireFullscreen !== false && !finalizedRef.current && !getFullscreenElement()) {
           requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
         }
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      clearTimeout(tabSwitchGraceTimerRef.current);
-    };
+      },
+    });
+    return () => signal.destroy();
   }, [started]);
 
   // Mobile-keyboard signal — touch devices only. Android Chrome (and some other mobile browsers)
@@ -926,52 +930,23 @@ export default function TestTaking() {
   // backgrounded, so neither visibilitychange nor fullscreenchange above fires, which is exactly
   // what lets a student search a visible on-screen question without tripping tab-switch
   // detection. The one side effect it can't avoid: the result sheet still has to occupy real
-  // screen space, so the visible viewport shrinks noticeably while it's open — the same signal a
-  // docked on-screen keyboard produces, which is why this is gated to touch devices and excludes
-  // any moment a text input/editor genuinely has focus. Not a perfect defense (nothing
-  // client-side can be, against an OS-level overlay) but it catches the actual, unavoidable
-  // footprint this class of overlay leaves on the page.
+  // screen space, so the visible viewport shrinks noticeably while it's open. Gated to touch
+  // devices; excludes an on-screen keyboard (an editable element focused), a device rotation, and
+  // pinch-zoom — see viewportOverlaySignal.js (also used by useProctoring.js) for the full
+  // root-cause writeup of why those last two needed their own explicit handling rather than only
+  // the editable-focus carve-out this used to rely on alone.
   useEffect(() => {
-    if (!started) return;
-    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia?.("(pointer: coarse)").matches;
-    if (!isTouchDevice) return;
-    const viewport = window.visualViewport;
-    const SHRINK_RATIO_THRESHOLD = 0.22;
-    let baseline = viewport ? viewport.height : window.innerHeight;
-    let flagged = false;
-
-    function isEditableFocused() {
-      const el = document.activeElement;
-      if (!el) return false;
-      return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
-    }
-
-    function handleResize() {
-      const height = viewport ? viewport.height : window.innerHeight;
-      if (isEditableFocused()) {
-        baseline = Math.max(baseline, height);
-        flagged = false;
-        return;
-      }
-      if (height >= baseline) {
-        baseline = height;
-        flagged = false;
-        return;
-      }
-      const shrinkRatio = (baseline - height) / baseline;
-      if (shrinkRatio > SHRINK_RATIO_THRESHOLD) {
-        if (!flagged) {
-          flagged = true;
-          reportViolation("SCREEN_OVERLAY_DETECTED", "an on-screen search/assistant overlay was detected");
-        }
-      } else {
-        flagged = false;
-      }
-    }
-
-    const target = viewport || window;
-    target.addEventListener("resize", handleResize);
-    return () => target.removeEventListener("resize", handleResize);
+    if (!started || !isTouchDevice()) return;
+    const signal = createOverlaySignal({
+      onOverlayDetected: () => reportViolation("SCREEN_OVERLAY_DETECTED", "an on-screen search/assistant overlay was detected"),
+      onOrientationChange: () => {
+        reportViolation("ORIENTATION_CHANGE", "the device orientation changed");
+        setOrientationNotice(true);
+        clearTimeout(orientationNoticeTimeoutRef.current);
+        orientationNoticeTimeoutRef.current = setTimeout(() => setOrientationNotice(false), 3500);
+      },
+    });
+    return () => signal.destroy();
   }, [started]);
 
   // Best-effort multi-monitor check — Chrome's experimental, permission-free screen.isExtended
@@ -1322,9 +1297,21 @@ export default function TestTaking() {
     };
   }, [attemptId]);
 
+  // offlineSinceRef marks a genuine browser-reported disconnect (not just page mount) so the
+  // NETWORK_LOSS report below only fires on an actual reconnect, never spuriously at load time.
+  const offlineSinceRef = useRef(null);
   useEffect(() => {
     function onOnline() {
       setIsOffline(false);
+      // Logged for admin review only -- NETWORK_LOSS is INTERRUPTION severity (see
+      // proctoringSeverity.js), never penalized, no matter how often it happens. Never counts
+      // toward MAX_TAB_VIOLATIONS, never resets the timer, never touches saved answers -- this is
+      // purely "an admin looking at this attempt's history should be able to see the student's
+      // connection actually dropped," per spec section 8/29.
+      if (offlineSinceRef.current) {
+        reportViolation("NETWORK_LOSS", "the connection was briefly interrupted");
+        offlineSinceRef.current = null;
+      }
       if (finalizedRef.current) return;
       const pending = [];
       if (pendingAutoSaveRef.current) pending.push(flushAutoSave());
@@ -1342,6 +1329,7 @@ export default function TestTaking() {
     }
     function onOffline() {
       setIsOffline(true);
+      offlineSinceRef.current = Date.now();
       setReconnectPhase(null);
     }
     window.addEventListener("online", onOnline);
@@ -1959,6 +1947,14 @@ export default function TestTaking() {
       {suspiciousNotice && (
         <div style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }} className="mono">
           {suspiciousNotice}
+        </div>
+      )}
+
+      {/* Informational only, never a warning/violation styling — matches spec: normal device
+          behavior gets a small, non-alarming notice, not a red banner. */}
+      {orientationNotice && (
+        <div style={{ background: "var(--card-bg, #F7F7F5)", color: "var(--ink-dim)", padding: "8px 24px", fontSize: 12.5, textAlign: "center", borderBottom: "1px solid var(--line)" }} className="mono">
+          Screen orientation changed. Please continue your test.
         </div>
       )}
 

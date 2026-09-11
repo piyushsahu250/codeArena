@@ -25,8 +25,15 @@ describe("VIOLATION_SEVERITY classification", () => {
   });
 
   test("SUSPICIOUS types — restricted actions / heuristics with a real false-positive rate", () => {
-    for (const type of ["MULTI_MONITOR", "DEVTOOLS", "COPY", "PASTE", "CUT", "RIGHT_CLICK", "DRAG_ATTEMPT", "PRINT_SCREEN_ATTEMPT"]) {
+    for (const type of ["MULTI_MONITOR", "DEVTOOLS", "COPY", "PASTE", "CUT", "RIGHT_CLICK", "DRAG_ATTEMPT", "PRINT_SCREEN_ATTEMPT", "TAB_SWITCH_BRIEF"]) {
       assert.equal(VIOLATION_SEVERITY[type], "SUSPICIOUS", `${type} should be SUSPICIOUS`);
+    }
+  });
+
+  test("ORIENTATION_CHANGE is INTERRUPTION, never counted — a phone/tablet rotating is not suspicious", () => {
+    assert.equal(VIOLATION_SEVERITY.ORIENTATION_CHANGE, "INTERRUPTION");
+    for (const priorCount of [0, 1, 2, 10, 100]) {
+      assert.equal(classifyViolation("ORIENTATION_CHANGE", priorCount).penalized, false, `priorCount=${priorCount}`);
     }
   });
 
@@ -64,5 +71,20 @@ describe("classifyViolation", () => {
     // threshold uniformly regardless of which SUSPICIOUS type is passed.
     assert.equal(classifyViolation("RIGHT_CLICK", 2).penalized, true);
     assert.equal(classifyViolation("PASTE", 2).penalized, true);
+  });
+
+  test("TAB_SWITCH_BRIEF (a short page-hidden spell — a call answered, a notification tapped) never costs a strike on its own, only on a repeated pattern", () => {
+    assert.equal(classifyViolation("TAB_SWITCH_BRIEF", 0).penalized, false);
+    assert.equal(classifyViolation("TAB_SWITCH_BRIEF", 1).penalized, false);
+    assert.equal(classifyViolation("TAB_SWITCH_BRIEF", 2).penalized, true); // 3rd SUSPICIOUS event overall — genuine repeated pattern
+  });
+
+  test("a sustained absence still escalates to plain TAB_SWITCH and is penalized immediately, same as before this session's redesign", () => {
+    // The frontend is responsible for only firing plain TAB_SWITCH once the long grace window has
+    // elapsed with the page still hidden — this just confirms the backend still treats that type
+    // exactly as strictly as it always has, so the graduated model never weakens real detection.
+    const { severity, penalized } = classifyViolation("TAB_SWITCH", 0);
+    assert.equal(severity, "CONFIRMED_VIOLATION");
+    assert.equal(penalized, true);
   });
 });
