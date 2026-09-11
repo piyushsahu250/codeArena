@@ -2247,7 +2247,7 @@ function parseUploadedFileBothSheets(file) {
   }
 }
 
-const EMPTY_BULK_RESULT = { total: 0, createdCount: 0, skippedCount: 0, errorCount: 0, skipped: [], errors: [], created: [], validRows: [] };
+const EMPTY_BULK_RESULT = { total: 0, createdCount: 0, skippedCount: 0, errorCount: 0, skipped: [], errors: [], created: [], validRows: [], autoFixedCount: 0, autoFixed: [], unknownColumns: [] };
 
 // Tags each error/skipped-row reason with which sheet it came from — MCQ and CODING each number
 // their own rows starting at 2, so "Row 5" alone would be ambiguous once the two sheets' issues
@@ -2287,6 +2287,15 @@ router.post("/bulk-import-combined/preview", authenticate, requireRole("ADMIN", 
       errors: [...tagSheet(mcqResult.errors, "MCQ"), ...tagSheet(codingResult.errors, "Coding")],
       skipped: [...tagSheet(mcqResult.skipped, "MCQ"), ...tagSheet(codingResult.skipped, "Coding")],
       structureHint: mcqResult.structureHint || null,
+      autoFixedCount: (mcqResult.autoFixedCount || 0) + (codingResult.autoFixedCount || 0),
+      // tagSheet (above) assumes a `.reason` field, which autoFixed entries don't have (they carry
+      // field/before/after instead) -- tagged via the `field` label itself instead, so it still
+      // reads clearly ("[MCQ] Correct Option(s)") without producing a bogus "undefined" reason.
+      autoFixed: [
+        ...(mcqResult.autoFixed || []).map((f) => ({ ...f, field: `[MCQ] ${f.field}` })),
+        ...(codingResult.autoFixed || []).map((f) => ({ ...f, field: `[Coding] ${f.field}` })),
+      ],
+      unknownColumns: [...new Set([...(mcqResult.unknownColumns || []), ...(codingResult.unknownColumns || [])])],
       // Kept separate (not flattened into one `validRows`) so confirm can route each half back
       // through the import logic that actually knows how to create that question type.
       mcqValidRows: mcqResult.validRows || [],
