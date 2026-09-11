@@ -104,7 +104,17 @@ function splitBlocks(text) {
 }
 
 function letterToOptionNumber(letter) {
-  const idx = "ABCDEF".indexOf(String(letter || "").trim().toUpperCase());
+  const s = String(letter || "").trim().toUpperCase();
+  // Requires EXACTLY one character before ever calling String.indexOf -- "ABCDEF".indexOf("")
+  // is 0 and "ABCDEF".indexOf("AB") is also 0 in JavaScript (both are trivially "found" as a
+  // substring at the very start), either of which would otherwise make an empty/missing/multi-
+  // character `letter` silently resolve to "1", as if it had been "A". Every current call site
+  // already only calls this with a value it has separately confirmed is a single A-F letter, so
+  // this never actually manifested as a live bug -- caught by this function's own unit tests
+  // (bulkQuestionParser.test.js) declaring the "anything outside A-F returns empty" contract,
+  // fixed here so that contract is actually true rather than true-by-coincidence.
+  if (s.length !== 1) return "";
+  const idx = "ABCDEF".indexOf(s);
   return idx === -1 ? "" : String(idx + 1);
 }
 

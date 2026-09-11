@@ -18,6 +18,10 @@ describe("letterToOptionNumber", () => {
     assert.equal(letterToOptionNumber(""), "");
     assert.equal(letterToOptionNumber(null), "");
     assert.equal(letterToOptionNumber("1"), "");
+    // "ABCDEF".indexOf("") and "ABCDEF".indexOf("AB") are both 0 in plain JavaScript (a substring
+    // match at the very start) -- these two guard against that indexOf quirk specifically.
+    assert.equal(letterToOptionNumber("AB"), "");
+    assert.equal(letterToOptionNumber(undefined), "");
   });
 });
 
