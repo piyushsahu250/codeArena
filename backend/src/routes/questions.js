@@ -224,18 +224,32 @@ async function resolveSubjectUnitTopicByName(req, { subjectName, unitName, topic
   }
   let unit = await prisma.unit.findFirst({ where: { subjectId: subject.id, name: { equals: unitName, mode: "insensitive" } } });
   if (!unit) {
-    // Exact match failed — try Roman<->Arabic numeral normalization before giving up. Only
-    // auto-resolved when it's unambiguous (exactly one configured unit normalizes to the same
-    // string); an ambiguous or total miss falls through to an error that lists what's actually
-    // configured, instead of leaving the uploader to guess-and-retry blind.
+    // Exact match failed — try Roman<->Arabic numeral normalization next. Only auto-resolved when
+    // it's unambiguous (exactly one configured unit normalizes to the same string).
     const wantedNormalized = normalizeUnitName(unitName);
     const candidates = await prisma.unit.findMany({ where: { subjectId: subject.id } });
     const normalizedMatches = candidates.filter((u) => normalizeUnitName(u.name) === wantedNormalized);
     if (normalizedMatches.length === 1) {
       unit = normalizedMatches[0];
+    } else if (normalizedMatches.length === 0) {
+      // No existing Unit matches even loosely — auto-create it under this Subject, the same
+      // create-if-missing convention Topic already uses one level below. Unit used to be a hard
+      // "must already exist, configure it through the UI first" requirement, which meant a
+      // Subject with zero Units configured yet rejected every single bulk-upload row outright —
+      // confirmed live 2026-09-11: a staff member bulk-uploading 20 Cybersecurity questions
+      // against "Unit 4" hit exactly this wall because the Cybersecurity subject had no Units
+      // configured at all. Deterministic and safe: it creates a Unit with the exact name the
+      // staff member typed, under the Subject they already confirmed access to — never guesses
+      // at a DIFFERENT existing Unit, which is exactly what the Roman-numeral branch above and
+      // the ambiguous-match branch below still exist to handle carefully instead.
+      unit = await prisma.unit.create({ data: { subjectId: subject.id, name: unitName } });
     } else {
-      const available = candidates.map((u) => `"${u.name}"`).join(", ") || "(no units configured for this subject)";
-      return { error: `"${unitName}" does not belong to Subject "${subjectName}". Units configured for this subject: ${available}` };
+      // Genuinely ambiguous — more than one existing Unit already normalizes to the same string
+      // (e.g. both "Unit 4" and "UNIT-4" exist as separate rows already). Auto-creating a third
+      // would only add to that mess; this is exactly the case that still needs a human decision,
+      // so it still hard-errors rather than guessing.
+      const available = candidates.map((u) => `"${u.name}"`).join(", ");
+      return { error: `"${unitName}" matches multiple existing units for Subject "${subjectName}": ${available}. Please use one of those exact names.` };
     }
   }
   let topicId = null;
