@@ -43,14 +43,23 @@ async function gradeCodingSubmission(sub, question) {
 // An attempt's totalScore is the sum of each question's BEST scoring submission — a student can
 // click Submit again after improving their code, and their best attempt (not just the latest)
 // counts, same as re-submitting always worked here.
-async function recomputeAttemptScore(attemptId) {
-  const allSubs = await prisma.submission.findMany({ where: { attemptId } });
+//
+// This is the ONE place this computation is allowed to live (quality-audit fix, 2026-09-11):
+// routes/submissions.js's quiz `/submit` route used to hand-duplicate this exact logic inline,
+// purely so it could run inside its own delete-then-recreate transaction — recomputeAttemptScore
+// itself only ever touched the plain singleton `prisma` client, which can't join an existing
+// transaction. Accepting an optional Prisma client here (a transaction client `tx`, or the plain
+// singleton by default) lets every caller — transactional or not — share this one implementation
+// instead of two copies that could silently drift apart the next time the scoring RULE itself
+// changes (partial credit, negative marking, etc.) and only one of the two got updated.
+async function recomputeAttemptScore(attemptId, client = prisma) {
+  const allSubs = await client.submission.findMany({ where: { attemptId } });
   const bestByQuestion = {};
   for (const s of allSubs) {
     if (!bestByQuestion[s.questionId] || s.score > bestByQuestion[s.questionId]) bestByQuestion[s.questionId] = s.score;
   }
   const totalScore = Object.values(bestByQuestion).reduce((a, b) => a + b, 0);
-  await prisma.testAttempt.update({ where: { id: attemptId }, data: { totalScore } });
+  await client.testAttempt.update({ where: { id: attemptId }, data: { totalScore } });
   return totalScore;
 }
 

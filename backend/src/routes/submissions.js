@@ -345,6 +345,13 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
     // partway through could leave TestAttempt.totalScore stale relative to the student's actual
     // last-saved answer, or (very briefly) let a concurrent read see zero submissions for this
     // question between the delete and the create.
+    //
+    // recomputeAttemptScore(attemptId, tx) -- the shared function, run against THIS transaction's
+    // client -- replaces what used to be a second, hand-copied inline implementation of the exact
+    // same best-per-question-sum logic /submit-code already called through the shared function.
+    // Quality-audit fix (2026-09-11): two independently-maintained copies of a scoring rule is
+    // exactly the "UI score != API score != DB score" root cause the audit exists to catch, even
+    // though both copies happened to compute the same thing today.
     let submission;
     await prisma.$transaction(async (tx) => {
       await tx.submission.deleteMany({ where: { attemptId, questionId } });
@@ -361,16 +368,7 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
           verdict: result.verdict,
         },
       });
-
-      const allSubs = await tx.submission.findMany({ where: { attemptId } });
-      const bestByQuestion = {};
-      for (const s of allSubs) {
-        if (!bestByQuestion[s.questionId] || s.score > bestByQuestion[s.questionId]) {
-          bestByQuestion[s.questionId] = s.score;
-        }
-      }
-      const totalScore = Object.values(bestByQuestion).reduce((a, b) => a + b, 0);
-      await tx.testAttempt.update({ where: { id: attemptId }, data: { totalScore } });
+      await recomputeAttemptScore(attemptId, tx);
     });
 
     res.json({ submissionId: submission.id, execution: sanitizeSubmitResponse(question, result) });
