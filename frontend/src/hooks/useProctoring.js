@@ -5,6 +5,7 @@ import { requestFullscreenCompat, getFullscreenElement, onFullscreenChange } fro
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
+import { classifyKeyEvent } from "../utils/keyboardShortcuts";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -226,26 +227,16 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   // preventable even with preventDefault() — they're still listed here so the attempt is logged.
   useEffect(() => {
     if (!active) return;
+    // Classified through the one shared classifyKeyEvent (utils/keyboardShortcuts.js) instead of
+    // this hook's own hand-rolled copy -- see that file's header comment for the root-cause
+    // writeup ("A/S/D not typing" report, 2026-09-11). Every check inside requires a modifier key
+    // before ever matching a letter, so a bare A/S/D/etc. keystroke always classifies as null
+    // (normal input) and is never preventDefault()'d or reported here.
     function onKeyDown(e) {
-      const key = e.key;
-      if (key === "PrintScreen") {
-        report("PRINT_SCREEN_ATTEMPT");
-        return;
-      }
-      const isDevtools =
-        key === "F12" ||
-        (e.ctrlKey && e.shiftKey && ["I", "J", "C", "i", "j", "c"].includes(key)) ||
-        (e.ctrlKey && ["u", "U"].includes(key));
-      const isBrowserChrome =
-        (e.ctrlKey && ["s", "S", "p", "p", "w", "W", "n", "N", "t", "T", "r", "R", "l", "L"].includes(key)) ||
-        (e.ctrlKey && key === "Tab") ||
-        (e.ctrlKey && e.shiftKey && ["t", "T"].includes(key)) ||
-        key === "F5" ||
-        key === "F11";
-      if (isDevtools || isBrowserChrome) {
-        e.preventDefault();
-        report(isDevtools ? "DEVTOOLS" : "BROWSER_SHORTCUT");
-      }
+      const type = classifyKeyEvent(e);
+      if (!type) return;
+      e.preventDefault();
+      report(type);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

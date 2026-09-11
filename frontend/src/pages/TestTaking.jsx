@@ -17,6 +17,7 @@ import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
+import { classifyKeyEvent } from "../utils/keyboardShortcuts";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -1001,23 +1002,24 @@ export default function TestTaking() {
       // since that's what actually keeps the drop blocked for the whole gesture.
       e.preventDefault();
     }
+    // Classified through the one shared classifyKeyEvent (utils/keyboardShortcuts.js) instead of
+    // this page hand-rolling its own copy of "is this a browser/devtools shortcut" — that
+    // duplication (vs. useProctoring.js's own, slightly different copy) is exactly what silently
+    // let this page under-classify Ctrl+Shift+I/J/C as BROWSER_SHORTCUT instead of the more
+    // serious DEVTOOLS, and never even blocked/logged Ctrl+U or PrintScreen at all. Every check
+    // inside the shared classifier requires a modifier key before ever matching a letter, so a
+    // bare A/S/D/etc. keystroke always classifies as null (normal input) and is never
+    // preventDefault()'d or reported here — see that file's own header comment for the full
+    // root-cause writeup of the "A/S/D not typing" report this was audited against.
     function blockKeys(e) {
-      const k = e.key?.toLowerCase();
-      const blockedWithCtrl = ["s", "p", "u", "w", "n", "t", "r", "tab"];
-      if ((e.ctrlKey || e.metaKey) && blockedWithCtrl.includes(k)) {
-        e.preventDefault();
-        reportViolation("BROWSER_SHORTCUT", `the ${e.ctrlKey ? "Ctrl" : "Cmd"}+${e.key} shortcut is disabled during the test`);
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ["t", "i", "j", "c"].includes(k)) {
-        e.preventDefault();
-        reportViolation("BROWSER_SHORTCUT", "developer-tools shortcuts are disabled during the test");
-        return;
-      }
-      if (k === "f5" || k === "f11" || k === "f12") {
-        e.preventDefault();
-        reportViolation("BROWSER_SHORTCUT", `${k.toUpperCase()} is disabled during the test`);
-      }
+      const type = classifyKeyEvent(e);
+      if (!type) return;
+      e.preventDefault();
+      const reason =
+        type === "PRINT_SCREEN_ATTEMPT" ? "taking a screenshot is disabled during the test" :
+        type === "DEVTOOLS" ? "developer-tools shortcuts are disabled during the test" :
+        `the ${e.ctrlKey ? "Ctrl" : e.metaKey ? "Cmd" : ""}+${e.key} shortcut is disabled during the test`;
+      reportViolation(type, reason);
     }
     document.addEventListener("contextmenu", blockContextMenu);
     document.addEventListener("copy", onCopy);
