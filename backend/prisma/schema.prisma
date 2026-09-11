@@ -820,6 +820,18 @@ model Question {
   numericTolerance     Float?  @default(0)
   numericAnswerDisplay String?
 
+  // Optional image attachment (diagram/figure/graph) on the question stem — orthogonal to
+  // questionType, not a type of its own, since a real math paper puts figures on MCQ, NUMERICAL,
+  // etc. equally. imageKey is the S3 object key ("questions/<questionId>/<uuid>.<ext>"); the
+  // actual bytes live in the private QUESTION_IMAGES_BUCKET (see utils/questionImages.js) — never
+  // in Postgres, and the bucket has Block Public Access on, so imageKey alone is useless without a
+  // presigned URL, which is generated fresh server-side on every response that includes a
+  // question (never stored). imageMimeType is the server-verified (magic-byte sniffed, never
+  // trusted from the client) content type, needed to set the right Content-Type when serving.
+  // Both null = no image, the overwhelming majority of existing and future questions.
+  imageKey      String?
+  imageMimeType String?
+
   // SQL-only: DDL + seed data (CREATE TABLE ...; INSERT INTO ...;) run once against a fresh
   // in-memory SQLite database before each test case, shared across all of this question's cases.
   // A case's own TestCase.input is optional *additional* setup SQL run after this (e.g. extra

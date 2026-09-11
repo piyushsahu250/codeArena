@@ -52,6 +52,9 @@ export default function TestPreview() {
                 </span>
               </div>
               <p style={{ whiteSpace: "pre-wrap", fontSize: 14, marginTop: 10, lineHeight: 1.6 }}><MathText text={tq.question.description} /></p>
+              {tq.question.imageUrl && (
+                <img src={tq.question.imageUrl} alt="" style={{ maxWidth: "100%", maxHeight: 320, borderRadius: 8, border: "1px solid var(--line)", marginTop: 10, display: "block" }} />
+              )}
 
               {tq.question.questionType === "NUMERICAL" ? (
                 <div style={{ marginTop: 12 }}>

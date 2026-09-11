@@ -88,6 +88,58 @@ export default function CreateQuestion() {
   const [loading, setLoading] = useState(isEdit);
   const [signature, setSignature] = useState(EMPTY_SIGNATURE);
 
+  // Optional image attachment (diagram/figure/graph) — orthogonal to Question Type, so it's
+  // rendered once for every type, not inside the type-specific blocks below. `imageUrl` mirrors
+  // what the server already has stored (null until an edit-mode load says otherwise); `imageFile`
+  // is a newly-picked file staged locally and only actually uploaded when the question is saved
+  // (a brand-new question has no id to upload against yet, so create and edit share one deferred-
+  // upload flow rather than two different ones). `imagePreview` is a local object: URL for
+  // whichever of those two the user should currently see.
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState("");
+  const [removingImage, setRemovingImage] = useState(false);
+
+  function pickImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // lets picking the exact same file again re-fire onChange
+    if (!file) return;
+    setImageError("");
+    if (!/^image\/(png|jpeg|jpg|gif|webp)$/.test(file.type)) {
+      setImageError("Use PNG, JPEG, GIF, or WebP");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError("Image must be under 5MB");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function clearStagedImage() {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
+  }
+
+  // Removes the image already saved on the server — immediate, not deferred to Save, since it
+  // doesn't depend on the rest of the form being valid and there's nothing to "undo" it with once
+  // the S3 object is actually gone.
+  async function removeServerImage() {
+    if (!isEdit) return;
+    setRemovingImage(true);
+    try {
+      await api.delete(`/questions/${id}/image`);
+      setImageUrl(null);
+    } catch (err) {
+      setImageError(err.response?.data?.error || "Failed to remove image");
+    } finally {
+      setRemovingImage(false);
+    }
+  }
+
   // Admin/Staff-authored working solution, keyed by language — run through the same judge a
   // student submission goes through, against this question's own test cases, to catch a wrong
   // expected output or a case that doesn't match the signature before publishing. Never sent to
@@ -198,6 +250,7 @@ export default function CreateQuestion() {
       setSubjectId(q.subjectId || null);
       setUnitId(q.unitId || null);
       setTopicId(q.topicId || null);
+      setImageUrl(q.imageUrl || null);
       setLoading(false);
     });
   }, [id, isEdit]);
@@ -261,6 +314,22 @@ export default function CreateQuestion() {
     else if (options.length < 2 || (form.questionType === "TRUE_FALSE" && newType !== "TRUE_FALSE")) setOptions(["", ""]);
   }
 
+  // Uploads a staged image (see pickImage above) once the question itself has a real id — a
+  // brand-new question has none until POST /questions returns, so this can't run any earlier.
+  // A failure here is surfaced but doesn't block navigation: the question text/answer already
+  // saved successfully, and "the image didn't attach, try again from the edit screen" is a much
+  // smaller problem than losing the whole question.
+  async function uploadStagedImageIfAny(questionId) {
+    if (!imageFile) return;
+    const body = new FormData();
+    body.append("image", imageFile);
+    try {
+      await api.post(`/questions/${questionId}/image`, body, { headers: { "Content-Type": "multipart/form-data" } });
+    } catch (err) {
+      alert(err.response?.data?.error || "The question saved, but its image failed to upload — open it again to retry.");
+    }
+  }
+
   async function handleSubmit(e, allowDuplicate = false) {
     e.preventDefault();
     if (!subjectId || !unitId) {
@@ -297,9 +366,11 @@ export default function CreateQuestion() {
 
       if (isEdit) {
         await api.patch(`/questions/${id}`, payload);
+        await uploadStagedImageIfAny(id);
         navigate("/staff/questions");
       } else {
         const { data: created } = await api.post("/questions", payload);
+        await uploadStagedImageIfAny(created.id);
         if (readinessSubjectId) {
           await api.post(`/readiness/admin/subjects/${readinessSubjectId}/pool`, { questionIds: [created.id] }).catch(() => {});
           navigate(`/staff/readiness-subjects?edit=${readinessSubjectId}`);
@@ -466,6 +537,33 @@ export default function CreateQuestion() {
           <textarea style={{ ...inputStyle, minHeight: 140 }} required value={form.description} onChange={updateField("description")} placeholder="Problem statement / question text…" />
           <MathSyntaxHint />
           <MathLivePreview text={form.description} />
+
+          <div style={{ marginTop: 14 }}>
+            <label style={labelStyle}>Image (optional) — diagram, figure, or graph</label>
+            {(imagePreview || imageUrl) && (
+              <div style={{ marginTop: 6, marginBottom: 8 }}>
+                <img
+                  src={imagePreview || imageUrl}
+                  alt="Question attachment"
+                  style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, border: "1px solid var(--line)", display: "block" }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, padding: "4px 10px", marginTop: 6 }}
+                  disabled={removingImage}
+                  onClick={imagePreview ? clearStagedImage : removeServerImage}
+                >
+                  {imagePreview ? "Cancel new image" : removingImage ? "Removing…" : "Remove image"}
+                </button>
+              </div>
+            )}
+            <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={pickImage} />
+            {imageFile && (
+              <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Uploads when you save this question.</p>
+            )}
+            {imageError && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 4 }}>{imageError}</p>}
+          </div>
 
           {!isQuiz && (
             <ProblemStatementFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />

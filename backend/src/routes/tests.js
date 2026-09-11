@@ -14,6 +14,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { notifyTestAssigned, notifyMany, emailStudent } = require("../utils/notifications");
 const { mapWithConcurrency } = require("../utils/queue");
 const { validateTestForPublish, TEST_PUBLISH_VALIDATION_INCLUDE } = require("../utils/testPublishValidation");
+const questionImages = require("../utils/questionImages");
 const NOTIFY_EMAIL_CONCURRENCY = Number(process.env.EMAIL_CONCURRENCY) || 5;
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const aiService = require("../services/ai/aiService");
@@ -955,6 +956,9 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
               numericTolerance: isStaff,
               numericAnswerDisplay: isStaff,
               explanation: isStaff,
+              // Not staff-gated, unlike the answer-key fields above — a figure/diagram is part of
+              // the question stem itself, something every student taking this test must see.
+              imageKey: true,
               testCases: { where: isStaff ? {} : { isHidden: false } },
             },
           },
@@ -1006,6 +1010,7 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
             starterCodeByLanguage: true, evaluationType: true, functionSignature: true, options: true,
             correctAnswer: isStaff, explanation: isStaff,
             numericAnswer: isStaff, numericTolerance: isStaff, numericAnswerDisplay: isStaff,
+            imageKey: true,
             testCases: { where: isStaff ? {} : { isHidden: false } },
           },
         });
@@ -1043,6 +1048,7 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
     test.attendanceStatus = record ? record.status : "NOT_MARKED";
   }
 
+  await questionImages.attachQuestionImageUrls(test.questions);
   res.json(test);
 });
 

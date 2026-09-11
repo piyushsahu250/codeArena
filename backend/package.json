@@ -11,6 +11,8 @@
     "test": "node --test test/"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.679.0",
+    "@aws-sdk/s3-request-presigner": "^3.679.0",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",

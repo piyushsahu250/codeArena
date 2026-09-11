@@ -14,6 +14,7 @@ const { safeErrorMessage } = require("../utils/errors");
 const { validateQuestionForVerification } = require("../utils/questionValidation");
 const { normalizeOptions } = require("../utils/mcqOptions");
 const { normalizeExpectedNumeric } = require("../utils/numericAnswer");
+const questionImages = require("../utils/questionImages");
 const { canStaffUseSubject, resolveSubjectUnitTopic, staffAuthorizedSubjectIds } = require("../utils/subjectAccess");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
@@ -25,6 +26,14 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 // Question bulk-import specifically also accepts .txt (Notepad format) — every other bulk-upload
 // route on the platform keeps using the spreadsheet-only `upload` above.
 const uploadQuestionFile = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetOrTextFileFilter });
+// Question-image upload: accepts anything up front (the real check is the magic-byte sniff on
+// the buffer in the route below, which is the only check that can't be fooled by a renamed file
+// or a spoofed Content-Type) — this filter only exists to reject non-image form fields fast.
+const uploadQuestionImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /^image\//.test(file.mimetype || "")),
+});
 
 const QUESTION_TYPES = ["CODING", "MCQ", "TRUE_FALSE", "MULTISELECT", "SQL", "NUMERICAL"];
 const DIFFICULTIES = ["EASY", "MEDIUM", "HARD"];
@@ -646,6 +655,9 @@ router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADM
     }),
     prisma.question.count({ where }),
   ]);
+  // Presigning is a pure local SigV4 computation (no network call), so doing it for a whole page
+  // of rows here is cheap — it's what lets QuestionBank.jsx show a thumbnail per row.
+  await questionImages.attachQuestionImageUrls(questions);
   res.json({ rows: questions, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
@@ -2280,7 +2292,11 @@ router.post("/:id/duplicate", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
     const original = await prisma.question.findUnique({ where: { id: req.params.id }, include: { testCases: true } });
     if (!original || !ownsQuestionRow(req, original)) return res.status(404).json({ error: "Question not found" });
 
-    const { id, questionNumber, createdAt, testCases, createdById: _c, instituteId: _i, ...rest } = original;
+    // imageKey/imageMimeType excluded deliberately — the S3 object isn't copied, only the DB row
+    // is, so a clone that kept the same imageKey would mean deleting either question's image
+    // (POST/DELETE /:id/image) deletes the S3 object out from under the other one too. A
+    // duplicate simply starts with no image; staff can upload a fresh one if they want it.
+    const { id, questionNumber, createdAt, testCases, createdById: _c, instituteId: _i, imageKey: _ik, imageMimeType: _imt, ...rest } = original;
     const clone = await prisma.question.create({
       data: {
         ...rest,
@@ -2316,6 +2332,7 @@ router.get("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_
   // 404 (not 403) on a cross-institute id — doesn't confirm whether the id exists at all,
   // consistent with how the list endpoint already just omits rows it can't show.
   if (!question || !ownsQuestionRow(req, question)) return res.status(404).json({ error: "Question not found" });
+  await questionImages.attachQuestionImageUrls(question);
   res.json(question);
 });
 
@@ -2536,6 +2553,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: req.requesterInstituteId, details: { questionId: question.id, title: question.title || question.description.slice(0, 60) },
     });
+    await questionImages.attachQuestionImageUrls(question);
     res.json(question);
   } catch (err) {
     console.error(err);
@@ -2555,6 +2573,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
       return res.status(409).json({ error: SUBMISSION_HISTORY_BLOCK_MESSAGE });
     }
     await prisma.question.delete({ where: { id: req.params.id } });
+    await questionImages.deleteQuestionImage(existing.imageKey);
     await logAudit({
       req, action: AUDIT_ACTIONS.QUESTION_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: req.requesterInstituteId, details: { questionId: existing.id, title: existing.title || existing.description.slice(0, 60) },
@@ -2566,6 +2585,77 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
     }
     console.error(err);
     res.status(500).json({ error: "Failed to delete question" });
+  }
+});
+
+// Upload/replace this question's image attachment. Staff can call this on a brand-new question
+// only after the initial create (which has no image field at all — see the frontend flow), or at
+// any time on an existing one to add/replace it. Any prior image is deleted from S3 after the new
+// one is successfully stored, never before — so a failed upload never leaves the question with a
+// broken/missing image it used to have.
+router.post("/:id/image", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), uploadQuestionImage.single("image"), async (req, res) => {
+  try {
+    if (!questionImages.isConfigured()) {
+      return res.status(503).json({ error: "Image storage isn't configured on this server yet" });
+    }
+    const existing = await prisma.question.findUnique({
+      where: { id: req.params.id },
+      include: { folder: { include: { shares: { select: { staffId: true } } } } },
+    });
+    if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const mime = questionImages.sniffImageMime(req.file.buffer);
+    if (!mime) {
+      return res.status(400).json({ error: "Unsupported or unrecognized image format — use PNG, JPEG, GIF, or WebP" });
+    }
+
+    const imageKey = await questionImages.uploadQuestionImage(existing.id, req.file.buffer, mime);
+    const question = await prisma.question.update({
+      where: { id: existing.id },
+      data: { imageKey, imageMimeType: mime },
+      include: { testCases: true },
+    });
+    // Old image (if any) is only removed once the new one is safely stored and the DB row
+    // repointed at it — never the other way around.
+    if (existing.imageKey && existing.imageKey !== imageKey) await questionImages.deleteQuestionImage(existing.imageKey);
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { questionId: question.id, title: question.title || question.description.slice(0, 60), imageUploaded: true },
+    });
+    await questionImages.attachQuestionImageUrls(question);
+    res.json(question);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to upload image") });
+  }
+});
+
+// Remove this question's image attachment (without deleting the question itself).
+router.delete("/:id/image", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("question_bank"), async (req, res) => {
+  try {
+    const existing = await prisma.question.findUnique({
+      where: { id: req.params.id },
+      include: { folder: { include: { shares: { select: { staffId: true } } } } },
+    });
+    if (!existing || !ownsQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!existing.imageKey) return res.json({ success: true }); // already has none — nothing to do
+
+    const question = await prisma.question.update({
+      where: { id: existing.id },
+      data: { imageKey: null, imageMimeType: null },
+      include: { testCases: true },
+    });
+    await questionImages.deleteQuestionImage(existing.imageKey);
+    await logAudit({
+      req, action: AUDIT_ACTIONS.QUESTION_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: req.requesterInstituteId, details: { questionId: question.id, title: question.title || question.description.slice(0, 60), imageRemoved: true },
+    });
+    res.json(question);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: safeErrorMessage(err, "Failed to remove image") });
   }
 });
 

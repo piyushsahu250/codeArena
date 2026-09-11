@@ -62,6 +62,10 @@ export default function ProblemStatement({ question }) {
 
       <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14, marginTop: 16 }}><MathText text={description} /></p>
 
+      {q.imageUrl && (
+        <img src={q.imageUrl} alt="" style={{ maxWidth: "100%", maxHeight: 360, borderRadius: 8, border: "1px solid var(--line)", marginTop: 12, display: "block" }} />
+      )}
+
       {q.realWorldScenario && (
         <div className="card" style={{ padding: 14, marginTop: 16, background: "var(--card-bg, #F7F7F5)" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>REAL-WORLD SCENARIO</div>
