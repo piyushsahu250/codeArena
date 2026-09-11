@@ -1547,7 +1547,11 @@ const TYPE_ALIASES = {
   "multiple select": "MULTISELECT", "multi select": "MULTISELECT", multiselect: "MULTISELECT", "multiple selection": "MULTISELECT",
   coding: "CODING",
 };
-const DIFFICULTY_ALIASES = { easy: "EASY", medium: "MEDIUM", hard: "HARD" };
+const DIFFICULTY_ALIASES = {
+  easy: "EASY", simple: "EASY", basic: "EASY", beginner: "EASY",
+  medium: "MEDIUM", moderate: "MEDIUM", intermediate: "MEDIUM", average: "MEDIUM",
+  hard: "HARD", difficult: "HARD", tough: "HARD", advanced: "HARD", expert: "HARD",
+};
 
 const IMPORT_HEADER_ALIASES = {
   title: ["question name", "name"],
@@ -1790,14 +1794,17 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction, imageZi
     const resolvedSubject = await resolveSubjectUnitTopicByName(req, { subjectName: subject, unitName: unit, topicName: topic });
     if (resolvedSubject.error) { errors.push({ row: rowNum, reason: resolvedSubject.error }); continue; }
 
-    // An invalid (non-blank) Difficulty is a real data problem, not a safe default — silently
-    // becoming "Easy" would skew a Readiness/blueprint's difficulty distribution with no trace
-    // anywhere that the original value was actually garbled. Matches the coding-question bulk
-    // import's already-existing, stricter treatment of the exact same column (this quiz path used
-    // to silently default instead — the one inconsistency found auditing the two side by side).
+    // An unrecognized (non-blank) Difficulty is auto-corrected to Medium rather than blocking the
+    // row outright — confirmed live 2026-09-11: a real generated question bank used values like
+    // "Confusing"/"Difficult" that don't cleanly map to Easy/Medium/Hard, and rejecting every one
+    // of those rows meant the only way to import anything was hand-editing the spreadsheet first.
+    // "Difficult"/"Tough"/etc. are now recognized aliases (see DIFFICULTY_ALIASES) and resolve
+    // exactly like "Hard" always did; only a value that STILL doesn't match anything recognizable
+    // falls back to Medium. Never silent, though — recorded in autoFixed exactly like every other
+    // correction here, so a staff member reviewing the preview can see it happened and fix it
+    // properly later if Medium wasn't the right call for that specific question.
     if (difficultyRaw && !DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)]) {
-      errors.push({ row: rowNum, reason: `Invalid Difficulty "${difficultyRaw}" — use Easy, Medium, or Hard` });
-      continue;
+      autoFixed.push({ row: rowNum, field: "Difficulty", before: difficultyRaw, after: "Medium (unrecognized value)" });
     }
 
     // Optional image attachment. A row that names one is validated up front (same "clear error,
@@ -1851,7 +1858,9 @@ async function runQuizBulkImport(req, { rows, folderId, duplicateAction, imageZi
         unitId: resolvedSubject.unitId,
         topicId: resolvedSubject.topicId,
         questionType,
-        difficulty: DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || "EASY",
+        // Blank cell (no difficulty given at all) still defaults to Easy, unchanged; a non-blank
+        // but unrecognized value defaults to Medium instead, matching the autoFixed message above.
+        difficulty: DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || (difficultyRaw ? "MEDIUM" : "EASY"),
         btlLevel,
         points: Number(pointsRaw) || 10,
         explanation: explanation || null,
@@ -2078,6 +2087,8 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
   const created = [];
   const skipped = [];
   const errors = [];
+  // Same deterministic-corrections transparency log as the quiz importer — see its own comment.
+  const autoFixed = [];
   const seenTitles = new Set();
   const folderIdByName = new Map();
   const existingTitlesByScope = new Map();
@@ -2139,11 +2150,13 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
       }
 
       const difficultyRaw = field(row, "difficulty");
+      // Same auto-fix-not-block treatment as the quiz importer's identical column — see its own
+      // comment for the full rationale (a value like "Confusing" that doesn't recognizably map to
+      // Easy/Medium/Hard now falls back to Medium and is logged, rather than rejecting the row).
       if (difficultyRaw && !DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)]) {
-        errors.push({ row: rowNum, reason: `Invalid Difficulty "${difficultyRaw}" — use Easy, Medium, or Hard` });
-        continue;
+        autoFixed.push({ row: rowNum, field: "Difficulty", before: difficultyRaw, after: "Medium (unrecognized value)" });
       }
-      const difficulty = DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || "EASY";
+      const difficulty = DIFFICULTY_ALIASES[normalizeHeader(difficultyRaw)] || (difficultyRaw ? "MEDIUM" : "EASY");
 
       // Optional image attachment -- same validate-up-front, never-import-as-if-it-existed
       // treatment as the quiz importer's identical block (see its own comment for the full
@@ -2330,6 +2343,7 @@ async function runCodingBulkImport(req, { rows, defaultFolderId, duplicateAction
   return {
     total: rows.length, createdCount: created.length, skippedCount: skipped.length, errorCount: errors.length,
     skipped, errors, created, validRows, unknownColumns,
+    autoFixedCount: autoFixed.length, autoFixed,
     imagesValidatedCount: created.filter((c) => c.hasImage || c.imageKey).length,
   };
 }

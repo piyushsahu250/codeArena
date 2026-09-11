@@ -871,7 +871,11 @@ const MODULE_CODING_IMPORT_HEADER_ALIASES = {
   starterC: ["starter code c"],
   tags: ["tags"],
 };
-const MODULE_CODING_DIFFICULTY_ALIASES = { easy: "EASY", medium: "MEDIUM", hard: "HARD" };
+const MODULE_CODING_DIFFICULTY_ALIASES = {
+  easy: "EASY", simple: "EASY", basic: "EASY", beginner: "EASY",
+  medium: "MEDIUM", moderate: "MEDIUM", intermediate: "MEDIUM", average: "MEDIUM",
+  hard: "HARD", difficult: "HARD", tough: "HARD", advanced: "HARD", expert: "HARD",
+};
 
 function normalizeModuleCodingHeader(h) {
   return String(h || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -988,12 +992,13 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
         continue;
       }
 
+      // An unrecognized (non-blank) Difficulty auto-corrects to Medium instead of blocking the row
+      // outright — same fix as questions.js's bulk importer (see its own comment for the full
+      // rationale: real generated question banks use values like "Confusing" that don't map
+      // cleanly to Easy/Medium/Hard, and rejecting every one of those rows left no way to import
+      // anything short of hand-editing the spreadsheet first). Blank stays defaulted to Easy.
       const difficultyRaw = field(row, "difficulty");
-      if (difficultyRaw && !MODULE_CODING_DIFFICULTY_ALIASES[normalizeModuleCodingHeader(difficultyRaw)]) {
-        errors.push({ row: rowNum, reason: `Invalid Difficulty "${difficultyRaw}" — use Easy, Medium, or Hard` });
-        continue;
-      }
-      const difficulty = MODULE_CODING_DIFFICULTY_ALIASES[normalizeModuleCodingHeader(difficultyRaw)] || "EASY";
+      const difficulty = MODULE_CODING_DIFFICULTY_ALIASES[normalizeModuleCodingHeader(difficultyRaw)] || (difficultyRaw ? "MEDIUM" : "EASY");
 
       const timeLimitSecRaw = field(row, "timeLimitSec");
       const timeLimitSec = timeLimitSecRaw ? Number(timeLimitSecRaw) : 2;
