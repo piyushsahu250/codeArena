@@ -6,6 +6,8 @@ import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import { useAuth } from "../context/AuthContext";
+import { useConfirm } from "../context/ConfirmContext";
+import { useToast } from "../context/ToastContext";
 
 const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 };
 const inputStyle = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 };
@@ -36,6 +38,7 @@ export default function ResultManagement() {
   // bug found and fixed in tests.js's GET /tests this session.
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
   const backTo = user?.role === "CLERK" ? "/clerk" : user?.role === "STAFF" ? "/staff" : "/admin";
+  const confirmDialog = useConfirm();
   const [dashboard, setDashboard] = useState(null);
   useEffect(() => { api.get("/results/admin/dashboard").then((res) => setDashboard(res.data)).catch(() => setDashboard(null)); }, []);
 
@@ -107,8 +110,14 @@ export default function ResultManagement() {
     }
   }
 
-  async function deleteExam(id) {
-    if (!confirm("Delete this examination and all its entries? This cannot be undone.")) return;
+  async function deleteExam(id, title) {
+    const ok = await confirmDialog({
+      title: "Delete examination",
+      message: `Delete "${title}" and all its entries? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await api.delete(`/results/admin/examinations/${id}`);
@@ -350,7 +359,7 @@ export default function ResultManagement() {
                       </td>
                       <td style={{ padding: "10px 12px" }}>
                         {isAdmin && (
-                          <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={(e) => { e.stopPropagation(); deleteExam(exam.id); }}>Delete</button>
+                          <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={(e) => { e.stopPropagation(); deleteExam(exam.id, exam.title); }}>Delete</button>
                         )}
                       </td>
                     </tr>
@@ -380,6 +389,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   // Unfreeze is INSTITUTE_ADMIN-only per spec (see resultManagement.js's PATCH .../unfreeze) —
   // isAdmin lumps ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN together, so this needs the exact role.
   const { user } = useAuth();
+  const confirmDialog = useConfirm();
+  const toast = useToast();
   const [exam, setExam] = useState(null);
   const [entries, setEntries] = useState([]);
   const [error, setError] = useState("");
@@ -440,8 +451,11 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   // Every workflow move (submit-for-review, mark-ready, send-back-to-draft, archive, unarchive)
   // is the same shape: PATCH one sub-route, reload, show any error. One handler for all five so
   // the buttons below stay simple.
-  async function transition(action, confirmMessage) {
-    if (confirmMessage && !confirm(confirmMessage)) return;
+  async function transition(action, confirmMessage, confirmTitle) {
+    if (confirmMessage) {
+      const ok = await confirmDialog({ title: confirmTitle || "Confirm", message: confirmMessage, confirmLabel: "Continue" });
+      if (!ok) return;
+    }
     setTransitioning(true);
     setError("");
     try {
@@ -508,12 +522,13 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   }
 
   async function removeEntry(entryId) {
-    if (!confirm("Remove this student's entry?")) return;
+    const ok = await confirmDialog({ title: "Remove entry", message: "Remove this student's entry?", confirmLabel: "Remove", danger: true });
+    if (!ok) return;
     try {
       await api.delete(`/results/admin/examinations/${examId}/entries/${entryId}`);
       loadEntries();
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to remove entry");
+      toast.error(err.response?.data?.error || "Failed to remove entry");
     }
   }
 
@@ -532,7 +547,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
       // A blob-typed error response body needs decoding before its .error message is readable.
       const text = err.response?.data instanceof Blob ? await err.response.data.text() : null;
       const message = text ? JSON.parse(text).error : err.response?.data?.error;
-      alert(message || "Failed to generate template");
+      toast.error(message || "Failed to generate template");
     }
   }
 
@@ -615,7 +630,12 @@ function ExamDetail({ examId, isAdmin, onBack }) {
           ...publishCheck.warnings.map((w) => `⚠ ${w.message}`),
         ].filter(Boolean).join("\n")
       : "";
-    if (!confirm(`Publish this result?\n\nThis will make the result visible to eligible students.\n\n${summaryLines}`)) return;
+    const ok = await confirmDialog({
+      title: "Publish result",
+      message: `This will make the result visible to eligible students.\n\n${summaryLines}`,
+      confirmLabel: "Publish",
+    });
+    if (!ok) return;
     setPublishing(true);
     setError("");
     try {
@@ -629,7 +649,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   }
 
   async function unpublish() {
-    if (!confirm("Unpublish this examination? Students will no longer be able to see it.")) return;
+    const ok = await confirmDialog({ title: "Unpublish examination", message: "Unpublish this examination? Students will no longer be able to see it.", confirmLabel: "Unpublish", danger: true });
+    if (!ok) return;
     setError("");
     try {
       await api.patch(`/results/admin/examinations/${examId}/unpublish`);
@@ -640,7 +661,13 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   }
 
   async function freezeMarks() {
-    if (!confirm("Freeze this examination's marks? No one — including Admins — will be able to edit them until an Institute Admin unfreezes.")) return;
+    const ok = await confirmDialog({
+      title: "Freeze marks",
+      message: "Freeze this examination's marks? No one — including Admins — will be able to edit them until an Institute Admin unfreezes.",
+      confirmLabel: "Freeze",
+      danger: true,
+    });
+    if (!ok) return;
     setFreezing(true);
     setError("");
     try {
@@ -654,7 +681,12 @@ function ExamDetail({ examId, isAdmin, onBack }) {
   }
 
   async function unfreezeMarks() {
-    if (!confirm("Unfreeze this examination's marks? Editing will be allowed again per normal permissions.")) return;
+    const ok = await confirmDialog({
+      title: "Unfreeze marks",
+      message: "Unfreeze this examination's marks? Editing will be allowed again per normal permissions.",
+      confirmLabel: "Unfreeze",
+    });
+    if (!ok) return;
     setFreezing(true);
     setError("");
     try {
@@ -731,7 +763,7 @@ function ExamDetail({ examId, isAdmin, onBack }) {
       const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
       window.open(url, "_blank");
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to load marksheet preview");
+      toast.error(err.response?.data?.error || "Failed to load marksheet preview");
     }
   }
 
@@ -814,16 +846,16 @@ function ExamDetail({ examId, isAdmin, onBack }) {
         {isAdmin && (
           <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
             {exam.status === "DRAFT" && (
-              <button className="btn btn-ghost" onClick={() => transition("submit-for-review", "Submit this examination for review?")} disabled={transitioning}>Submit for Review</button>
+              <button className="btn btn-ghost" onClick={() => transition("submit-for-review", "Submit this examination for review?", "Submit for review")} disabled={transitioning}>Submit for Review</button>
             )}
             {exam.status === "IN_REVIEW" && (
               <>
-                <button className="btn btn-ghost" onClick={() => transition("mark-ready", "Mark this examination Ready to Publish?")} disabled={transitioning}>Mark Ready to Publish</button>
-                <button className="btn btn-ghost" onClick={() => transition("send-back-to-draft", "Send this examination back to Draft?")} disabled={transitioning}>Send Back to Draft</button>
+                <button className="btn btn-ghost" onClick={() => transition("mark-ready", "Mark this examination Ready to Publish?", "Mark ready to publish")} disabled={transitioning}>Mark Ready to Publish</button>
+                <button className="btn btn-ghost" onClick={() => transition("send-back-to-draft", "Send this examination back to Draft?", "Send back to draft")} disabled={transitioning}>Send Back to Draft</button>
               </>
             )}
             {exam.status === "READY_TO_PUBLISH" && (
-              <button className="btn btn-ghost" onClick={() => transition("send-back-to-draft", "Send this examination back to Draft?")} disabled={transitioning}>Send Back to Draft</button>
+              <button className="btn btn-ghost" onClick={() => transition("send-back-to-draft", "Send this examination back to Draft?", "Send back to draft")} disabled={transitioning}>Send Back to Draft</button>
             )}
             {exam.status !== "PUBLISHED" && exam.status !== "ARCHIVED" && (
               <button className="btn btn-primary" onClick={publish} disabled={publishing || (publishCheck && !publishCheck.canPublish)}>{publishing ? "Publishing…" : "Publish Result"}</button>
@@ -832,10 +864,10 @@ function ExamDetail({ examId, isAdmin, onBack }) {
               <button className="btn btn-ghost" onClick={unpublish}>Unpublish</button>
             )}
             {(exam.status === "PUBLISHED" || exam.status === "UNPUBLISHED") && (
-              <button className="btn btn-ghost" onClick={() => transition("archive", "Archive this examination? It will be moved out of active workflows but kept for records.")} disabled={transitioning}>Archive</button>
+              <button className="btn btn-ghost" onClick={() => transition("archive", "Archive this examination? It will be moved out of active workflows but kept for records.", "Archive examination")} disabled={transitioning}>Archive</button>
             )}
             {exam.status === "ARCHIVED" && (
-              <button className="btn btn-ghost" onClick={() => transition("unarchive", "Restore this examination from the archive?")} disabled={transitioning}>Unarchive</button>
+              <button className="btn btn-ghost" onClick={() => transition("unarchive", "Restore this examination from the archive?", "Restore examination")} disabled={transitioning}>Unarchive</button>
             )}
             {/* Freeze/Unfreeze (spec section 3) -- deliberately independent of the publish workflow
                 buttons above; freezing is never required to publish and publishing never implies
