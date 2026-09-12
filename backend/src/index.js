@@ -61,19 +61,25 @@ const issueReportRoutes = require("./routes/issueReports");
 const platformHealthRoutes = require("./routes/platformHealth");
 
 const app = express();
-// There are TWO proxy hops in front of this service, not one — confirmed directly via a
-// temporary debug route that echoed X-Forwarded-For across repeated requests: Cloudflare's edge
-// (its IP changes per request/edge node) sits in front of Render's own internal load balancer
-// (which itself bounces between at least two internal addresses). With trust proxy=1, Express
-// only trusted the innermost hop (Render's own proxy) and used ITS address as req.ip — meaning
-// req.ip was effectively random per request (whichever internal Render node handled it), never
-// the real client. This silently broke every IP-keyed mechanism in the app: the login/forgot-
-// password rate limiters (each request landed in a different bucket, so the limit never
-// triggered), the global rate limiter's IP fallback, and the IP recorded on AuditLog/LoginSession
-// rows. Trusting 2 hops walks back through both proxies to the address Cloudflare itself reports
-// as the original client (confirmed stable across every test request), which is what req.ip
-// should have been resolving to all along.
-app.set("trust proxy", 2);
+// Number of reverse-proxy hops in front of this service — MUST match the real topology exactly,
+// not be "safely" set too high. Express/proxy-addr walks back exactly this many entries from the
+// end of X-Forwarded-For and trusts whatever is left as req.ip; if this is set HIGHER than the
+// real hop count, the extra trusted "hop" is whatever the client itself put in X-Forwarded-For —
+// i.e. a raw, unauthenticated attacker-controlled value. Confirmed directly against this exact
+// runtime (proxy-addr via a throwaway Express instance): with trust=2 and an inbound request
+// carrying `X-Forwarded-For: 1.2.3.4, 203.0.113.99` (203.0.113.99 being nginx's own, correct view
+// of the real client), req.ip resolved to "1.2.3.4" — the attacker's own spoofed value — silently
+// defeating every IP-keyed control: the global/login/forgot-password rate limiters, and the IP
+// recorded on AuditLog/LoginSession rows.
+//
+// This value was `2`, carried over from an earlier Render+Cloudflare deployment (Cloudflare edge
+// + Render's own internal load balancer = 2 real hops back then). Current production topology
+// (see docs/DEPLOYMENT.md) is Browser -> nginx (EC2 host, TLS termination) -> this Node process —
+// exactly ONE real hop today, so trust proxy must be 1, not 2, until that topology changes again
+// (e.g. if CloudFront is ever placed in front of nginx, making it 2 real hops once more — this is
+// now env-driven specifically so that a future topology change is a config/redeploy, not a
+// code change someone has to remember to make).
+app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS) || 1);
 app.use(helmet());
 app.use(compression());
 // Scoped to the known frontend origin(s) rather than reflecting any caller — same FRONTEND_URL

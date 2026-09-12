@@ -12,14 +12,25 @@
 | `JWT_SECRET` | HMAC secret for signing/verifying auth JWTs (HS256). |
 | `PORT` | Port the Express server listens on. |
 | `FRONTEND_URL` | Used for CORS allowlist and building absolute links in emails/PDFs. |
+| `TRUST_PROXY_HOPS` | Express `trust proxy` setting — the exact number of reverse-proxy hops in front of this service (currently 1: nginx on the EC2 host). Defaults to `1` if unset. **Must match the real topology exactly** — setting it higher than the real hop count lets a client spoof `req.ip` via a forged `X-Forwarded-For` header, defeating IP-keyed rate limiting and corrupting AuditLog/LoginSession IPs (confirmed directly against this codebase's own proxy-addr resolution, 2026-09-12). Only change this if the topology changes (e.g. to `2` if CloudFront or another proxy is ever placed in front of nginx). |
 
-## AI (Anthropic Claude)
+## AI (Google Gemini)
+
+The code (`backend/src/services/ai/geminiProvider.js`) calls Google's Gemini API, not Anthropic's —
+this section previously documented `ANTHROPIC_*` variables that no longer exist anywhere in
+`backend/src`. `render.yaml` still references the old `ANTHROPIC_*` names; if the Render fallback
+is ever reactivated, its env vars need to be renamed to match the table below or AI features will
+silently fail there (confirmed via `grep` of `backend/src/**/*.js` — zero `ANTHROPIC_*` reads).
 
 | Variable | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY` | Enables all Claude-backed features (question generation, resume review/rewrite, interview feedback, learning hints, interview drafts). Features degrade to a controlled "not configured" error when unset — do not assume they're always available. |
-| `ANTHROPIC_MODEL` | Overrides the default Claude model used, if set. |
-| `ANTHROPIC_TIMEOUT_MS` | Optional. Overrides the 30000ms (30s) timeout on Claude API requests, if set. |
+| `GEMINI_API_KEY` | Enables all Gemini-backed features (question generation, resume review/rewrite, interview feedback, learning hints, interview drafts). Features degrade to a controlled "not configured" error when unset — do not assume they're always available. |
+| `GEMINI_MODEL` | Overrides the default Gemini model used, if set. |
+| `GEMINI_TIMEOUT_MS` | Optional. Overrides the request timeout on Gemini API calls, if set. |
+| `GEMINI_MAX_RETRIES`, `GEMINI_RETRY_BASE_DELAY_MS` | Retry tuning for transient Gemini API failures. |
+| `GEMINI_THINKING_LEVEL` | Optional reasoning-effort override for Gemini calls that support it. |
+| `AI_CONCURRENCY`, `AI_MAX_QUEUE_SIZE` | Platform-wide concurrency/queue limits for AI calls. |
+| `AI_DAILY_LIMIT_GLOBAL`, `AI_DAILY_LIMIT_PER_INSTITUTE` | Daily AI-call caps, platform-wide and per institute. |
 
 ## Security / PII
 

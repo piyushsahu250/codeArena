@@ -13,10 +13,10 @@ services:
         value: 4000
       - key: JUDGE_DROP_PRIVILEGES
         value: "true" # student-submitted code must never execute as root — see backend/src/utils/judge.js's DROP_PRIVILEGES comment. The Dockerfile already builds the dedicated non-root `sandbox` uid/gid; this was the missing switch to actually use it.
-      - key: ANTHROPIC_API_KEY
-        sync: false # set manually to enable any AI feature (question generation, hints, resume review, interview feedback)
+      - key: GEMINI_API_KEY
+        sync: false # set manually to enable any AI feature (question generation, hints, resume review, interview feedback) -- the code (backend/src/services/ai/geminiProvider.js) calls Google's Gemini API, not Anthropic's; this key was ANTHROPIC_API_KEY until 2026-09-12, silently stale since the provider switch (the app never reads that name, so AI features would fail here with "not configured" until fixed).
       - key: ENABLE_AI_AUTO_REFRESH
-        sync: false # unset by default — set to "true" to enable the scheduled AI question-draft auto-refresh (backend/src/utils/aiRefreshScheduler.js). Makes real, billed Claude API calls on a timer; drafts still require manual admin approval before going live.
+        sync: false # unset by default — set to "true" to enable the scheduled AI question-draft auto-refresh (backend/src/utils/aiRefreshScheduler.js). Makes real, billed Gemini API calls on a timer; drafts still require manual admin approval before going live.
       - key: AI_AUTO_REFRESH_INTERVAL_MS
         sync: false # optional, defaults to 24h (86400000) if unset
       - key: AI_AUTO_REFRESH_MIN_POOL
