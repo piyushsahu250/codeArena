@@ -1,10 +1,10 @@
 {
   "platform": "CodeArena",
   "documentationVersion": "1.0.0",
-  "lastUpdated": "2026-09-11",
+  "lastUpdated": "2026-09-12",
   "lastCodeReview": "2026-08-08",
   "platformRevision": {
-    "backend": "cbcf79c",
+    "backend": "b889e82",
     "frontend": "994c5b5"
   },
   "techStack": {
@@ -112,12 +112,12 @@
   },
   "businessRulesCount": 11,
   "databaseEntities": {
-    "modelCount": 109,
-    "enumCount": 27,
+    "modelCount": 112,
+    "enumCount": 30,
     "migrationStrategy": "prisma db push --accept-data-loss on every deploy (no formal Migrate history)",
     "source": "backend/prisma/schema.prisma"
   },
-  "apiCount": 560,
+  "apiCount": 567,
   "apiSource": "backend/src/routes/*.js (31 files), mounted in backend/src/index.js",
   "knownIssues": [
     {
