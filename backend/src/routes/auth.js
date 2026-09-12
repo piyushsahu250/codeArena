@@ -127,6 +127,14 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password." });
     }
     if (!user.isActive) return res.status(403).json({ error: "This account has been deactivated. Contact your administrator." });
+    // Institute.isActive previously had no enforcement anywhere — this was the actual gap: the
+    // login query already fetches `institute` (for singleSessionOnly/branding/password policy
+    // below), so a deactivated institute's own users could still log in and use the platform
+    // completely normally. Same "after password, not before" placement as the user check above,
+    // for the same reason (never reveal deactivation status to a bare guess).
+    if (user.institute && user.institute.isActive === false) {
+      return res.status(403).json({ error: "Your institute's access has been deactivated. Contact the platform administrator." });
+    }
 
     // Sequential, not Promise.all: this platform's Prisma pool is deliberately small
     // (connection_limit — see prisma.js), and every simultaneous query in a login request

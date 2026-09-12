@@ -73,6 +73,14 @@ export default function StudentDashboard() {
   const [dashRetrying, setDashRetrying] = useState(false);
   const autoRetriedRef = useRef(false);
 
+  // The course slug that Learning Progress / Continue Learning fetches for this student. Resolved
+  // from the same eligibility-scoped GET /learning/courses this student's own Learning Hub uses
+  // (first PUBLISHED course by author-defined order) instead of a hardcoded "java" — this used to
+  // always fetch the literal "java" course regardless of what's actually assigned to the
+  // student's institute, silently breaking the widget for anyone else. `undefined` = not yet
+  // resolved, `null` = resolved to "no eligible course".
+  const [courseSlug, setCourseSlug] = useState(undefined);
+
   function loadDashSummary() {
     setDashError(false);
     return api.get("/dashboard/student").then((res) => setDash(res.data)).catch(() => {
@@ -92,7 +100,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     loadDashSummary();
     api.get("/tests").then((res) => setTests(res.data)).catch(() => setTests([]));
-    api.get("/learning/courses/java").then((res) => setLearning(res.data)).catch(() => setLearning(null));
+    api.get("/learning/courses").then((res) => setCourseSlug(res.data?.[0]?.slug || null)).catch(() => setCourseSlug(null));
     api.get("/learning/mastery").then((res) => {
       const rated = (res.data.mastery || []).filter((m) => m.strength !== "INSUFFICIENT_DATA" && m.strength !== "STRONG");
       setWeakConcept(rated.length ? rated[rated.length - 1] : null);
@@ -103,6 +111,11 @@ export default function StudentDashboard() {
     api.get("/results/me").then((res) => setResults(res.data)).catch(() => setResults([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!courseSlug) return; // still resolving, or resolved to "no eligible course" — leave `learning` null either way
+    api.get(`/learning/courses/${courseSlug}`).then((res) => setLearning(res.data)).catch(() => setLearning(null));
+  }, [courseSlug]);
 
   function retryDashSummary() {
     setDashRetrying(true);
@@ -142,9 +155,24 @@ export default function StudentDashboard() {
     }
   }
 
-  const upcomingTests = (tests || [])
+  // GET /tests returns every published test the student is eligible for with no time-window
+  // filter — a test whose endTime is long past but that the student never attempted is neither
+  // `completed` (no submission exists) nor excluded here, so a plain ascending sort by startTime
+  // put the oldest, permanently-expired "Closed" tests at the very TOP of a section literally
+  // titled "Upcoming Tests," unbounded, forever. Fix: bucket by actual status first (Live now >
+  // Upcoming > Closed) so expired items can never outrank a real upcoming/live one, and cap the
+  // stale "Closed" tail to a handful for context instead of showing every expired test ever.
+  const testsWithStatus = (tests || [])
     .filter((t) => !statusOf(t).completed)
-    .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    .map((t) => ({ test: t, status: statusOf(t) }));
+  const liveNow = testsWithStatus.filter((x) => x.status.label === "Live now")
+    .sort((a, b) => new Date(a.test.startTime) - new Date(b.test.startTime));
+  const upcomingOnly = testsWithStatus.filter((x) => x.status.label === "Upcoming")
+    .sort((a, b) => new Date(a.test.startTime) - new Date(b.test.startTime));
+  const recentlyClosed = testsWithStatus.filter((x) => x.status.label === "Closed")
+    .sort((a, b) => new Date(b.test.endTime) - new Date(a.test.endTime))
+    .slice(0, 3);
+  const upcomingTests = [...liveNow, ...upcomingOnly, ...recentlyClosed].map((x) => x.test).slice(0, 8);
 
   const loading = (!dash && !dashError) || tests === null;
 
@@ -158,7 +186,7 @@ export default function StudentDashboard() {
           <p style={{ fontSize: 14, color: "var(--ink-dim)", marginTop: 8 }}>Here's where you stand today.</p>
         </div>
 
-        <QuickActions learningResumeId={learning?.resumeLessonId} style={{ marginTop: 20 }} />
+        <QuickActions courseSlug={courseSlug} learningResumeId={learning?.resumeLessonId} style={{ marginTop: 20 }} />
 
         {/* Hero: Placement Readiness Score + Level/XP side by side — these were two separate
             full-width cards stacked on top of each other before, competing for the same "most
@@ -168,7 +196,11 @@ export default function StudentDashboard() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: readinessScore != null && gami ? "1.1fr 1fr" : "1fr",
+              // `auto-fit`/`minmax` (not a fixed two-column split) so this stacks naturally on
+              // narrow phones instead of squeezing both cards side-by-side with no fallback —
+              // every other multi-column section on this page already uses this pattern; this
+              // hero grid was the one that didn't.
+              gridTemplateColumns: readinessScore != null && gami ? "repeat(auto-fit, minmax(280px, 1fr))" : "1fr",
               gap: 16,
               marginTop: SECTION_GAP,
             }}
@@ -280,8 +312,10 @@ export default function StudentDashboard() {
               )}
             </div>
 
-            {/* Recent activity + notifications */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, marginTop: SECTION_GAP }}>
+            {/* Recent activity + notifications. minmax floor kept below the page's own content
+                width (maxWidth 1100 minus 24px*2 padding) so a narrow phone (~320-390px) can't
+                end up with a column wider than the viewport itself — 340px previously did. */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: SECTION_GAP }}>
               <Section title="Recent Activity" icon={Activity}>
                 {loading ? (
                   <SkeletonLines count={4} />
@@ -474,12 +508,12 @@ function SkeletonLines({ count }) {
 // One clear primary CTA ("Continue Learning") plus a row of secondary icon-tiles for everything
 // else, replacing what used to be 7 pill buttons of identical visual weight — a student had no
 // way to tell at a glance which action mattered most.
-function QuickActions({ learningResumeId, style }) {
+function QuickActions({ courseSlug, learningResumeId, style }) {
   const { isFeatureEnabled } = useFeatures();
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", ...style }}>
       {isFeatureEnabled("lms") && (
-        <Link to={learningResumeId ? `/learning/java/lesson/${learningResumeId}` : "/learning"} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Link to={learningResumeId && courseSlug ? `/learning/${courseSlug}/lesson/${learningResumeId}` : "/learning"} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <PlayCircle size={15} /> Continue Learning
         </Link>
       )}
@@ -535,11 +569,24 @@ function RecommendedLearningBlock({ learning, interviewSummary, weakConcept }) {
 
 const STATUS_ICON = { COMPLETED: "✓", IN_PROGRESS: "◐", NOT_STARTED: "○" };
 
+// Same "which specific requirement is blocking this module" logic as CourseOverview.jsx's full
+// module list — the API response already includes lessonsComplete/codingTest per module (that's
+// what the full page uses), this condensed dashboard widget was just discarding it and showing a
+// bare "Locked" label instead of the reason a student actually needs to see.
+function lockReason(modules, index) {
+  const prev = modules[index - 1];
+  const needsLessons = prev && !prev.lessonsComplete;
+  const needsCoding = prev && prev.codingTest?.required && !prev.codingTest?.passed;
+  if (needsLessons && needsCoding) return `Complete Module ${index}'s lessons and pass its Coding Assessment to unlock this module.`;
+  if (needsCoding) return `Pass the Coding Assessment in Module ${index} to unlock this module.`;
+  return `Complete the previous module's practice test to unlock this module.`;
+}
+
 function LearningProgressBlock({ learning }) {
   const { course, modules, overall, resumeLessonId } = learning;
   const completedModules = modules.filter((m) => m.completed);
   const currentModule = modules.find((m) => !m.locked && !m.completed);
-  const lockedModules = modules.filter((m) => m.locked);
+  const lockedModules = modules.filter((m) => m.locked).map((m) => ({ ...m, reason: lockReason(modules, modules.indexOf(m)) }));
 
   return (
     <div>
@@ -573,7 +620,13 @@ function LearningProgressBlock({ learning }) {
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)", marginBottom: 6 }}>Locked</div>
           {lockedModules.length === 0 ? <span style={{ fontSize: 13, color: "var(--ink-dim)" }}>None</span> : lockedModules.map((m) => (
-            <div key={m.id} style={{ fontSize: 13, color: "var(--ink-dim)", display: "flex", alignItems: "center", gap: 6 }}><Lock size={13} /> {m.title}</div>
+            <div key={m.id} title={m.reason} style={{ fontSize: 13, color: "var(--ink-dim)", display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 4 }}>
+              <Lock size={13} style={{ marginTop: 2, flexShrink: 0 }} />
+              <div>
+                <div>{m.title}</div>
+                <div style={{ fontSize: 11.5, marginTop: 1 }}>{m.reason}</div>
+              </div>
+            </div>
           ))}
         </div>
       </div>

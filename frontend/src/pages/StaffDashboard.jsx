@@ -237,7 +237,12 @@ export default function StaffDashboard() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link to="/staff/tests/new" className="btn btn-primary"><PlusCircle size={15} /> Create Test</Link>
             <Link to="/staff/learning" className="btn btn-ghost"><BookOpen size={15} /> Learning Management</Link>
-            <Link to="/staff/students" className="btn btn-ghost"><Download size={15} /> Download Reports</Link>
+            {/* Was a duplicate of the Student Performance link below (both pointed at /staff/students,
+                which has no bulk-download of its own) — Export Center is the platform's actual
+                bulk CSV/Excel/JSON report download, so this now points at the real feature instead
+                of silently landing on the search page. FeatureProtected already shows a clean
+                "unavailable" message if export_center is off for this institute. */}
+            <Link to="/staff/exports" className="btn btn-ghost"><Download size={15} /> Download Reports</Link>
             <Link to="/staff/students" className="btn btn-ghost"><UsersIcon size={15} /> Student Performance</Link>
             <Link to="/staff/questions" className="btn btn-ghost"><Upload size={15} /> Upload Questions</Link>
             <Link to="/staff/gamification" className="btn btn-ghost"><Trophy size={15} /> Gamification</Link>

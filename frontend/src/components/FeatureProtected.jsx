@@ -1,7 +1,10 @@
 import { useAuth } from "../context/AuthContext";
 import { useFeatures } from "../context/FeatureContext";
 
-const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk" };
+// Kept in sync with App.jsx's own HOME_BY_ROLE — this one was missing SUPER_ADMIN/INSTITUTE_ADMIN,
+// so a super admin or institute admin hitting a disabled-feature route (e.g. Export Center with
+// export_center off) got a "Go to Dashboard" link that fell through to "/" instead of "/admin".
+const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
 
 // Section 8 of the feature-visibility spec: a direct/manually-typed URL to a disabled feature must
 // not load the page or leak an internal error — show a plain message and bounce to the dashboard.

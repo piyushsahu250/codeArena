@@ -7,6 +7,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { computeMandatoryCompletion } = require("../utils/studentProfileCompletion");
 const { decryptProfile } = require("../utils/piiEncryption");
 const { estimateAiCostUsd } = require("../utils/aiCostEstimate");
+const { revokeAllSessionsForInstitute } = require("../utils/sessions");
 
 const router = express.Router();
 
@@ -102,6 +103,15 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRe
       },
     });
     invalidate("institutes:");
+    // Institute.isActive previously had zero enforcement effect: login never checked it, and
+    // turning it off left every already-logged-in user of that institute fully authenticated
+    // until their token naturally expired. Login-time is now also checked (auth.js), but that
+    // alone does nothing for sessions that already exist at the moment of deactivation — this
+    // closes that side, same as the existing per-user deactivate-account flow already does
+    // (users.js's revokeAllSessions call) just applied institute-wide.
+    if (isActive === false && existing.isActive !== false) {
+      await revokeAllSessionsForInstitute(institute.id).catch(() => {});
+    }
     await logAudit({ req, action: AUDIT_ACTIONS.INSTITUTE_CONFIG_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: institute.id, details: { instituteName: institute.name, changedFields: Object.keys(req.body) } });
     res.json(institute);
   } catch (err) {

@@ -8,6 +8,7 @@ const { testEligibilityWhere } = require("../utils/testEligibility");
 const { getStudentPoolIds } = require("../utils/talentPoolEligibility");
 const { cached } = require("../utils/cache");
 const { computeLearningRecommendations } = require("../utils/learningRecommendations");
+const { courseEligibilityWhere, isEligibilityUnresolvable } = require("../utils/courseEligibility");
 
 const router = express.Router();
 
@@ -74,7 +75,7 @@ async function getRecentActivity(studentId) {
   return items;
 }
 
-async function getNotifications(student, javaCourse) {
+async function getNotifications(student, primaryCourse) {
   const notifications = [];
   const now = new Date();
   const in48h = new Date(now.getTime() + 48 * 3600 * 1000);
@@ -105,9 +106,9 @@ async function getNotifications(student, javaCourse) {
     }
   }
 
-  if (javaCourse) {
-    const modules = await prisma.courseModule.findMany({ where: { courseId: javaCourse.id }, orderBy: { order: "asc" } });
-    const lockMap = await getModuleLockMap(prisma, student.id, javaCourse.id);
+  if (primaryCourse) {
+    const modules = await prisma.courseModule.findMany({ where: { courseId: primaryCourse.id }, orderBy: { order: "asc" } });
+    const lockMap = await getModuleLockMap(prisma, student.id, primaryCourse.id);
     const currentUnstarted = modules.find((m, i) => i > 0 && !lockMap.get(m.id)?.locked && !lockMap.get(m.id)?.completed);
     if (currentUnstarted) {
       const anyProgress = await prisma.lessonProgress.count({
@@ -156,7 +157,19 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
     const rank = await computeGroupRank(student.id, student.academicGroupId);
     const streak = await getCodingStreak(student.id);
     const certificatesEarned = await prisma.certificate.count({ where: { studentId: student.id } });
-    const javaCourse = await prisma.course.findUnique({ where: { slug: "java" } });
+    // The student's first eligible, published course (by author-defined order) — not a hardcoded
+    // slug. This used to always look up the literal "java" course with no institute/eligibility
+    // scoping at all (prisma.course.findUnique({ where: { slug: "java" } })), which (a) silently
+    // broke Learning Progress % / module-unlock notifications for any institute whose assigned
+    // course isn't actually slugged "java", and (b) could in principle attribute lesson counts
+    // from a course belonging to a different institute entirely, since findUnique-by-slug never
+    // checked visibility. Same eligibility gate GET /learning/courses already uses.
+    const primaryCourse = isEligibilityUnresolvable(student.instituteId, student.academicGroupId)
+      ? null
+      : await prisma.course.findFirst({
+          where: { status: "PUBLISHED", ...courseEligibilityWhere(student.instituteId, student.academicGroupId) },
+          orderBy: { order: "asc" },
+        });
 
     // recentActivity/notifications/recommendations are secondary — the frontend already renders a
     // clean empty state for each of them (StudentDashboard.jsx's EmptyState) and none of them feed
@@ -169,20 +182,21 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
     // Still sequential, not Promise.all — same pool-contention reasoning as above; only the
     // per-call failure isolation is new here, not the concurrency shape.
     const recentActivity = await getRecentActivity(student.id).catch((err) => { console.error("[dashboard/student] recentActivity failed", err.message); return []; });
-    const notifications = await getNotifications(student, javaCourse).catch((err) => { console.error("[dashboard/student] notifications failed", err.message); return []; });
+    const notifications = await getNotifications(student, primaryCourse).catch((err) => { console.error("[dashboard/student] notifications failed", err.message); return []; });
     const recommendations = await cached(`recommendations:${student.id}`, 5 * 60 * 1000, () => computeLearningRecommendations(prisma, student.id))
       .catch((err) => { console.error("[dashboard/student] recommendations failed", err.message); return []; });
 
     let learningProgressPercent = 0;
-    if (javaCourse) {
-      const totalLessons = await prisma.lesson.count({ where: { module: { courseId: javaCourse.id } } });
+    if (primaryCourse) {
+      const totalLessons = await prisma.lesson.count({ where: { module: { courseId: primaryCourse.id } } });
       const completedLessons = await prisma.lessonProgress.count({
-        where: { studentId: student.id, status: "COMPLETED", lesson: { module: { courseId: javaCourse.id } } },
+        where: { studentId: student.id, status: "COMPLETED", lesson: { module: { courseId: primaryCourse.id } } },
       });
       learningProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
     }
 
     res.json({
+      primaryCourseSlug: primaryCourse?.slug || null,
       cards: {
         testsAssigned: perf.summary.totalTestsAssigned,
         testsCompleted: perf.summary.totalTestsCompleted,

@@ -6,6 +6,7 @@ import UploadProgressBar from "../components/UploadProgressBar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 // Shared "N students added successfully." / "N added. M could not be added." feedback — every
 // member-add flow (Search, Browse, Bulk Import's own summary text, Transfer's own alert) should
@@ -36,6 +37,7 @@ export default function TalentPools() {
   // actually manage Talent Pools per the backend's own requireRole lists in talentPools.js. Same
   // role-list-omission bug class already found and fixed in tests.js and ResultManagement.jsx.
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"].includes(user?.role);
+  const confirmDialog = useConfirm();
   const [pools, setPools] = useState([]);
   const [institutes, setInstitutes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -77,7 +79,14 @@ export default function TalentPools() {
     }
   }
 
-  async function deletePool(id) {
+  async function deletePool(id, name) {
+    const ok = await confirmDialog({
+      title: "Delete Talent Pool",
+      message: `Delete "${name}"? This permanently removes the pool and cannot be undone. (Blocked if it still has members.)`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await api.delete(`/talent-pools/${id}`);
@@ -175,7 +184,7 @@ export default function TalentPools() {
                 </div>
               </div>
               {isAdmin && (
-                <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={(e) => { e.stopPropagation(); deletePool(p.id); }}>Delete</button>
+                <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={(e) => { e.stopPropagation(); deletePool(p.id, p.name); }}>Delete</button>
               )}
             </div>
           ))}
@@ -319,6 +328,7 @@ const MEMBER_MODES = ["Search", "Browse", "Bulk Import", "Transfer"];
 
 function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
   const poolId = pool.id;
+  const confirmDialog = useConfirm();
   const [members, setMembers] = useState([]);
   const [mode, setMode] = useState(0);
   const [memberSearch, setMemberSearch] = useState("");
@@ -360,7 +370,14 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
       });
   }, [pool.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function removeMember(studentId) {
+  async function removeMember(studentId, name) {
+    const ok = await confirmDialog({
+      title: "Remove member",
+      message: `Remove ${name} from this Talent Pool? They'll lose access to any exclusive tests/interviews assigned through it.`,
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await api.delete(`/talent-pools/${poolId}/members/${studentId}`);
@@ -422,7 +439,7 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
               {m.student.institute && <span style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>{m.student.institute.name}</span>}
               <span style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>{m.addedVia === "AUTO_RULE" ? "Auto-selected" : "Manually added"}</span>
             </div>
-            <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => removeMember(m.studentId)}>Remove</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => removeMember(m.studentId, m.student.name)}>Remove</button>
           </div>
         ))}
         {members.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No members yet.</p>}
@@ -954,6 +971,7 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
 
 function AssessmentsTab({ pool, setError, onChange, isAdmin, user }) {
   const poolId = pool.id;
+  const confirmDialog = useConfirm();
   const [tests, setTests] = useState([]);
   const [availableTests, setAvailableTests] = useState([]);
   const [selectedTestId, setSelectedTestId] = useState("");
@@ -981,7 +999,14 @@ function AssessmentsTab({ pool, setError, onChange, isAdmin, user }) {
     }
   }
 
-  async function unassignTest(testId) {
+  async function unassignTest(testId, title) {
+    const ok = await confirmDialog({
+      title: "Unassign test",
+      message: `Remove "${title}" from this pool's exclusive tests? Members will lose access to it through this pool.`,
+      confirmLabel: "Unassign",
+      danger: true,
+    });
+    if (!ok) return;
     await api.delete(`/talent-pools/${poolId}/tests/${testId}`).catch(() => {});
     loadAll();
     onChange();
@@ -1004,7 +1029,14 @@ function AssessmentsTab({ pool, setError, onChange, isAdmin, user }) {
     }
   }
 
-  async function deleteConfig(id) {
+  async function deleteConfig(id, label) {
+    const ok = await confirmDialog({
+      title: "Delete interview config",
+      message: `Delete the "${label}" mock interview config? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await api.delete(`/talent-pools/${poolId}/interview-configs/${id}`).catch(() => {});
     loadAll();
   }
@@ -1035,7 +1067,7 @@ function AssessmentsTab({ pool, setError, onChange, isAdmin, user }) {
               {link.test.title}{link.test.company ? ` — ${link.test.company}` : ""}
               {link.test.attendanceMandatory && <span style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 6 }}>(attendance mandatory)</span>}
             </div>
-            {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => unassignTest(link.testId)}>Unassign</button>}
+            {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => unassignTest(link.testId, link.test.title)}>Unassign</button>}
           </div>
         ))}
         {tests.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No exclusive tests assigned yet.</p>}
@@ -1055,7 +1087,7 @@ function AssessmentsTab({ pool, setError, onChange, isAdmin, user }) {
         {configs.map((c) => (
           <div key={c.id} className="card" style={{ padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 13 }}>{c.label} {!c.isActive && <span style={{ color: "var(--ink-dim)" }}>(inactive)</span>}</div>
-            {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => deleteConfig(c.id)}>Delete</button>}
+            {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => deleteConfig(c.id, c.label)}>Delete</button>}
           </div>
         ))}
         {configs.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No exclusive interview configs yet.</p>}
@@ -1071,6 +1103,7 @@ function AssessmentsTab({ pool, setError, onChange, isAdmin, user }) {
 // self-assigns (no picker — see AttendanceHome.jsx for the equivalent self-service "Claim" flow),
 // so this panel only renders assignment controls for ADMIN, plus a read-only list for everyone.
 function AttendanceOwnershipPanel({ pool, isAdmin, user, setError }) {
+  const confirmDialog = useConfirm();
   const [owners, setOwners] = useState([]);
   const [staffByInstitute, setStaffByInstitute] = useState({});
   const [picks, setPicks] = useState({});
@@ -1101,7 +1134,14 @@ function AttendanceOwnershipPanel({ pool, isAdmin, user, setError }) {
     }
   }
 
-  async function remove(assignmentId) {
+  async function remove(assignmentId, staffName, instituteName) {
+    const ok = await confirmDialog({
+      title: "Remove attendance owner",
+      message: `Remove ${staffName} as the attendance owner for ${instituteName}? Attendance for this pool's mandatory tests at that institute will be unowned until someone else is assigned.`,
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await api.delete(`/talent-pools/${pool.id}/attendance-owners/${assignmentId}`);
@@ -1146,7 +1186,7 @@ function AttendanceOwnershipPanel({ pool, isAdmin, user, setError }) {
                       </div>
                     )}
                     {canManage && owner && (
-                      <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)", marginLeft: 6 }} onClick={() => remove(owner.id)}>Remove</button>
+                      <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)", marginLeft: 6 }} onClick={() => remove(owner.id, owner.staff.name, pi.institute.name)}>Remove</button>
                     )}
                   </td>
                 </tr>

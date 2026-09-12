@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import { useConfirm } from "../context/ConfirmContext";
 
 const labelStyle = { display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 };
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 14 };
@@ -155,6 +156,7 @@ function AttendanceRulesTab({ instituteId, setError }) {
 }
 
 function DepartmentsTab({ departments, instituteId, onChange, setError }) {
+  const confirmDialog = useConfirm();
   const [deptName, setDeptName] = useState("");
   const [savingDept, setSavingDept] = useState(false);
 
@@ -174,7 +176,14 @@ function DepartmentsTab({ departments, instituteId, onChange, setError }) {
     }
   }
 
-  async function deleteDept(id) {
+  async function deleteDept(id, name) {
+    const ok = await confirmDialog({
+      title: "Delete department",
+      message: `Delete the "${name}" department? (Blocked if any divisions/sections still exist under it.)`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/attendance/admin/departments/${id}`);
       onChange();
@@ -194,7 +203,7 @@ function DepartmentsTab({ departments, instituteId, onChange, setError }) {
         {departments.map((d) => (
           <div key={d.id} className="card" style={{ padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontWeight: 600, fontSize: 13 }}>{d.name}</div>
-            <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => deleteDept(d.id)}>Delete</button>
+            <button className="btn btn-ghost" style={{ fontSize: 12, color: "var(--rust)" }} onClick={() => deleteDept(d.id, d.name)}>Delete</button>
           </div>
         ))}
         {departments.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No departments yet — one gets created automatically the first time a student names it during Bulk Upload/Registration, or add one here in advance.</p>}
@@ -210,6 +219,7 @@ function DepartmentsTab({ departments, instituteId, onChange, setError }) {
 // /staff-assignments finds any existing assignment for that (group, subject) pair and updates its
 // staff in place; a different subject always creates a new row instead of replacing anything.
 function GroupAssignmentTab({ staff, instituteId, setError }) {
+  const confirmDialog = useConfirm();
   const [batches, setBatches] = useState([]);
   const [batchYear, setBatchYear] = useState("");
   const [rows, setRows] = useState(null);
@@ -262,7 +272,13 @@ function GroupAssignmentTab({ staff, instituteId, setError }) {
   }
 
   async function removeAssignment(assignmentId) {
-    if (!confirm("Remove this staff assignment? Their lecture plans and attendance records for this subject will be deleted too.")) return;
+    const ok = await confirmDialog({
+      title: "Remove staff assignment",
+      message: "Remove this staff assignment? Their lecture plans and attendance records for this subject will be deleted too.",
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await api.delete(`/attendance/admin/staff-assignments/${assignmentId}`);

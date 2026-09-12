@@ -73,4 +73,22 @@ async function revokeAllSessions(userId) {
   for (const s of toClose) cache.invalidate(`session-active:${s.token}`);
 }
 
-module.exports = { createSession, isSessionActive, endSession, revokeAllSessions };
+// Same as revokeAllSessions, but for every user of one institute at once — used when an institute
+// is toggled inactive (PATCH /institutes/:id). Institute.isActive previously had no enforcement
+// effect anywhere: auth.js's login route never checked it, and toggling it off didn't touch any
+// already-issued session, so an already-logged-in user of a "deactivated" institute stayed fully
+// authenticated indefinitely. Login-time is now also checked (see auth.js) — this half closes the
+// other side of the same gap for sessions that already exist at the moment of deactivation.
+// LoginSession has no instituteId column of its own, so this resolves the user set first rather
+// than assuming a relation filter inside updateMany's where is supported.
+async function revokeAllSessionsForInstitute(instituteId) {
+  const users = await prisma.user.findMany({ where: { instituteId }, select: { id: true } });
+  const userIds = users.map((u) => u.id);
+  if (userIds.length === 0) return;
+  const toClose = await prisma.loginSession.findMany({ where: { userId: { in: userIds }, isActive: true }, select: { token: true } });
+  if (toClose.length === 0) return;
+  await prisma.loginSession.updateMany({ where: { userId: { in: userIds }, isActive: true }, data: { isActive: false, logoutAt: new Date() } });
+  for (const s of toClose) cache.invalidate(`session-active:${s.token}`);
+}
+
+module.exports = { createSession, isSessionActive, endSession, revokeAllSessions, revokeAllSessionsForInstitute };
