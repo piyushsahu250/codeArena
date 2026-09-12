@@ -4,6 +4,7 @@
 // comment for why this is a genuinely different data shape, not a rename of the old one.
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+const { Prisma } = require("@prisma/client");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -93,23 +94,31 @@ router.post("/", authenticate, requireRole("STUDENT"), attachRequesterInstitute,
 
 // GET /api/ai-interviews/:id — session state (reconnect support, spec §15/§29).
 router.get("/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
-  const session = await loadOwnSession(req, res);
-  if (!session) return;
-  const remainingSeconds = session.expiresAt ? Math.max(0, Math.round((new Date(session.expiresAt) - Date.now()) / 1000)) : null;
-  res.json({ ...session, remainingSeconds, competencyPlan: undefined }); // hidden plan never leaves the server, spec §34
+  try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    const remainingSeconds = session.expiresAt ? Math.max(0, Math.round((new Date(session.expiresAt) - Date.now()) / 1000)) : null;
+    res.json({ ...session, remainingSeconds, competencyPlan: undefined }); // hidden plan never leaves the server, spec §34
+  } catch (err) {
+    console.error("[ai-interviews] get session failed:", err.message);
+    res.status(500).json({ error: "Failed to load interview session" });
+  }
 });
 
 // POST /api/ai-interviews/:id/start — CREATED -> INTRODUCTION -> QUESTIONING, generates the
 // spoken introduction and the first question. One combined route (not two) because a candidate
 // has no reason to ever pause between "introduce yourself" and "ask the first question."
 router.post("/:id/start", authenticate, requireRole("STUDENT"), createLimiter, async (req, res) => {
-  const session = await loadOwnSession(req, res);
-  if (!session) return;
-  if (!canTransition(session.status, "INTRODUCTION")) {
-    return res.status(409).json({ error: `Cannot start an interview from status ${session.status}` });
-  }
-
+  // Whole handler in one try/catch — see the /answer route's own comment for the real bug this
+  // convention exists to prevent (an uncaught rejection from an async Express 4 handler never
+  // sends a response at all; the client just hangs until its own timeout).
   try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    if (!canTransition(session.status, "INTRODUCTION")) {
+      return res.status(409).json({ error: `Cannot start an interview from status ${session.status}` });
+    }
+
     const introduction = await engine.generateIntroduction({ session, userId: req.user.id, instituteId: session.instituteId });
 
     const now = new Date();
@@ -151,27 +160,39 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), createLimiter, a
 // answer for the current one, which breaks the "next depends on previous" invariant this whole
 // module exists to guarantee).
 router.post("/:id/answer", authenticate, requireRole("STUDENT"), answerLimiter, async (req, res) => {
-  const session = await loadOwnSession(req, res);
-  if (!session) return;
-  if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) {
-    return res.status(409).json({ error: `No question is currently awaiting an answer (status: ${session.status})` });
-  }
-  if (session.expiresAt && new Date() >= new Date(session.expiresAt)) {
-    return finalizeExpiredSession(req, res, session);
-  }
-
-  const currentTurn = await prisma.aiInterviewTurn.findFirst({
-    where: { sessionId: session.id, evaluation: null },
-    orderBy: { turnIndex: "desc" },
-  });
-  if (!currentTurn) return res.status(409).json({ error: "No open question to answer" });
-
-  const { answerText, skipped } = req.body;
-  if (!skipped && (typeof answerText !== "string" || !answerText.trim())) {
-    return res.status(400).json({ error: "answerText is required unless skipped is true" });
-  }
-
+  // The ENTIRE handler body is inside this one try/catch, deliberately — a real bug caught during
+  // testing (2026-09-12): the currentTurn lookup below used to sit BEFORE any try/catch, and its
+  // `evaluation: null` filter (see the Prisma.JsonNull fix just below) threw a Prisma validation
+  // error ("Argument `evaluation` must not be null" — a plain JS null is ambiguous for a Json?
+  // column; Prisma requires Prisma.JsonNull/Prisma.DbNull instead). Express 4 does NOT auto-catch
+  // a rejected promise from an async route handler, so that thrown error was silently swallowed —
+  // no response was ever sent, and the request hung until the CLIENT's own timeout fired. Verified
+  // live: every /answer call hung for 75s+ before this fix, and completed normally after it.
   try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) {
+      return res.status(409).json({ error: `No question is currently awaiting an answer (status: ${session.status})` });
+    }
+    if (session.expiresAt && new Date() >= new Date(session.expiresAt)) {
+      return finalizeExpiredSession(req, res, session);
+    }
+
+    // A turn that has never been answered has a true database NULL in this column (never once
+    // written to), not a stored JSON "null" literal — Prisma.DbNull is the correct match for that,
+    // where a plain `null` is rejected outright and Prisma.JsonNull would match the OTHER case
+    // (an explicitly-stored JSON null value, which never happens here).
+    const currentTurn = await prisma.aiInterviewTurn.findFirst({
+      where: { sessionId: session.id, evaluation: { equals: Prisma.DbNull } },
+      orderBy: { turnIndex: "desc" },
+    });
+    if (!currentTurn) return res.status(409).json({ error: "No open question to answer" });
+
+    const { answerText, skipped } = req.body;
+    if (!skipped && (typeof answerText !== "string" || !answerText.trim())) {
+      return res.status(400).json({ error: "answerText is required unless skipped is true" });
+    }
+
     const evaluation = await engine.evaluateAnswer({
       session, turn: currentTurn, answerText: skipped ? null : answerText,
       userId: req.user.id, instituteId: session.instituteId,
@@ -273,46 +294,57 @@ async function finalizeExpiredSession(req, res, session) {
 // timer expiry double-checked server-side (the server's own expiresAt is authoritative either
 // way — spec §15 — this route never trusts a client claim that time is up without verifying it).
 router.post("/:id/complete", authenticate, requireRole("STUDENT"), async (req, res) => {
-  const session = await loadOwnSession(req, res);
-  if (!session) return;
-  if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) {
-    return res.status(409).json({ error: `Cannot complete an interview from status ${session.status}` });
+  try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) {
+      return res.status(409).json({ error: `Cannot complete an interview from status ${session.status}` });
+    }
+    const reason = session.expiresAt && new Date() >= new Date(session.expiresAt) ? "TIME_EXPIRED" : "CANDIDATE_ENDED";
+    await prisma.aiInterviewSession.update({
+      where: { id: session.id },
+      data: { status: "COMPLETED", completedAt: new Date(), terminationReason: reason },
+    });
+    res.json({ status: "COMPLETED", terminationReason: reason });
+  } catch (err) {
+    console.error("[ai-interviews] complete failed:", err.message);
+    res.status(500).json({ error: "Failed to complete interview session" });
   }
-  const reason = session.expiresAt && new Date() >= new Date(session.expiresAt) ? "TIME_EXPIRED" : "CANDIDATE_ENDED";
-  await prisma.aiInterviewSession.update({
-    where: { id: session.id },
-    data: { status: "COMPLETED", completedAt: new Date(), terminationReason: reason },
-  });
-  res.json({ status: "COMPLETED", terminationReason: reason });
 });
 
 // GET /api/ai-interviews/:id/transcript — full turn history (spec §19).
 router.get("/:id/transcript", authenticate, requireRole("STUDENT"), async (req, res) => {
-  const session = await loadOwnSession(req, res);
-  if (!session) return;
-  const turns = await prisma.aiInterviewTurn.findMany({ where: { sessionId: session.id }, orderBy: { turnIndex: "asc" } });
-  res.json(turns.map((t) => ({
-    turnIndex: t.turnIndex, questionText: t.questionText, questionType: t.questionType,
-    answerText: t.answerText, skipped: t.skipped, answeredAt: t.answeredAt,
-    evaluation: t.evaluation ? publicEvaluation(t.evaluation) : null,
-  })));
+  try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    const turns = await prisma.aiInterviewTurn.findMany({ where: { sessionId: session.id }, orderBy: { turnIndex: "asc" } });
+    res.json(turns.map((t) => ({
+      turnIndex: t.turnIndex, questionText: t.questionText, questionType: t.questionType,
+      answerText: t.answerText, skipped: t.skipped, answeredAt: t.answeredAt,
+      evaluation: t.evaluation ? publicEvaluation(t.evaluation) : null,
+    })));
+  } catch (err) {
+    console.error("[ai-interviews] transcript failed:", err.message);
+    res.status(500).json({ error: "Failed to load transcript" });
+  }
 });
 
 // GET /api/ai-interviews/:id/report — final report; generates it on first request if the session
 // is COMPLETED but not yet REPORT_READY (mirrors interview.js's existing ai-insights
 // generate-on-first-view pattern, so a student is never billed for a report they never open).
 router.get("/:id/report", authenticate, requireRole("STUDENT"), async (req, res) => {
-  const session = await loadOwnSession(req, res);
-  if (!session) return;
-
-  const existing = await prisma.aiInterviewReport.findUnique({ where: { sessionId: session.id } });
-  if (existing) return res.json(existing);
-
-  if (session.status !== "COMPLETED") {
-    return res.status(409).json({ error: "Report is not available until the interview is completed" });
-  }
-
+  let session;
   try {
+    session = await loadOwnSession(req, res);
+    if (!session) return;
+
+    const existing = await prisma.aiInterviewReport.findUnique({ where: { sessionId: session.id } });
+    if (existing) return res.json(existing);
+
+    if (session.status !== "COMPLETED") {
+      return res.status(409).json({ error: "Report is not available until the interview is completed" });
+    }
+
     await prisma.aiInterviewSession.update({ where: { id: session.id }, data: { status: "EVALUATING" } });
     const turns = await prisma.aiInterviewTurn.findMany({ where: { sessionId: session.id }, orderBy: { turnIndex: "asc" } });
     const scores = aggregateScores(turns);
@@ -338,7 +370,7 @@ router.get("/:id/report", authenticate, requireRole("STUDENT"), async (req, res)
 
     res.json(report);
   } catch (err) {
-    await prisma.aiInterviewSession.update({ where: { id: session.id }, data: { status: "COMPLETED" } }).catch(() => {});
+    if (session?.id) await prisma.aiInterviewSession.update({ where: { id: session.id }, data: { status: "COMPLETED" } }).catch(() => {});
     sendAiError(res, err, "Failed to generate the interview report");
   }
 });
