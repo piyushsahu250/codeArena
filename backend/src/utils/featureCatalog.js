@@ -27,6 +27,7 @@ const FEATURE_CATALOG = [
   { key: "readiness_test", label: "Readiness Test", category: "Assessment" },
   { key: "ai_mock_interview", label: "AI Mock Interview", category: "AI" },
   { key: "ai_draftview", label: "AI DraftView", category: "AI", dependsOn: "ai_mock_interview" },
+  { key: "ai_voice_interview", label: "AI Voice Interview", category: "AI", description: "Adaptive, LLM-driven mock interview — a separate engine from AI Mock Interview's admin-authored question bank." },
   { key: "certificates", label: "Certificates", category: "Certificates" },
   { key: "export_center", label: "Export Center", category: "Reports" },
   { key: "resume_builder", label: "Resume Builder", category: "Career Features", description: "Create and optimize professional resumes." },

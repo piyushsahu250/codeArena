@@ -297,6 +297,8 @@ model User {
   interviewCertificate InterviewCertificate?
   candidateQuestionReports CandidateQuestionReport[]
   emailLogs            EmailLog[]
+  aiInterviewSessions  AiInterviewSession[]
+  aiInterviewReports   AiInterviewReport[]
 
   passwordHistory PasswordHistory[]
   loginSessions   LoginSession[]
@@ -2300,6 +2302,7 @@ model Company {
   interviewProfile        CompanyInterviewProfile?
   candidateReports        CandidateQuestionReport[]
   generationJobs          QuestionGenerationJob[]
+  aiInterviewSessions     AiInterviewSession[]
 
   // No separate @@index([name]) — `name` is already @unique above, which creates its own index;
   // an explicit duplicate index here was pure write overhead with zero query benefit.
@@ -2977,6 +2980,185 @@ model InterviewCertificate {
   studentId       String   @unique
   averageScore    Int
   issuedAt        DateTime @default(now())
+}
+
+// ===================================================================
+// AI Voice Interview Module (real-time adaptive interview engine).
+// Deliberately a SEPARATE model set from InterviewSession/InterviewAnswer
+// above, not an extension of them: that pair is built around a fixed,
+// pre-created question list (every InterviewAnswer row is inserted
+// up-front at session-start, `skipped: true`, before the student answers
+// anything) — the opposite of this module's actual requirement, where
+// each question is generated ONE AT A TIME, live, and depends on the
+// evaluation of the PREVIOUS answer. Forcing that into the existing
+// pre-created-answers shape would mean either fabricating placeholder
+// rows for questions that don't exist yet, or overloading InterviewSession
+// with a second, incompatible meaning for half its fields
+// (roundPlanSnapshot/eliminatedAtRound have no equivalent here). Two real
+// models, sharing the SAME institute/RBAC/feature-flag conventions as
+// everything else on this platform, is the honest structure — see
+// docs/AI_INTERVIEW.md.
+//
+// Phase 1 of this module (docs/AI_INTERVIEW.md) is TEXT-ONLY: the
+// adaptive reasoning engine (state machine + LLM-driven next-question
+// selection + evidence-based evaluation) proven over plain text turns
+// before any real-time voice I/O is added on top. voiceEnabled/
+// realtimeProvider below are present now so the schema doesn't need a
+// breaking migration once voice is added, but are unused (false/null)
+// until then.
+// ===================================================================
+
+enum AiInterviewStatus {
+  CREATED
+  INTRODUCTION
+  QUESTIONING
+  FOLLOW_UP
+  DEEP_DIVE
+  SKILL_TRANSITION
+  FINAL_QUESTION
+  COMPLETED
+  EVALUATING
+  REPORT_READY
+  ABANDONED
+}
+
+enum AiInterviewQuestionType {
+  INTRODUCTION
+  FUNDAMENTALS
+  CONCEPTUAL
+  PRACTICAL
+  SCENARIO
+  DEBUGGING
+  SYSTEM_DESIGN
+  BEHAVIORAL
+  PROJECT_BASED
+  FOLLOW_UP
+  DEEP_DIVE
+  SITUATIONAL
+  ROLE_SPECIFIC
+}
+
+enum AiInterviewDecision {
+  STRONG
+  GOOD
+  BORDERLINE
+  NEEDS_IMPROVEMENT
+}
+
+// One full adaptive interview attempt. Server-authoritative timer
+// (startedAt/expiresAt, remainingSeconds always derived from these, never
+// trusted from the client) per spec §15. `competencyPlan` is the HIDDEN
+// assessment plan (spec §34) — an ordered list of objectives with running
+// coverage, not a fixed question list; the engine consults and updates it
+// every turn but never exposes it to the candidate.
+model AiInterviewSession {
+  id              String   @id @default(uuid())
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId       String
+  // Denormalized at create time from the student's own row (never client-supplied) — same
+  // "never trust instituteId from the frontend" convention as attachRequesterInstitute
+  // elsewhere; this column exists so institute-scoped admin/staff reporting never has to join
+  // through User just to filter by institute.
+  instituteId     String?
+
+  role            String   // target job role, free text (e.g. "Java Developer")
+  experienceLevel ExperienceLevel
+  interviewType   String   // TECHNICAL | HR | BEHAVIORAL | CODING | SYSTEM_DESIGN | PROJECT | MIXED | COMPANY_SPECIFIC | PLACEMENT | AI_MOCK — spec §16
+  targetSkills    Json     // string[], e.g. ["Java","DSA","SQL","Spring Boot"]
+  language        String   @default("en") // en | hi | hinglish — spec §22; governs generation/TTS language, transcript is never translated before evaluation
+  companyRef      Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId       String?  // "company-style / role-aligned interview" — never claims to know a real company's actual questions, spec §18
+
+  status           AiInterviewStatus @default(CREATED)
+  difficulty       Int      @default(5) // 1-10, adjusted after each turn by overall competency TREND (spec §10) — never mechanically per single answer
+  competencyPlan   Json     // [{skill, weight, targetQuestions, questionsAsked, coverageScore}] — hidden assessment plan, spec §34; never the candidate-visible question list
+  currentObjective String?  // which competency/skill the NEXT question should target
+
+  durationMin       Int      @default(20)
+  startedAt         DateTime?
+  expiresAt         DateTime? // startedAt + durationMin, set once at the INTRODUCTION -> QUESTIONING transition
+  completedAt       DateTime?
+  terminationReason String?  // "TIME_EXPIRED" | "CANDIDATE_ENDED" | "MAX_TURNS" | null
+
+  resumeSnapshot   Json?    // {skills, projects, experience} copied from Resume at session start (spec §8) — a later resume edit must never retroactively change an in-flight/completed interview's context
+  jobDescription   String?  // free-text JD the interview was scoped against, if any (spec §9)
+
+  // Voice I/O — reserved for a later phase (Gemini Live API), unused today (always false/null).
+  voiceEnabled     Boolean  @default(false)
+  realtimeProvider String?  // "gemini_live" once that phase ships
+
+  turns  AiInterviewTurn[]
+  report AiInterviewReport?
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId, status])
+  @@index([instituteId, createdAt])
+  @@index([status])
+}
+
+// One question-answer exchange. turnIndex is the ONLY ordering — there is no fixed question list
+// to index into, since questionText is generated live by the engine based on everything before it
+// (spec §2's whole point). evaluation is written once the candidate answers; a turn with
+// evaluation: null is still awaiting an answer (i.e. it's the "current question").
+model AiInterviewTurn {
+  id               String   @id @default(uuid())
+  session          AiInterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId        String
+  turnIndex        Int
+
+  objective        String   // competency this turn targets, e.g. "Java - OOP - Polymorphism"
+  questionType     AiInterviewQuestionType
+  questionText     String   // AI-generated, original — never a reproduction of a real question-bank entry
+  difficultyAtTurn Int      // snapshot of session.difficulty when this question was generated
+
+  answerText String?   // candidate's transcript (typed today; Web Speech / Gemini Live transcript once voice ships) — original, never translated before evaluation, spec §22
+  answeredAt DateTime?
+  skipped    Boolean  @default(false) // "I don't know" / explicit skip — engine adapts per spec §12, never terminates the interview
+
+  // Structured, evidence-based evaluation — spec §11/§37. Never stores hidden chain-of-thought,
+  // only the concise signals + short evidence strings needed for scoring and the final report.
+  // Shape: {correctness,technicalDepth,clarity,reasoning,confidence,relevance (0-100 each),
+  //   skillScores:{}, strengths:[], weaknesses:[], missingConcepts:[], evidence:[string],
+  //   followUpRecommended:bool, recommendedNextObjective:string, difficultyAdjustment:-1|0|1}
+  evaluation Json?
+
+  createdAt DateTime @default(now())
+
+  @@unique([sessionId, turnIndex])
+  @@index([sessionId])
+}
+
+// Finalized report — persisted once (spec §20/§37), never recomputed on a later read so a future
+// scoring-rule change doesn't retroactively alter a candidate's own history. `decision` is computed
+// by a deterministic, admin-configurable rule (see docs/AI_INTERVIEW.md's decideOutcome()) applied
+// to the scores below — never an unexplained raw AI opinion, per spec §20's own requirement.
+model AiInterviewReport {
+  id                  String   @id @default(uuid())
+  session             AiInterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId           String   @unique
+  student             User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId           String
+
+  overallScore        Int
+  technicalScore      Int
+  problemSolvingScore Int
+  communicationScore  Int
+  confidenceScore     Int
+  roleFitScore        Int
+  skillScores         Json    // {"Java": 90, "DSA": 78, ...}
+
+  strengths           Json    // string[]
+  weaknesses          Json    // string[]
+  recommendedLearning Json    // string[]
+  evidence            Json    // {scoreCategory: [supporting quote/reasoning strings]} — spec §37, makes the report auditable
+
+  decision            AiInterviewDecision
+  decisionRuleVersion String  // which configured rubric version produced `decision` — see docs/AI_INTERVIEW.md
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId, createdAt])
 }
 
 // ===================== Attendance Management =====================
