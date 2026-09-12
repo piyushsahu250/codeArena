@@ -5,7 +5,7 @@ import {
   Users, FileQuestion, Building2, School, Upload, ChevronLeft, ChevronRight, ClipboardList,
   Mail, Activity, Download, CalendarDays, CalendarRange, Briefcase, Sparkles, CheckSquare, Layers,
   CalendarCheck, Share2, UserCircle, Building, Star, UserCog, Target, StickyNote, AlertTriangle,
-  Shield,
+  Shield, Headphones,
 } from "lucide-react";
 import { useSidebarUI } from "../context/SidebarContext";
 import { useUnsavedChangesGuard } from "../context/UnsavedChangesContext";
@@ -33,6 +33,7 @@ const MENU = {
       { label: "Company Tests", to: "/company-tests", icon: Briefcase },
       { label: "My Results", to: "/results", icon: ClipboardList },
       { label: "Mock Interview", to: "/interview", icon: Mic, featureKey: "ai_mock_interview" },
+      { label: "AI Voice Interview", to: "/ai-interview", icon: Headphones, featureKey: "ai_voice_interview" },
       { label: "Resume Builder", to: "/resume", icon: FileText, featureKey: "resume_builder" },
       { label: "Interview History", to: "/interview/history", icon: History, featureKey: "interview_history" },
       { label: "Certificates", to: "/certificates", icon: Award, featureKey: "certificates" },

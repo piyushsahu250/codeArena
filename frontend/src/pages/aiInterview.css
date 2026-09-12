@@ -1,0 +1,323 @@
+/* AI Voice Interview module — setup + live session screens. Reuses the platform's existing
+   design tokens (theme.css: --paper/--ink/--card-bg/--amber/--rust/--mint/--line/--radius) rather
+   than inventing a new palette, the same way interviewPrep.css layers bespoke classes on top of
+   the shared tokens for the older Mock Interview module. */
+
+.ai-int-page {
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-int-centered {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  gap: 12px;
+}
+
+.ai-int-error {
+  color: var(--rust);
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+/* ---- Setup page ---- */
+
+.ai-int-setup-wrap {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+  width: 100%;
+}
+
+.ai-int-setup-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.ai-int-setup-header h1 {
+  font-size: 24px;
+  margin: 0 0 4px;
+}
+.ai-int-setup-header p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-dim);
+  max-width: 46ch;
+}
+
+.ai-int-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.ai-int-form-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ai-int-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ai-int-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card-bg, transparent);
+  color: var(--ink);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.ai-int-input:focus {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+}
+.ai-int-textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.ai-int-skill-input-row {
+  display: flex;
+  gap: 8px;
+}
+.ai-int-skill-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ai-int-skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ai-int-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--info-bg);
+  border: 1px solid var(--line);
+}
+.ai-int-skill-chip.suggestion {
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink-dim);
+}
+.ai-int-skill-chip button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-dim);
+  padding: 0;
+}
+
+/* ---- Live session screen ---- */
+
+.ai-int-session {
+  height: 100vh;
+}
+
+.ai-int-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+.ai-int-topbar-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-dim);
+  text-transform: capitalize;
+}
+.ai-int-timer {
+  font-family: var(--font-mono, monospace);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ai-int-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  font-size: 13px;
+}
+.ai-int-banner.error {
+  background: var(--danger-bg);
+  color: var(--rust);
+}
+
+.ai-int-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+
+.ai-int-orb {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg, var(--info-bg));
+  border: 2px solid var(--line);
+  color: var(--ink-dim);
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.ai-int-orb.ai_speaking {
+  border-color: var(--amber);
+  color: var(--amber);
+  animation: ai-int-pulse 1.4s ease-in-out infinite;
+}
+.ai-int-orb.listening {
+  border-color: var(--mint);
+  color: var(--mint);
+}
+.ai-int-orb.processing {
+  border-color: var(--ink-dim);
+  color: var(--ink-dim);
+  animation: ai-int-spin 1.6s linear infinite;
+}
+@keyframes ai-int-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes ai-int-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ai-int-state-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-int-question-card {
+  max-width: 560px;
+  background: var(--card-bg, var(--info-bg));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+.ai-int-question-card p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.ai-int-caption {
+  max-width: 480px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+.ai-int-eval-hint {
+  font-size: 12px;
+  color: var(--mint);
+}
+
+.ai-int-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.ai-int-mic-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card-bg, transparent);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.ai-int-mic-btn.muted {
+  background: var(--danger-bg);
+  color: var(--rust);
+  border-color: var(--rust);
+}
+
+.ai-int-mic-level {
+  width: 80px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  position: relative;
+  overflow: hidden;
+}
+.ai-int-mic-level::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--level, 0));
+  background: var(--mint);
+  transition: transform 0.08s linear;
+}
+
+.ai-int-preflight-card {
+  max-width: 420px;
+  background: var(--card-bg, var(--info-bg));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: left;
+}
+.ai-int-preflight-card h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.ai-int-preflight-card > p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  text-transform: capitalize;
+}
+.ai-int-checklist {
+  margin: 0 0 20px;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

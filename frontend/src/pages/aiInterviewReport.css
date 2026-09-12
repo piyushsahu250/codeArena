@@ -1,0 +1,161 @@
+.ai-report-wrap {
+  padding: 32px 20px 80px;
+}
+.ai-report-container {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ai-report-header h1 {
+  margin: 0 0 2px;
+  font-size: 22px;
+}
+.ai-report-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.ai-report-decision {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ai-report-decision.strong { background: var(--success-bg); color: var(--mint); }
+.ai-report-decision.good { background: var(--success-bg); color: var(--mint); }
+.ai-report-decision.borderline { background: var(--warning-bg); color: var(--amber-dark); }
+.ai-report-decision.needs_improvement { background: var(--danger-bg); color: var(--rust); }
+
+.ai-report-overall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.ai-report-overall-score {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ai-report-overall-label {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-report-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ai-report-score-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 32px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.ai-report-score-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.ai-report-score-fill {
+  height: 100%;
+  background: var(--amber);
+  border-radius: 999px;
+}
+.ai-report-score-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+.ai-report-skill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ai-report-skill-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--info-bg);
+  font-size: 13px;
+}
+
+.ai-report-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ai-report-grid-2 ul,
+.ai-report-transcript ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ai-report-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ai-report-transcript-turn {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.ai-report-transcript-turn:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.ai-report-transcript-q {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.ai-report-transcript-a {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+
+.ai-report-footnote {
+  font-size: 11px;
+  color: var(--ink-dim);
+  text-align: center;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .ai-report-grid-2 { grid-template-columns: 1fr; }
+}

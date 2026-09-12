@@ -40,6 +40,10 @@ const TestTaking = lazy(() => import("./pages/TestTaking"));
 // Lazy-loaded: pulls in Monaco (code editor), only needed for coding practice questions.
 const LessonView = lazy(() => import("./pages/LessonView"));
 const InterviewSession = lazy(() => import("./pages/InterviewSession"));
+// AI Voice Interview module (separate from the InterviewSession above — different backend
+// tables/engine, feature key ai_voice_interview). Lazy-loaded: pulls in the Web Audio capture code
+// only needed once a student actually starts a voice interview.
+const AiInterviewSession = lazy(() => import("./pages/AiInterviewSession"));
 const ReadinessAssessment = lazy(() => import("./pages/ReadinessAssessment"));
 const ModuleCodingAssessment = lazy(() => import("./pages/ModuleCodingAssessment"));
 const ProjectView = lazy(() => import("./pages/ProjectView"));
@@ -97,6 +101,8 @@ import MyPortfolio from "./pages/MyPortfolio";
 import SkillGraph from "./pages/SkillGraph";
 import ResumeAdmin from "./pages/ResumeAdmin";
 import InterviewHub from "./pages/InterviewHub";
+import AiInterviewSetup from "./pages/AiInterviewSetup";
+import AiInterviewReport from "./pages/AiInterviewReport";
 import ReadinessHub from "./pages/ReadinessHub";
 import ReadinessReport from "./pages/ReadinessReport";
 import InterviewReport from "./pages/InterviewReport";
@@ -327,6 +333,25 @@ export default function App() {
           <Route path="/interview/leaderboard" element={<Protected roles={["STUDENT"]}><InterviewLeaderboard /></Protected>} />
           <Route path="/interview/progress" element={<Protected roles={["STUDENT"]}><Suspense fallback={<LoadingScreen />}><InterviewProgress /></Suspense></Protected>} />
           <Route path="/interview/certificate" element={<Protected roles={["STUDENT"]}><InterviewCertificate /></Protected>} />
+          {/* AI Voice Interview — separate module from /interview above (different backend
+              tables/engine, feature key ai_voice_interview). noChrome + ErrorBoundary on the live
+              session route for the same reason /interview/session/:id has them: a long-lived,
+              high-stakes screen shouldn't render inside the normal sidebar chrome, and a render
+              crash mid-interview must degrade to a recoverable message, not a blank screen. */}
+          <Route path="/ai-interview" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="ai_voice_interview" featureLabel="AI Voice Interview"><AiInterviewSetup /></FeatureProtected></Protected>} />
+          <Route
+            path="/ai-interview/session/:id"
+            element={
+              <Protected roles={["STUDENT"]} noChrome>
+                <ErrorBoundary title="We hit a temporary problem" message="Your interview progress up to your last answered question is saved. Reloading this page will let you reconnect.">
+                  <Suspense fallback={<LoadingScreen />}>
+                    <AiInterviewSession />
+                  </Suspense>
+                </ErrorBoundary>
+              </Protected>
+            }
+          />
+          <Route path="/ai-interview/report/:id" element={<Protected roles={["STUDENT"]}><AiInterviewReport /></Protected>} />
 
           {/* Learning module — browsable by Student, Admin, and Staff (admin/staff preview content they manage) */}
           <Route path="/learning" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><LearningHub /></FeatureProtected></Protected>} />

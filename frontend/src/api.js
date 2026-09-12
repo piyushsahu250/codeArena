@@ -61,7 +61,7 @@ api.interceptors.response.use(
       // InterviewSession.jsx listens for this event, shows an in-page message, and calls
       // performExpiredRedirect() itself once acknowledged. Every other route keeps the original
       // instant-redirect behavior unchanged.
-      if (window.location.pathname.startsWith("/interview/session/")) {
+      if (window.location.pathname.startsWith("/interview/session/") || window.location.pathname.startsWith("/ai-interview/session/")) {
         redirectingToLogin = true; // still guard against repeat dispatches from parallel failed requests
         window.dispatchEvent(new CustomEvent("app:session-expired"));
         return Promise.reject(err);
