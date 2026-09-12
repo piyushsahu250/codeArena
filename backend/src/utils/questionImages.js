@@ -1,7 +1,15 @@
 // Storage layer for question-attached images (diagrams/figures/graphs on a Question — see the
 // imageKey/imageMimeType schema comment on Question). Backed by a private S3 bucket, never a
 // public one: Block Public Access is on for QUESTION_IMAGES_BUCKET, so the only way to actually
-// view an image is a presigned GET URL generated here, on demand, per response.
+// view an image is a signed GET URL generated here, on demand, per response.
+//
+// CloudFront (2026-09-12): production reads go through a CloudFront distribution in front of the
+// bucket (Origin Access Control -- the bucket policy trusts only that one distribution's ARN,
+// nothing else) rather than straight to S3, so the same image requested by many students during
+// one exam window is served from the edge after the first fetch instead of hitting S3 (or this
+// backend) again per student. The bucket itself stays exactly as private either way -- CloudFront
+// signed URLs (see signQuestionImage below) replace S3 presigned URLs as the access-control
+// mechanism, keyed off a CloudFront key pair, not this module's own IAM credentials.
 //
 // Credentials: this box runs untrusted student-submitted code in Docker containers, and has a
 // host-level firewall rule (DOCKER-USER: DROP -> 169.254.169.254) that deliberately blocks every
@@ -16,9 +24,28 @@
 const crypto = require("crypto");
 const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { getSignedUrl: getSignedCloudFrontUrl } = require("@aws-sdk/cloudfront-signer");
 
 const REGION = process.env.AWS_REGION || "ap-south-1";
 const BUCKET = process.env.QUESTION_IMAGES_BUCKET || "";
+
+// CloudFront (2026-09-12): the bucket sits behind a private CloudFront distribution (OAC, no
+// public access, Block Public Access still fully on) so repeated reads of the same image across
+// many students during an exam window are served from the edge instead of hitting S3/this
+// backend for every single request. All three of these must be set for CloudFront signing to be
+// used; if any is missing, signQuestionImage() falls back to the original S3 presigned-URL path
+// below (e.g. local dev, or before the distribution is provisioned in a given environment) rather
+// than throwing — same "isConfigured()-gated, never crash on missing optional config" convention
+// as the rest of this module.
+const CF_DOMAIN = process.env.CLOUDFRONT_QUESTION_IMAGES_DOMAIN || "";
+const CF_KEY_PAIR_ID = process.env.CLOUDFRONT_QUESTION_IMAGES_KEY_PAIR_ID || "";
+// Stored (SSM, container env) as base64, not the raw multi-line PEM -- Docker's --env-file format
+// is one KEY=VALUE per line, so a real newline embedded in the value would corrupt the file. The
+// SSM parameter name itself carries the _B64 suffix as a reminder of this at the source.
+const CF_PRIVATE_KEY = process.env.CLOUDFRONT_QUESTION_IMAGES_PRIVATE_KEY_B64
+  ? Buffer.from(process.env.CLOUDFRONT_QUESTION_IMAGES_PRIVATE_KEY_B64, "base64").toString("utf8")
+  : "";
+const cloudFrontConfigured = !!(CF_DOMAIN && CF_KEY_PAIR_ID && CF_PRIVATE_KEY);
 
 // Constructed lazily (and only once) so a server started without these env vars set (local dev,
 // CI, a preview deploy) still boots cleanly — every exported function below either no-ops or
@@ -97,19 +124,37 @@ async function deleteQuestionImage(key) {
   }
 }
 
-// Presigned GET URL generation. The signing timestamp is floored to the start of the current
-// SIGN_WINDOW_SEC window (not "now") so that every call made within the same window produces a
-// byte-identical URL for the same key — otherwise a fresh signature (and therefore a different
-// URL string) on every single question-fetch would mean the browser can never cache the <img>,
-// even though the underlying image never changes. Expiry is always SIGN_TTL_SEC past that floored
-// point, so real remaining validity is somewhere between (SIGN_TTL_SEC - SIGN_WINDOW_SEC) and
-// SIGN_TTL_SEC — comfortably longer than any single test attempt, so a URL captured at the start
-// of an exam is still good well after it ends.
+// Signed URL generation (CloudFront if configured, else the original S3 presigned URL). The
+// signing timestamp is floored to the start of the current SIGN_WINDOW_SEC window (not "now") so
+// that every call made within the same window produces a byte-identical URL for the same key —
+// otherwise a fresh signature (and therefore a different URL string) on every single question-
+// fetch would mean neither the browser NOR CloudFront's edge cache could ever reuse a previous
+// fetch of the same image, even though the underlying image never changes. This matters more, not
+// less, now that CloudFront is in front: its cache key excludes query strings for this
+// distribution's cache policy, so many different students' independently-signed URLs for the same
+// key all land on the same edge cache entry once the first one is a miss — exactly the point of
+// putting a CDN in front of an asset many students load during the same exam window. Expiry is
+// always SIGN_TTL_SEC past that floored point, so real remaining validity is somewhere between
+// (SIGN_TTL_SEC - SIGN_WINDOW_SEC) and SIGN_TTL_SEC — comfortably longer than any single test
+// attempt, so a URL captured at the start of an exam is still good well after it ends.
 const SIGN_WINDOW_SEC = 3600; // 1 hour: how often the URL string actually changes
 const SIGN_TTL_SEC = 4 * 3600; // 4 hours: real minimum remaining validity for any URL handed out
 async function signQuestionImage(key) {
   if (!key || !isConfigured()) return null;
   const flooredMs = Math.floor(Date.now() / (SIGN_WINDOW_SEC * 1000)) * SIGN_WINDOW_SEC * 1000;
+  if (cloudFrontConfigured) {
+    try {
+      return getSignedCloudFrontUrl({
+        url: `https://${CF_DOMAIN}/${key}`,
+        keyPairId: CF_KEY_PAIR_ID,
+        privateKey: CF_PRIVATE_KEY,
+        dateLessThan: new Date(flooredMs + SIGN_TTL_SEC * 1000).toISOString(),
+      });
+    } catch (err) {
+      console.error(`[questionImages] failed to sign CloudFront URL for ${key}:`, err.message);
+      return null;
+    }
+  }
   try {
     return await getSignedUrl(
       client(),

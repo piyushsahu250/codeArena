@@ -109,6 +109,27 @@ blocked on ports 25/465/587 as of 2025-09-26 (free tier) — this is why the bac
 | `TALENT_POOL_REMINDER_INTERVAL_MS` | Tuning for the above. |
 | `INTERVIEW_ANTI_REPEAT_DAYS` | How many days back the interview-question selection avoids repeating a question for the same student. |
 
+## AWS — Question Images (S3 + CloudFront)
+
+Question-attached images (diagrams/figures) are the only file type this platform actually stores
+as objects (everything else is either parsed-and-discarded, an external link, or a base64 data URL
+in Postgres — see `backend/src/utils/questionImages.js`'s own header comment). The bucket
+(`QUESTION_IMAGES_BUCKET`) stays fully private (Block Public Access on) either way — these vars
+only change *how* a signed, time-limited read URL gets produced.
+
+| Variable | Purpose |
+|---|---|
+| `AWS_REGION` | Region for the S3 client (defaults to `ap-south-1` if unset). |
+| `QUESTION_IMAGES_BUCKET` | The S3 bucket name (e.g. `codearena-question-images-<account-id>`). |
+| `QUESTION_IMAGES_AWS_ACCESS_KEY_ID`, `QUESTION_IMAGES_AWS_SECRET_ACCESS_KEY` | Credentials for a dedicated, scoped IAM user (`codearena-question-images`, PutObject/GetObject/DeleteObject/ListBucket on this bucket only) — a static key, not the EC2 instance role, because a host-level `DOCKER-USER` iptables rule deliberately blocks every container (including this API's own) from reaching the instance metadata service, as SSRF defense against untrusted student-submitted code. |
+| `CLOUDFRONT_QUESTION_IMAGES_DOMAIN` | The CloudFront distribution's `*.cloudfront.net` domain sitting in front of the bucket (via Origin Access Control — the bucket policy trusts only that specific distribution's ARN). Added 2026-09-12 so repeated reads of the same image across many students in one exam window are served from the edge, not re-fetched from S3 per student. |
+| `CLOUDFRONT_QUESTION_IMAGES_KEY_PAIR_ID` | The CloudFront public key's ID (registered as a Trusted Key Group on the distribution) used to verify signed URLs. |
+| `CLOUDFRONT_QUESTION_IMAGES_PRIVATE_KEY_B64` | The matching RSA private key this backend signs URLs with, **base64-encoded** (the raw PEM is multi-line; Docker's `--env-file` format is one `KEY=VALUE` per line, so the real key material would corrupt the file otherwise — the app base64-decodes this back to PEM at startup). Never checked into git, generated once and stored only in SSM Parameter Store (SecureString). |
+
+If any of the three `CLOUDFRONT_QUESTION_IMAGES_*` vars is unset, `signQuestionImage()` falls back
+to a plain S3 presigned URL (the original mechanism) rather than throwing — safe for local dev or
+any environment where the distribution hasn't been provisioned.
+
 ## Platform / Runtime (read, not app-specific config)
 
 | Variable | Purpose |
