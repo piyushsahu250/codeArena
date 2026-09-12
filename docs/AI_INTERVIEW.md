@@ -36,5 +36,65 @@ Every answer gets one structured, evidence-based evaluation call (`AIInterviewEn
 ## Security
 Same four-layer stack as every other AI-backed route on this platform: `authenticate` → `requireRole("STUDENT")` → `attachRequesterInstitute` (instituteId always server-derived, never client-supplied) → `requireFeature("ai_voice_interview")`, plus per-user rate limits (`createLimiter` 5/min, `answerLimiter` 20/min — real, billed Gemini calls on every turn) and `aiService`'s existing daily quota enforcement. Every session-scoped route 404s (not 403s) on ownership mismatch, matching the platform's existing "don't confirm another user's resource exists" convention.
 
-## Deferred (not built in this phase)
-Real-time voice I/O, resume/job-description-driven weighted competency matrices (spec §9), admin configuration UI for the scoring rubric (spec §38), per-institute AI-cost dollar tracking (today's `AiUsageLog` tracks tokens/latency/success, not USD), multilingual generation beyond a `language` field placeholder, interruption/barge-in handling, load testing at scale, and the candidate-facing frontend UI. See the delivery conversation for the full list.
+## Phase 2: real-time voice I/O
+
+**Architecture decision, made deliberately:** Gemini Live is used ONLY as a real-time speech-to-text
++ turn-detection layer — never to let it generate the interview's own conversational content. A
+full speech-to-speech conversational model asked to "conduct the interview" would bypass
+everything Phase 1 built (structured evaluation, deterministic scoring, duplicate-question
+prevention, competency planning) and — just as importantly for a graded assessment — has no clean
+way to guarantee it speaks the EXACT question text the engine decided on rather than paraphrasing
+it. So:
+
+```
+Browser mic  --(WS, this backend only)-->  Gemini Live (BidiGenerateContent)
+                                             - responseModalities: ["TEXT"], inputAudioTranscription: {}
+                                             - automatic VAD left ON (Gemini's own turn detection = spec §3's
+                                               "AI should detect when the candidate has finished speaking")
+                                             - Gemini's own generated reply is always discarded; only
+                                               inputTranscription + turnComplete are used
+turnComplete (finalText) --> processAnswer() [Phase 1 engine, UNCHANGED, shared with the text route]
+next question text --> Gemini TTS (plain :generateContent, responseModalities: ["AUDIO"]) --> exact audio
+                        --> sent to the browser over the SAME WebSocket for playback
+```
+
+The browser never connects to Google directly and never sees `GEMINI_API_KEY` — every Gemini
+credential stays server-side, in this same process, exactly like every other AI call on this
+platform.
+
+**Secure session establishment** (spec §28): `POST /api/ai-interviews/:id/voice-session` (normal
+authenticated REST, real JWT) mints a random, 30-second, single-use ticket
+(`services/aiInterview/voiceTickets.js`, in-memory — same "not multi-instance-safe, documented as
+such" convention as `aiQueue.js`). The browser opens `wss://.../api/ai-interviews/:id/voice?ticket=...`
+— the ticket, not the student's real JWT, is what's in that URL, so nothing long-lived ever risks
+being captured in a proxy/CDN log. `index.js`'s `'upgrade'` handler consumes (and thus invalidates)
+the ticket before ever completing the WebSocket handshake.
+
+**Shared adaptive core**: the actual "evaluate the answer, decide what's next, generate the next
+question" logic was extracted into `services/aiInterview/answerProcessor.js` specifically so the
+text route (`POST .../answer`) and the voice handler (`services/aiInterview/voiceSessionHandler.js`)
+call the exact same implementation — one place this logic is allowed to live, not two that could
+drift apart between transports.
+
+**Interruption/barge-in** (spec §14): Gemini Live's own `serverContent.interrupted` signal, and an
+explicit client-sent `{type:"interrupt"}` message, both map to a `{type:"stop_playback"}` message
+sent to the browser — the frontend's job is to immediately stop whatever TTS audio is currently
+playing when it receives that message.
+
+**New env vars**: `GEMINI_LIVE_MODEL` (default `gemini-2.5-flash-native-audio-preview-09-2025`),
+`GEMINI_TTS_MODEL` (default `gemini-2.5-flash-preview-tts`), `GEMINI_TTS_VOICE` (default `Kore`) —
+all optional, reusing the existing `GEMINI_API_KEY`. No new vendor relationship.
+
+**What Phase 2 does NOT include yet**: the candidate-facing frontend UI (browser mic capture,
+PCM16 encoding, audio playback, the actual interview screen) — this phase is the complete,
+independently-testable BACKEND voice pipeline. See the delivery conversation for exactly what was
+verified live (Gemini Live connectivity with real transcribed audio, real TTS synthesis, the full
+WS relay loop) versus what still needs a real browser to exercise (actual microphone capture,
+real human speech, mobile audio quirks, multi-device testing).
+
+## Deferred (not built yet)
+The candidate-facing frontend UI (both text and voice), resume/job-description-driven weighted
+competency matrices (spec §9), admin configuration UI for the scoring rubric (spec §38),
+per-institute AI-cost dollar tracking (today's `AiUsageLog` tracks tokens/latency/success, not
+USD), multilingual generation beyond a `language` field placeholder, and load testing at scale
+(100/500/1000 concurrent interviews — spec §39). See the delivery conversation for the full list.

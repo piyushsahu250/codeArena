@@ -12,11 +12,10 @@ const { requireFeature } = require("../middleware/featureGate");
 const { sendAiError } = require("../utils/aiErrors");
 const engine = require("../services/aiInterview/AIInterviewEngine");
 const { canTransition, ACTIVE_QUESTIONING_STATES } = require("../services/aiInterview/stateMachine");
-const {
-  buildCompetencyPlan, selectNextObjective, recordObjectiveAsked,
-  computeDifficultyTrend, checkCompletion, TREND_WINDOW,
-} = require("../services/aiInterview/competencyPlan");
+const { buildCompetencyPlan, selectNextObjective, recordObjectiveAsked } = require("../services/aiInterview/competencyPlan");
 const { aggregateScores, aggregateSkillScores, decideOutcome, DECISION_RULE_VERSION } = require("../services/aiInterview/scoring");
+const { processAnswer, publicEvaluation } = require("../services/aiInterview/answerProcessor");
+const { mintTicket } = require("../services/aiInterview/voiceTickets");
 
 const router = express.Router();
 
@@ -162,7 +161,7 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), createLimiter, a
 router.post("/:id/answer", authenticate, requireRole("STUDENT"), answerLimiter, async (req, res) => {
   // The ENTIRE handler body is inside this one try/catch, deliberately — a real bug caught during
   // testing (2026-09-12): the currentTurn lookup below used to sit BEFORE any try/catch, and its
-  // `evaluation: null` filter (see the Prisma.JsonNull fix just below) threw a Prisma validation
+  // `evaluation: null` filter (see the Prisma.DbNull fix just below) threw a Prisma validation
   // error ("Argument `evaluation` must not be null" — a plain JS null is ambiguous for a Json?
   // column; Prisma requires Prisma.JsonNull/Prisma.DbNull instead). Express 4 does NOT auto-catch
   // a rejected promise from an async route handler, so that thrown error was silently swallowed —
@@ -193,94 +192,36 @@ router.post("/:id/answer", authenticate, requireRole("STUDENT"), answerLimiter, 
       return res.status(400).json({ error: "answerText is required unless skipped is true" });
     }
 
-    const evaluation = await engine.evaluateAnswer({
-      session, turn: currentTurn, answerText: skipped ? null : answerText,
-      userId: req.user.id, instituteId: session.instituteId,
-    });
-
-    await prisma.aiInterviewTurn.update({
-      where: { id: currentTurn.id },
-      data: { answerText: skipped ? null : answerText, answeredAt: new Date(), skipped: !!skipped, evaluation },
-    });
-
-    const allTurns = await prisma.aiInterviewTurn.findMany({ where: { sessionId: session.id }, orderBy: { turnIndex: "asc" } });
-    const recentCorrectness = allTurns.filter((t) => t.evaluation).map((t) => t.evaluation.correctness);
-    const nextDifficulty = computeDifficultyTrend({ currentDifficulty: session.difficulty, recentCorrectness });
-
-    const updatedPlan = recordObjectiveAsked(session.competencyPlan, currentTurn.objective, evaluation.correctness);
-
-    const completionReason = checkCompletion({
-      now: new Date(), expiresAt: session.expiresAt, turnsCount: allTurns.length, competencyPlan: updatedPlan,
-    });
-
-    if (completionReason) {
-      await prisma.aiInterviewSession.update({
-        where: { id: session.id },
-        data: { status: "COMPLETED", completedAt: new Date(), terminationReason: completionReason, difficulty: nextDifficulty, competencyPlan: updatedPlan },
-      });
-      return res.json({ status: "COMPLETED", evaluation: publicEvaluation(evaluation), nextQuestion: null });
-    }
-
-    // Stage: FOLLOW_UP when the evaluator explicitly recommends probing further, DEEP_DIVE when
-    // the answer was strong enough to justify going harder on the same objective, otherwise a
-    // normal QUESTIONING turn possibly on a different objective — spec §2's worked examples.
-    const nextObjective = selectNextObjective({
-      competencyPlan: updatedPlan, recommendedNextObjective: evaluation.recommendedNextObjective,
-    });
-    const stage = evaluation.followUpRecommended
-      ? "FOLLOW_UP"
-      : evaluation.difficultyAdjustment > 0 && nextObjective === currentTurn.objective
-      ? "DEEP_DIVE"
-      : nextObjective !== currentTurn.objective
-      ? "SKILL_TRANSITION"
-      : "QUESTIONING";
-
-    if (!canTransition(session.status, stage) && session.status !== stage) {
-      // Fallback: any of the active-questioning states can always re-enter plain QUESTIONING —
-      // this only trips if the computed stage above were ever somehow invalid, which validateion
-      // above already prevents; kept as a defensive 409 rather than silently writing a bad status.
-      return res.status(409).json({ error: `Invalid stage transition ${session.status} -> ${stage}` });
-    }
-
-    const nextQuestion = await engine.generateNextQuestion({
-      session: { ...session, difficulty: nextDifficulty }, recentTurns: allTurns,
-      objective: nextObjective, stage,
-      resumeSnapshot: session.resumeSnapshot, jobDescription: session.jobDescription,
-      userId: req.user.id, instituteId: session.instituteId,
-    });
-
-    const finalPlan = recordObjectiveAsked(updatedPlan, nextObjective, 0);
-
-    const [, newTurn] = await prisma.$transaction([
-      prisma.aiInterviewSession.update({
-        where: { id: session.id },
-        data: { status: stage, difficulty: nextDifficulty, currentObjective: nextObjective, competencyPlan: finalPlan },
-      }),
-      prisma.aiInterviewTurn.create({
-        data: {
-          sessionId: session.id, turnIndex: currentTurn.turnIndex + 1, objective: nextObjective,
-          questionType: nextQuestion.questionType, questionText: nextQuestion.questionText, difficultyAtTurn: nextDifficulty,
-        },
-      }),
-    ]);
-
-    res.json({
-      status: stage,
-      evaluation: publicEvaluation(evaluation),
-      nextQuestion: { id: newTurn.id, turnIndex: newTurn.turnIndex, questionText: newTurn.questionText, questionType: newTurn.questionType },
-    });
+    // Shared with the Phase 2 voice-session WebSocket handler (services/aiInterview/
+    // answerProcessor.js) — one implementation of "evaluate -> decide next -> generate," not two
+    // that could drift apart between the text and voice transports.
+    const result = await processAnswer({ session, currentTurn, answerText, skipped, userId: req.user.id, instituteId: session.instituteId });
+    res.json(result);
   } catch (err) {
+    if (err.invalidTransition) return res.status(409).json({ error: err.message });
     sendAiError(res, err, "Failed to process your answer");
   }
 });
 
-// Only the fields a candidate should ever see about their own evaluation — internal signals like
-// recommendedNextObjective/difficultyAdjustment steer the engine but are never shown, matching
-// spec §11's "do not expose hidden chain-of-thought."
-function publicEvaluation(evaluation) {
-  const { correctness, technicalDepth, clarity, reasoning, confidence, relevance, strengths, weaknesses } = evaluation;
-  return { correctness, technicalDepth, clarity, reasoning, confidence, relevance, strengths, weaknesses };
-}
+// POST /api/ai-interviews/:id/voice-session — Phase 2. Mints a short-lived, single-use ticket
+// (spec §28's "secure short-lived session creation") the browser then uses to open the actual
+// realtime WebSocket connection (see index.js's upgrade handler + voiceSessionHandler.js). The
+// browser never sees GEMINI_API_KEY, never connects to Google directly, and never carries its own
+// real JWT into a WS URL — only this narrow, 30-second, single-use ticket.
+router.post("/:id/voice-session", authenticate, requireRole("STUDENT"), createLimiter, async (req, res) => {
+  try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    if (session.status !== "CREATED" && !ACTIVE_QUESTIONING_STATES.includes(session.status)) {
+      return res.status(409).json({ error: `Cannot start voice for an interview in status ${session.status}` });
+    }
+    const ticket = mintTicket({ sessionId: session.id, studentId: req.user.id, instituteId: session.instituteId });
+    res.json({ ticket, expiresInSeconds: 30 });
+  } catch (err) {
+    console.error("[ai-interviews] voice-session ticket mint failed:", err.message);
+    res.status(500).json({ error: "Failed to start voice session" });
+  }
+});
 
 async function finalizeExpiredSession(req, res, session) {
   await prisma.aiInterviewSession.update({

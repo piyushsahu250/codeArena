@@ -10,6 +10,7 @@ require("dotenv").config();
 BigInt.prototype.toJSON = function () { return this.toString(); };
 const express = require("express");
 const cors = require("cors");
+const { WebSocketServer } = require("ws");
 const helmet = require("helmet");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
@@ -290,7 +291,7 @@ const { startTestScheduledPublishScheduler } = require("./utils/testScheduledPub
 startTestScheduledPublishScheduler();
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`CodeArena API running on port ${PORT}`);
   // Best-effort: warms the OS page cache for javac/gcc/g++ right away instead of waiting for the
   // first real student submission to pay that cost — see warmUpCompilers()'s own comment for why
@@ -303,4 +304,38 @@ app.listen(PORT, () => {
   // longer holds cap_net_admin (see the Dockerfile's setcap comment); that capability delegation
   // was tried and confirmed live to be insufficient for either iptables backend in this
   // environment anyway, which is why the mechanism moved to the entrypoint's root phase instead.
+});
+
+// AI Voice Interview realtime WebSocket (Phase 2) — the ONLY WebSocket endpoint on this platform;
+// everything else stays plain request/response (confirmed zero other WS/SSE usage anywhere in
+// this codebase during the pre-implementation audit). `noServer: true` + a manual 'upgrade'
+// listener (rather than letting the `ws` library bind its own port/path automatically) so this
+// coexists with Express handling every normal HTTP request on the exact same port, and so the
+// upgrade can be REJECTED before ever completing for anything that isn't a validated voice-ticket
+// request — never a bare, unauthenticated WS handshake.
+const { consumeTicket } = require("./services/aiInterview/voiceTickets");
+const { handleVoiceConnection } = require("./services/aiInterview/voiceSessionHandler");
+const voiceWss = new WebSocketServer({ noServer: true });
+server.on("upgrade", (req, socket, head) => {
+  let url;
+  try { url = new URL(req.url, "http://localhost"); } catch { socket.destroy(); return; }
+
+  const match = /^\/api\/ai-interviews\/([^/]+)\/voice$/.exec(url.pathname);
+  if (!match) { socket.destroy(); return; } // not a path this server handles WS upgrades for at all
+
+  const sessionId = match[1];
+  const ticket = url.searchParams.get("ticket");
+  const entry = ticket && consumeTicket(ticket);
+  if (!entry || entry.sessionId !== sessionId) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+
+  voiceWss.handleUpgrade(req, socket, head, (ws) => {
+    handleVoiceConnection(ws, entry).catch((err) => {
+      console.error("[voiceSession] unhandled error:", err.message);
+      try { ws.close(); } catch { /* already closed */ }
+    });
+  });
 });

@@ -28,6 +28,8 @@ silently fail there (confirmed via `grep` of `backend/src/**/*.js` — zero `ANT
 | `GEMINI_MODEL` | Overrides the default Gemini model used, if set. |
 | `GEMINI_TIMEOUT_MS` | Optional. Overrides the request timeout on Gemini API calls, if set. |
 | `GEMINI_MAX_RETRIES`, `GEMINI_RETRY_BASE_DELAY_MS` | Retry tuning for transient Gemini API failures. |
+| `GEMINI_LIVE_MODEL` | AI Voice Interview (Phase 2) — the Gemini Live model used for real-time speech-to-text + turn detection (defaults to `gemini-2.5-flash-native-audio-preview-09-2025`). Never generates the interview's own content — see docs/AI_INTERVIEW.md's Phase 2 architecture note. |
+| `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE` | AI Voice Interview (Phase 2) — the plain (non-Live) Gemini TTS model and voice used to speak the exact question text the adaptive engine decided on (defaults: `gemini-2.5-flash-preview-tts`, voice `Kore`). |
 | `GEMINI_THINKING_LEVEL` | Optional reasoning-effort override for Gemini calls that support it. |
 | `AI_CONCURRENCY`, `AI_MAX_QUEUE_SIZE` | Platform-wide concurrency/queue limits for AI calls. |
 | `AI_DAILY_LIMIT_GLOBAL`, `AI_DAILY_LIMIT_PER_INSTITUTE` | Daily AI-call caps, platform-wide and per institute. |
