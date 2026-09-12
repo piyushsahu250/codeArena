@@ -756,6 +756,7 @@ function BulkImportPanel({ pool, setError, onChange }) {
 }
 
 function TransferPanel({ pool, pools, members, setError, onChange }) {
+  const toast = useToast();
   const [selected, setSelected] = useState([]);
   const [targetPoolId, setTargetPoolId] = useState("");
   const [mode, setMode] = useState("MOVE");
@@ -773,7 +774,7 @@ function TransferPanel({ pool, pools, members, setError, onChange }) {
       const { data } = await api.post(`/talent-pools/${pool.id}/members/transfer`, { studentIds: selected, targetPoolId, mode });
       setSelected([]);
       onChange();
-      alert(`${data.addedCount} added to target pool${mode === "MOVE" ? `, ${data.removedCount} removed from this pool` : ""}.`);
+      toast.success(`${data.addedCount} added to target pool${mode === "MOVE" ? `, ${data.removedCount} removed from this pool` : ""}.`);
     } catch (err) {
       setError(err.response?.data?.error || "Transfer failed");
     } finally {
@@ -842,6 +843,7 @@ const READINESS_LEVELS = [
 ];
 
 function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
+  const toast = useToast();
   const [rule, setRule] = useState({});
   const [preview, setPreview] = useState(null);
   const [previewing, setPreviewing] = useState(false);
@@ -895,7 +897,7 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
       const { data } = await api.post(`/talent-pools/${poolId}/auto-rule/run`);
       setPreview(null);
       onChange();
-      alert(`${data.addedCount} student(s) added.`);
+      toast.success(`${data.addedCount} student(s) added.`);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to run auto-selection");
     } finally {
