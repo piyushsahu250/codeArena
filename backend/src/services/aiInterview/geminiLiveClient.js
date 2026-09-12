@@ -6,9 +6,11 @@
 // question prevention, competency planning) — this connection exists purely so the candidate's
 // spoken answer becomes text, with Gemini's own automatic Voice Activity Detection telling us the
 // moment they've finished speaking (spec §3's "AI should detect when the candidate has finished
-// speaking"), and nothing more. `responseModalities: ["TEXT"]` means Gemini's own generated reply
-// (which we never asked for and always discard) comes back as text, not audio — no wasted TTS
-// cost on a reply nobody hears.
+// speaking"), and nothing more. Gemini's own generated reply (which we never asked for) is always
+// discarded — this native-audio Live model variant requires responseModalities: ["AUDIO"]
+// (confirmed live: a text-only request is rejected outright), so that discarded reply comes back
+// as audio, not text; inputAudioTranscription runs independently of the response modality either
+// way, so STT/turn-detection is unaffected by this.
 //
 // This client is only ever used SERVER-SIDE (from the WS voice-session handler) — the browser
 // never holds a Gemini API key or connects to Google directly at all; every credential this needs
@@ -46,10 +48,18 @@ class GeminiLiveSttSession extends EventEmitter {
       // VAD is exactly the "detect when the candidate has finished speaking" behavior spec §3
       // asks for, and reimplementing that client-side (spec's alternative "manual" mode) would be
       // strictly worse for a first real implementation with no clear benefit here.
+      // responseModalities: ["AUDIO"], not ["TEXT"] -- confirmed live (2026-09-12) that the
+      // native-audio Live model variant REJECTS a text-only response modality outright ("The
+      // requested combination of response modalities (TEXT) is not supported by the model"),
+      // closing the connection immediately. Gemini's own generated audio reply is received and
+      // simply never processed below (no handler reads serverContent.modelTurn's audio parts) --
+      // the exact same "discard the reply, only inputTranscription matters" approach as before,
+      // just paying for audio-shaped output tokens instead of text-shaped ones. inputAudioTranscription
+      // is independent of the response modality either way, so STT/turn-detection is unaffected.
       this._ws.send(JSON.stringify({
         setup: {
           model: `models/${LIVE_MODEL}`,
-          generationConfig: { responseModalities: ["TEXT"] },
+          generationConfig: { responseModalities: ["AUDIO"] },
           inputAudioTranscription: {},
         },
       }));
