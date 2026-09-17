@@ -275,6 +275,9 @@ export default function EmailLogs() {
               {logs === null && (
                 <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }} className="mono">Loading…</td></tr>
               )}
+              {logs?.length === 0 && (
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: "center", color: "var(--ink-dim)" }} className="mono">No email logs found.</td></tr>
+              )}
               {logs?.map((log) => (
                 <tr key={log.id} style={{ borderBottom: "1px solid var(--line)", fontSize: 13 }}>
                   <td style={{ padding: "10px 12px" }}>{log.recipientName}</td>
@@ -284,7 +287,7 @@ export default function EmailLogs() {
                   <td style={{ padding: "10px 12px" }}>
                     <span className="mono" style={{ fontWeight: 700, color: STATUS_COLOR[log.status] }}>{log.status}</span>
                   </td>
-                  <td style={{ padding: "10px 12px", color: "var(--rust)", fontSize: 12, maxWidth: 260 }}>{log.errorMessage || "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--rust)", fontSize: 12, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.errorMessage || undefined}>{log.errorMessage || "—"}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right" }}>
                     {isRetryable(log) ? (
                       (log.retryCount ?? 0) >= MAX_EMAIL_RETRIES ? (

@@ -1758,13 +1758,13 @@ export default function TestTaking() {
         <div className="exam-palette-legend" style={{ marginBottom: 14 }}>
           <span><span className="exam-palette-legend-dot" style={{ background: "var(--mint)" }} />Answered</span>
           <span><span className="exam-palette-legend-dot" style={{ background: "var(--ink-dim)" }} />Not answered</span>
-          <span><span className="exam-palette-legend-dot" style={{ background: "#8b5cf6" }} />Marked for review</span>
+          <span><span className="exam-palette-legend-dot" style={{ background: "var(--review-purple)" }} />Marked for review</span>
           <span><span className="exam-palette-legend-dot" style={{ background: "var(--rust)" }} />Failed (coding)</span>
         </div>
         <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 12, display: "flex", gap: 14, flexWrap: "wrap" }}>
           <span>Answered: <strong style={{ color: "var(--mint)" }}>{examCounts.answeredCount}</strong></span>
           <span>Unanswered: <strong>{examCounts.unansweredCount}</strong></span>
-          <span>Review: <strong style={{ color: "#8b5cf6" }}>{examCounts.reviewCount}</strong></span>
+          <span>Review: <strong style={{ color: "var(--review-purple)" }}>{examCounts.reviewCount}</strong></span>
         </div>
         <div className="exam-palette-grid">
           {questions.map((tq, idx) => {
@@ -1897,7 +1897,7 @@ export default function TestTaking() {
       {noiseWarning && (
         <div
           style={{
-            background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 600,
+            background: "var(--amber)", color: "var(--amber-ink)", padding: "10px 24px", fontSize: 13, fontWeight: 600,
             textAlign: "center",
           }}
           className="mono"
@@ -1908,7 +1908,7 @@ export default function TestTaking() {
 
       {testMeta?.requireWebcam && faceModelStatus === "unavailable" && (
         <div
-          style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }}
+          style={{ background: "var(--amber)", color: "var(--amber-ink)", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }}
           className="mono"
         >
           ⚠ Face detection could not start (likely a network/firewall issue) — your camera feed is still shown, but presence isn't being automatically checked this session.
@@ -1947,7 +1947,7 @@ export default function TestTaking() {
       )}
 
       {suspiciousNotice && (
-        <div style={{ background: "var(--amber)", color: "#3a2c00", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }} className="mono">
+        <div style={{ background: "var(--amber)", color: "var(--amber-ink)", padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center" }} className="mono">
           {suspiciousNotice}
         </div>
       )}
@@ -2019,7 +2019,7 @@ export default function TestTaking() {
                               fontSize: 12, padding: "8px 10px", borderRadius: 8, whiteSpace: "pre-wrap",
                               alignSelf: m.role === "student" ? "flex-end" : "flex-start",
                               background: m.role === "student" ? "var(--paper)" : "var(--amber)",
-                              color: m.role === "student" ? "inherit" : "#3a2c00",
+                              color: m.role === "student" ? "inherit" : "var(--amber-ink)",
                               border: m.role === "student" ? "1px solid var(--line)" : "none",
                               maxWidth: "90%",
                             }}
@@ -2102,7 +2102,7 @@ export default function TestTaking() {
                   </span>
                   <button
                     className="btn btn-ghost"
-                    style={{ fontSize: 12, padding: "5px 10px", color: markedForReview[current.id] ? "#8b5cf6" : undefined }}
+                    style={{ fontSize: 12, padding: "5px 10px", color: markedForReview[current.id] ? "var(--review-purple)" : undefined }}
                     onClick={toggleMarkForReview}
                   >
                     {markedForReview[current.id] ? "⚑ Marked" : "⚑ Mark for review"}
@@ -2146,7 +2146,7 @@ export default function TestTaking() {
                   <span className={`exam-save-pill ${savingAnswer ? "saving" : saveFailed ? "failed" : "saved"}`}>
                     {savingAnswer ? "Saving…" : saveFailed ? "⚠ Not saved" : "Autosaved ✓"}
                   </span>
-                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px", color: markedForReview[current.id] ? "#8b5cf6" : undefined }} onClick={toggleMarkForReview}>
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "5px 10px", color: markedForReview[current.id] ? "var(--review-purple)" : undefined }} onClick={toggleMarkForReview}>
                     {markedForReview[current.id] ? "⚑ Marked" : "⚑ Mark for review"}
                   </button>
                 </div>
@@ -2197,7 +2197,7 @@ export default function TestTaking() {
                   </span>
                   <button
                     className="btn btn-ghost"
-                    style={{ color: markedForReview[current.id] ? "#8b5cf6" : undefined }}
+                    style={{ color: markedForReview[current.id] ? "var(--review-purple)" : undefined }}
                     onClick={toggleMarkForReview}
                   >
                     {markedForReview[current.id] ? "⚑ Marked" : "⚑ Mark for review"}
@@ -2380,8 +2380,8 @@ function SubmitReviewModal({ counts, timeLabel, finalizing, onReviewUnanswered, 
             <div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{counts.unansweredCount}</div>
             <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>Unanswered</div>
           </div>
-          <div style={{ textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "#F1EBFB" }}>
-            <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: "#8b5cf6" }}>{counts.reviewCount}</div>
+          <div style={{ textAlign: "center", padding: "10px 4px", borderRadius: 8, background: "var(--review-bg)" }}>
+            <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: "var(--review-purple)" }}>{counts.reviewCount}</div>
             <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>For Review</div>
           </div>
         </div>

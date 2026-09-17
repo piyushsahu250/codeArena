@@ -48,6 +48,15 @@
   --danger-text: #9B3A26;
   --info-text: #2E5A8C;
 
+  /* "Marked for review" purple (exam palette) — was hardcoded per-instance across TestTaking.jsx
+     with no dark-mode counterpart; now a token so every instance stays consistent and theme-aware. */
+  --review-purple: #8b5cf6;
+  --review-bg: #F1EBFB;
+  /* Dark, readable text for chips/banners sitting directly on the solid --amber accent (not a
+     tinted surface, so --warning-text doesn't apply) — was repeated as a literal hex in
+     TestTaking.jsx with no shared name. */
+  --amber-ink: #3a2c00;
+
   /* Type */
   --font-display: 'Source Serif 4', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -89,6 +98,7 @@
   --warning-text: var(--amber-dark);
   --danger-text: var(--rust);
   --info-text: #3D6FA8;
+  --review-bg: #2A2140;
 }
 :root:not([data-theme="dark"]) { --card-bg: #fff; }
 
@@ -712,12 +722,11 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 .exam-palette-cell:hover { transform: translateY(-1px); }
 .exam-palette-cell.current { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink) inset; }
 .exam-palette-cell.answered { background: var(--success-bg); border-color: var(--mint); color: var(--mint); }
-.exam-palette-cell.review { background: #F1EBFB; border-color: #8b5cf6; color: #8b5cf6; }
+.exam-palette-cell.review { background: var(--review-bg); border-color: var(--review-purple); color: var(--review-purple); }
 .exam-palette-cell.wrong { background: var(--danger-bg); border-color: var(--rust); color: var(--rust); }
-:root[data-theme="dark"] .exam-palette-cell.review { background: #2A2140; }
 .exam-palette-cell-flag {
   position: absolute; top: -4px; right: -4px; width: 13px; height: 13px; border-radius: 50%;
-  background: #8b5cf6; color: #fff; font-size: 8px; display: flex; align-items: center; justify-content: center;
+  background: var(--review-purple); color: #fff; font-size: 8px; display: flex; align-items: center; justify-content: center;
 }
 
 /* Mobile: the palette collapses to a small "Question 8 of 30 ▾" trigger and opens as a bottom

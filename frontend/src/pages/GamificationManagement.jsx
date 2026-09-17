@@ -63,6 +63,9 @@ export default function GamificationManagement() {
               </tr>
             </thead>
             <tbody>
+              {rules?.length === 0 && (
+                <tr><td colSpan={isAdmin ? 3 : 2} style={{ padding: 20, textAlign: "center", color: "var(--ink-dim)" }} className="mono">No XP rules configured.</td></tr>
+              )}
               {(rules || []).map((r) => (
                 <XpRuleRow key={r.activity} rule={r} editable={isAdmin} onSaved={loadRules} />
               ))}
@@ -73,6 +76,9 @@ export default function GamificationManagement() {
         {/* Badges */}
         <h3 style={{ fontSize: 16, marginTop: 32, marginBottom: 12 }}>Badges</h3>
         {isAdmin && <NewBadgeForm onCreated={loadBadges} />}
+        {badges?.length === 0 && (
+          <p style={{ color: "var(--ink-dim)", fontSize: 13, marginTop: 12 }} className="mono">No badges created yet.</p>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10, marginTop: 12 }}>
           {(badges || []).map((b) => (
             <BadgeCard key={b.id} badge={b} editable={isAdmin} onChanged={loadBadges} />
