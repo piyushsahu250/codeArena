@@ -1028,6 +1028,7 @@ function Banner({ color, children }) {
 
 const VERDICT_LABEL = {
   ACCEPTED: "Accepted",
+  PARTIAL: "Partially Accepted",
   WRONG_ANSWER: "Wrong Answer",
   COMPILE_ERROR: "Compilation Error",
   RUNTIME_ERROR: "Runtime Error",

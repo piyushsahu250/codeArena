@@ -434,6 +434,13 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
         const match = raw.match(/Maximum resident set size \(kbytes\):\s*(\d+)/);
         if (match) memoryKb = Number(match[1]);
       } catch { /* stats file may not exist if the process never actually started */ }
+      // Same DROP_PRIVILEGES ownership gap as cleanupTmpDir() above -- /usr/bin/time itself runs
+      // as `sandbox` under the dropped-privilege spawn, so statsFile is sandbox-owned; confirmed
+      // LIVE (2026-09-17) that a killed/TLE run's stats file is left stranded directly in
+      // os.tmpdir() (not inside tmpDir, so cleanupTmpDir's own fix doesn't cover it) without this.
+      if (DROP_PRIVILEGES) {
+        try { fs.chownSync(statsFile, process.getuid(), process.getgid()); } catch { /* already gone, or never handed over */ }
+      }
       fs.rm(statsFile, () => {});
       return memoryKb;
     }
@@ -473,7 +480,20 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
 // with.
 function cleanupTmpDir(tmpDir) {
   if (DROP_PRIVILEGES) {
-    try { fs.chownSync(tmpDir, process.getuid(), process.getgid()); } catch { /* already gone, or never handed over */ }
+    // Chowning tmpDir alone is confirmed LIVE (2026-09-17, killed/TLE runs) to not always be
+    // enough: Node's recursive fs.rm can internally attempt to chmod a stubborn entry before
+    // unlinking it, and chmod-ing a FILE still requires being ITS OWNER (or root/CAP_FOWNER)
+    // under Linux — directory ownership doesn't grant that, so a source file `sandbox` still owns
+    // (e.g. sol.py, chmod 0440 — see prepare() below) can make the whole recursive removal
+    // silently fail, stranding tmpDir and its contents in /tmp indefinitely. Chowning each entry
+    // individually closes this; tmpDir is always flat (no subdirectories — see RUNNERS, nothing
+    // here ever mkdirs inside it), so a plain readdir is sufficient.
+    try {
+      fs.chownSync(tmpDir, process.getuid(), process.getgid());
+      for (const name of fs.readdirSync(tmpDir)) {
+        try { fs.chownSync(path.join(tmpDir, name), process.getuid(), process.getgid()); } catch { /* already gone */ }
+      }
+    } catch { /* already gone, or never handed over */ }
   }
   fs.rm(tmpDir, { recursive: true, force: true }, () => {});
 }

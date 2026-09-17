@@ -390,6 +390,58 @@ router.post("/validate-test-cases", authenticate, requireRole("ADMIN", "SUPER_AD
   }
 });
 
+// Semantic gate alongside questionValidation.js's structural one — that file's own comment names
+// the exact gap this closes: "Question has no stored reference-solution field to execute through
+// the judge" (true when it was written; Question.referenceSolution — a {[language]: code} map —
+// can be authored via CreateQuestion.jsx and was already being executed for AI-drafted questions
+// via aiQuestions.js's verifyCodingAnswer(), but a manually-authored question's own stored
+// solution was never run against its own test cases before VERIFIED, so a wrong expected output
+// or a broken reference solution could reach VERIFIED/PUBLISHED undetected). Reuses the exact
+// judgeSubmission()+runQueued() pipeline the manual "/validate-test-cases" endpoint above and a
+// real student submission both already go through — no second execution system. Skipped entirely
+// when no referenceSolution is stored (most existing questions predate this field; the rule is
+// "verify a solution IF one exists," not "require every question to have one" — matching
+// validateQuestionForVerification's own MIN_CASES-only structural scope for questions with none).
+async function validateReferenceSolutions(question, testCases) {
+  const reasons = [];
+  const solutions = question.referenceSolution;
+  if (!solutions || typeof solutions !== "object") return reasons;
+  const languages = Object.keys(solutions).filter((lang) => solutions[lang] && String(solutions[lang]).trim());
+
+  for (const language of languages) {
+    let result;
+    try {
+      result = await runQueued(() =>
+        judgeSubmission({
+          language, code: solutions[language], testCases,
+          timeLimitMs: question.timeLimitMs || 2000,
+          memoryLimitKb: question.memoryLimitKb || undefined,
+          evaluationType: question.evaluationType, functionSignature: question.functionSignature, sqlSchema: question.sqlSchema,
+          comparisonMode: question.comparisonMode, floatAbsoluteTolerance: question.floatAbsoluteTolerance, floatRelativeTolerance: question.floatRelativeTolerance,
+        })
+      );
+    } catch (err) {
+      // A busy judge queue is a system-availability problem, not proof the solution is broken —
+      // but per spec ("never silently publish a broken question"), an unverifiable solution still
+      // blocks VERIFIED rather than being treated as a pass by default.
+      reasons.push(
+        err.queueBusy
+          ? `Could not validate the ${language} reference solution — code execution is currently busy. Please try again shortly.`
+          : `Could not validate the ${language} reference solution: ${safeErrorMessage(err, "unknown error")}`
+      );
+      continue;
+    }
+    if (result.passedCases !== result.totalCases) {
+      const firstFailure = (result.details || []).find((d) => d.verdict !== "PASSED");
+      const evidence = firstFailure
+        ? ` (first failure: ${firstFailure.verdict} on input "${String(firstFailure.input ?? "").slice(0, 80)}" — expected "${String(firstFailure.expected ?? "").slice(0, 80)}", got "${String(firstFailure.actual ?? firstFailure.error ?? "").slice(0, 80)}")`
+        : "";
+      reasons.push(`The stored ${language} reference solution only passes ${result.passedCases}/${result.totalCases} of this question's own test cases${evidence}`);
+    }
+  }
+  return reasons;
+}
+
 // Institute-wide (or Staff-own-content) question bank health: counts by status/type/difficulty,
 // plus real attempt-based stats — attempts, avg score, pass rate, avg runtime — computed with
 // Prisma groupBy/aggregate directly against Submission rows, never by loading and summing rows in
@@ -1135,7 +1187,12 @@ router.post("/bulk-status", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
         casesByQuestion.get(tc.questionId).push(tc);
       }
       for (const q of gradable) {
-        const reasons = validateQuestionForVerification(q, casesByQuestion.get(q.id) || []);
+        const cases = casesByQuestion.get(q.id) || [];
+        const reasons = validateQuestionForVerification(q, cases);
+        // Only worth actually executing the reference solution once the structural gate already
+        // passed — running the judge against a question that's missing test cases/a signature
+        // would just fail for the same reason questionValidation.js already caught, cheaply.
+        if (reasons.length === 0) reasons.push(...(await validateReferenceSolutions(q, cases)));
         if (reasons.length > 0) blocked.push({ id: q.id, title: q.title || q.description.slice(0, 60), reasons });
       }
       const blockedIds = new Set(blocked.map((b) => b.id));
@@ -2809,7 +2866,10 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
 
     if (data.questionStatus === "VERIFIED" && (type === "CODING" || type === "SQL")) {
       const effectiveCases = testCases || await prisma.testCase.findMany({ where: { questionId: existing.id } });
-      const reasons = validateQuestionForVerification({ ...existing, ...data }, effectiveCases);
+      const merged = { ...existing, ...data };
+      const reasons = validateQuestionForVerification(merged, effectiveCases);
+      // Same "only execute once structural checks pass" ordering as the bulk-status route above.
+      if (reasons.length === 0) reasons.push(...(await validateReferenceSolutions(merged, effectiveCases)));
       if (reasons.length > 0) {
         return res.status(400).json({ error: "Cannot mark as VERIFIED — this question isn't ready yet", reasons });
       }
