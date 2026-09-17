@@ -699,6 +699,12 @@ router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), exec
     if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
 
     const { questionId, code, language } = req.body;
+    // Same "must already have a server-created placeholder InterviewAnswer row" assignment check
+    // as POST /sessions/:id/answer above — without it a student could run any CODING question on
+    // the platform through someone else's active session as a free judge-oracle self-check, even
+    // though this route only ever reaches visible/sample cases (never scores or saves an answer).
+    const assignedAnswer = await prisma.interviewAnswer.findUnique({ where: { sessionId_questionId: { sessionId: session.id, questionId } } });
+    if (!assignedAnswer) return res.status(404).json({ error: "Question not found" });
     const question = await prisma.interviewQuestion.findUnique({ where: { id: questionId } });
     if (!question || question.category !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
@@ -772,6 +778,21 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), execLi
     if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
 
     const { questionId, answerText, code, language, skipped, timeTakenSec } = req.body;
+    // Every question this session ever legitimately intends to show a student already has a
+    // placeholder InterviewAnswer row (skipped:true) created server-side BEFORE this route is
+    // ever called for it -- at session creation (questions.map(...) above), on round-advance,
+    // and when a follow-up question is inserted (see maybeInsertFollowUp below). Requiring that
+    // row to already exist is therefore both necessary AND sufficient proof questionId was
+    // actually assigned, without needing to special-case every session shape (round-elimination
+    // Company Rounds use roundResults[].questionIds; plain category/Mock/Resume-based sessions
+    // don't). Missing until this fix: a student could pass ANY InterviewQuestion.id on the
+    // platform and this route would grade it — for CODING that reaches the judge with that
+    // question's own HIDDEN test cases, and finalizeSession() sums every InterviewAnswer row for
+    // the session with no re-check against what was actually assigned, so the padded answer's
+    // score fed straight into the final report. Same "don't confirm existence" 404 (not 403)
+    // convention as loadOwnSession/loadOwnMarksheetEntry elsewhere in this codebase.
+    const assignedAnswer = await prisma.interviewAnswer.findUnique({ where: { sessionId_questionId: { sessionId: session.id, questionId } } });
+    if (!assignedAnswer) return res.status(404).json({ error: "Question not found" });
     const question = await prisma.interviewQuestion.findUnique({ where: { id: questionId } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 

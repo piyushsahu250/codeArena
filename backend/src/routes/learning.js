@@ -671,12 +671,36 @@ router.delete("/notes/:id", authenticate, requireRole("STUDENT"), async (req, re
   }
 });
 
+// STUDENT-side course-eligibility gate for a practice question, mirroring the same
+// courseEligibilityWhere/studentCanAccessCourse check GET /courses and /courses/:slug already
+// apply at the course level (see that route's own comment: "closes the gap where students were
+// the one place they were never actually applied"). PracticeQuestion has no instituteId of its
+// own (see lmsOwnership.js's resolvePracticeQuestionCourseInstituteId) — without this, a student
+// who knew or guessed a practiceQuestion id could run/submit/check/hint against a question whose
+// owning course was never published, or never assigned to their institute/academic group at all,
+// bypassing the course-assignment gate entirely. Returns the loaded question row on success (so
+// callers don't re-fetch it) or null if not found/ineligible — every caller responds 404 either
+// way, the same non-disclosure convention the course-slug route above already uses.
+async function loadEligiblePracticeQuestion(req, questionId) {
+  const q = await prisma.practiceQuestion.findUnique({
+    where: { id: questionId },
+    include: { lesson: { select: { module: { select: { course: { select: { id: true, status: true } } } } } } },
+  });
+  if (!q) return null;
+  const course = q.lesson.module.course;
+  if (course.status !== "PUBLISHED") return null;
+  const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
+  if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return null;
+  const eligible = await studentCanAccessCourse(prisma, course.id, student.instituteId, student.academicGroupId);
+  return eligible ? q : null;
+}
+
 // STUDENT: check an MCQ/FILL_BLANK/DEBUG/OUTPUT_PREDICTION practice answer. Unlike exam
 // submissions, learning-mode feedback is immediate and reveals the correct answer + explanation
 // right away — that's the point of practice, not a leak.
 router.post("/practice/:id/check", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
+    const q = await loadEligiblePracticeQuestion(req, req.params.id);
     if (!q) return res.status(404).json({ error: "Question not found" });
     if (q.type === "CODING") return res.status(400).json({ error: "Use /run for coding questions" });
 
@@ -740,8 +764,9 @@ function splitPracticeCases(testCases) {
 // is hidden from the student anyway.
 router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), runLimiter, async (req, res) => {
   try {
-    const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
-    if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
+    const q = await loadEligiblePracticeQuestion(req, req.params.id);
+    if (!q) return res.status(404).json({ error: "Question not found" });
+    if (q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const { language, code } = req.body;
     const { visible } = splitPracticeCases(q.testCases);
@@ -759,8 +784,9 @@ router.post("/practice/:id/run", authenticate, requireRole("STUDENT"), attachReq
 // to PracticeRunLog (the streak/badge signal) and that awards tiered XP on first solve.
 router.post("/practice/:id/submit", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), runLimiter, async (req, res) => {
   try {
-    const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
-    if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
+    const q = await loadEligiblePracticeQuestion(req, req.params.id);
+    if (!q) return res.status(404).json({ error: "Question not found" });
+    if (q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const { language, code } = req.body;
     const { visible, hidden } = splitPracticeCases(q.testCases);
@@ -812,8 +838,9 @@ router.post("/practice/:id/hint", authenticate, requireRole("STUDENT"), hintLimi
       return res.status(403).json({ error: "AI hints aren't enabled for your institute" });
     }
 
-    const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
-    if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
+    const q = await loadEligiblePracticeQuestion(req, req.params.id);
+    if (!q) return res.status(404).json({ error: "Question not found" });
+    if (q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const lastAttempt = await prisma.practiceRunLog.findFirst({
       where: { studentId: req.user.id, questionId: q.id },
@@ -849,8 +876,9 @@ router.post("/practice/:id/assist", authenticate, requireRole("STUDENT"), hintLi
     const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, institute: { select: { aiHintsEnabled: true } } } });
     if (!student?.institute?.aiHintsEnabled) return res.status(403).json({ error: "AI hints aren't enabled for your institute" });
 
-    const q = await prisma.practiceQuestion.findUnique({ where: { id: req.params.id } });
-    if (!q || q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
+    const q = await loadEligiblePracticeQuestion(req, req.params.id);
+    if (!q) return res.status(404).json({ error: "Question not found" });
+    if (q.type !== "CODING") return res.status(400).json({ error: "Not a coding question" });
 
     const { category, code, language } = req.body;
     const cat = STUCK_CATEGORIES[category] || STUCK_CATEGORIES.HINT;
