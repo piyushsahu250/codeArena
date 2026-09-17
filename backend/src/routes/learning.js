@@ -678,13 +678,23 @@ router.delete("/notes/:id", authenticate, requireRole("STUDENT"), async (req, re
 // own (see lmsOwnership.js's resolvePracticeQuestionCourseInstituteId) — without this, a student
 // who knew or guessed a practiceQuestion id could run/submit/check/hint against a question whose
 // owning course was never published, or never assigned to their institute/academic group at all,
-// bypassing the course-assignment gate entirely. Returns the loaded question row on success (so
-// callers don't re-fetch it) or null if not found/ineligible — every caller responds 404 either
-// way, the same non-disclosure convention the course-slug route above already uses.
+// bypassing the course-assignment gate entirely.
+//
+// ALSO enforces the same module-lock check every other lesson-content route already applies
+// (GET /lessons/:id, POST /lessons/:id/progress, etc. — see learningLock.js) — found missing here
+// during a full-platform audit: a student who knew/guessed a practiceQuestion id belonging to a
+// LOCKED module could still check answers, run/submit code, and request AI hints against it, and
+// POST /practice/:id/submit awards real CODING_EASY/MEDIUM/HARD XP on an accepted submission —
+// a genuine lock bypass + XP exploit, not just a content leak. Checked live (not just structurally
+// via the course gate above), same as every other lock-enforcing route in this file.
+//
+// Returns the loaded question row on success (so callers don't re-fetch it) or null if not
+// found/ineligible/locked — every caller responds 404 either way, the same non-disclosure
+// convention the course-slug route above already uses.
 async function loadEligiblePracticeQuestion(req, questionId) {
   const q = await prisma.practiceQuestion.findUnique({
     where: { id: questionId },
-    include: { lesson: { select: { module: { select: { course: { select: { id: true, status: true } } } } } } },
+    include: { lesson: { select: { moduleId: true, module: { select: { courseId: true, course: { select: { id: true, status: true } } } } } } },
   });
   if (!q) return null;
   const course = q.lesson.module.course;
@@ -692,7 +702,10 @@ async function loadEligiblePracticeQuestion(req, questionId) {
   const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { instituteId: true, academicGroupId: true } });
   if (isEligibilityUnresolvable(student?.instituteId, student?.academicGroupId)) return null;
   const eligible = await studentCanAccessCourse(prisma, course.id, student.instituteId, student.academicGroupId);
-  return eligible ? q : null;
+  if (!eligible) return null;
+  const lockMap = await getModuleLockMap(prisma, req.user.id, q.lesson.module.courseId);
+  if (lockMap.get(q.lesson.moduleId)?.locked) return null;
+  return q;
 }
 
 // STUDENT: check an MCQ/FILL_BLANK/DEBUG/OUTPUT_PREDICTION practice answer. Unlike exam
@@ -929,12 +942,25 @@ router.get("/practice/:id/draft", authenticate, requireRole("STUDENT"), async (r
 
 // =========================== Certificates ===========================
 
+// Found during a full-platform audit: this previously counted lesson completion ONLY, never the
+// per-module required Coding Assessment that getModuleLockMap treats as mandatory for
+// progression (learningLock.js) — so a course whose final module has a required Coding Assessment
+// could be certified "complete" for a student who finished every lesson but never passed that
+// assessment. Reuses getModuleLockMap itself rather than re-deriving the coding-assessment check
+// independently (the exact "never independently re-derive completion with different logic"
+// principle this file's own admin/staff progress-view comment already establishes, extended here
+// to certificate issuance) — a module's own `completed` flag is only ever true once its
+// predecessor was also satisfied (see that file's sequential prevSatisfied propagation), so
+// checking every module's `completed` flag is equivalent to, and no more expensive than, checking
+// just the last one.
 async function checkCourseCompletion(studentId, course) {
   const totalLessons = await prisma.lesson.count({ where: { module: { courseId: course.id } } });
   const completedLessons = await prisma.lessonProgress.count({
     where: { studentId, status: "COMPLETED", lesson: { module: { courseId: course.id } } },
   });
-  return { totalLessons, completedLessons, complete: totalLessons > 0 && completedLessons >= totalLessons };
+  const lockMap = await getModuleLockMap(prisma, studentId, course.id);
+  const allModulesSatisfied = lockMap.size > 0 && [...lockMap.values()].every((m) => m.completed);
+  return { totalLessons, completedLessons, complete: totalLessons > 0 && completedLessons >= totalLessons && allModulesSatisfied };
 }
 
 // Auto-issues (idempotently, via the studentId+courseId unique constraint) the LEARNING_MODULE
