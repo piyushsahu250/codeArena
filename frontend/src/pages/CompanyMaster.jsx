@@ -100,7 +100,7 @@ export default function CompanyMaster() {
           <div className="card" style={{ padding: 24, marginTop: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 16 }}>{editingId ? "Edit Company" : "New Company"}</h3>
-              <button className="btn btn-ghost" style={{ padding: 6 }} onClick={() => setShowForm(false)}><X size={16} /></button>
+              <button className="btn btn-ghost" style={{ padding: 6 }} onClick={() => setShowForm(false)} aria-label="Close form"><X size={16} /></button>
             </div>
             <form onSubmit={save}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>

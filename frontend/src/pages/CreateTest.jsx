@@ -148,7 +148,10 @@ export default function CreateTest() {
   useEffect(() => () => setGuard?.(false), [setGuard]);
 
   useEffect(() => {
-    api.get("/questions", { params: { ...(search ? { q: search } : {}), pageSize: 100 } }).then((res) => setQuestions(res.data.rows));
+    const t = setTimeout(() => {
+      api.get("/questions", { params: { ...(search ? { q: search } : {}), pageSize: 100 } }).then((res) => setQuestions(res.data.rows));
+    }, 300); // debounce so typing in the search box doesn't fire a request per keystroke
+    return () => clearTimeout(t);
   }, [search]);
 
   useEffect(() => {
@@ -844,18 +847,21 @@ function QuestionBankPickerModal({ selected, onToggle, onQuestionsSeen, onClose,
   useEffect(() => {
     if (!activeFolder) return;
     setLoadingItems(true);
-    const params = { q: q || undefined, pageSize: 200 };
-    if (activeFolder.id === "__none__") params.folderId = "__none__";
-    else if (activeFolder.id !== "__all__") params.folderId = activeFolder.id;
-    if (filterToSubject && subjectId && unitId) {
-      params.subjectId = subjectId;
-      params.unitId = unitId;
-    }
-    api.get("/questions", { params }).then((res) => {
-      setItems(res.data.rows);
-      onQuestionsSeen(res.data.rows);
-      setLoadingItems(false);
-    });
+    const t = setTimeout(() => {
+      const params = { q: q || undefined, pageSize: 200 };
+      if (activeFolder.id === "__none__") params.folderId = "__none__";
+      else if (activeFolder.id !== "__all__") params.folderId = activeFolder.id;
+      if (filterToSubject && subjectId && unitId) {
+        params.subjectId = subjectId;
+        params.unitId = unitId;
+      }
+      api.get("/questions", { params }).then((res) => {
+        setItems(res.data.rows);
+        onQuestionsSeen(res.data.rows);
+        setLoadingItems(false);
+      });
+    }, 300); // debounce so typing in the search box doesn't fire a request per keystroke
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFolder, q, filterToSubject]);
 

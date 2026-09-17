@@ -272,7 +272,7 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
       create: { attemptId, questionId, studentId: req.user.id, language: savedLanguage || "", code: code || "", verdict: "PENDING" },
     });
 
-    const result = await gradeCodingSubmission(sub, question);
+    const { judgeResult: result, submission: freshSub } = await gradeCodingSubmission(sub, question);
 
     // If this resubmission scored worse than the previously locked-in best, restore that best in
     // full (code, language, and every grading field together — never mix a stored verdict with
@@ -280,7 +280,6 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
     // so the student sees an honest verdict for what they just ran; only the persisted/scored
     // record is protected from regressing.
     if (hadLockedBest) {
-      const freshSub = await prisma.submission.findUnique({ where: { id: sub.id } });
       if (freshSub && priorBest.score > freshSub.score) {
         await prisma.submission.update({
           where: { id: sub.id },

@@ -200,13 +200,21 @@ function Protected({ roles, children, noChrome = false }) {
   }
   return (
     <>
+      {/* Keyboard users otherwise must Tab through the entire sidebar (up to 25+ links for
+          ADMIN) on every single page before reaching content — this is the very first
+          focusable element on any authenticated page, hidden until Tab reaches it (see
+          .ca-skip-link, theme.css). Rendered even when noChrome hides the sidebar itself, since
+          #main-content below still exists either way and skipping "nothing" is harmless. */}
+      <a href="#main-content" className="ca-skip-link">Skip to main content</a>
       {!noChrome && <Sidebar role={user.role} profileGateActive={profileGateActive(user)} />}
       {!noChrome && <ReportProblemWidget />}
       {/* Keyed by path so this remounts (and re-triggers the fade-in) on every navigation,
-          instead of silently reusing the same DOM node with stale animation state. */}
-      <div key={location.pathname} className="ca-page-enter">
+          instead of silently reusing the same DOM node with stale animation state. A real <main>
+          landmark (was a plain <div>) so screen-reader users have a way to jump straight to page
+          content and the skip link above has something to land on. */}
+      <main id="main-content" key={location.pathname} className="ca-page-enter">
         {children}
-      </div>
+      </main>
     </>
   );
 }

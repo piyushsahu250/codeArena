@@ -995,10 +995,20 @@ router.put("/admin/examinations/:id/remark-bands", authenticate, requireRole("AD
     // must not require the exam maker to re-save every single entry by hand for the new bands to
     // actually apply to results already entered.
     const entries = await prisma.resultEntry.findMany({ where: { examinationId: req.params.id, status: "PRESENT" }, select: { id: true, obtainedMarks: true, percentage: true } });
-    await Promise.all(entries.map(async (e) => {
-      const resultTag = await computeResultTag(req.params.id, e.obtainedMarks, e.percentage);
-      return prisma.resultEntry.update({ where: { id: e.id }, data: { resultTag } });
-    }));
+    // Same "resolve every async lookup first, then pipeline the writes through one
+    // $transaction" pattern as PATCH /admin/examinations/:id above (thresholdsChanged) --
+    // this route previously fired one UPDATE per entry via a bare Promise.all, which is a real
+    // N+1 write pattern that scales with exam size (full-platform performance audit,
+    // 2026-09-17). computeResultTag's own reads are already cached per-key, so only the writes
+    // needed batching.
+    const recomputedTags = await Promise.all(entries.map(async (e) => ({
+      id: e.id, resultTag: await computeResultTag(req.params.id, e.obtainedMarks, e.percentage),
+    })));
+    if (recomputedTags.length > 0) {
+      await prisma.$transaction(
+        recomputedTags.map((r) => prisma.resultEntry.update({ where: { id: r.id }, data: { resultTag: r.resultTag } }))
+      );
+    }
 
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_REMARK_BANDS_UPDATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,

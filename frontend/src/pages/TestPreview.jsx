@@ -53,7 +53,10 @@ export default function TestPreview() {
               </div>
               <p style={{ whiteSpace: "pre-wrap", fontSize: 14, marginTop: 10, lineHeight: 1.6 }}><MathText text={tq.question.description} /></p>
               {tq.question.imageUrl && (
-                <img src={tq.question.imageUrl} alt="" style={{ maxWidth: "100%", maxHeight: 320, borderRadius: 8, border: "1px solid var(--line)", marginTop: 10, display: "block" }} />
+                // Not decorative -- see ProblemStatement.jsx's identical fix for the same
+                // full-platform accessibility audit finding (2026-09-17): alt="" told screen
+                // readers to skip question content that may be essential to answering.
+                <img src={tq.question.imageUrl} alt="Diagram accompanying this question" style={{ maxWidth: "100%", maxHeight: 320, borderRadius: 8, border: "1px solid var(--line)", marginTop: 10, display: "block" }} />
               )}
 
               {tq.question.questionType === "NUMERICAL" ? (

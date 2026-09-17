@@ -74,7 +74,11 @@ export default function EmailLogs() {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter, q, from, to, batchId]);
-  useEffect(load, [statusFilter, typeFilter, q, from, to, batchId, page]);
+  useEffect(() => {
+    const t = setTimeout(load, 300); // debounce so typing in the search box doesn't fire a request per keystroke
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, typeFilter, q, from, to, batchId, page]);
 
   function clearBatchFilter() {
     setBatchId("");

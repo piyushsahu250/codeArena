@@ -61,7 +61,11 @@ export default function ResultManagement() {
       .then((res) => setExams(res.data))
       .catch((err) => setError(err.response?.data?.error || "Failed to load examinations"));
   }
-  useEffect(loadExams, [statusFilter, searchFilter]);
+  useEffect(() => {
+    const t = setTimeout(loadExams, 300); // debounce so typing in the search box doesn't fire a request per keystroke
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, searchFilter]);
   useEffect(() => {
     if (isAdmin) api.get("/attendance/admin/departments").then((res) => setDepartments(res.data)).catch(() => setDepartments([]));
   }, [isAdmin]);

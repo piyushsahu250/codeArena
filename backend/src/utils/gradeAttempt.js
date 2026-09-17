@@ -30,14 +30,19 @@ async function gradeCodingSubmission(sub, question) {
       : result.verdict === "ACCEPTED"
       ? question.points
       : Math.round((result.passedCases / result.totalCases) * question.points);
-  await prisma.submission.update({
+  // Returns the update's own result alongside the judge result -- a caller that needs the
+  // post-write row (e.g. its new `score`) used to immediately re-fetch the exact row this just
+  // wrote, a redundant round trip on every graded coding submission (full-platform performance
+  // audit, 2026-09-17). gradePendingCodingSubmissions() below only needed judgeResult before and
+  // still only destructures that, so this is additive, not a breaking change to that call site.
+  const submission = await prisma.submission.update({
     where: { id: sub.id },
     data: {
       score, passedCases: result.passedCases, totalCases: result.totalCases, verdict: result.verdict,
       timeMs: result.maxTimeMs ?? null, memoryKb: result.maxMemoryKb ?? null,
     },
   });
-  return result;
+  return { judgeResult: result, submission };
 }
 
 // An attempt's totalScore is the sum of each question's BEST scoring submission — a student can

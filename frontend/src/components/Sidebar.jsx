@@ -276,7 +276,11 @@ export default function Sidebar({ role, profileGateActive = false }) {
             Powered by Acrosoft Webtech Solution Pvt. Ltd.
           </div>
         )}
-        <button className="ca-sidebar-collapse-btn" onClick={() => setCollapsed((c) => !c)}>
+        <button
+          className="ca-sidebar-collapse-btn"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
           {collapsed ? <ChevronRight size={16} /> : <><ChevronLeft size={16} /><span style={{ fontSize: 12 }}>Collapse</span></>}
         </button>
       </aside>

@@ -63,7 +63,13 @@ export default function ProblemStatement({ question }) {
       <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14, marginTop: 16 }}><MathText text={description} /></p>
 
       {q.imageUrl && (
-        <img src={q.imageUrl} alt="" style={{ maxWidth: "100%", maxHeight: 360, borderRadius: 8, border: "1px solid var(--line)", marginTop: 12, display: "block" }} />
+        // Not decorative -- this is question content (a diagram/figure/graph an author attached,
+        // per CreateQuestion.jsx's own field label) that may be essential to answering, so alt=""
+        // (which tells a screen reader to skip it entirely) was actively wrong here, not just
+        // unhelpful. No per-image caption is stored to describe the actual content, but naming
+        // that a diagram exists at all is far better than silence for a screen-reader user taking
+        // this question (full-platform accessibility audit, 2026-09-17).
+        <img src={q.imageUrl} alt="Diagram accompanying this question" style={{ maxWidth: "100%", maxHeight: 360, borderRadius: 8, border: "1px solid var(--line)", marginTop: 12, display: "block" }} />
       )}
 
       {q.realWorldScenario && (
