@@ -169,6 +169,10 @@
   background: var(--danger-bg);
   color: var(--rust);
 }
+.ai-int-banner.warning {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
 
 .ai-int-main {
   flex: 1;

@@ -6,6 +6,8 @@ import Button from "../components/Button";
 import { useMicCapture } from "../hooks/useMicCapture";
 import { playPcm16, stopPlayback, closePcmPlayer } from "../utils/pcmPlayer";
 import { aiInterviewVoiceWsUrl } from "../utils/wsUrl";
+import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
+import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import "./aiInterview.css";
 
 // The live voice-interview screen — the actual real-time loop:
@@ -40,6 +42,16 @@ export default function AiInterviewSession() {
   const [mode, setMode] = useState("voice"); // voice | text
   const [textAnswer, setTextAnswer] = useState("");
   const [textSubmitting, setTextSubmitting] = useState(false);
+  // Lightweight integrity signal (product decision: fullscreen + tab-switch only, no camera, never
+  // auto-terminates the interview) — deliberately NOT the shared useProctoring.js hook, which also
+  // blocks copy/paste/right-click/F12/drag-drop as a locked-down EXAM surface; this interview is a
+  // practice tool, not a formal proctored assessment, so only the two signals actually approved are
+  // wired in, via the same underlying fullscreenCompat.js/tabSwitchSignal.js utilities that hook
+  // itself uses (shared primitives, not shared exam-lockdown behavior).
+  const [fullscreenOk, setFullscreenOk] = useState(true);
+  const [integrityNotice, setIntegrityNotice] = useState(null); // { text, sustained } | null
+  const fullscreenActivatedAtRef = useRef(null);
+  const integrityNoticeTimeoutRef = useRef(null);
 
   const wsRef = useRef(null);
   const audioQueueRef = useRef([]);
@@ -201,6 +213,7 @@ export default function AiInterviewSession() {
             stopListening();
             mic.release();
             ws.close();
+            if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
             setPhase(PHASES.COMPLETED);
             setTimeout(() => navigate(`/ai-interview/report/${id}`), 1200);
             break;
@@ -227,6 +240,14 @@ export default function AiInterviewSession() {
   }, [id, enqueueSpeech, startListening, stopListening, mic, navigate]);
 
   async function beginInterview() {
+    // Must be the very first thing this does, synchronously, still inside the click handler that
+    // invoked it — browsers only honor requestFullscreen() when the call stack traces back to a
+    // real user gesture, and by the time mic.requestPermission()'s await resolves that context is
+    // long gone. Fire-and-forget: fullscreenOk/onFullscreenChange below is what actually reflects
+    // whether it succeeded, and this is intentionally never a blocking requirement (iOS Safari has
+    // no Fullscreen API for arbitrary elements at all — see fullscreenCompat.js — so treating this
+    // as mandatory would lock those candidates out of starting an interview entirely).
+    if (supportsFullscreen()) requestFullscreenCompat().catch(() => {});
     const granted = await mic.requestPermission();
     if (granted) connect();
   }
@@ -236,6 +257,7 @@ export default function AiInterviewSession() {
   // the voice transport FIRST so the backend's one open turn is never raced by both a WS-driven
   // voice answer and a REST-driven typed answer for the same question.
   async function switchToText() {
+    if (supportsFullscreen() && !getFullscreenElement()) requestFullscreenCompat().catch(() => {});
     stopListening();
     mic.release();
     wsRef.current?.close();
@@ -267,6 +289,7 @@ export default function AiInterviewSession() {
       setTextAnswer("");
       setLastEvaluation(data.evaluation || null);
       if (data.status === "COMPLETED" || !data.nextQuestion) {
+        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
         setPhase(PHASES.COMPLETED);
         setTimeout(() => navigate(`/ai-interview/report/${id}`), 1200);
       } else {
@@ -301,6 +324,7 @@ export default function AiInterviewSession() {
     stopListening();
     mic.release();
     wsRef.current?.close();
+    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
     navigate(`/ai-interview/report/${id}`);
   }
 
@@ -315,6 +339,47 @@ export default function AiInterviewSession() {
     wsRef.current?.close();
     performExpiredRedirect();
   }
+
+  // --- lightweight integrity signal: fullscreen + tab-switch, informational only, never
+  // auto-terminates (see the state declarations above for why this doesn't use useProctoring.js).
+  // Active for the whole ACTIVE phase regardless of voice/text mode -- an interview in progress is
+  // an interview in progress either way.
+  useEffect(() => {
+    if (phase !== PHASES.ACTIVE) return;
+    fullscreenActivatedAtRef.current = Date.now();
+
+    function showNotice(text, sustained) {
+      setIntegrityNotice({ text, sustained });
+      clearTimeout(integrityNoticeTimeoutRef.current);
+      if (!sustained) integrityNoticeTimeoutRef.current = setTimeout(() => setIntegrityNotice(null), 6000);
+    }
+
+    const stopFullscreenWatch = onFullscreenChange(() => {
+      const isFs = !!getFullscreenElement();
+      setFullscreenOk(isFs);
+      if (!isFs) {
+        // The fullscreen request from beginInterview()/switchToText() settling is itself a
+        // fullscreenchange event -- never flag that as an "exit" (see the same grace-window
+        // reasoning useProctoring.js documents for its own ACTIVATION_GRACE_MS).
+        if (Date.now() - (fullscreenActivatedAtRef.current || 0) < 2000) return;
+        showNotice("You've left fullscreen. For the best interview experience, please return to fullscreen.", true);
+      } else {
+        setIntegrityNotice((prev) => (prev?.sustained ? null : prev));
+      }
+    });
+
+    const tabSignal = createTabSwitchSignal({
+      onBrief: () => showNotice("Switched away briefly.", false),
+      onSwitch: () => showNotice("You switched to another tab or app. Your progress is safe -- come back whenever you're ready to continue.", true),
+      onVisible: () => setIntegrityNotice((prev) => (prev?.sustained ? null : prev)),
+    });
+
+    return () => {
+      stopFullscreenWatch();
+      tabSignal.destroy();
+      clearTimeout(integrityNoticeTimeoutRef.current);
+    };
+  }, [phase]);
 
   // --- server-authoritative countdown display (source of truth is session.expiresAt; the
   // backend's own scheduleExpiry force-completes the interview regardless of what this shows) ---
@@ -334,6 +399,7 @@ export default function AiInterviewSession() {
       mic.release();
       wsRef.current?.close();
       closePcmPlayer();
+      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -411,6 +477,15 @@ export default function AiInterviewSession() {
         <div className="ai-int-banner error">
           <span>{fatalError}</span>
           {mode === "voice" && <Button variant="ghost" onClick={reconnect}><RefreshCw size={14} /> Reconnect</Button>}
+        </div>
+      )}
+
+      {integrityNotice && (
+        <div className="ai-int-banner warning">
+          <span>{integrityNotice.text}</span>
+          {integrityNotice.sustained && !fullscreenOk && supportsFullscreen() && (
+            <Button variant="ghost" onClick={() => requestFullscreenCompat().catch(() => {})}>Return to fullscreen</Button>
+          )}
         </div>
       )}
 
