@@ -8,6 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useFeatures } from "../context/FeatureContext";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
+import { EXPERIENCE_LEVEL_LABEL } from "../constants/interviewCategories";
 import "./interviewPrep.css";
 
 const CARDS = [
@@ -53,7 +54,7 @@ export default function InterviewHub() {
   const [config, setConfig] = useState({
     subject: "Java", topic: "Arrays", difficulty: "EASY", language: "java",
     aptitudeCategory: "QUANTITATIVE", negativeMarking: false,
-    durationMin: 30, jobRole: "", experienceLevel: "Fresher",
+    durationMin: 30, jobRole: "", experienceLevel: "FRESHER",
     company: "", companyCategory: "HR",
   });
 
@@ -267,8 +268,8 @@ export default function InterviewHub() {
                     {JOB_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                   <select className="ip-select" value={config.experienceLevel} onChange={(e) => setConfig({ ...config, experienceLevel: e.target.value })}>
-                    <option value="Fresher">Fresher</option>
-                    <option value="Experienced">Experienced</option>
+                    <option value="FRESHER">{EXPERIENCE_LEVEL_LABEL.FRESHER}</option>
+                    <option value="EXPERIENCED">{EXPERIENCE_LEVEL_LABEL.EXPERIENCED}</option>
                   </select>
                   <select className="ip-select" value={config.durationMin} onChange={(e) => setConfig({ ...config, durationMin: Number(e.target.value) })}>
                     {DURATIONS.map((d) => <option key={d} value={d}>{d} minutes</option>)}
