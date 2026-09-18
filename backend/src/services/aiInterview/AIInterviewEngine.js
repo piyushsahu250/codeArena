@@ -113,10 +113,20 @@ async function generateNextQuestion({ session, recentTurns, objective, stage, re
 
 const EVALUATION_SCORE_KEYS = ["correctness", "technicalDepth", "clarity", "reasoning", "confidence", "relevance"];
 
+// The AI's OWN certainty in this evaluation — distinct from `confidence` above, which scores how
+// confident the CANDIDATE sounded. An ambiguous, off-topic, or unusually short answer should
+// lower this even when the other scores still come out numerically clean, so a low-evaluatorConfidence
+// turn can be flagged (see scoring.js's lowConfidenceTurnCount/reviewRequired) instead of treated
+// with the same authority as a clear-cut one.
+const EVALUATOR_CONFIDENCE_KEY = "evaluatorConfidence";
+
 function validateEvaluationShape(v) {
   if (!v || typeof v !== "object") return "response is not an object";
   for (const key of EVALUATION_SCORE_KEYS) {
     if (typeof v[key] !== "number" || v[key] < 0 || v[key] > 100) return `"${key}" must be a number 0-100`;
+  }
+  if (typeof v[EVALUATOR_CONFIDENCE_KEY] !== "number" || v[EVALUATOR_CONFIDENCE_KEY] < 0 || v[EVALUATOR_CONFIDENCE_KEY] > 100) {
+    return `"${EVALUATOR_CONFIDENCE_KEY}" must be a number 0-100`;
   }
   if (!Array.isArray(v.strengths) || !Array.isArray(v.weaknesses) || !Array.isArray(v.missingConcepts) || !Array.isArray(v.evidence)) {
     return "strengths/weaknesses/missingConcepts/evidence must all be arrays";
@@ -134,7 +144,7 @@ async function evaluateAnswer({ session, turn, answerText, userId, instituteId }
     // call, but there is genuinely nothing to evaluate. A tiny deterministic shape, no LLM call
     // needed (saves cost on the one case with no real content to reason about).
     return {
-      correctness: 0, technicalDepth: 0, clarity: 0, reasoning: 0, confidence: 0, relevance: 0,
+      correctness: 0, technicalDepth: 0, clarity: 0, reasoning: 0, confidence: 0, relevance: 0, evaluatorConfidence: 100,
       strengths: [], weaknesses: ["Did not attempt an answer"], missingConcepts: [], evidence: ["Candidate skipped or said they did not know."],
       followUpRecommended: false, recommendedNextObjective: null, difficultyAdjustment: -1,
     };
@@ -145,13 +155,14 @@ async function evaluateAnswer({ session, turn, answerText, userId, instituteId }
     `Question asked: ${turn.questionText}`,
     aiService.wrapUntrusted("Candidate's answer", answerText),
     "Evaluate ONLY this answer to this question. Score 0-100 on each: correctness, technicalDepth, clarity, reasoning, confidence, relevance.",
+    "evaluatorConfidence: separately, score 0-100 how confident YOU are in the scores you just gave — not how confident the candidate sounded. Lower this for an ambiguous, off-topic, garbled/mis-transcribed-sounding, or unusually short answer where a human reviewer might reasonably score it differently than you did; keep it high only when the answer is clear enough that your evaluation isn't a close call.",
     "List concrete strengths, weaknesses, and missingConcepts (specific technical concepts the answer should have covered but didn't) as short phrases.",
     "evidence: 1-3 short quotes or paraphrases from the answer that justify the scores above (this makes the report auditable).",
     "followUpRecommended: true if this answer is incomplete/ambiguous enough that probing further would be valuable.",
     "recommendedNextObjective: which skill/topic the NEXT question should target given this answer (can repeat the current objective if it needs more probing, or name a different one from context if this one seems well-covered).",
     "difficultyAdjustment: -1 if this answer suggests the candidate is struggling at the current difficulty, +1 if they're clearly ready for harder, 0 otherwise.",
     "Do not penalize accent, phrasing style, or non-native English — evaluate technical content and reasoning only.",
-    'Return ONLY this JSON: {"correctness":0-100,"technicalDepth":0-100,"clarity":0-100,"reasoning":0-100,"confidence":0-100,"relevance":0-100,"strengths":string[],"weaknesses":string[],"missingConcepts":string[],"evidence":string[],"followUpRecommended":boolean,"recommendedNextObjective":string|null,"difficultyAdjustment":-1|0|1}',
+    'Return ONLY this JSON: {"correctness":0-100,"technicalDepth":0-100,"clarity":0-100,"reasoning":0-100,"confidence":0-100,"relevance":0-100,"evaluatorConfidence":0-100,"strengths":string[],"weaknesses":string[],"missingConcepts":string[],"evidence":string[],"followUpRecommended":boolean,"recommendedNextObjective":string|null,"difficultyAdjustment":-1|0|1}',
   ].join("\n\n");
 
   return aiService.generateJson({

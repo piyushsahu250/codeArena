@@ -3156,6 +3156,17 @@ model AiInterviewReport {
   decision            AiInterviewDecision
   decisionRuleVersion String  // which configured rubric version produced `decision` — see docs/AI_INTERVIEW.md
 
+  // Spec's "if evaluation confidence is insufficient, mark REVIEW_REQUIRED instead of pretending
+  // certainty" — evaluatorConfidence (the AI's own certainty in ITS evaluation, distinct from the
+  // `confidence` score which measures how confident the CANDIDATE sounded) is stored per-turn in
+  // AiInterviewTurn.evaluation's JSON (no schema change needed there); these two fields are the
+  // report-level rollup so a low-confidence interview is flagged rather than silently scored with
+  // the same authority as a high-confidence one. Not surfaced to the student today (no admin
+  // review queue exists yet for individual sessions) — this makes the signal available and
+  // queryable rather than discarding it, which is the actual gap being closed.
+  reviewRequired         Boolean @default(false)
+  lowConfidenceTurnCount Int     @default(0)
+
   createdAt DateTime @default(now())
 
   @@index([studentId, createdAt])

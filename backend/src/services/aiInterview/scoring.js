@@ -17,6 +17,15 @@ const RUBRIC = {
   thresholds: { STRONG: 80, GOOD: 65, BORDERLINE: 50 },
 };
 
+// "If evaluation confidence is insufficient, mark REVIEW_REQUIRED instead of pretending
+// certainty" — evaluatorConfidence is the AI's own certainty in each per-turn evaluation (see
+// AIInterviewEngine.js), distinct from the candidate-confidence score already folded into
+// overallScore above. A single low-confidence turn doesn't discredit an otherwise-clear
+// interview; a third or more of turns being low-confidence is a real signal the overall
+// decision deserves a second look before being treated as fully certain.
+const EVALUATOR_CONFIDENCE_LOW_THRESHOLD = 50;
+const REVIEW_REQUIRED_LOW_CONFIDENCE_FRACTION = 1 / 3;
+
 function average(nums) {
   if (!nums.length) return 0;
   return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
@@ -45,7 +54,10 @@ function aggregateScores(turns) {
   // what was asked" matters for role fit specifically, distinct from raw technical correctness.
   const roleFitScore = Math.round((overallScore + relevanceScore) / 2);
 
-  return { overallScore, technicalScore, problemSolvingScore, communicationScore, confidenceScore, roleFitScore };
+  const lowConfidenceTurnCount = evaluated.filter((t) => (t.evaluation.evaluatorConfidence ?? 100) < EVALUATOR_CONFIDENCE_LOW_THRESHOLD).length;
+  const reviewRequired = evaluated.length > 0 && lowConfidenceTurnCount / evaluated.length >= REVIEW_REQUIRED_LOW_CONFIDENCE_FRACTION;
+
+  return { overallScore, technicalScore, problemSolvingScore, communicationScore, confidenceScore, roleFitScore, lowConfidenceTurnCount, reviewRequired };
 }
 
 function aggregateSkillScores(turns, competencyPlan) {

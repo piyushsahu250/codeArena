@@ -48,3 +48,39 @@ test("decideOutcome applies the documented thresholds exactly", () => {
 test("decideOutcome is a pure function of the score alone (deterministic, not an AI opinion)", () => {
   assert.equal(decideOutcome(82), decideOutcome(82));
 });
+
+test("aggregateScores flags reviewRequired when a third or more of turns have low evaluator confidence", () => {
+  const turns = [
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 30 }),
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 90 }),
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 90 }),
+  ];
+  const scores = aggregateScores(turns);
+  assert.equal(scores.lowConfidenceTurnCount, 1);
+  assert.equal(scores.reviewRequired, true, "1 of 3 turns low-confidence meets the 1/3 threshold");
+});
+
+test("aggregateScores does not flag reviewRequired when low-confidence turns are under the threshold", () => {
+  const turns = [
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 30 }),
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 90 }),
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 90 }),
+    turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80, evaluatorConfidence: 90 }),
+  ];
+  const scores = aggregateScores(turns);
+  assert.equal(scores.lowConfidenceTurnCount, 1);
+  assert.equal(scores.reviewRequired, false, "1 of 4 turns is under the 1/3 threshold");
+});
+
+test("aggregateScores treats a missing evaluatorConfidence (evaluations stored before this field existed) as fully confident", () => {
+  const turns = [turn({ technicalDepth: 80, reasoning: 80, clarity: 80, confidence: 80, relevance: 80 })];
+  const scores = aggregateScores(turns);
+  assert.equal(scores.lowConfidenceTurnCount, 0, "backward compatibility: no retroactive flagging of pre-existing reports");
+  assert.equal(scores.reviewRequired, false);
+});
+
+test("aggregateScores.reviewRequired is false (not undefined-truthy) for an empty turn list", () => {
+  const scores = aggregateScores([]);
+  assert.equal(scores.reviewRequired, false);
+  assert.equal(scores.lowConfidenceTurnCount, 0);
+});
