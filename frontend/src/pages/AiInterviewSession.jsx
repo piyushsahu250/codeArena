@@ -78,12 +78,21 @@ export default function AiInterviewSession() {
     });
   }, [id]);
 
-  // Mic capture is deliberately decoupled from the "listening" UI phase: muting must be able to
-  // stop/start the actual audio stream without disturbing the ai_speaking/listening/processing
-  // state machine below (an earlier version of this toggled both together, which meant unmuting
-  // while the AI was still talking incorrectly flipped the UI straight to "Listening…").
+  // Capture runs for the whole live connection (gated only on the WS being open and not muted),
+  // NOT just during the "listening" UI phase — a real fix, not the original design. It used to be
+  // gated on listeningRef, which meant the mic was hard-stopped while the AI was speaking. That
+  // silently broke barge-in entirely: Gemini Live's own turn-detection ("interrupted" event,
+  // handled below and in voiceSessionHandler.js) can only fire from audio it actually receives, so
+  // a candidate talking over the AI was never heard until the AI finished — only the manual
+  // "Interrupt" button worked. getUserMedia already requests echoCancellation:true (same technique
+  // any video-call app uses to prevent a device's own speaker output from feeding back into its
+  // mic), which is what makes streaming continuously through AI-speech safe rather than a feedback
+  // risk. Muting must still be able to stop/start the actual audio stream without disturbing the
+  // ai_speaking/listening/processing UI state machine below (an earlier version toggled both
+  // together, which meant unmuting while the AI was still talking incorrectly flipped the UI
+  // straight to "Listening…") — that's still true here, capture state and UI state stay separate.
   const syncCapture = useCallback(() => {
-    const shouldCapture = listeningRef.current && !micMutedRef.current;
+    const shouldCapture = wsRef.current?.readyState === WebSocket.OPEN && !micMutedRef.current;
     if (shouldCapture && !captureActiveRef.current) {
       captureActiveRef.current = true;
       mic.start((base64) => {
@@ -157,7 +166,7 @@ export default function AiInterviewSession() {
       const ws = new WebSocket(aiInterviewVoiceWsUrl(id, data.ticket));
       wsRef.current = ws;
 
-      ws.onopen = () => setPhase(PHASES.ACTIVE);
+      ws.onopen = () => { setPhase(PHASES.ACTIVE); syncCapture(); };
 
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
@@ -208,6 +217,7 @@ export default function AiInterviewSession() {
       };
       ws.onclose = () => {
         stopListening();
+        syncCapture();
       };
     } catch (err) {
       setFatalError(err.response?.data?.error || "Could not start the voice session.");
