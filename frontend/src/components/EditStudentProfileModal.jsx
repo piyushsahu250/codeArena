@@ -144,16 +144,16 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
             <div style={sectionHeaderStyle}>Personal Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={labelStyle}>Full Name</label>
-                <input style={inputStyle} required value={form.name} onChange={updateField("name")} />
+                <label style={labelStyle} htmlFor="edit-student-name">Full Name</label>
+                <input id="edit-student-name" style={inputStyle} required value={form.name} onChange={updateField("name")} />
               </div>
               <div>
-                <label style={labelStyle}>Mobile Number</label>
-                <input style={inputStyle} value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
+                <label style={labelStyle} htmlFor="edit-student-mobile">Mobile Number</label>
+                <input id="edit-student-mobile" style={inputStyle} value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={labelStyle}>Email Address</label>
-                <input style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
+                <label style={labelStyle} htmlFor="edit-student-email">Email Address</label>
+                <input id="edit-student-email" style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
                 {original?.pendingEmail && (
                   <p style={{ fontSize: 11, color: "var(--ink-dim)", margin: "4px 0 0" }}>
                     A self-service change to <strong>{original.pendingEmail}</strong> is still awaiting the student's own verification click — editing here replaces that pending request.
@@ -161,8 +161,8 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
                 )}
               </div>
               <div>
-                <label style={labelStyle}>Gender (optional)</label>
-                <select style={inputStyle} value={form.gender} onChange={updateField("gender")}>
+                <label style={labelStyle} htmlFor="edit-student-gender">Gender (optional)</label>
+                <select id="edit-student-gender" style={inputStyle} value={form.gender} onChange={updateField("gender")}>
                   <option value="">— Not specified —</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -172,54 +172,54 @@ export default function EditStudentProfileModal({ studentId, onClose, onSaved })
               </div>
             </div>
 
-            <label style={labelStyle}>Profile Photo (optional)</label>
+            <label style={labelStyle} htmlFor="edit-student-photo">Profile Photo (optional)</label>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {form.profilePhotoUrl && (
                 <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
               )}
-              <input type="file" accept="image/*" onChange={handlePhotoChange} />
+              <input id="edit-student-photo" type="file" accept="image/*" onChange={handlePhotoChange} />
             </div>
 
             <div style={sectionHeaderStyle}>Academic Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={labelStyle}>Registration Number (PRN)</label>
-                <input style={inputStyle} maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
+                <label style={labelStyle} htmlFor="edit-student-registration-number">Registration Number (PRN)</label>
+                <input id="edit-student-registration-number" style={inputStyle} maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} />
               </div>
               <div>
-                <label style={labelStyle}>Roll Number</label>
-                <input style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Max 3 characters" />
+                <label style={labelStyle} htmlFor="edit-student-roll-number">Roll Number</label>
+                <input id="edit-student-roll-number" style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Max 3 characters" />
               </div>
               <div>
-                <label style={labelStyle}>Institute</label>
-                <select style={inputStyle} value={form.instituteId} onChange={updateField("instituteId")}>
+                <label style={labelStyle} htmlFor="edit-student-institute">Institute</label>
+                <select id="edit-student-institute" style={inputStyle} value={form.instituteId} onChange={updateField("instituteId")}>
                   <option value="">— None —</option>
                   {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Department (Branch)</label>
-                <input style={inputStyle} value={form.department} onChange={updateField("department")} />
+                <label style={labelStyle} htmlFor="edit-student-department">Department (Branch)</label>
+                <input id="edit-student-department" style={inputStyle} value={form.department} onChange={updateField("department")} />
               </div>
               <div>
-                <label style={labelStyle}>Course</label>
-                <input style={inputStyle} value={form.program} onChange={updateField("program")} />
+                <label style={labelStyle} htmlFor="edit-student-course">Course</label>
+                <input id="edit-student-course" style={inputStyle} value={form.program} onChange={updateField("program")} />
               </div>
               <div>
-                <label style={labelStyle}>Batch / Academic Year</label>
-                <input style={inputStyle} value={form.batchYear} onChange={updateField("batchYear")} />
+                <label style={labelStyle} htmlFor="edit-student-batch-year">Batch / Academic Year</label>
+                <input id="edit-student-batch-year" style={inputStyle} value={form.batchYear} onChange={updateField("batchYear")} />
               </div>
               <div>
-                <label style={labelStyle}>Section</label>
-                <input style={inputStyle} value={form.section} onChange={updateField("section")} />
+                <label style={labelStyle} htmlFor="edit-student-section">Section</label>
+                <input id="edit-student-section" style={inputStyle} value={form.section} onChange={updateField("section")} />
               </div>
             </div>
 
             <div style={sectionHeaderStyle}>Account Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
               <div>
-                <label style={labelStyle}>Student Status</label>
-                <select style={inputStyle} value={form.isActive ? "active" : "inactive"} onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}>
+                <label style={labelStyle} htmlFor="edit-student-status">Student Status</label>
+                <select id="edit-student-status" style={inputStyle} value={form.isActive ? "active" : "inactive"} onChange={(e) => setForm({ ...form, isActive: e.target.value === "active" })}>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>

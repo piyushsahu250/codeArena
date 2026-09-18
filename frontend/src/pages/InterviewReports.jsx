@@ -137,35 +137,35 @@ export default function InterviewReports() {
 
         <form onSubmit={applyFilters} className="card" style={{ padding: 16, marginTop: 24 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 10 }}>
-            <div><label style={labelStyle}>Search (name / roll)</label><input style={inputStyle} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
-            <div><label style={labelStyle}>Academic Group</label>
-              <select style={inputStyle} value={filters.academicGroupId} onChange={(e) => setFilters({ ...filters, academicGroupId: e.target.value })}>
+            <div><label style={labelStyle} htmlFor="interview-reports-search">Search (name / roll)</label><input id="interview-reports-search" style={inputStyle} value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-academic-group">Academic Group</label>
+              <select id="interview-reports-academic-group" style={inputStyle} value={filters.academicGroupId} onChange={(e) => setFilters({ ...filters, academicGroupId: e.target.value })}>
                 <option value="">All groups</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.department.name} - {g.section} ({g.batch})</option>)}
               </select>
             </div>
-            <div><label style={labelStyle}>Batch Year</label><input style={inputStyle} value={filters.batchYear} onChange={(e) => setFilters({ ...filters, batchYear: e.target.value })} placeholder="e.g. 2025" /></div>
-            <div><label style={labelStyle}>Department</label><input style={inputStyle} value={filters.department} onChange={(e) => setFilters({ ...filters, department: e.target.value })} /></div>
-            <div><label style={labelStyle}>Company</label>
-              <select style={inputStyle} value={filters.company} onChange={(e) => setFilters({ ...filters, company: e.target.value })}>
+            <div><label style={labelStyle} htmlFor="interview-reports-batch-year">Batch Year</label><input id="interview-reports-batch-year" style={inputStyle} value={filters.batchYear} onChange={(e) => setFilters({ ...filters, batchYear: e.target.value })} placeholder="e.g. 2025" /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-department">Department</label><input id="interview-reports-department" style={inputStyle} value={filters.department} onChange={(e) => setFilters({ ...filters, department: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-company">Company</label>
+              <select id="interview-reports-company" style={inputStyle} value={filters.company} onChange={(e) => setFilters({ ...filters, company: e.target.value })}>
                 <option value="">All companies</option>
                 {companies.map((c) => <option key={c.company} value={c.company}>{c.company}</option>)}
               </select>
             </div>
-            <div><label style={labelStyle}>Interview Type</label>
-              <select style={inputStyle} value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
+            <div><label style={labelStyle} htmlFor="interview-reports-type">Interview Type</label>
+              <select id="interview-reports-type" style={inputStyle} value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
                 {TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
-            <div><label style={labelStyle}>Status</label>
-              <select style={inputStyle} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+            <div><label style={labelStyle} htmlFor="interview-reports-status">Status</label>
+              <select id="interview-reports-status" style={inputStyle} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
                 <option value="">All statuses</option><option value="COMPLETED">Completed</option><option value="TERMINATED">Terminated</option>
               </select>
             </div>
-            <div><label style={labelStyle}>Date From</label><input type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} /></div>
-            <div><label style={labelStyle}>Date To</label><input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} /></div>
-            <div><label style={labelStyle}>Min Score</label><input type="number" min="0" max="100" style={inputStyle} value={filters.scoreMin} onChange={(e) => setFilters({ ...filters, scoreMin: e.target.value })} /></div>
-            <div><label style={labelStyle}>Max Score</label><input type="number" min="0" max="100" style={inputStyle} value={filters.scoreMax} onChange={(e) => setFilters({ ...filters, scoreMax: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-date-from">Date From</label><input id="interview-reports-date-from" type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-date-to">Date To</label><input id="interview-reports-date-to" type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-score-min">Min Score</label><input id="interview-reports-score-min" type="number" min="0" max="100" style={inputStyle} value={filters.scoreMin} onChange={(e) => setFilters({ ...filters, scoreMin: e.target.value })} /></div>
+            <div><label style={labelStyle} htmlFor="interview-reports-score-max">Max Score</label><input id="interview-reports-score-max" type="number" min="0" max="100" style={inputStyle} value={filters.scoreMax} onChange={(e) => setFilters({ ...filters, scoreMax: e.target.value })} /></div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button className="btn btn-primary" type="submit">Apply Filters</button>

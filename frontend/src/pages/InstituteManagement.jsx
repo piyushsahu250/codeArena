@@ -167,20 +167,20 @@ export default function InstituteManagement() {
         <form onSubmit={handleCreate} className="card" style={{ padding: 20, marginTop: 24 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Institute name</label>
-              <input style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. ABC Engineering College" />
+              <label style={labelStyle} htmlFor="institute-create-name">Institute name</label>
+              <input id="institute-create-name" style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. ABC Engineering College" />
             </div>
             <div>
-              <label style={labelStyle}>Code (optional)</label>
-              <input style={inputStyle} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. ABC001" />
+              <label style={labelStyle} htmlFor="institute-create-code">Code (optional)</label>
+              <input id="institute-create-code" style={inputStyle} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. ABC001" />
             </div>
             <div>
-              <label style={labelStyle}>Address (optional)</label>
-              <input style={inputStyle} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <label style={labelStyle} htmlFor="institute-create-address">Address (optional)</label>
+              <input id="institute-create-address" style={inputStyle} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </div>
             <div>
-              <label style={labelStyle}>Contact details (optional)</label>
-              <input style={inputStyle} value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} placeholder="Phone / email" />
+              <label style={labelStyle} htmlFor="institute-create-contact">Contact details (optional)</label>
+              <input id="institute-create-contact" style={inputStyle} value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} placeholder="Phone / email" />
             </div>
           </div>
           <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={saving}>{saving ? "Adding…" : "+ Add institute"}</button>
@@ -201,12 +201,12 @@ export default function InstituteManagement() {
                     <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", color: "var(--ink-dim)", marginBottom: 8 }}>Security Policy</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       <div>
-                        <label style={labelStyle}>Password expiry (days, blank = never)</label>
-                        <input style={inputStyle} type="number" min={0} value={editForm.passwordExpiryDays} onChange={(e) => setEditForm({ ...editForm, passwordExpiryDays: e.target.value })} placeholder="Never" />
+                        <label style={labelStyle} htmlFor={`institute-${inst.id}-password-expiry`}>Password expiry (days, blank = never)</label>
+                        <input id={`institute-${inst.id}-password-expiry`} style={inputStyle} type="number" min={0} value={editForm.passwordExpiryDays} onChange={(e) => setEditForm({ ...editForm, passwordExpiryDays: e.target.value })} placeholder="Never" />
                       </div>
                       <div>
-                        <label style={labelStyle}>Block reuse of last N passwords</label>
-                        <input style={inputStyle} type="number" min={0} value={editForm.passwordHistoryDepth} onChange={(e) => setEditForm({ ...editForm, passwordHistoryDepth: e.target.value })} />
+                        <label style={labelStyle} htmlFor={`institute-${inst.id}-password-history-depth`}>Block reuse of last N passwords</label>
+                        <input id={`institute-${inst.id}-password-history-depth`} style={inputStyle} type="number" min={0} value={editForm.passwordHistoryDepth} onChange={(e) => setEditForm({ ...editForm, passwordHistoryDepth: e.target.value })} />
                       </div>
                     </div>
                     <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>

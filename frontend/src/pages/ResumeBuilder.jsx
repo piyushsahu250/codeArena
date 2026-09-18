@@ -752,8 +752,8 @@ function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
       </div>
       {form.photoUrl && <img src={form.photoUrl} alt="Preview" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", marginTop: 10 }} />}
       <div style={{ marginTop: 10 }}>
-        <label style={labelStyle}>Address</label>
-        <textarea style={{ ...inputStyle, minHeight: 50 }} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+        <label style={labelStyle} htmlFor="resume-address">Address</label>
+        <textarea id="resume-address" style={{ ...inputStyle, minHeight: 50 }} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginTop: 12 }}>
@@ -762,8 +762,8 @@ function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
         <Field label="Portfolio Website (optional)" value={form.portfolio} onChange={(v) => setForm({ ...form, portfolio: v })} />
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={labelStyle}>Career Objective / Professional Summary</label>
-        <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
+        <label style={labelStyle} htmlFor="resume-summary">Career Objective / Professional Summary</label>
+        <textarea id="resume-summary" style={{ ...inputStyle, minHeight: 70 }} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
         <ImproveButton text={form.summary} section="summary" onApply={(improved) => setForm((f) => ({ ...f, summary: improved }))} />
       </div>
       <button className="btn btn-primary" style={{ marginTop: 12, fontSize: 12 }} onClick={save} disabled={saving}>{saving ? "Saving…" : "Save Personal Details"}</button>
@@ -772,10 +772,11 @@ function PersonalDetailsForm({ resume, onSave, lowConfidence, confidence }) {
 }
 
 function Field({ label, value, onChange }) {
+  const fieldId = `resume-field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
   return (
     <div>
-      <label style={labelStyle}>{label}</label>
-      <input style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} />
+      <label style={labelStyle} htmlFor={fieldId}>{label}</label>
+      <input id={fieldId} style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
@@ -908,22 +909,22 @@ function ItemForm({ fields, draft, setDraft, onSave, onCancel, companies }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
         {fields.map((f) => (
           <div key={f.key} style={{ gridColumn: f.wide ? "1 / -1" : undefined }}>
-            <label style={labelStyle}>{f.label}</label>
+            <label style={labelStyle} htmlFor={`item-form-${f.key}`}>{f.label}</label>
             {f.type === "textarea" ? (
               <>
-                <textarea style={{ ...inputStyle, minHeight: 60 }} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
+                <textarea id={`item-form-${f.key}`} style={{ ...inputStyle, minHeight: 60 }} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
                 {f.improvable && (
                   <ImproveButton text={draft[f.key]} section={f.improvable} onApply={(improved) => setDraft({ ...draft, [f.key]: improved })} />
                 )}
               </>
             ) : f.type === "select" ? (
-              <select style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}>
+              <select id={`item-form-${f.key}`} style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}>
                 {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             ) : f.type === "company" ? (
-              <CompanyField field={f} draft={draft} setDraft={setDraft} companies={companies || []} />
+              <CompanyField id={`item-form-${f.key}`} field={f} draft={draft} setDraft={setDraft} companies={companies || []} />
             ) : (
-              <input style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
+              <input id={`item-form-${f.key}`} style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
             )}
           </div>
         ))}
@@ -940,11 +941,12 @@ function ItemForm({ fields, draft, setDraft, onSave, onCancel, companies }) {
 // the display name (shown in previews/PDF unchanged); draft.companyId is set only when a real
 // Company Master entry is picked, and cleared back to null for "Other" so the resume doesn't carry
 // a stale link to a company the student didn't actually select.
-function CompanyField({ field, draft, setDraft, companies }) {
+function CompanyField({ id, field, draft, setDraft, companies }) {
   const matched = draft.companyId && companies.some((c) => c.id === draft.companyId);
   return (
     <>
       <select
+        id={id}
         style={inputStyle}
         value={matched ? draft.companyId : "OTHER"}
         onChange={(e) => {

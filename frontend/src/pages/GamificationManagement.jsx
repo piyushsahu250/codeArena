@@ -199,24 +199,24 @@ function NewBadgeForm({ onCreated }) {
   return (
     <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
       <div style={{ flex: "1 1 100px" }}>
-        <label style={labelStyle}>Code</label>
-        <input style={inputStyle} required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "_") })} />
+        <label style={labelStyle} htmlFor="badge-code">Code</label>
+        <input id="badge-code" style={inputStyle} required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "_") })} />
       </div>
       <div style={{ flex: "1 1 60px" }}>
-        <label style={labelStyle}>Icon</label>
-        <input style={inputStyle} value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} />
+        <label style={labelStyle} htmlFor="badge-icon">Icon</label>
+        <input id="badge-icon" style={inputStyle} value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} />
       </div>
       <div style={{ flex: "2 1 150px" }}>
-        <label style={labelStyle}>Name</label>
-        <input style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <label style={labelStyle} htmlFor="badge-name">Name</label>
+        <input id="badge-name" style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       </div>
       <div style={{ flex: "2 1 200px" }}>
-        <label style={labelStyle}>Description</label>
-        <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <label style={labelStyle} htmlFor="badge-description">Description</label>
+        <input id="badge-description" style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </div>
       <div style={{ flex: "1 1 140px" }}>
-        <label style={labelStyle}>Category</label>
-        <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+        <label style={labelStyle} htmlFor="badge-category">Category</label>
+        <select id="badge-category" style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>

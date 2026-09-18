@@ -64,18 +64,18 @@ export default function TestCasesEditor({
         <div key={idx} className="card" style={{ padding: 16, marginTop: 10 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={labelStyle}>{inputLabel}</label>
-              <textarea style={{ ...inputStyle, fontFamily: "var(--font-mono)", minHeight: 60 }} value={tc.input} onChange={(e) => updateCase(idx, "input", e.target.value)} placeholder={inputPlaceholder} />
+              <label style={labelStyle} htmlFor={`testcase-input-${idx}`}>{inputLabel}</label>
+              <textarea id={`testcase-input-${idx}`} style={{ ...inputStyle, fontFamily: "var(--font-mono)", minHeight: 60 }} value={tc.input} onChange={(e) => updateCase(idx, "input", e.target.value)} placeholder={inputPlaceholder} />
             </div>
             <div>
-              <label style={labelStyle}>{expectedLabel}</label>
-              <textarea style={{ ...inputStyle, fontFamily: "var(--font-mono)", minHeight: 60 }} value={tc.expected} onChange={(e) => updateCase(idx, "expected", e.target.value)} placeholder={expectedPlaceholder} />
+              <label style={labelStyle} htmlFor={`testcase-expected-${idx}`}>{expectedLabel}</label>
+              <textarea id={`testcase-expected-${idx}`} style={{ ...inputStyle, fontFamily: "var(--font-mono)", minHeight: 60 }} value={tc.expected} onChange={(e) => updateCase(idx, "expected", e.target.value)} placeholder={expectedPlaceholder} />
             </div>
           </div>
           {!tc.isHidden && (
             <>
-              <label style={{ ...labelStyle, marginTop: 8 }}>Explanation (optional, shown to students alongside this sample)</label>
-              <input style={inputStyle} value={tc.explanation || ""} onChange={(e) => updateCase(idx, "explanation", e.target.value)} />
+              <label style={{ ...labelStyle, marginTop: 8 }} htmlFor={`testcase-explanation-${idx}`}>Explanation (optional, shown to students alongside this sample)</label>
+              <input id={`testcase-explanation-${idx}`} style={inputStyle} value={tc.explanation || ""} onChange={(e) => updateCase(idx, "explanation", e.target.value)} />
             </>
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>

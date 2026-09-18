@@ -36,8 +36,8 @@ export default function StaffPicker({ value, onChange, excludeIds = [] }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <div>
-        <label style={labelStyle}>Search staff</label>
-        <input style={inputStyle} placeholder="Type a name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <label style={labelStyle} htmlFor="staffpicker-search">Search staff</label>
+        <input id="staffpicker-search" style={inputStyle} placeholder="Type a name…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {visible.map((s) => (

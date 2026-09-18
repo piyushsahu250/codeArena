@@ -56,11 +56,11 @@ export default function ResetPassword() {
           <p style={{ color: "var(--mint)", fontSize: 14, marginTop: 12 }}>Password reset successfully. Please log in with your new password — you'll need to sign in again on any other devices too.</p>
         ) : (
           <>
-            <label style={labelStyle}>New password</label>
-            <input style={inputStyle} type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <label style={labelStyle} htmlFor="rp-new-password">New password</label>
+            <input id="rp-new-password" style={inputStyle} type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
 
-            <label style={labelStyle}>Confirm new password</label>
-            <input style={inputStyle} type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <label style={labelStyle} htmlFor="rp-confirm-password">Confirm new password</label>
+            <input id="rp-confirm-password" style={inputStyle} type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
 
             {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{error}</p>}
 

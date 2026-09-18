@@ -159,14 +159,14 @@ export default function AccountSettings() {
                 />
               </div>
 
-              <label style={labelStyle}>Full name</label>
-              <input style={inputStyle} required value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+              <label style={labelStyle} htmlFor="account-profile-name">Full name</label>
+              <input id="account-profile-name" style={inputStyle} required value={profileName} onChange={(e) => setProfileName(e.target.value)} />
 
-              <label style={labelStyle}>Mobile number</label>
-              <input style={inputStyle} value={profileMobile} onChange={(e) => setProfileMobile(e.target.value)} placeholder="9876543210" />
+              <label style={labelStyle} htmlFor="account-profile-mobile">Mobile number</label>
+              <input id="account-profile-mobile" style={inputStyle} value={profileMobile} onChange={(e) => setProfileMobile(e.target.value)} placeholder="9876543210" />
 
-              <label style={labelStyle}>LinkedIn profile URL</label>
-              <input style={inputStyle} type="url" value={profileLinkedin} onChange={(e) => setProfileLinkedin(e.target.value)} placeholder="https://linkedin.com/in/yourname" />
+              <label style={labelStyle} htmlFor="account-profile-linkedin">LinkedIn profile URL</label>
+              <input id="account-profile-linkedin" style={inputStyle} type="url" value={profileLinkedin} onChange={(e) => setProfileLinkedin(e.target.value)} placeholder="https://linkedin.com/in/yourname" />
 
               <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
                 Role: <span className="mono">{user.role}</span>{user.institute?.name && ` · ${user.institute.name}`}
@@ -198,8 +198,9 @@ export default function AccountSettings() {
         )}
 
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-          <label style={labelStyle}>Email</label>
+          <label style={labelStyle} htmlFor="account-email">Email</label>
           <input
+            id="account-email"
             style={inputStyle}
             type="email"
             required
@@ -212,8 +213,8 @@ export default function AccountSettings() {
             }}
           />
 
-          <label style={labelStyle}>New password (optional)</label>
-          <input style={inputStyle} type="password" minLength={8} placeholder="Leave blank to keep current password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <label style={labelStyle} htmlFor="account-new-password">New password (optional)</label>
+          <input id="account-new-password" style={inputStyle} type="password" minLength={8} placeholder="Leave blank to keep current password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           {newPassword && (
             <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
               At least 8 characters, with uppercase, lowercase, a number, and a special character.
@@ -222,13 +223,13 @@ export default function AccountSettings() {
 
           {newPassword && (
             <>
-              <label style={labelStyle}>Confirm new password</label>
-              <input style={inputStyle} type="password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              <label style={labelStyle} htmlFor="account-confirm-password">Confirm new password</label>
+              <input id="account-confirm-password" style={inputStyle} type="password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
             </>
           )}
 
-          <label style={labelStyle}>Current password</label>
-          <input style={inputStyle} type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Required to confirm this change" />
+          <label style={labelStyle} htmlFor="account-current-password">Current password</label>
+          <input id="account-current-password" style={inputStyle} type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Required to confirm this change" />
 
           {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{error}</p>}
           {success && <p style={{ color: "var(--mint)", fontSize: 13, marginTop: 8 }}>{success}</p>}

@@ -89,8 +89,9 @@ export default function AiInterviewSetup() {
         </div>
 
         <Card padding={24} className="ai-int-setup-card">
-          <FormRow label="Job role">
+          <FormRow label="Job role" htmlFor="ai-int-role">
             <input
+              id="ai-int-role"
               className="ai-int-input"
               placeholder="e.g. Java Backend Developer"
               value={form.role}
@@ -98,8 +99,9 @@ export default function AiInterviewSetup() {
             />
           </FormRow>
 
-          <FormRow label="Experience level">
+          <FormRow label="Experience level" htmlFor="ai-int-experience">
             <select
+              id="ai-int-experience"
               className="ai-int-input"
               value={form.experienceLevel}
               onChange={(e) => setForm((f) => ({ ...f, experienceLevel: e.target.value }))}
@@ -108,8 +110,9 @@ export default function AiInterviewSetup() {
             </select>
           </FormRow>
 
-          <FormRow label="Interview type">
+          <FormRow label="Interview type" htmlFor="ai-int-type">
             <select
+              id="ai-int-type"
               className="ai-int-input"
               value={form.interviewType}
               onChange={(e) => setForm((f) => ({ ...f, interviewType: e.target.value }))}
@@ -118,9 +121,10 @@ export default function AiInterviewSetup() {
             </select>
           </FormRow>
 
-          <FormRow label="Skills to be assessed">
+          <FormRow label="Skills to be assessed" htmlFor="ai-int-skill-input">
             <div className="ai-int-skill-input-row">
               <input
+                id="ai-int-skill-input"
                 className="ai-int-input"
                 placeholder="Type a skill and press Enter"
                 value={skillInput}
@@ -147,8 +151,9 @@ export default function AiInterviewSetup() {
           </FormRow>
 
           <div className="ai-int-form-grid-2">
-            <FormRow label="Duration">
+            <FormRow label="Duration" htmlFor="ai-int-duration">
               <select
+                id="ai-int-duration"
                 className="ai-int-input"
                 value={form.durationMin}
                 onChange={(e) => setForm((f) => ({ ...f, durationMin: Number(e.target.value) }))}
@@ -156,8 +161,9 @@ export default function AiInterviewSetup() {
                 {DURATIONS.map((d) => <option key={d} value={d}>{d} minutes</option>)}
               </select>
             </FormRow>
-            <FormRow label="Language">
+            <FormRow label="Language" htmlFor="ai-int-language">
               <select
+                id="ai-int-language"
                 className="ai-int-input"
                 value={form.language}
                 onChange={(e) => setForm((f) => ({ ...f, language: e.target.value }))}
@@ -167,8 +173,9 @@ export default function AiInterviewSetup() {
             </FormRow>
           </div>
 
-          <FormRow label="Job description (optional)">
+          <FormRow label="Job description (optional)" htmlFor="ai-int-job-description">
             <textarea
+              id="ai-int-job-description"
               className="ai-int-input ai-int-textarea"
               placeholder="Paste a job description to help the AI focus on relevant competencies."
               value={form.jobDescription}
@@ -189,10 +196,10 @@ export default function AiInterviewSetup() {
   );
 }
 
-function FormRow({ label, children }) {
+function FormRow({ label, htmlFor, children }) {
   return (
     <div className="ai-int-form-row">
-      <label>{label}</label>
+      <label htmlFor={htmlFor}>{label}</label>
       {children}
     </div>
   );

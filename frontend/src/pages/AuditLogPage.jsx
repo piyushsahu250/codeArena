@@ -78,19 +78,19 @@ export default function AuditLogPage({ basePath }) {
 
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
-            <label style={labelStyle}>Action</label>
-            <select style={inputStyle} value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+            <label style={labelStyle} htmlFor="audit-action">Action</label>
+            <select id="audit-action" style={inputStyle} value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
               <option value="">All actions</option>
               {actions.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>From</label>
-            <input style={inputStyle} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <label style={labelStyle} htmlFor="audit-from">From</label>
+            <input id="audit-from" style={inputStyle} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
           <div>
-            <label style={labelStyle}>To</label>
-            <input style={inputStyle} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <label style={labelStyle} htmlFor="audit-to">To</label>
+            <input id="audit-to" style={inputStyle} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
           <button className="btn btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }} onClick={exportCsv}>
             <Download size={14} /> Export CSV

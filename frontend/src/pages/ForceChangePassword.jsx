@@ -43,14 +43,14 @@ export default function ForceChangePassword() {
           password before continuing.
         </p>
 
-        <label style={labelStyle}>Temporary password</label>
-        <input style={inputStyle} type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="The password you just signed in with" />
+        <label style={labelStyle} htmlFor="fcp-current-password">Temporary password</label>
+        <input id="fcp-current-password" style={inputStyle} type="password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="The password you just signed in with" />
 
-        <label style={labelStyle}>New password</label>
-        <input style={inputStyle} type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        <label style={labelStyle} htmlFor="fcp-new-password">New password</label>
+        <input id="fcp-new-password" style={inputStyle} type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
 
-        <label style={labelStyle}>Confirm new password</label>
-        <input style={inputStyle} type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+        <label style={labelStyle} htmlFor="fcp-confirm-password">Confirm new password</label>
+        <input id="fcp-confirm-password" style={inputStyle} type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
 
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{error}</p>}
 

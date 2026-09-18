@@ -104,7 +104,7 @@ export default function CertificateAdmin({ basePath }) {
           </p>
           <form onSubmit={issue} style={{ marginTop: 12, display: "grid", gap: 10 }}>
             <div style={{ position: "relative" }}>
-              <label style={labelStyle}>Student</label>
+              <label style={labelStyle} htmlFor="cert-student-search">Student</label>
               {selectedStudent ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="badge">{selectedStudent.name} ({selectedStudent.email})</span>
@@ -112,7 +112,7 @@ export default function CertificateAdmin({ basePath }) {
                 </div>
               ) : (
                 <>
-                  <input style={inputStyle} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, roll number, or email" />
+                  <input id="cert-student-search" style={inputStyle} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, roll number, or email" />
                   {results.length > 0 && (
                     <div className="card" style={{ position: "absolute", zIndex: 5, width: "100%", maxHeight: 220, overflowY: "auto", padding: 4, marginTop: 2 }}>
                       {results.map((s) => (
@@ -127,12 +127,12 @@ export default function CertificateAdmin({ basePath }) {
               )}
             </div>
             <div>
-              <label style={labelStyle}>Program / Activity Name</label>
-              <input style={inputStyle} value={programName} onChange={(e) => setProgramName(e.target.value)} placeholder="e.g. FDP: Advanced Java Workshop" />
+              <label style={labelStyle} htmlFor="cert-program-name">Program / Activity Name</label>
+              <input id="cert-program-name" style={inputStyle} value={programName} onChange={(e) => setProgramName(e.target.value)} placeholder="e.g. FDP: Advanced Java Workshop" />
             </div>
             <div>
-              <label style={labelStyle}>Certificate Title (optional, defaults to program name)</label>
-              <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Certificate of Participation" />
+              <label style={labelStyle} htmlFor="cert-title">Certificate Title (optional, defaults to program name)</label>
+              <input id="cert-title" style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Certificate of Participation" />
             </div>
             {error && <p style={{ color: "var(--rust)", fontSize: 13 }}>{error}</p>}
             {success && <p style={{ color: "var(--mint)", fontSize: 13 }}>{success}</p>}

@@ -193,20 +193,20 @@ export default function ExportCenter({ basePath }) {
           {entity === "students" && (
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 10 }}>
               <div>
-                <label style={labelStyle}>Batch</label>
-                <input style={inputStyle} placeholder="e.g. 2026" value={filters.batch} onChange={(e) => set("batch", e.target.value)} />
+                <label style={labelStyle} htmlFor="export-center-batch">Batch</label>
+                <input id="export-center-batch" style={inputStyle} placeholder="e.g. 2026" value={filters.batch} onChange={(e) => set("batch", e.target.value)} />
               </div>
               <div>
-                <label style={labelStyle}>Placement Participation</label>
-                <select style={inputStyle} value={filters.placementParticipation} onChange={(e) => set("placementParticipation", e.target.value)}>
+                <label style={labelStyle} htmlFor="export-center-placement-participation">Placement Participation</label>
+                <select id="export-center-placement-participation" style={inputStyle} value={filters.placementParticipation} onChange={(e) => set("placementParticipation", e.target.value)}>
                   <option value="">All</option>
                   <option value="INTERESTED">Registered</option>
                   <option value="NOT_INTERESTED">Not Registered</option>
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Offer Verification</label>
-                <select style={inputStyle} value={filters.offerVerificationStatus} onChange={(e) => set("offerVerificationStatus", e.target.value)}>
+                <label style={labelStyle} htmlFor="export-center-offer-verification">Offer Verification</label>
+                <select id="export-center-offer-verification" style={inputStyle} value={filters.offerVerificationStatus} onChange={(e) => set("offerVerificationStatus", e.target.value)}>
                   <option value="">All</option>
                   <option value="PENDING">Pending</option>
                   <option value="VERIFIED">Verified</option>
@@ -217,8 +217,8 @@ export default function ExportCenter({ basePath }) {
 
           {entity === "talentPools" && (
             <div>
-              <label style={labelStyle}>Talent Pool</label>
-              <select style={inputStyle} value={filters.poolId} onChange={(e) => set("poolId", e.target.value)}>
+              <label style={labelStyle} htmlFor="export-center-talent-pool">Talent Pool</label>
+              <select id="export-center-talent-pool" style={inputStyle} value={filters.poolId} onChange={(e) => set("poolId", e.target.value)}>
                 <option value="">Select a pool…</option>
                 {pools.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -244,12 +244,12 @@ export default function ExportCenter({ basePath }) {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label style={{ ...labelStyle, fontWeight: 400, fontSize: 11 }}>From</label>
-                  <input type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => set("dateFrom", e.target.value)} />
+                  <label style={{ ...labelStyle, fontWeight: 400, fontSize: 11 }} htmlFor="export-center-date-from">From</label>
+                  <input id="export-center-date-from" type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => set("dateFrom", e.target.value)} />
                 </div>
                 <div>
-                  <label style={{ ...labelStyle, fontWeight: 400, fontSize: 11 }}>To</label>
-                  <input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => set("dateTo", e.target.value)} />
+                  <label style={{ ...labelStyle, fontWeight: 400, fontSize: 11 }} htmlFor="export-center-date-to">To</label>
+                  <input id="export-center-date-to" type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => set("dateTo", e.target.value)} />
                 </div>
               </div>
             </div>

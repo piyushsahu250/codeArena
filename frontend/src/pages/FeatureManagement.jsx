@@ -156,8 +156,8 @@ export default function FeatureManagement() {
         </p>
 
         <div className="card" style={{ padding: 20, marginBottom: 24 }}>
-          <label style={labelStyle}>Search Institute</label>
-          <input style={inputStyle} placeholder="Sanjivani…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <label style={labelStyle} htmlFor="feature-mgmt-search-institute">Search Institute</label>
+          <input id="feature-mgmt-search-institute" style={inputStyle} placeholder="Sanjivani…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, maxHeight: 160, overflowY: "auto" }}>
             {filteredInstitutes.map((inst) => (
               <button
@@ -235,8 +235,8 @@ export default function FeatureManagement() {
           <div style={{ fontWeight: 700, marginBottom: 12 }}>Bulk Institute Management</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
-              <label style={labelStyle}>Feature</label>
-              <select style={inputStyle} value={bulkFeatureKey} onChange={(e) => setBulkFeatureKey(e.target.value)}>
+              <label style={labelStyle} htmlFor="bulk-feature-key">Feature</label>
+              <select id="bulk-feature-key" style={inputStyle} value={bulkFeatureKey} onChange={(e) => setBulkFeatureKey(e.target.value)}>
                 <option value="">Select feature…</option>
                 {features.length > 0
                   ? features.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)
@@ -244,8 +244,8 @@ export default function FeatureManagement() {
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Set to</label>
-              <select style={inputStyle} value={bulkEnabled ? "on" : "off"} onChange={(e) => setBulkEnabled(e.target.value === "on")}>
+              <label style={labelStyle} htmlFor="bulk-feature-set-to">Set to</label>
+              <select id="bulk-feature-set-to" style={inputStyle} value={bulkEnabled ? "on" : "off"} onChange={(e) => setBulkEnabled(e.target.value === "on")}>
                 <option value="on">ON</option>
                 <option value="off">OFF</option>
               </select>
@@ -278,15 +278,15 @@ export default function FeatureManagement() {
           <div style={{ fontWeight: 700, marginBottom: 12 }}>Copy Feature Configuration</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <div>
-              <label style={labelStyle}>Copy from</label>
-              <select style={inputStyle} value={copyFrom} onChange={(e) => { setCopyFrom(e.target.value); setCopyPreview(null); }}>
+              <label style={labelStyle} htmlFor="copy-feature-from">Copy from</label>
+              <select id="copy-feature-from" style={inputStyle} value={copyFrom} onChange={(e) => { setCopyFrom(e.target.value); setCopyPreview(null); }}>
                 <option value="">Select institute…</option>
                 {institutes.map((inst) => <option key={inst.id} value={inst.id}>{inst.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Apply to</label>
-              <select style={inputStyle} value={copyTo} onChange={(e) => { setCopyTo(e.target.value); setCopyPreview(null); }}>
+              <label style={labelStyle} htmlFor="copy-feature-to">Apply to</label>
+              <select id="copy-feature-to" style={inputStyle} value={copyTo} onChange={(e) => { setCopyTo(e.target.value); setCopyPreview(null); }}>
                 <option value="">Select institute…</option>
                 {institutes.map((inst) => <option key={inst.id} value={inst.id}>{inst.name}</option>)}
               </select>

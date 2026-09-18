@@ -94,24 +94,24 @@ function QuestionDraftsTab() {
         <div style={{ fontWeight: 700, fontSize: 14 }}>Generate with AI</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))", gap: 10, marginTop: 10 }}>
           <div>
-            <label style={labelStyle}>Category</label>
-            <select style={inputStyle} value={genForm.category} onChange={(e) => setGenForm({ ...genForm, category: e.target.value })}>
+            <label style={labelStyle} htmlFor="qd-gen-category">Category</label>
+            <select id="qd-gen-category" style={inputStyle} value={genForm.category} onChange={(e) => setGenForm({ ...genForm, category: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Company (optional — general pool if blank)</label>
-            <input style={inputStyle} value={genForm.company} onChange={(e) => setGenForm({ ...genForm, company: e.target.value })} placeholder="e.g. Amazon" />
+            <label style={labelStyle} htmlFor="qd-gen-company">Company (optional — general pool if blank)</label>
+            <input id="qd-gen-company" style={inputStyle} value={genForm.company} onChange={(e) => setGenForm({ ...genForm, company: e.target.value })} placeholder="e.g. Amazon" />
           </div>
           <div>
-            <label style={labelStyle}>Difficulty (optional)</label>
-            <select style={inputStyle} value={genForm.difficulty} onChange={(e) => setGenForm({ ...genForm, difficulty: e.target.value })}>
+            <label style={labelStyle} htmlFor="qd-gen-difficulty">Difficulty (optional)</label>
+            <select id="qd-gen-difficulty" style={inputStyle} value={genForm.difficulty} onChange={(e) => setGenForm({ ...genForm, difficulty: e.target.value })}>
               <option value="">Any</option><option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option>
             </select>
           </div>
           <div>
-            <label style={labelStyle}>How many (1-10)</label>
-            <input type="number" min="1" max="10" style={inputStyle} value={genForm.count} onChange={(e) => setGenForm({ ...genForm, count: e.target.value })} />
+            <label style={labelStyle} htmlFor="qd-gen-count">How many (1-10)</label>
+            <input id="qd-gen-count" type="number" min="1" max="10" style={inputStyle} value={genForm.count} onChange={(e) => setGenForm({ ...genForm, count: e.target.value })} />
           </div>
         </div>
         <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={generating || aiAvailable !== true} onClick={generate}>
@@ -237,31 +237,31 @@ function DraftQuestionCard({ draft, onChanged, selectable, selected, onToggleSel
 
       {expanded && (
         <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
-          <label style={labelStyle}>Title</label>
-          <input style={inputStyle} value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <label style={labelStyle}>Prompt</label>
-          <textarea style={{ ...inputStyle, minHeight: 80 }} value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
+          <label style={labelStyle} htmlFor={`draft-title-${draft.id}`}>Title</label>
+          <input id={`draft-title-${draft.id}`} style={inputStyle} value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle} htmlFor={`draft-prompt-${draft.id}`}>Prompt</label>
+          <textarea id={`draft-prompt-${draft.id}`} style={{ ...inputStyle, minHeight: 80 }} value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
 
           {draft.category === "APTITUDE" && (
             <>
-              <label style={labelStyle}>Aptitude Category</label>
-              <select style={inputStyle} value={form.aptitudeCategory || ""} onChange={(e) => setForm({ ...form, aptitudeCategory: e.target.value })}>
+              <label style={labelStyle} htmlFor={`draft-aptcat-${draft.id}`}>Aptitude Category</label>
+              <select id={`draft-aptcat-${draft.id}`} style={inputStyle} value={form.aptitudeCategory || ""} onChange={(e) => setForm({ ...form, aptitudeCategory: e.target.value })}>
                 <option value="">Select…</option>
                 {APTITUDE_CATS.map((a) => <option key={a} value={a}>{a}</option>)}
               </select>
-              <label style={labelStyle}>Options (one per line, or edit as JSON array)</label>
-              <textarea style={{ ...inputStyle, minHeight: 60, fontFamily: "var(--font-mono)" }} value={(form.options || []).join("\n")} onChange={(e) => setForm({ ...form, options: e.target.value.split("\n") })} />
-              <label style={labelStyle}>Correct answer index (0-based)</label>
-              <input type="number" min="0" style={inputStyle} value={form.correctAnswer?.[0] ?? ""} onChange={(e) => setForm({ ...form, correctAnswer: [Number(e.target.value)] })} />
+              <label style={labelStyle} htmlFor={`draft-options-${draft.id}`}>Options (one per line, or edit as JSON array)</label>
+              <textarea id={`draft-options-${draft.id}`} style={{ ...inputStyle, minHeight: 60, fontFamily: "var(--font-mono)" }} value={(form.options || []).join("\n")} onChange={(e) => setForm({ ...form, options: e.target.value.split("\n") })} />
+              <label style={labelStyle} htmlFor={`draft-correct-${draft.id}`}>Correct answer index (0-based)</label>
+              <input id={`draft-correct-${draft.id}`} type="number" min="0" style={inputStyle} value={form.correctAnswer?.[0] ?? ""} onChange={(e) => setForm({ ...form, correctAnswer: [Number(e.target.value)] })} />
             </>
           )}
 
           {["HR", "TECHNICAL", "SYSTEM_DESIGN", "BEHAVIORAL", "MANAGERIAL"].includes(draft.category) && (
             <>
-              <label style={labelStyle}>Expected keywords (comma-separated)</label>
-              <input style={inputStyle} value={(form.expectedKeywords || []).join(", ")} onChange={(e) => setForm({ ...form, expectedKeywords: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} />
-              <label style={labelStyle}>Model answer</label>
-              <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.modelAnswer || ""} onChange={(e) => setForm({ ...form, modelAnswer: e.target.value })} />
+              <label style={labelStyle} htmlFor={`draft-keywords-${draft.id}`}>Expected keywords (comma-separated)</label>
+              <input id={`draft-keywords-${draft.id}`} style={inputStyle} value={(form.expectedKeywords || []).join(", ")} onChange={(e) => setForm({ ...form, expectedKeywords: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} />
+              <label style={labelStyle} htmlFor={`draft-modelanswer-${draft.id}`}>Model answer</label>
+              <textarea id={`draft-modelanswer-${draft.id}`} style={{ ...inputStyle, minHeight: 60 }} value={form.modelAnswer || ""} onChange={(e) => setForm({ ...form, modelAnswer: e.target.value })} />
             </>
           )}
 
@@ -342,12 +342,12 @@ function PatternDraftsTab() {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 10, marginTop: 10 }}>
           <div>
-            <label style={labelStyle}>Company</label>
-            <input style={inputStyle} value={genForm.company} onChange={(e) => setGenForm({ ...genForm, company: e.target.value })} placeholder="e.g. Amazon" />
+            <label style={labelStyle} htmlFor="pd-gen-company">Company</label>
+            <input id="pd-gen-company" style={inputStyle} value={genForm.company} onChange={(e) => setGenForm({ ...genForm, company: e.target.value })} placeholder="e.g. Amazon" />
           </div>
           <div>
-            <label style={labelStyle}>Category</label>
-            <select style={inputStyle} value={genForm.category} onChange={(e) => setGenForm({ ...genForm, category: e.target.value })}>
+            <label style={labelStyle} htmlFor="pd-gen-category">Category</label>
+            <select id="pd-gen-category" style={inputStyle} value={genForm.category} onChange={(e) => setGenForm({ ...genForm, category: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -557,36 +557,36 @@ function CompanyQuestionsTab() {
         )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 10, marginTop: 10 }}>
           <div>
-            <label style={labelStyle}>Company</label>
-            <select style={inputStyle} value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
+            <label style={labelStyle} htmlFor="cq-company">Company</label>
+            <select id="cq-company" style={inputStyle} value={form.companyId} onChange={(e) => setForm({ ...form, companyId: e.target.value })}>
               <option value="">{companies.length === 0 ? "No active companies yet" : "Select…"}</option>
               {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Role</label>
-            <input style={inputStyle} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g. Software Engineer" />
+            <label style={labelStyle} htmlFor="cq-role">Role</label>
+            <input id="cq-role" style={inputStyle} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g. Software Engineer" />
           </div>
           <div>
-            <label style={labelStyle}>Level (optional)</label>
-            <select style={inputStyle} value={form.experienceLevel} onChange={(e) => setForm({ ...form, experienceLevel: e.target.value })}>
+            <label style={labelStyle} htmlFor="cq-level">Level (optional)</label>
+            <select id="cq-level" style={inputStyle} value={form.experienceLevel} onChange={(e) => setForm({ ...form, experienceLevel: e.target.value })}>
               <option value="">Any</option>
               {EXPERIENCE_LEVELS.map((l) => <option key={l} value={l}>{EXPERIENCE_LEVEL_LABEL[l]}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Round</label>
-            <select style={inputStyle} value={form.round} onChange={(e) => setForm({ ...form, round: e.target.value })}>
+            <label style={labelStyle} htmlFor="cq-round">Round</label>
+            <select id="cq-round" style={inputStyle} value={form.round} onChange={(e) => setForm({ ...form, round: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Technology (optional)</label>
-            <input style={inputStyle} value={form.technology} onChange={(e) => setForm({ ...form, technology: e.target.value })} placeholder="e.g. Graphs" />
+            <label style={labelStyle} htmlFor="cq-technology">Technology (optional)</label>
+            <input id="cq-technology" style={inputStyle} value={form.technology} onChange={(e) => setForm({ ...form, technology: e.target.value })} placeholder="e.g. Graphs" />
           </div>
           <div>
-            <label style={labelStyle}>New questions to draft (0-10)</label>
-            <input type="number" min="0" max="10" style={inputStyle} value={form.count} onChange={(e) => setForm({ ...form, count: e.target.value })} />
+            <label style={labelStyle} htmlFor="cq-count">New questions to draft (0-10)</label>
+            <input id="cq-count" type="number" min="0" max="10" style={inputStyle} value={form.count} onChange={(e) => setForm({ ...form, count: e.target.value })} />
           </div>
         </div>
         <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={generating || aiAvailable !== true} onClick={updateQuestions}>

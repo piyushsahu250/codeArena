@@ -337,8 +337,9 @@ export default function StudentSearch({ basePath }) {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
             {isPlatformLevelAdmin && (
               <div style={{ flex: "1 1 180px" }}>
-                <label style={labelStyle}>Institute</label>
+                <label style={labelStyle} htmlFor="student-search-browse-institute">Institute</label>
                 <select
+                  id="student-search-browse-institute"
                   style={inputStyle}
                   value={browseInstituteId}
                   onChange={(e) => { setBrowseInstituteId(e.target.value); setBrowseDepartmentId(""); setBrowseSection(""); }}
@@ -349,8 +350,9 @@ export default function StudentSearch({ basePath }) {
               </div>
             )}
             <div style={{ flex: "1 1 180px" }}>
-              <label style={labelStyle}>Department</label>
+              <label style={labelStyle} htmlFor="student-search-browse-department">Department</label>
               <select
+                id="student-search-browse-department"
                 style={inputStyle}
                 value={browseDepartmentId}
                 onChange={(e) => { setBrowseDepartmentId(e.target.value); setBrowseSection(""); }}
@@ -363,45 +365,45 @@ export default function StudentSearch({ basePath }) {
               </select>
             </div>
             <div style={{ flex: "1 1 160px" }}>
-              <label style={labelStyle}>Division (Section)</label>
-              <select style={inputStyle} value={browseSection} onChange={(e) => setBrowseSection(e.target.value)} disabled={!browseDepartmentId}>
+              <label style={labelStyle} htmlFor="student-search-browse-section">Division (Section)</label>
+              <select id="student-search-browse-section" style={inputStyle} value={browseSection} onChange={(e) => setBrowseSection(e.target.value)} disabled={!browseDepartmentId}>
                 <option value="">Select section…</option>
                 {sections.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div style={{ flex: "1 1 140px" }}>
-              <label style={labelStyle}>Batch</label>
-              <select style={inputStyle} value={browseBatch} onChange={(e) => setBrowseBatch(e.target.value)} disabled={!browseDepartmentId}>
+              <label style={labelStyle} htmlFor="student-search-browse-batch">Batch</label>
+              <select id="student-search-browse-batch" style={inputStyle} value={browseBatch} onChange={(e) => setBrowseBatch(e.target.value)} disabled={!browseDepartmentId}>
                 <option value="">All batches</option>
                 {batches.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
             <div style={{ flex: "1 1 170px" }}>
-              <label style={labelStyle}>Placement Registration</label>
-              <select style={inputStyle} value={browsePlacementParticipation} onChange={(e) => setBrowsePlacementParticipation(e.target.value)}>
+              <label style={labelStyle} htmlFor="student-search-browse-placement-participation">Placement Registration</label>
+              <select id="student-search-browse-placement-participation" style={inputStyle} value={browsePlacementParticipation} onChange={(e) => setBrowsePlacementParticipation(e.target.value)}>
                 <option value="">All students</option>
                 <option value="INTERESTED">Registered</option>
                 <option value="NOT_INTERESTED">Not Registered</option>
               </select>
             </div>
             <div style={{ flex: "1 1 170px" }}>
-              <label style={labelStyle}>Offer Verification</label>
-              <select style={inputStyle} value={browseVerificationStatus} onChange={(e) => setBrowseVerificationStatus(e.target.value)}>
+              <label style={labelStyle} htmlFor="student-search-browse-verification-status">Offer Verification</label>
+              <select id="student-search-browse-verification-status" style={inputStyle} value={browseVerificationStatus} onChange={(e) => setBrowseVerificationStatus(e.target.value)}>
                 <option value="">All students</option>
                 <option value="VERIFIED">Has Verified Offer</option>
                 <option value="PENDING">Has Pending Offer</option>
               </select>
             </div>
             <div style={{ flex: "1 1 170px" }}>
-              <label style={labelStyle}>Document Type</label>
-              <select style={inputStyle} value={browseDocumentType} onChange={(e) => setBrowseDocumentType(e.target.value)}>
+              <label style={labelStyle} htmlFor="student-search-browse-document-type">Document Type</label>
+              <select id="student-search-browse-document-type" style={inputStyle} value={browseDocumentType} onChange={(e) => setBrowseDocumentType(e.target.value)}>
                 <option value="">All document types</option>
                 {docTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div style={{ flex: "1 1 170px" }}>
-              <label style={labelStyle}>Document Status</label>
-              <select style={inputStyle} value={browseDocumentStatus} onChange={(e) => setBrowseDocumentStatus(e.target.value)}>
+              <label style={labelStyle} htmlFor="student-search-browse-document-status">Document Status</label>
+              <select id="student-search-browse-document-status" style={inputStyle} value={browseDocumentStatus} onChange={(e) => setBrowseDocumentStatus(e.target.value)}>
                 <option value="">All statuses</option>
                 <option value="PENDING">Pending</option>
                 <option value="VERIFIED">Verified</option>

@@ -156,21 +156,22 @@ export default function AttendanceReports() {
 
         <div className="card" style={{ padding: 16, marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
           <div>
-            <label style={labelStyle}>Date</label>
-            <input type="date" style={inputStyle} value={filters.date} onChange={(e) => set("date", e.target.value)} />
+            <label style={labelStyle} htmlFor="attendance-filter-date">Date</label>
+            <input id="attendance-filter-date" type="date" style={inputStyle} value={filters.date} onChange={(e) => set("date", e.target.value)} />
           </div>
           <div>
-            <label style={labelStyle}>From</label>
-            <input type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => set("dateFrom", e.target.value)} disabled={!!filters.date} />
+            <label style={labelStyle} htmlFor="attendance-filter-date-from">From</label>
+            <input id="attendance-filter-date-from" type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => set("dateFrom", e.target.value)} disabled={!!filters.date} />
           </div>
           <div>
-            <label style={labelStyle}>To</label>
-            <input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => set("dateTo", e.target.value)} disabled={!!filters.date} />
+            <label style={labelStyle} htmlFor="attendance-filter-date-to">To</label>
+            <input id="attendance-filter-date-to" type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => set("dateTo", e.target.value)} disabled={!!filters.date} />
           </div>
           {isPlatformAdmin && (
             <div>
-              <label style={labelStyle}>Institute</label>
+              <label style={labelStyle} htmlFor="attendance-filter-institute">Institute</label>
               <select
+                id="attendance-filter-institute"
                 style={inputStyle}
                 value={filters.instituteId}
                 onChange={(e) => setFilters((f) => ({ ...f, instituteId: e.target.value, academicYear: "", departmentId: "", section: "", semester: "", talentPoolId: "", facultyId: "" }))}
@@ -181,41 +182,41 @@ export default function AttendanceReports() {
             </div>
           )}
           <div>
-            <label style={labelStyle}>Batch</label>
-            <select style={inputStyle} value={filters.academicYear} onChange={(e) => set("academicYear", e.target.value)}>
+            <label style={labelStyle} htmlFor="attendance-filter-batch">Batch</label>
+            <select id="attendance-filter-batch" style={inputStyle} value={filters.academicYear} onChange={(e) => set("academicYear", e.target.value)}>
               <option value="">All</option>
               {academicYears.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Department</label>
-            <select style={inputStyle} value={filters.departmentId} onChange={(e) => { set("departmentId", e.target.value); set("section", ""); }}>
+            <label style={labelStyle} htmlFor="attendance-filter-department">Department</label>
+            <select id="attendance-filter-department" style={inputStyle} value={filters.departmentId} onChange={(e) => { set("departmentId", e.target.value); set("section", ""); }}>
               <option value="">All</option>
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Section</label>
-            <select style={inputStyle} value={filters.section} onChange={(e) => set("section", e.target.value)}>
+            <label style={labelStyle} htmlFor="attendance-filter-section">Section</label>
+            <select id="attendance-filter-section" style={inputStyle} value={filters.section} onChange={(e) => set("section", e.target.value)}>
               <option value="">All</option>
               {sections.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Semester</label>
-            <select style={inputStyle} value={filters.semester} onChange={(e) => set("semester", e.target.value)}>
+            <label style={labelStyle} htmlFor="attendance-filter-semester">Semester</label>
+            <select id="attendance-filter-semester" style={inputStyle} value={filters.semester} onChange={(e) => set("semester", e.target.value)}>
               <option value="">All</option>
               {semesters.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Subject</label>
-            <input style={inputStyle} placeholder="e.g. Data Structures" value={filters.subject} onChange={(e) => set("subject", e.target.value)} />
+            <label style={labelStyle} htmlFor="attendance-filter-subject">Subject</label>
+            <input id="attendance-filter-subject" style={inputStyle} placeholder="e.g. Data Structures" value={filters.subject} onChange={(e) => set("subject", e.target.value)} />
           </div>
           {talentPools.length > 0 && (
             <div>
-              <label style={labelStyle}>Talent Pool</label>
-              <select style={inputStyle} value={filters.talentPoolId} onChange={(e) => set("talentPoolId", e.target.value)}>
+              <label style={labelStyle} htmlFor="attendance-filter-talent-pool">Talent Pool</label>
+              <select id="attendance-filter-talent-pool" style={inputStyle} value={filters.talentPoolId} onChange={(e) => set("talentPoolId", e.target.value)}>
                 <option value="">All</option>
                 {talentPools.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -223,16 +224,16 @@ export default function AttendanceReports() {
           )}
           {isAdmin && (
             <div>
-              <label style={labelStyle}>Faculty</label>
-              <select style={inputStyle} value={filters.facultyId} onChange={(e) => set("facultyId", e.target.value)}>
+              <label style={labelStyle} htmlFor="attendance-filter-faculty">Faculty</label>
+              <select id="attendance-filter-faculty" style={inputStyle} value={filters.facultyId} onChange={(e) => set("facultyId", e.target.value)}>
                 <option value="">All</option>
                 {faculty.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </div>
           )}
           <div>
-            <label style={labelStyle}>Lecture Type</label>
-            <select style={inputStyle} value={filters.lectureType} onChange={(e) => set("lectureType", e.target.value)}>
+            <label style={labelStyle} htmlFor="attendance-filter-lecture-type">Lecture Type</label>
+            <select id="attendance-filter-lecture-type" style={inputStyle} value={filters.lectureType} onChange={(e) => set("lectureType", e.target.value)}>
               <option value="">All</option>
               <option value="REGULAR">Regular Class</option>
               <option value="PRACTICE_TEST">Practice Test</option>
@@ -240,8 +241,8 @@ export default function AttendanceReports() {
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Attendance Status</label>
-            <select style={inputStyle} value={filters.status} onChange={(e) => set("status", e.target.value)}>
+            <label style={labelStyle} htmlFor="attendance-filter-status">Attendance Status</label>
+            <select id="attendance-filter-status" style={inputStyle} value={filters.status} onChange={(e) => set("status", e.target.value)}>
               <option value="">All</option>
               <option value="PRESENT">Present</option>
               <option value="ABSENT">Absent</option>

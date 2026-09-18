@@ -146,8 +146,9 @@ export default function ResumeAdmin() {
                 )}
 
                 <div style={{ marginTop: 16 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600 }}>Send feedback</label>
+                  <label style={{ fontSize: 12, fontWeight: 600 }} htmlFor="resumeadmin-feedback">Send feedback</label>
                   <textarea
+                    id="resumeadmin-feedback"
                     style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, marginTop: 6, minHeight: 60 }}
                     placeholder="e.g. Add more measurable achievements to your projects section."
                     value={feedbackText}

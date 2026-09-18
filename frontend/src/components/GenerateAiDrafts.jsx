@@ -233,8 +233,8 @@ export default function GenerateAiDrafts({ onGenerated }) {
           </div>
         </div>
         <div>
-          <label style={labelStyle}>Question Type</label>
-          <select style={inputStyle} value={questionType} onChange={(e) => setQuestionType(e.target.value)}>
+          <label style={labelStyle} htmlFor="ai-draft-question-type">Question Type</label>
+          <select id="ai-draft-question-type" style={inputStyle} value={questionType} onChange={(e) => setQuestionType(e.target.value)}>
             <option value="MCQ">Multiple Choice</option>
             <option value="TRUE_FALSE">True/False</option>
             <option value="MULTISELECT">Multiple Select</option>
@@ -243,8 +243,8 @@ export default function GenerateAiDrafts({ onGenerated }) {
         </div>
         {!blueprintMode && (
           <div>
-            <label style={labelStyle}>Difficulty</label>
-            <select style={inputStyle} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+            <label style={labelStyle} htmlFor="ai-draft-difficulty">Difficulty</label>
+            <select id="ai-draft-difficulty" style={inputStyle} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
               <option value="EASY">Easy</option>
               <option value="MEDIUM">Medium</option>
               <option value="HARD">Hard</option>
@@ -252,17 +252,17 @@ export default function GenerateAiDrafts({ onGenerated }) {
           </div>
         )}
         <div>
-          <label style={labelStyle}>Subtopic (optional — narrows within the Subject/Unit above)</label>
-          <input style={inputStyle} value={subtopic} onChange={(e) => setSubtopic(e.target.value)} placeholder="e.g. Binary Search Trees" />
+          <label style={labelStyle} htmlFor="ai-draft-subtopic">Subtopic (optional — narrows within the Subject/Unit above)</label>
+          <input id="ai-draft-subtopic" style={inputStyle} value={subtopic} onChange={(e) => setSubtopic(e.target.value)} placeholder="e.g. Binary Search Trees" />
         </div>
         <div>
-          <label style={labelStyle}>Skill tested (optional)</label>
-          <input style={inputStyle} value={skillTested} onChange={(e) => setSkillTested(e.target.value)} placeholder="e.g. Recursion" />
+          <label style={labelStyle} htmlFor="ai-draft-skill-tested">Skill tested (optional)</label>
+          <input id="ai-draft-skill-tested" style={inputStyle} value={skillTested} onChange={(e) => setSkillTested(e.target.value)} placeholder="e.g. Recursion" />
         </div>
         {!blueprintMode && (
           <div>
-            <label style={labelStyle}>How many (1–10)</label>
-            <input type="number" min="1" max="10" style={inputStyle} value={count} onChange={(e) => setCount(e.target.value)} />
+            <label style={labelStyle} htmlFor="ai-draft-count">How many (1–10)</label>
+            <input id="ai-draft-count" type="number" min="1" max="10" style={inputStyle} value={count} onChange={(e) => setCount(e.target.value)} />
           </div>
         )}
       </div>
@@ -276,8 +276,9 @@ export default function GenerateAiDrafts({ onGenerated }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
             {DIFFICULTIES.map((d) => (
               <div key={d}>
-                <label style={labelStyle}>{DIFFICULTY_LABEL[d]}</label>
+                <label style={labelStyle} htmlFor={`ai-draft-blueprint-${d}`}>{DIFFICULTY_LABEL[d]}</label>
                 <input
+                  id={`ai-draft-blueprint-${d}`}
                   type="number" min="0" max={MAX_BLUEPRINT_TOTAL} style={inputStyle}
                   value={blueprint[d]}
                   onChange={(e) => setBlueprint((b) => ({ ...b, [d]: Math.max(0, Number(e.target.value) || 0) }))}

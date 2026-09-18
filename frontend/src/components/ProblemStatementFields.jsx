@@ -8,10 +8,11 @@ const EMPTY_APPROACH = { approach: "", complexity: "" };
 
 function ApproachFields({ label, value, onChange }) {
   const v = value || EMPTY_APPROACH;
+  const approachId = `approach-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div style={{ marginTop: 10 }}>
-      <label style={{ ...labelStyle, marginTop: 0 }}>{label}</label>
-      <textarea style={{ ...inputStyle, minHeight: 60 }} value={v.approach || ""} onChange={(e) => onChange({ ...v, approach: e.target.value })} placeholder="Describe the approach..." />
+      <label style={{ ...labelStyle, marginTop: 0 }} htmlFor={approachId}>{label}</label>
+      <textarea id={approachId} style={{ ...inputStyle, minHeight: 60 }} value={v.approach || ""} onChange={(e) => onChange({ ...v, approach: e.target.value })} placeholder="Describe the approach..." />
       <input style={{ ...inputStyle, maxWidth: 220, marginTop: 6 }} value={v.complexity || ""} onChange={(e) => onChange({ ...v, complexity: e.target.value })} placeholder="Complexity, e.g. O(n^2)" />
     </div>
   );
@@ -60,46 +61,46 @@ export default function ProblemStatementFields({ value, onChange }) {
   }
   return (
     <div>
-      <label style={labelStyle}>Estimated time (minutes, optional)</label>
-      <input type="number" min="1" style={{ ...inputStyle, maxWidth: 160 }} value={v.estimatedTimeMin ?? ""} onChange={(e) => onChange({ estimatedTimeMin: e.target.value ? Number(e.target.value) : null })} />
+      <label style={labelStyle} htmlFor="psf-estimated-time-min">Estimated time (minutes, optional)</label>
+      <input id="psf-estimated-time-min" type="number" min="1" style={{ ...inputStyle, maxWidth: 160 }} value={v.estimatedTimeMin ?? ""} onChange={(e) => onChange({ estimatedTimeMin: e.target.value ? Number(e.target.value) : null })} />
 
-      <label style={labelStyle}>Real-world scenario (optional)</label>
+      <label style={labelStyle} htmlFor="psf-real-world-scenario">Real-world scenario (optional)</label>
       <p style={hintStyle}>A short framing of where this problem shows up in practice — helps students see why it matters before diving in.</p>
-      <textarea style={{ ...inputStyle, minHeight: 60 }} value={v.realWorldScenario || ""} onChange={set("realWorldScenario")} />
+      <textarea id="psf-real-world-scenario" style={{ ...inputStyle, minHeight: 60 }} value={v.realWorldScenario || ""} onChange={set("realWorldScenario")} />
 
-      <label style={labelStyle}>Beginner-friendly explanation (optional)</label>
+      <label style={labelStyle} htmlFor="psf-problem-explanation">Beginner-friendly explanation (optional)</label>
       <p style={hintStyle}>What the problem is really asking, step by step — shown to students before they attempt it, separate from the problem statement itself.</p>
-      <textarea style={{ ...inputStyle, minHeight: 90 }} value={v.problemExplanation || ""} onChange={set("problemExplanation")} />
+      <textarea id="psf-problem-explanation" style={{ ...inputStyle, minHeight: 90 }} value={v.problemExplanation || ""} onChange={set("problemExplanation")} />
 
-      <label style={labelStyle}>Constraints (optional)</label>
-      <textarea style={{ ...inputStyle, minHeight: 60, fontFamily: "var(--font-mono)", fontSize: 13 }} value={v.constraints || ""} onChange={set("constraints")} placeholder={"1 <= n <= 10^5\n-10^9 <= nums[i] <= 10^9"} />
+      <label style={labelStyle} htmlFor="psf-constraints">Constraints (optional)</label>
+      <textarea id="psf-constraints" style={{ ...inputStyle, minHeight: 60, fontFamily: "var(--font-mono)", fontSize: 13 }} value={v.constraints || ""} onChange={set("constraints")} placeholder={"1 <= n <= 10^5\n-10^9 <= nums[i] <= 10^9"} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <label style={labelStyle}>Input format (optional)</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} value={v.inputFormat || ""} onChange={set("inputFormat")} />
+          <label style={labelStyle} htmlFor="psf-input-format">Input format (optional)</label>
+          <textarea id="psf-input-format" style={{ ...inputStyle, minHeight: 60 }} value={v.inputFormat || ""} onChange={set("inputFormat")} />
         </div>
         <div>
-          <label style={labelStyle}>Output format (optional)</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} value={v.outputFormat || ""} onChange={set("outputFormat")} />
+          <label style={labelStyle} htmlFor="psf-output-format">Output format (optional)</label>
+          <textarea id="psf-output-format" style={{ ...inputStyle, minHeight: 60 }} value={v.outputFormat || ""} onChange={set("outputFormat")} />
         </div>
       </div>
 
-      <label style={labelStyle}>Notes (optional)</label>
-      <textarea style={{ ...inputStyle, minHeight: 50 }} value={v.notes || ""} onChange={set("notes")} />
+      <label style={labelStyle} htmlFor="psf-notes">Notes (optional)</label>
+      <textarea id="psf-notes" style={{ ...inputStyle, minHeight: 50 }} value={v.notes || ""} onChange={set("notes")} />
 
-      <label style={labelStyle}>Edge cases to consider (optional)</label>
+      <label style={labelStyle} htmlFor="psf-edge-cases">Edge cases to consider (optional)</label>
       <p style={hintStyle}>Called out for students, not test-case data — e.g. "empty input", "all duplicate values", "n = 1".</p>
-      <textarea style={{ ...inputStyle, minHeight: 60 }} value={v.edgeCases || ""} onChange={set("edgeCases")} />
+      <textarea id="psf-edge-cases" style={{ ...inputStyle, minHeight: 60 }} value={v.edgeCases || ""} onChange={set("edgeCases")} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <label style={labelStyle}>Time complexity (optional)</label>
-          <input style={inputStyle} value={v.timeComplexity || ""} onChange={set("timeComplexity")} placeholder="O(n)" />
+          <label style={labelStyle} htmlFor="psf-time-complexity">Time complexity (optional)</label>
+          <input id="psf-time-complexity" style={inputStyle} value={v.timeComplexity || ""} onChange={set("timeComplexity")} placeholder="O(n)" />
         </div>
         <div>
-          <label style={labelStyle}>Space complexity (optional)</label>
-          <input style={inputStyle} value={v.spaceComplexity || ""} onChange={set("spaceComplexity")} placeholder="O(1)" />
+          <label style={labelStyle} htmlFor="psf-space-complexity">Space complexity (optional)</label>
+          <input id="psf-space-complexity" style={inputStyle} value={v.spaceComplexity || ""} onChange={set("spaceComplexity")} placeholder="O(1)" />
         </div>
       </div>
 

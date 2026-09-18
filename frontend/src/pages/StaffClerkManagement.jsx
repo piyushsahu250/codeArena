@@ -146,12 +146,12 @@ export default function StaffClerkManagement() {
         <div className="card" style={{ padding: 16, marginTop: 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
             <div>
-              <label style={labelStyle}>Search (name / employee ID / email / mobile)</label>
-              <input style={{ ...inputStyle, width: "100%" }} value={filters.q} onChange={setFilter("q")} placeholder="Search…" />
+              <label style={labelStyle} htmlFor="staff-clerk-search">Search (name / employee ID / email / mobile)</label>
+              <input id="staff-clerk-search" style={{ ...inputStyle, width: "100%" }} value={filters.q} onChange={setFilter("q")} placeholder="Search…" />
             </div>
             <div>
-              <label style={labelStyle}>Role</label>
-              <select style={{ ...inputStyle, width: "100%" }} value={filters.role} onChange={setFilter("role")}>
+              <label style={labelStyle} htmlFor="staff-clerk-role">Role</label>
+              <select id="staff-clerk-role" style={{ ...inputStyle, width: "100%" }} value={filters.role} onChange={setFilter("role")}>
                 <option value="">All (Staff + Institute Admin + Clerk)</option>
                 <option value="STAFF">Staff</option>
                 <option value="INSTITUTE_ADMIN">Institute Admin</option>
@@ -160,51 +160,51 @@ export default function StaffClerkManagement() {
             </div>
             {institutes.length > 0 && (
               <div>
-                <label style={labelStyle}>Institute</label>
-                <select style={{ ...inputStyle, width: "100%" }} value={filters.instituteId} onChange={setFilter("instituteId")}>
+                <label style={labelStyle} htmlFor="staff-clerk-institute">Institute</label>
+                <select id="staff-clerk-institute" style={{ ...inputStyle, width: "100%" }} value={filters.instituteId} onChange={setFilter("instituteId")}>
                   <option value="">All institutes</option>
                   {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
               </div>
             )}
             <div>
-              <label style={labelStyle}>Department</label>
-              <input style={{ ...inputStyle, width: "100%" }} value={filters.department} onChange={setFilter("department")} />
+              <label style={labelStyle} htmlFor="staff-clerk-department">Department</label>
+              <input id="staff-clerk-department" style={{ ...inputStyle, width: "100%" }} value={filters.department} onChange={setFilter("department")} />
             </div>
             <div>
-              <label style={labelStyle}>Designation</label>
-              <input style={{ ...inputStyle, width: "100%" }} value={filters.designation} onChange={setFilter("designation")} />
+              <label style={labelStyle} htmlFor="staff-clerk-designation">Designation</label>
+              <input id="staff-clerk-designation" style={{ ...inputStyle, width: "100%" }} value={filters.designation} onChange={setFilter("designation")} />
             </div>
             <div>
-              <label style={labelStyle}>Account Status</label>
-              <select style={{ ...inputStyle, width: "100%" }} value={filters.accountStatus} onChange={setFilter("accountStatus")}>
+              <label style={labelStyle} htmlFor="staff-clerk-account-status">Account Status</label>
+              <select id="staff-clerk-account-status" style={{ ...inputStyle, width: "100%" }} value={filters.accountStatus} onChange={setFilter("accountStatus")}>
                 <option value="">All statuses</option>
                 {Object.entries(STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Active Session</label>
-              <select style={{ ...inputStyle, width: "100%" }} value={filters.hasActiveSession} onChange={setFilter("hasActiveSession")}>
+              <label style={labelStyle} htmlFor="staff-clerk-active-session">Active Session</label>
+              <select id="staff-clerk-active-session" style={{ ...inputStyle, width: "100%" }} value={filters.hasActiveSession} onChange={setFilter("hasActiveSession")}>
                 <option value="">Any</option>
                 <option value="true">Currently logged in</option>
                 <option value="false">Not logged in</option>
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Date Joined From</label>
-              <input style={{ ...inputStyle, width: "100%" }} type="date" value={filters.dateJoinedFrom} onChange={setFilter("dateJoinedFrom")} />
+              <label style={labelStyle} htmlFor="staff-clerk-date-joined-from">Date Joined From</label>
+              <input id="staff-clerk-date-joined-from" style={{ ...inputStyle, width: "100%" }} type="date" value={filters.dateJoinedFrom} onChange={setFilter("dateJoinedFrom")} />
             </div>
             <div>
-              <label style={labelStyle}>Date Joined To</label>
-              <input style={{ ...inputStyle, width: "100%" }} type="date" value={filters.dateJoinedTo} onChange={setFilter("dateJoinedTo")} />
+              <label style={labelStyle} htmlFor="staff-clerk-date-joined-to">Date Joined To</label>
+              <input id="staff-clerk-date-joined-to" style={{ ...inputStyle, width: "100%" }} type="date" value={filters.dateJoinedTo} onChange={setFilter("dateJoinedTo")} />
             </div>
             <div>
-              <label style={labelStyle}>Last Login From</label>
-              <input style={{ ...inputStyle, width: "100%" }} type="date" value={filters.lastLoginFrom} onChange={setFilter("lastLoginFrom")} />
+              <label style={labelStyle} htmlFor="staff-clerk-last-login-from">Last Login From</label>
+              <input id="staff-clerk-last-login-from" style={{ ...inputStyle, width: "100%" }} type="date" value={filters.lastLoginFrom} onChange={setFilter("lastLoginFrom")} />
             </div>
             <div>
-              <label style={labelStyle}>Last Login To</label>
-              <input style={{ ...inputStyle, width: "100%" }} type="date" value={filters.lastLoginTo} onChange={setFilter("lastLoginTo")} />
+              <label style={labelStyle} htmlFor="staff-clerk-last-login-to">Last Login To</label>
+              <input id="staff-clerk-last-login-to" style={{ ...inputStyle, width: "100%" }} type="date" value={filters.lastLoginTo} onChange={setFilter("lastLoginTo")} />
             </div>
           </div>
         </div>

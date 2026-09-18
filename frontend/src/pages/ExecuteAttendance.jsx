@@ -199,8 +199,9 @@ export default function ExecuteAttendance() {
 
         {requiresTest && !plan.testId && (
           <div className="card" style={{ padding: 16, marginTop: 20 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Select Test</label>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 6 }} htmlFor="execatt-select-test">Select Test</label>
             <select
+              id="execatt-select-test"
               style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }}
               value={testId}
               onChange={(e) => setTestId(e.target.value)}

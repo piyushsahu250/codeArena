@@ -121,16 +121,16 @@ export default function SubjectUnitPicker({ subjectId, unitId, topicId, onChange
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div>
-          <label style={labelStyle}>Subject</label>
-          <select style={inputStyle} value={subjectId || ""} onChange={(e) => pickSubject(e.target.value)} disabled={!subjects}>
+          <label style={labelStyle} htmlFor="subject-unit-picker-subject">Subject</label>
+          <select id="subject-unit-picker-subject" style={inputStyle} value={subjectId || ""} onChange={(e) => pickSubject(e.target.value)} disabled={!subjects}>
             <option value="">{subjects === null ? "Loading…" : "— Select Subject —"}</option>
             {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             <option value={NEW}>+ New Subject…</option>
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Unit</label>
-          <select style={inputStyle} value={unitId || ""} onChange={(e) => pickUnit(e.target.value)} disabled={!subjectId}>
+          <label style={labelStyle} htmlFor="subject-unit-picker-unit">Unit</label>
+          <select id="subject-unit-picker-unit" style={inputStyle} value={unitId || ""} onChange={(e) => pickUnit(e.target.value)} disabled={!subjectId}>
             <option value="">{subjectId ? "— Select Unit —" : "Select a Subject first"}</option>
             {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             {subjectId && <option value={NEW}>+ New Unit…</option>}
@@ -141,8 +141,9 @@ export default function SubjectUnitPicker({ subjectId, unitId, topicId, onChange
       {creatingSubject && (
         <div className="card" style={{ padding: 12, marginTop: 8, display: "flex", gap: 8, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
-            <label style={{ ...labelStyle, marginTop: 0 }}>New Subject name</label>
+            <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="subject-unit-picker-new-subject-name">New Subject name</label>
             <input
+              id="subject-unit-picker-new-subject-name"
               style={inputStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Java" autoFocus
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createSubject(); } }}
             />
@@ -154,8 +155,9 @@ export default function SubjectUnitPicker({ subjectId, unitId, topicId, onChange
       {creatingUnit && (
         <div className="card" style={{ padding: 12, marginTop: 8, display: "flex", gap: 8, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
-            <label style={{ ...labelStyle, marginTop: 0 }}>New Unit name (under {selectedSubject?.name})</label>
+            <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="subject-unit-picker-new-unit-name">New Unit name (under {selectedSubject?.name})</label>
             <input
+              id="subject-unit-picker-new-unit-name"
               style={inputStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Unit 1" autoFocus
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createUnit(); } }}
             />
@@ -167,8 +169,8 @@ export default function SubjectUnitPicker({ subjectId, unitId, topicId, onChange
 
       {showTopic && (
         <div style={{ marginTop: 12 }}>
-          <label style={labelStyle}>Topic (optional)</label>
-          <select style={inputStyle} value={topicId || ""} onChange={(e) => pickTopic(e.target.value)} disabled={!unitId || topicsLoading}>
+          <label style={labelStyle} htmlFor="subject-unit-picker-topic">Topic (optional)</label>
+          <select id="subject-unit-picker-topic" style={inputStyle} value={topicId || ""} onChange={(e) => pickTopic(e.target.value)} disabled={!unitId || topicsLoading}>
             <option value="">{!unitId ? "Select a Unit first" : topicsLoading ? "Loading…" : "— None —"}</option>
             {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             {unitId && <option value={NEW}>+ New Topic…</option>}

@@ -427,11 +427,11 @@ export default function CreateTest() {
 
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
           <div id="step-basic" />
-          <label style={labelStyle}>Title</label>
-          <input style={inputStyle} required value={form.title} onChange={updateField("title")} />
+          <label style={labelStyle} htmlFor="test-title">Title</label>
+          <input id="test-title" style={inputStyle} required value={form.title} onChange={updateField("title")} />
 
-          <label style={labelStyle}>Test code (optional)</label>
-          <input style={inputStyle} value={form.code} onChange={updateField("code")} placeholder="e.g. MCA-DS-MID1" />
+          <label style={labelStyle} htmlFor="test-code">Test code (optional)</label>
+          <input id="test-code" style={inputStyle} value={form.code} onChange={updateField("code")} placeholder="e.g. MCA-DS-MID1" />
 
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 14 }}>
             Test names are not required to be unique — "Unit 1 Test" for Java and "Unit 1 Test" for DBMS are two
@@ -451,42 +451,42 @@ export default function CreateTest() {
             }}
           />
           <div style={{ marginTop: 12 }}>
-            <label style={labelStyle}>Program (optional)</label>
-            <input style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. B.Tech CSE" />
+            <label style={labelStyle} htmlFor="test-program">Program (optional)</label>
+            <input id="test-program" style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. B.Tech CSE" />
           </div>
 
-          <label style={labelStyle}>Description</label>
-          <textarea style={{ ...inputStyle, minHeight: 80 }} value={form.description} onChange={updateField("description")} />
+          <label style={labelStyle} htmlFor="test-description">Description</label>
+          <textarea id="test-description" style={{ ...inputStyle, minHeight: 80 }} value={form.description} onChange={updateField("description")} />
 
-          <label style={labelStyle}>Instructions for students (optional)</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.instructions} onChange={updateField("instructions")} />
+          <label style={labelStyle} htmlFor="test-instructions">Instructions for students (optional)</label>
+          <textarea id="test-instructions" style={{ ...inputStyle, minHeight: 60 }} value={form.instructions} onChange={updateField("instructions")} />
 
-          <label style={labelStyle}>Company (optional — marks this as a company-specific placement round, e.g. "TCS", "Amazon")</label>
-          <input style={inputStyle} value={form.company} onChange={updateField("company")} placeholder="Leave blank for a regular test" />
+          <label style={labelStyle} htmlFor="test-company">Company (optional — marks this as a company-specific placement round, e.g. "TCS", "Amazon")</label>
+          <input id="test-company" style={inputStyle} value={form.company} onChange={updateField("company")} placeholder="Leave blank for a regular test" />
 
           <div id="step-config" />
           <div id="step-schedule" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Duration (min)</label>
-              <input style={inputStyle} type="number" value={form.durationMin} onChange={updateField("durationMin")} />
+              <label style={labelStyle} htmlFor="test-duration-min">Duration (min)</label>
+              <input id="test-duration-min" style={inputStyle} type="number" value={form.durationMin} onChange={updateField("durationMin")} />
             </div>
             <div>
-              <label style={labelStyle}>Start time</label>
-              <input style={inputStyle} type="datetime-local" required value={form.startTime} onChange={updateField("startTime")} />
+              <label style={labelStyle} htmlFor="test-start-time">Start time</label>
+              <input id="test-start-time" style={inputStyle} type="datetime-local" required value={form.startTime} onChange={updateField("startTime")} />
             </div>
             <div>
-              <label style={labelStyle}>End time</label>
-              <input style={inputStyle} type="datetime-local" required value={form.endTime} onChange={updateField("endTime")} />
+              <label style={labelStyle} htmlFor="test-end-time">End time</label>
+              <input id="test-end-time" style={inputStyle} type="datetime-local" required value={form.endTime} onChange={updateField("endTime")} />
             </div>
           </div>
 
           {!isPublished && (
             <div>
-              <label style={labelStyle}>
+              <label style={labelStyle} htmlFor="test-scheduled-publish-at">
                 Schedule publish (optional) — automatically publishes at this moment instead of you clicking Publish yourself
               </label>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input style={{ ...inputStyle, flex: 1 }} type="datetime-local" value={form.scheduledPublishAt} onChange={updateField("scheduledPublishAt")} />
+                <input id="test-scheduled-publish-at" style={{ ...inputStyle, flex: 1 }} type="datetime-local" value={form.scheduledPublishAt} onChange={updateField("scheduledPublishAt")} />
                 {form.scheduledPublishAt && (
                   <button type="button" className="btn btn-ghost" onClick={() => setForm({ ...form, scheduledPublishAt: "" })}>Clear</button>
                 )}
@@ -496,8 +496,8 @@ export default function CreateTest() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Passing marks (optional)</label>
-              <input style={inputStyle} type="number" value={form.passingMarks} onChange={updateField("passingMarks")} placeholder={`Total: ${totalMarks}`} />
+              <label style={labelStyle} htmlFor="test-passing-marks">Passing marks (optional)</label>
+              <input id="test-passing-marks" style={inputStyle} type="number" value={form.passingMarks} onChange={updateField("passingMarks")} placeholder={`Total: ${totalMarks}`} />
             </div>
             <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 10 }}>
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
@@ -557,8 +557,8 @@ export default function CreateTest() {
 
           {isPlatformLevel && (
             <div style={{ marginTop: 10 }}>
-              <label style={labelStyle}>Institute</label>
-              <select style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
+              <label style={labelStyle} htmlFor="test-institute">Institute</label>
+              <select id="test-institute" style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
                 <option value="">All institutes (platform-wide)</option>
                 {institutes.map((inst) => (
                   <option key={inst.id} value={inst.id}>{inst.name}</option>
@@ -700,8 +700,9 @@ export default function CreateTest() {
                 </p>
               )}
 
-              <label style={labelStyle}>Questions per student</label>
+              <label style={labelStyle} htmlFor="test-random-questions-per-student">Questions per student</label>
               <input
+                id="test-random-questions-per-student"
                 style={{ ...inputStyle, maxWidth: 160 }}
                 type="number"
                 min={1}

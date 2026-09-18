@@ -468,8 +468,8 @@ export default function CreateQuestion() {
           {isCoding && <QuestionPreviewToggle question={previewQuestion} />}
         </div>
         <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-          <label style={labelStyle}>Question Type</label>
-          <select style={inputStyle} value={form.questionType} onChange={(e) => changeType(e.target.value)}>
+          <label style={labelStyle} htmlFor="cq-question-type">Question Type</label>
+          <select id="cq-question-type" style={inputStyle} value={form.questionType} onChange={(e) => changeType(e.target.value)}>
             {QUESTION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
 
@@ -526,8 +526,8 @@ export default function CreateQuestion() {
             )}
           </div>
 
-          <label style={labelStyle}>Question Name (optional)</label>
-          <input style={inputStyle} value={form.title} onChange={updateField("title")} />
+          <label style={labelStyle} htmlFor="cq-title">Question Name (optional)</label>
+          <input id="cq-title" style={inputStyle} value={form.title} onChange={updateField("title")} />
 
           <div style={{ marginTop: 14 }}>
             <SubjectUnitPicker
@@ -547,18 +547,18 @@ export default function CreateQuestion() {
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Employability Readiness tagging (optional)</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={labelStyle}>Subtopic</label>
-                <input style={inputStyle} value={form.subtopic} onChange={updateField("subtopic")} placeholder="Finer than Topic, e.g. &quot;Normalization&quot;" />
+                <label style={labelStyle} htmlFor="cq-subtopic">Subtopic</label>
+                <input id="cq-subtopic" style={inputStyle} value={form.subtopic} onChange={updateField("subtopic")} placeholder="Finer than Topic, e.g. &quot;Normalization&quot;" />
               </div>
               <div>
-                <label style={labelStyle}>Skill Tested</label>
-                <input style={inputStyle} value={form.skillTested} onChange={updateField("skillTested")} placeholder="e.g. Recursion, SQL Joins" />
+                <label style={labelStyle} htmlFor="cq-skilltested">Skill Tested</label>
+                <input id="cq-skilltested" style={inputStyle} value={form.skillTested} onChange={updateField("skillTested")} placeholder="e.g. Recursion, SQL Joins" />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <div>
-                <label style={labelStyle}>Bloom's Taxonomy (BTL) Level</label>
-                <select style={inputStyle} value={form.btlLevel} onChange={updateField("btlLevel")}>
+                <label style={labelStyle} htmlFor="cq-btl-level">Bloom's Taxonomy (BTL) Level</label>
+                <select id="cq-btl-level" style={inputStyle} value={form.btlLevel} onChange={updateField("btlLevel")}>
                   <option value="">Not classified</option>
                   {BTL_LEVELS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
                 </select>
@@ -569,8 +569,8 @@ export default function CreateQuestion() {
                 )}
               </div>
               <div>
-                <label style={labelStyle}>Review Status</label>
-                <select style={inputStyle} value={form.questionStatus} onChange={updateField("questionStatus")}>
+                <label style={labelStyle} htmlFor="cq-review-status">Review Status</label>
+                <select id="cq-review-status" style={inputStyle} value={form.questionStatus} onChange={updateField("questionStatus")}>
                   {QUESTION_STATUSES.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
                 </select>
                 <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
@@ -580,13 +580,13 @@ export default function CreateQuestion() {
             </div>
           </div>
 
-          <label style={labelStyle}>Question Text</label>
-          <textarea style={{ ...inputStyle, minHeight: 140 }} required value={form.description} onChange={updateField("description")} placeholder="Problem statement / question text…" />
+          <label style={labelStyle} htmlFor="cq-description">Question Text</label>
+          <textarea id="cq-description" style={{ ...inputStyle, minHeight: 140 }} required value={form.description} onChange={updateField("description")} placeholder="Problem statement / question text…" />
           <MathSyntaxHint />
           <MathLivePreview text={form.description} />
 
           <div style={{ marginTop: 14 }}>
-            <label style={labelStyle}>Image (optional) — diagram, figure, or graph</label>
+            <label style={labelStyle} htmlFor="cq-image">Image (optional) — diagram, figure, or graph</label>
             {(imagePreview || imageUrl) && (
               <div style={{ marginTop: 6, marginBottom: 8 }}>
                 <img
@@ -605,7 +605,7 @@ export default function CreateQuestion() {
                 </button>
               </div>
             )}
-            <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={pickImage} />
+            <input id="cq-image" type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={pickImage} />
             {imageFile && (
               <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Uploads when you save this question.</p>
             )}
@@ -618,21 +618,21 @@ export default function CreateQuestion() {
 
           <div style={{ display: "grid", gridTemplateColumns: isQuiz ? "1fr 1fr" : "1fr 1fr 1fr", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Difficulty Level</label>
-              <select style={inputStyle} value={form.difficulty} onChange={updateField("difficulty")}>
+              <label style={labelStyle} htmlFor="cq-difficulty">Difficulty Level</label>
+              <select id="cq-difficulty" style={inputStyle} value={form.difficulty} onChange={updateField("difficulty")}>
                 <option value="EASY">Easy</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HARD">Hard</option>
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Marks</label>
-              <input style={inputStyle} type="number" value={form.points} onChange={updateField("points")} />
+              <label style={labelStyle} htmlFor="cq-points">Marks</label>
+              <input id="cq-points" style={inputStyle} type="number" value={form.points} onChange={updateField("points")} />
             </div>
             {!isQuiz && (
               <div>
-                <label style={labelStyle}>Time limit (ms)</label>
-                <input style={inputStyle} type="number" value={form.timeLimitMs} onChange={updateField("timeLimitMs")} />
+                <label style={labelStyle} htmlFor="cq-timelimit">Time limit (ms)</label>
+                <input id="cq-timelimit" style={inputStyle} type="number" value={form.timeLimitMs} onChange={updateField("timeLimitMs")} />
               </div>
             )}
           </div>
@@ -641,12 +641,12 @@ export default function CreateQuestion() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelStyle}>Memory limit (MB, optional)</label>
-                  <input style={inputStyle} type="number" value={form.memoryLimitKb} onChange={updateField("memoryLimitKb")} placeholder="Platform default" />
+                  <label style={labelStyle} htmlFor="cq-memorylimit">Memory limit (MB, optional)</label>
+                  <input id="cq-memorylimit" style={inputStyle} type="number" value={form.memoryLimitKb} onChange={updateField("memoryLimitKb")} placeholder="Platform default" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Tags (comma-separated, optional)</label>
-                  <input style={inputStyle} value={form.tags} onChange={updateField("tags")} placeholder="Arrays, Dynamic Programming" />
+                  <label style={labelStyle} htmlFor="cq-tags">Tags (comma-separated, optional)</label>
+                  <input id="cq-tags" style={inputStyle} value={form.tags} onChange={updateField("tags")} placeholder="Arrays, Dynamic Programming" />
                 </div>
               </div>
 
@@ -718,11 +718,11 @@ export default function CreateQuestion() {
 
           {isSql && (
             <>
-              <label style={{ ...labelStyle, marginTop: 20 }}>Setup SQL (schema + seed data)</label>
+              <label style={{ ...labelStyle, marginTop: 20 }} htmlFor="cq-sqlschema">Setup SQL (schema + seed data)</label>
               <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
                 Run once against a fresh database before each test case — e.g. <span className="mono">CREATE TABLE employees (id INTEGER, name TEXT, salary INTEGER); INSERT INTO employees VALUES (1,'Asha',50000), (2,'Ravi',62000);</span> SQLite syntax only.
               </p>
-              <textarea style={{ ...inputStyle, minHeight: 100, fontFamily: "var(--font-mono)" }} value={form.sqlSchema} onChange={updateField("sqlSchema")} placeholder="CREATE TABLE ...; INSERT INTO ...;" />
+              <textarea id="cq-sqlschema" style={{ ...inputStyle, minHeight: 100, fontFamily: "var(--font-mono)" }} value={form.sqlSchema} onChange={updateField("sqlSchema")} placeholder="CREATE TABLE ...; INSERT INTO ...;" />
 
               <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
                 Each case grades the same student query against the setup SQL above, plus this case's own optional extra setup SQL — the LeetCode-style pattern of varying the data per case while asking for one query.
@@ -743,21 +743,21 @@ export default function CreateQuestion() {
 
           {isNumerical && (
             <>
-              <label style={{ ...labelStyle, marginTop: 20 }}>Expected answer</label>
+              <label style={{ ...labelStyle, marginTop: 20 }} htmlFor="cq-numericanswer">Expected answer</label>
               <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
                 An integer, a decimal (<span className="mono">0.5</span>), or a fraction (<span className="mono">1/2</span>) — a leading minus is fine.
                 The student's typed answer is parsed the same way, so <span className="mono">1/2</span>, <span className="mono">0.5</span> and <span className="mono">2/4</span> are all accepted for the same question.
               </p>
-              <input style={inputStyle} value={form.numericAnswer} onChange={updateField("numericAnswer")} placeholder="e.g. 5   or   -3/4   or   3.14159" />
+              <input id="cq-numericanswer" style={inputStyle} value={form.numericAnswer} onChange={updateField("numericAnswer")} placeholder="e.g. 5   or   -3/4   or   3.14159" />
 
-              <label style={{ ...labelStyle, marginTop: 16 }}>Tolerance (absolute)</label>
+              <label style={{ ...labelStyle, marginTop: 16 }} htmlFor="cq-numerictolerance">Tolerance (absolute)</label>
               <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
                 <span className="mono">0</span> means an exact match — correct for integer and fraction answers. For a decimal answer like π, set a real value such as <span className="mono">0.001</span> so a rounded answer still scores.
               </p>
-              <input style={{ ...inputStyle, maxWidth: 200 }} type="number" min="0" step="any" value={form.numericTolerance} onChange={updateField("numericTolerance")} placeholder="0" />
+              <input id="cq-numerictolerance" style={{ ...inputStyle, maxWidth: 200 }} type="number" min="0" step="any" value={form.numericTolerance} onChange={updateField("numericTolerance")} placeholder="0" />
 
-              <label style={{ ...labelStyle, marginTop: 20 }}>Explanation (optional)</label>
-              <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.explanation} onChange={updateField("explanation")} placeholder="Shown to staff for review; not shown to students during the test." />
+              <label style={{ ...labelStyle, marginTop: 20 }} htmlFor="cq-numerical-explanation">Explanation (optional)</label>
+              <textarea id="cq-numerical-explanation" style={{ ...inputStyle, minHeight: 60 }} value={form.explanation} onChange={updateField("explanation")} placeholder="Shown to staff for review; not shown to students during the test." />
               <MathLivePreview text={form.explanation} />
             </>
           )}
@@ -795,8 +795,8 @@ export default function CreateQuestion() {
                 </div>
               ))}
 
-              <label style={labelStyle}>Explanation (optional)</label>
-              <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.explanation} onChange={updateField("explanation")} placeholder="Shown to staff for review; not shown to students during the test." />
+              <label style={labelStyle} htmlFor="cq-quiz-explanation">Explanation (optional)</label>
+              <textarea id="cq-quiz-explanation" style={{ ...inputStyle, minHeight: 60 }} value={form.explanation} onChange={updateField("explanation")} placeholder="Shown to staff for review; not shown to students during the test." />
               <MathLivePreview text={form.explanation} />
             </>
           )}

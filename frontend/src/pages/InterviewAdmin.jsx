@@ -226,70 +226,70 @@ export default function InterviewAdmin() {
           <form onSubmit={createQuestion} className="card" style={{ padding: 20, marginTop: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 10 }}>
               <div>
-                <label style={labelStyle}>Category</label>
-                <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <label style={labelStyle} htmlFor="ia-category">Category</label>
+                <select id="ia-category" style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               {form.category === "TECHNICAL" || form.category === "CODING" || form.category === "SYSTEM_DESIGN" ? (
-                <div><label style={labelStyle}>Subject / Topic</label><input style={inputStyle} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></div>
+                <div><label style={labelStyle} htmlFor="ia-subject">Subject / Topic</label><input id="ia-subject" style={inputStyle} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></div>
               ) : form.category === "APTITUDE" ? (
                 <div>
-                  <label style={labelStyle}>Aptitude Category</label>
-                  <select style={inputStyle} value={form.aptitudeCategory} onChange={(e) => setForm({ ...form, aptitudeCategory: e.target.value })}>
+                  <label style={labelStyle} htmlFor="ia-aptcat">Aptitude Category</label>
+                  <select id="ia-aptcat" style={inputStyle} value={form.aptitudeCategory} onChange={(e) => setForm({ ...form, aptitudeCategory: e.target.value })}>
                     <option value="">Select…</option>
                     {APTITUDE_CATS.map((a) => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
               ) : null}
               <div>
-                <label style={labelStyle}>Difficulty</label>
-                <select style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+                <label style={labelStyle} htmlFor="ia-difficulty">Difficulty</label>
+                <select id="ia-difficulty" style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
                   <option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option>
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Company (optional — leave blank for the general pool)</label>
-                <input style={inputStyle} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. TCS, Amazon" />
+                <label style={labelStyle} htmlFor="ia-company">Company (optional — leave blank for the general pool)</label>
+                <input id="ia-company" style={inputStyle} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. TCS, Amazon" />
               </div>
             </div>
 
-            <label style={labelStyle}>Prompt</label>
-            <textarea style={{ ...inputStyle, minHeight: 60 }} required value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
+            <label style={labelStyle} htmlFor="ia-prompt">Prompt</label>
+            <textarea id="ia-prompt" style={{ ...inputStyle, minHeight: 60 }} required value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
 
             {(form.category === "HR" || form.category === "TECHNICAL" || form.category === "SYSTEM_DESIGN" || form.category === "BEHAVIORAL") && (
               <>
-                <label style={labelStyle}>Expected Keywords (comma-separated)</label>
-                <input style={inputStyle} value={form.expectedKeywords} onChange={(e) => setForm({ ...form, expectedKeywords: e.target.value })} />
-                <label style={labelStyle}>Model Answer (optional)</label>
-                <textarea style={{ ...inputStyle, minHeight: 50 }} value={form.modelAnswer} onChange={(e) => setForm({ ...form, modelAnswer: e.target.value })} />
+                <label style={labelStyle} htmlFor="ia-keywords">Expected Keywords (comma-separated)</label>
+                <input id="ia-keywords" style={inputStyle} value={form.expectedKeywords} onChange={(e) => setForm({ ...form, expectedKeywords: e.target.value })} />
+                <label style={labelStyle} htmlFor="ia-modelanswer">Model Answer (optional)</label>
+                <textarea id="ia-modelanswer" style={{ ...inputStyle, minHeight: 50 }} value={form.modelAnswer} onChange={(e) => setForm({ ...form, modelAnswer: e.target.value })} />
               </>
             )}
 
             {form.category === "APTITUDE" && (
               <>
-                <label style={labelStyle}>Options (pipe-separated: A|B|C|D)</label>
-                <input style={inputStyle} value={form.options} onChange={(e) => setForm({ ...form, options: e.target.value })} />
-                <label style={labelStyle}>Correct Answer Index (0-based)</label>
-                <input style={inputStyle} type="number" min="0" value={form.correctAnswer} onChange={(e) => setForm({ ...form, correctAnswer: e.target.value })} />
-                <label style={labelStyle}>Explanation</label>
-                <textarea style={{ ...inputStyle, minHeight: 50 }} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+                <label style={labelStyle} htmlFor="ia-options">Options (pipe-separated: A|B|C|D)</label>
+                <input id="ia-options" style={inputStyle} value={form.options} onChange={(e) => setForm({ ...form, options: e.target.value })} />
+                <label style={labelStyle} htmlFor="ia-correctanswer">Correct Answer Index (0-based)</label>
+                <input id="ia-correctanswer" style={inputStyle} type="number" min="0" value={form.correctAnswer} onChange={(e) => setForm({ ...form, correctAnswer: e.target.value })} />
+                <label style={labelStyle} htmlFor="ia-explanation">Explanation</label>
+                <textarea id="ia-explanation" style={{ ...inputStyle, minHeight: 50 }} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
               </>
             )}
 
             {form.category === "CODING" && (
               <>
-                <label style={labelStyle}>Title (optional)</label>
-                <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-                <label style={labelStyle}>Tags (comma-separated, optional)</label>
-                <input style={inputStyle} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Arrays, Recursion" />
+                <label style={labelStyle} htmlFor="ia-title">Title (optional)</label>
+                <input id="ia-title" style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                <label style={labelStyle} htmlFor="ia-tags">Tags (comma-separated, optional)</label>
+                <input id="ia-tags" style={inputStyle} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Arrays, Recursion" />
 
                 <div style={{ marginTop: 10 }}>
                   <ProblemStatementFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
                 </div>
 
-                <label style={labelStyle}>Default language (which one the candidate sees first)</label>
-                <select style={inputStyle} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+                <label style={labelStyle} htmlFor="ia-language">Default language (which one the candidate sees first)</label>
+                <select id="ia-language" style={inputStyle} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
                   <option value="java">Java</option><option value="python">Python</option><option value="javascript">JavaScript</option><option value="c">C</option><option value="cpp">C++</option>
                 </select>
 
@@ -317,8 +317,8 @@ export default function InterviewAdmin() {
               </>
             )}
 
-            <label style={labelStyle}>Follow-up question (optional — asked automatically right after this one is answered)</label>
-            <select style={inputStyle} value={form.followUpQuestionId} onChange={(e) => setForm({ ...form, followUpQuestionId: e.target.value })}>
+            <label style={labelStyle} htmlFor="ia-followup">Follow-up question (optional — asked automatically right after this one is answered)</label>
+            <select id="ia-followup" style={inputStyle} value={form.followUpQuestionId} onChange={(e) => setForm({ ...form, followUpQuestionId: e.target.value })}>
               <option value="">None</option>
               {(questions || []).map((q) => <option key={q.id} value={q.id}>[{q.category}] {q.prompt.slice(0, 60)}{q.prompt.length > 60 ? "…" : ""}</option>)}
             </select>

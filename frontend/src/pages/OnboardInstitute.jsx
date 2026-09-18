@@ -95,22 +95,22 @@ export default function OnboardInstitute() {
               required before students or staff can be added.
             </p>
             <div>
-              <label style={labelStyle}>Institute name</label>
-              <input style={inputStyle} required autoFocus value={instituteForm.name} onChange={(e) => setInstituteForm({ ...instituteForm, name: e.target.value })} placeholder="e.g. ABC Engineering College" />
+              <label style={labelStyle} htmlFor="onboard-institute-name">Institute name</label>
+              <input id="onboard-institute-name" style={inputStyle} required autoFocus value={instituteForm.name} onChange={(e) => setInstituteForm({ ...instituteForm, name: e.target.value })} placeholder="e.g. ABC Engineering College" />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={labelStyle}>Code (optional)</label>
-                <input style={inputStyle} value={instituteForm.code} onChange={(e) => setInstituteForm({ ...instituteForm, code: e.target.value })} placeholder="e.g. ABC001" />
+                <label style={labelStyle} htmlFor="onboard-institute-code">Code (optional)</label>
+                <input id="onboard-institute-code" style={inputStyle} value={instituteForm.code} onChange={(e) => setInstituteForm({ ...instituteForm, code: e.target.value })} placeholder="e.g. ABC001" />
               </div>
               <div>
-                <label style={labelStyle}>Contact (optional)</label>
-                <input style={inputStyle} value={instituteForm.contact} onChange={(e) => setInstituteForm({ ...instituteForm, contact: e.target.value })} placeholder="Phone / email" />
+                <label style={labelStyle} htmlFor="onboard-institute-contact">Contact (optional)</label>
+                <input id="onboard-institute-contact" style={inputStyle} value={instituteForm.contact} onChange={(e) => setInstituteForm({ ...instituteForm, contact: e.target.value })} placeholder="Phone / email" />
               </div>
             </div>
             <div>
-              <label style={labelStyle}>Address (optional)</label>
-              <input style={inputStyle} value={instituteForm.address} onChange={(e) => setInstituteForm({ ...instituteForm, address: e.target.value })} />
+              <label style={labelStyle} htmlFor="onboard-institute-address">Address (optional)</label>
+              <input id="onboard-institute-address" style={inputStyle} value={instituteForm.address} onChange={(e) => setInstituteForm({ ...instituteForm, address: e.target.value })} />
             </div>
             <button className="btn btn-primary" disabled={creatingInstitute} style={{ justifySelf: "start" }}>
               {creatingInstitute ? "Creating…" : "Create Institute →"}
@@ -128,16 +128,16 @@ export default function OnboardInstitute() {
               reusable form.
             </p>
             <div>
-              <label style={labelStyle}>Admin's name</label>
-              <input style={inputStyle} required autoFocus value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} />
+              <label style={labelStyle} htmlFor="onboard-admin-name">Admin's name</label>
+              <input id="onboard-admin-name" style={inputStyle} required autoFocus value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} />
             </div>
             <div>
-              <label style={labelStyle}>Admin's email</label>
-              <input style={inputStyle} required type="email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} />
+              <label style={labelStyle} htmlFor="onboard-admin-email">Admin's email</label>
+              <input id="onboard-admin-email" style={inputStyle} required type="email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} />
             </div>
             <div>
-              <label style={labelStyle}>Mobile (optional)</label>
-              <input style={inputStyle} value={adminForm.mobile} onChange={(e) => setAdminForm({ ...adminForm, mobile: e.target.value })} />
+              <label style={labelStyle} htmlFor="onboard-admin-mobile">Mobile (optional)</label>
+              <input id="onboard-admin-mobile" style={inputStyle} value={adminForm.mobile} onChange={(e) => setAdminForm({ ...adminForm, mobile: e.target.value })} />
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button className="btn btn-primary" disabled={creatingAdmin}>

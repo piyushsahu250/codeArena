@@ -70,20 +70,20 @@ export default function EditStaffClerkProfileModal({ userId, onClose, onSaved })
           <form onSubmit={handleSave} style={{ marginTop: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={labelStyle}>Full Name</label>
-                <input style={inputStyle} required value={form.name} onChange={updateField("name")} />
+                <label style={labelStyle} htmlFor="edit-staff-clerk-name">Full Name</label>
+                <input id="edit-staff-clerk-name" style={inputStyle} required value={form.name} onChange={updateField("name")} />
               </div>
               <div>
-                <label style={labelStyle}>Email Address</label>
-                <input style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
+                <label style={labelStyle} htmlFor="edit-staff-clerk-email">Email Address</label>
+                <input id="edit-staff-clerk-email" style={inputStyle} type="email" required value={form.email} onChange={updateField("email")} />
               </div>
               <div>
-                <label style={labelStyle}>Mobile Number</label>
-                <input style={inputStyle} value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
+                <label style={labelStyle} htmlFor="edit-staff-clerk-mobile">Mobile Number</label>
+                <input id="edit-staff-clerk-mobile" style={inputStyle} value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
               </div>
               <div>
-                <label style={labelStyle}>Gender (optional)</label>
-                <select style={inputStyle} value={form.gender} onChange={updateField("gender")}>
+                <label style={labelStyle} htmlFor="edit-staff-clerk-gender">Gender (optional)</label>
+                <select id="edit-staff-clerk-gender" style={inputStyle} value={form.gender} onChange={updateField("gender")}>
                   <option value="">— Not specified —</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -92,32 +92,32 @@ export default function EditStaffClerkProfileModal({ userId, onClose, onSaved })
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Employee ID</label>
-                <input style={inputStyle} value={form.employeeId} onChange={updateField("employeeId")} />
+                <label style={labelStyle} htmlFor="edit-staff-clerk-employee-id">Employee ID</label>
+                <input id="edit-staff-clerk-employee-id" style={inputStyle} value={form.employeeId} onChange={updateField("employeeId")} />
               </div>
               <div>
-                <label style={labelStyle}>Designation</label>
-                <input style={inputStyle} value={form.designation} onChange={updateField("designation")} placeholder="e.g. Assistant Professor" />
+                <label style={labelStyle} htmlFor="edit-staff-clerk-designation">Designation</label>
+                <input id="edit-staff-clerk-designation" style={inputStyle} value={form.designation} onChange={updateField("designation")} placeholder="e.g. Assistant Professor" />
               </div>
               <div>
-                <label style={labelStyle}>Institute</label>
-                <select style={inputStyle} value={form.instituteId} onChange={updateField("instituteId")}>
+                <label style={labelStyle} htmlFor="edit-staff-clerk-institute">Institute</label>
+                <select id="edit-staff-clerk-institute" style={inputStyle} value={form.instituteId} onChange={updateField("instituteId")}>
                   <option value="">— None —</option>
                   {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Department</label>
-                <input style={inputStyle} value={form.department} onChange={updateField("department")} />
+                <label style={labelStyle} htmlFor="edit-staff-clerk-department">Department</label>
+                <input id="edit-staff-clerk-department" style={inputStyle} value={form.department} onChange={updateField("department")} />
               </div>
             </div>
 
-            <label style={labelStyle}>Profile Photo (optional)</label>
+            <label style={labelStyle} htmlFor="edit-staff-clerk-profile-photo">Profile Photo (optional)</label>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {form.profilePhotoUrl && (
                 <img src={form.profilePhotoUrl} alt="Profile preview" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
               )}
-              <input type="file" accept="image/*" onChange={handlePhotoChange} />
+              <input id="edit-staff-clerk-profile-photo" type="file" accept="image/*" onChange={handlePhotoChange} />
             </div>
 
             {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 12 }}>{error}</p>}

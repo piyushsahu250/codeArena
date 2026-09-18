@@ -172,15 +172,15 @@ export default function AcademicGroups() {
 
         <div style={{ display: "flex", gap: 16, marginTop: 20, flexWrap: "wrap" }}>
           <div>
-            <label style={{ ...labelStyle, marginTop: 0 }}>Filter by institute</label>
-            <select style={{ ...inputStyle, maxWidth: 300 }} value={filterInstituteId} onChange={(e) => changeInstitute(e.target.value)} disabled={loading}>
+            <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="acadgroups-filter-institute">Filter by institute</label>
+            <select id="acadgroups-filter-institute" style={{ ...inputStyle, maxWidth: 300 }} value={filterInstituteId} onChange={(e) => changeInstitute(e.target.value)} disabled={loading}>
               <option value="">All institutes</option>
               {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={{ ...labelStyle, marginTop: 0 }}>Filter by batch</label>
-            <select style={{ ...inputStyle, maxWidth: 220 }} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} disabled={loading}>
+            <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="acadgroups-filter-batch">Filter by batch</label>
+            <select id="acadgroups-filter-batch" style={{ ...inputStyle, maxWidth: 220 }} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} disabled={loading}>
               <option value="">All batches</option>
               {availableBatches.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>

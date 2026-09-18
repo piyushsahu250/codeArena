@@ -206,10 +206,11 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
 
           {uploadFormat === "spreadsheet" && (
             <div style={{ marginTop: 14 }}>
-              <label style={{ display: "block", fontSize: 13 }}>
+              <label style={{ display: "block", fontSize: 13 }} htmlFor="bulk-import-images-zip">
                 Images (ZIP) — optional, only needed if any row fills in "Image File Name"
               </label>
               <input
+                id="bulk-import-images-zip"
                 type="file"
                 accept=".zip"
                 style={{ marginTop: 6 }}
@@ -223,12 +224,12 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
 
           {folders !== undefined && (
             <>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 14 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 14 }} htmlFor="bulk-import-folder-id">
                 Save to Question Bank
                 {questionKind === "coding" && <span style={{ color: "var(--ink-dim)" }}>(fallback for rows with no Question Bank named)</span>}
               </label>
               <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
-                <select style={{ ...inputStyle, flex: 1 }} value={folderId} onChange={(e) => { setFolderId(e.target.value); setNewFolderName(""); }}>
+                <select id="bulk-import-folder-id" style={{ ...inputStyle, flex: 1 }} value={folderId} onChange={(e) => { setFolderId(e.target.value); setNewFolderName(""); }}>
                   <option value="">Uncategorized (no folder)</option>
                   {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
@@ -244,10 +245,10 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
             </>
           )}
 
-          <label style={{ display: "block", fontSize: 13, marginTop: 14 }}>
+          <label style={{ display: "block", fontSize: 13, marginTop: 14 }} htmlFor="bulk-import-duplicate-action">
             If a question already exists (same text, same Subject/Unit):
           </label>
-          <select style={{ ...inputStyle, marginTop: 6 }} value={duplicateAction} onChange={(e) => setDuplicateAction(e.target.value)}>
+          <select id="bulk-import-duplicate-action" style={{ ...inputStyle, marginTop: 6 }} value={duplicateAction} onChange={(e) => setDuplicateAction(e.target.value)}>
             <option value="skip">Skip duplicates</option>
             <option value="import">Import anyway</option>
           </select>

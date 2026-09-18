@@ -426,11 +426,12 @@ export default function AdminDashboard() {
               </p>
             ) : (
               <>
-                <label style={labelStyle}>Full name</label>
-                <input style={inputStyle} required value={form.name} onChange={updateField("name")} />
+                <label style={labelStyle} htmlFor="admin-create-name">Full name</label>
+                <input id="admin-create-name" style={inputStyle} required value={form.name} onChange={updateField("name")} />
 
-                <label style={labelStyle}>Email</label>
+                <label style={labelStyle} htmlFor="admin-create-email">Email</label>
                 <input
+                  id="admin-create-email"
                   style={inputStyle}
                   type="email"
                   required
@@ -443,30 +444,30 @@ export default function AdminDashboard() {
                   }}
                 />
 
-                <label style={labelStyle}>Role</label>
-                <select style={inputStyle} value={form.role} onChange={updateField("role")}>
+                <label style={labelStyle} htmlFor="admin-create-role">Role</label>
+                <select id="admin-create-role" style={inputStyle} value={form.role} onChange={updateField("role")}>
                   {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
 
-                <label style={labelStyle}>Institute</label>
-                <select style={inputStyle} required value={form.instituteId} onChange={updateField("instituteId")}>
+                <label style={labelStyle} htmlFor="admin-create-institute">Institute</label>
+                <select id="admin-create-institute" style={inputStyle} required value={form.instituteId} onChange={updateField("instituteId")}>
                   <option value="">Select institute…</option>
                   {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
 
                 {form.role === "STUDENT" && (
                   <>
-                    <label style={labelStyle}>Registration number (PRN)</label>
-                    <input style={inputStyle} required maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="9-12 alphanumeric characters" />
+                    <label style={labelStyle} htmlFor="admin-create-registration-number">Registration number (PRN)</label>
+                    <input id="admin-create-registration-number" style={inputStyle} required maxLength={12} value={form.registrationNumber} onChange={updateField("registrationNumber")} placeholder="9-12 alphanumeric characters" />
 
-                    <label style={labelStyle}>Roll number (optional)</label>
-                    <input style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Auto-filled from PRN's last 3 characters if left blank" />
+                    <label style={labelStyle} htmlFor="admin-create-roll-number">Roll number (optional)</label>
+                    <input id="admin-create-roll-number" style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Auto-filled from PRN's last 3 characters if left blank" />
 
-                    <label style={labelStyle}>Mobile number</label>
-                    <input style={inputStyle} required value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
+                    <label style={labelStyle} htmlFor="admin-create-mobile">Mobile number</label>
+                    <input id="admin-create-mobile" style={inputStyle} required value={form.mobile} onChange={updateField("mobile")} placeholder="9876543210" />
 
-                    <label style={labelStyle}>Gender (optional)</label>
-                    <select style={inputStyle} value={form.gender} onChange={updateField("gender")}>
+                    <label style={labelStyle} htmlFor="admin-create-gender">Gender (optional)</label>
+                    <select id="admin-create-gender" style={inputStyle} value={form.gender} onChange={updateField("gender")}>
                       <option value="">— Not specified —</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
@@ -474,11 +475,12 @@ export default function AdminDashboard() {
                       <option value="Prefer not to say">Prefer not to say</option>
                     </select>
 
-                    <label style={labelStyle}>Course (optional)</label>
-                    <input style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. MCA" />
+                    <label style={labelStyle} htmlFor="admin-create-course">Course (optional)</label>
+                    <input id="admin-create-course" style={inputStyle} value={form.program} onChange={updateField("program")} placeholder="e.g. MCA" />
 
-                    <label style={labelStyle}>Batch</label>
+                    <label style={labelStyle} htmlFor="admin-create-batch">Batch</label>
                     <input
+                      id="admin-create-batch"
                       style={inputStyle}
                       required
                       list="batch-options"
@@ -494,16 +496,16 @@ export default function AdminDashboard() {
                       places the student into an academic group — auto-created if it's new, reused if it exists.
                     </p>
 
-                    <label style={labelStyle}>Section (optional)</label>
-                    <input style={inputStyle} list="section-options" value={form.section} onChange={updateField("section")} placeholder="Defaults to Section A" />
+                    <label style={labelStyle} htmlFor="admin-create-section">Section (optional)</label>
+                    <input id="admin-create-section" style={inputStyle} list="section-options" value={form.section} onChange={updateField("section")} placeholder="Defaults to Section A" />
                     <datalist id="section-options">
                       {sectionOptions.map((s) => <option key={s} value={s} />)}
                     </datalist>
                   </>
                 )}
 
-                <label style={labelStyle}>Department</label>
-                <input style={inputStyle} list="department-options" value={form.department} onChange={updateField("department")} placeholder={form.role === "STUDENT" ? "Defaults to Unassigned" : undefined} />
+                <label style={labelStyle} htmlFor="admin-create-department">Department</label>
+                <input id="admin-create-department" style={inputStyle} list="department-options" value={form.department} onChange={updateField("department")} placeholder={form.role === "STUDENT" ? "Defaults to Unassigned" : undefined} />
                 <datalist id="department-options">
                   {departmentOptions.map((d) => <option key={d} value={d} />)}
                 </datalist>

@@ -105,20 +105,20 @@ export default function CompanyMaster() {
             <form onSubmit={save}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
                 <div>
-                  <label style={labelStyle}>Company Name *</label>
-                  <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  <label style={labelStyle} htmlFor="company-master-name">Company Name *</label>
+                  <input id="company-master-name" style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                 </div>
                 <div>
-                  <label style={labelStyle}>Logo URL</label>
-                  <input style={inputStyle} value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} placeholder="https://…" />
+                  <label style={labelStyle} htmlFor="company-master-logo-url">Logo URL</label>
+                  <input id="company-master-logo-url" style={inputStyle} value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} placeholder="https://…" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Type (optional)</label>
-                  <input style={inputStyle} value={form.companyType} onChange={(e) => setForm({ ...form, companyType: e.target.value })} placeholder="Product, Service, Startup…" />
+                  <label style={labelStyle} htmlFor="company-master-type">Type (optional)</label>
+                  <input id="company-master-type" style={inputStyle} value={form.companyType} onChange={(e) => setForm({ ...form, companyType: e.target.value })} placeholder="Product, Service, Startup…" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Website (optional)</label>
-                  <input style={inputStyle} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://…" />
+                  <label style={labelStyle} htmlFor="company-master-website">Website (optional)</label>
+                  <input id="company-master-website" style={inputStyle} value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://…" />
                 </div>
               </div>
               {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 10 }}>{error}</p>}

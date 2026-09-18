@@ -334,23 +334,23 @@ function PermissionsTab({ userId, data, onChanged }) {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14, alignItems: "flex-end" }}>
             {institutes.length > 0 && (
               <div>
-                <label style={{ display: "block", fontSize: 11, color: "var(--ink-dim)" }}>Institute</label>
-                <select style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
+                <label style={{ display: "block", fontSize: 11, color: "var(--ink-dim)" }} htmlFor="permtab-institute">Institute</label>
+                <select id="permtab-institute" style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
                   <option value="">{data.institute?.name || "Select…"}</option>
                   {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </select>
               </div>
             )}
             <div>
-              <label style={{ display: "block", fontSize: 11, color: "var(--ink-dim)" }}>Academic Group</label>
-              <select style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }} value={academicGroupId} onChange={(e) => setAcademicGroupId(e.target.value)}>
+              <label style={{ display: "block", fontSize: 11, color: "var(--ink-dim)" }} htmlFor="permtab-academic-group">Academic Group</label>
+              <select id="permtab-academic-group" style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }} value={academicGroupId} onChange={(e) => setAcademicGroupId(e.target.value)}>
                 <option value="">Select…</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.department?.name} · {g.section} ({g.batch})</option>)}
               </select>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 11, color: "var(--ink-dim)" }}>Semester</label>
-              <input style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, width: 100 }} value={semester} onChange={(e) => setSemester(e.target.value)} placeholder="e.g. 5" />
+              <label style={{ display: "block", fontSize: 11, color: "var(--ink-dim)" }} htmlFor="permtab-semester">Semester</label>
+              <input id="permtab-semester" style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13, width: 100 }} value={semester} onChange={(e) => setSemester(e.target.value)} placeholder="e.g. 5" />
             </div>
             <button className="btn btn-primary" style={{ fontSize: 13 }} disabled={!academicGroupId || !semester.trim() || assigning} onClick={assign}>
               {assigning ? "Assigning…" : "Assign"}

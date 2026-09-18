@@ -126,43 +126,43 @@ export default function ReadinessAnalytics() {
 
         <div className="card" style={{ padding: 16, marginTop: 24, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
-            <label style={labelStyle}>Institute</label>
-            <select style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)} disabled={compareMode}>
+            <label style={labelStyle} htmlFor="readiness-institute">Institute</label>
+            <select id="readiness-institute" style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)} disabled={compareMode}>
               <option value="">All institutes</option>
               {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Subject</label>
-            <select style={inputStyle} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setAssessmentMode(""); }} disabled={compareMode}>
+            <label style={labelStyle} htmlFor="readiness-subject">Subject</label>
+            <select id="readiness-subject" style={inputStyle} value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setAssessmentMode(""); }} disabled={compareMode}>
               <option value="">All subjects</option>
               {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Assessment Mode</label>
-            <select style={inputStyle} value={assessmentMode} onChange={(e) => setAssessmentMode(e.target.value)} disabled={!subjectId || compareMode}>
+            <label style={labelStyle} htmlFor="readiness-assessment-mode">Assessment Mode</label>
+            <select id="readiness-assessment-mode" style={inputStyle} value={assessmentMode} onChange={(e) => setAssessmentMode(e.target.value)} disabled={!subjectId || compareMode}>
               <option value="">All modes</option>
               {modeOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Batch</label>
-            <select style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} disabled={compareMode}>
+            <label style={labelStyle} htmlFor="readiness-batch">Batch</label>
+            <select id="readiness-batch" style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)} disabled={compareMode}>
               <option value="">All batches</option>
               {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Department</label>
-            <select style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)} disabled={compareMode}>
+            <label style={labelStyle} htmlFor="readiness-department">Department</label>
+            <select id="readiness-department" style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)} disabled={compareMode}>
               <option value="">All departments</option>
               {departmentOptions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Section</label>
-            <select style={inputStyle} value={filterSection} onChange={(e) => setFilterSection(e.target.value)} disabled={compareMode}>
+            <label style={labelStyle} htmlFor="readiness-section">Section</label>
+            <select id="readiness-section" style={inputStyle} value={filterSection} onChange={(e) => setFilterSection(e.target.value)} disabled={compareMode}>
               <option value="">All sections</option>
               {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>

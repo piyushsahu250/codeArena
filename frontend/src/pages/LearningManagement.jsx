@@ -206,12 +206,12 @@ function StudentProgressPanel({ courses }) {
     <div style={{ marginTop: 20 }}>
       <form onSubmit={lookup} className="card" style={{ padding: 20, display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 220px" }}>
-          <label style={{ ...labelStyle, marginTop: 0 }}>Student Registration Number (PRN)</label>
-          <input style={inputStyle} value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} placeholder="e.g. 2125PMIF1020" />
+          <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="student-progress-prn">Student Registration Number (PRN)</label>
+          <input id="student-progress-prn" style={inputStyle} value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} placeholder="e.g. 2125PMIF1020" />
         </div>
         <div style={{ flex: "1 1 180px" }}>
-          <label style={{ ...labelStyle, marginTop: 0 }}>Course (optional — narrows the search)</label>
-          <select style={inputStyle} value={courseSlug} onChange={(e) => setCourseSlug(e.target.value)}>
+          <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="student-progress-course">Course (optional — narrows the search)</label>
+          <select id="student-progress-course" style={inputStyle} value={courseSlug} onChange={(e) => setCourseSlug(e.target.value)}>
             <option value="">Any course with progress</option>
             {courses.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
           </select>
@@ -418,40 +418,40 @@ function CoursePanel({ courses, onSelect, onRefresh }) {
       {isAdmin && (
         <form onSubmit={save} className="card" style={{ padding: 20, maxHeight: "80vh", overflowY: "auto" }}>
           <h3 style={{ fontSize: 15 }}>{editingId ? "Edit course" : "Add course"}</h3>
-          <label style={labelStyle}>Slug (URL id, e.g. "python")</label>
-          <input style={inputStyle} required disabled={!!editingId} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
-          <label style={labelStyle}>Name</label>
-          <input style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <label style={labelStyle}>Description</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={labelStyle} htmlFor="course-slug">Slug (URL id, e.g. "python")</label>
+          <input id="course-slug" style={inputStyle} required disabled={!!editingId} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+          <label style={labelStyle} htmlFor="course-name">Name</label>
+          <input id="course-name" style={inputStyle} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <label style={labelStyle} htmlFor="course-description">Description</label>
+          <textarea id="course-description" style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
-          <label style={labelStyle}>Status</label>
-          <select style={inputStyle} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+          <label style={labelStyle} htmlFor="course-status">Status</label>
+          <select id="course-status" style={inputStyle} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
             {COURSE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{COURSE_STATUS_LABELS[s]}</option>)}
           </select>
           <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Only Published courses can be assigned to institutes or academic groups.</p>
 
-          <label style={labelStyle}>Category</label>
-          <input style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Programming, Aptitude" />
+          <label style={labelStyle} htmlFor="course-category">Category</label>
+          <input id="course-category" style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Programming, Aptitude" />
 
-          <label style={labelStyle}>Thumbnail URL (external image, optional)</label>
-          <input style={inputStyle} value={form.thumbnailUrl} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} />
-          <label style={labelStyle}>Banner URL (external image, optional)</label>
-          <input style={inputStyle} value={form.bannerUrl} onChange={(e) => setForm({ ...form, bannerUrl: e.target.value })} />
+          <label style={labelStyle} htmlFor="course-thumbnail-url">Thumbnail URL (external image, optional)</label>
+          <input id="course-thumbnail-url" style={inputStyle} value={form.thumbnailUrl} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} />
+          <label style={labelStyle} htmlFor="course-banner-url">Banner URL (external image, optional)</label>
+          <input id="course-banner-url" style={inputStyle} value={form.bannerUrl} onChange={(e) => setForm({ ...form, bannerUrl: e.target.value })} />
 
-          <label style={labelStyle}>Instructor name</label>
-          <input style={inputStyle} value={form.instructorName} onChange={(e) => setForm({ ...form, instructorName: e.target.value })} />
-          <label style={labelStyle}>Skills covered (comma-separated)</label>
-          <input style={inputStyle} value={form.skillsCovered} onChange={(e) => setForm({ ...form, skillsCovered: e.target.value })} placeholder="OOP, Collections, Multithreading" />
+          <label style={labelStyle} htmlFor="course-instructor-name">Instructor name</label>
+          <input id="course-instructor-name" style={inputStyle} value={form.instructorName} onChange={(e) => setForm({ ...form, instructorName: e.target.value })} />
+          <label style={labelStyle} htmlFor="course-skills-covered">Skills covered (comma-separated)</label>
+          <input id="course-skills-covered" style={inputStyle} value={form.skillsCovered} onChange={(e) => setForm({ ...form, skillsCovered: e.target.value })} placeholder="OOP, Collections, Multithreading" />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={labelStyle}>Est. duration (min)</label>
-              <input style={inputStyle} type="number" min="0" value={form.estimatedDurationMin} onChange={(e) => setForm({ ...form, estimatedDurationMin: e.target.value })} />
+              <label style={labelStyle} htmlFor="course-duration-min">Est. duration (min)</label>
+              <input id="course-duration-min" style={inputStyle} type="number" min="0" value={form.estimatedDurationMin} onChange={(e) => setForm({ ...form, estimatedDurationMin: e.target.value })} />
             </div>
             <div>
-              <label style={labelStyle}>Difficulty</label>
-              <select style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+              <label style={labelStyle} htmlFor="course-difficulty">Difficulty</label>
+              <select id="course-difficulty" style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
                 <option value="">—</option>
                 {DIFFICULTY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
@@ -708,12 +708,12 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
       {isAdmin && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
-            <label style={labelStyle}>New module title</label>
-            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label style={labelStyle} htmlFor="module-new-title">New module title</label>
+            <input id="module-new-title" style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div style={{ flex: "3 1 260px" }}>
-            <label style={labelStyle}>Description</label>
-            <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <label style={labelStyle} htmlFor="module-new-description">Description</label>
+            <input id="module-new-description" style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add module"}</button>
         </form>
@@ -810,20 +810,21 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
       {isAdmin && !bulkMode && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
-            <label style={labelStyle}>New lesson title</label>
-            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label style={labelStyle} htmlFor="lesson-new-title">New lesson title</label>
+            <input id="lesson-new-title" style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div style={{ flex: "1 1 120px" }}>
-            <label style={labelStyle}>Est. minutes</label>
-            <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+            <label style={labelStyle} htmlFor="lesson-new-est-minutes">Est. minutes</label>
+            <input id="lesson-new-est-minutes" style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
           </div>
           <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add lesson"}</button>
         </form>
       )}
       {isAdmin && bulkMode && (
         <form onSubmit={createBulk} className="card" style={{ padding: 16 }}>
-          <label style={labelStyle}>One lesson title per line — no template, no IDs needed</label>
+          <label style={labelStyle} htmlFor="lesson-bulk-titles">One lesson title per line — no template, no IDs needed</label>
           <textarea
+            id="lesson-bulk-titles"
             style={{ ...inputStyle, minHeight: 120, fontFamily: "monospace" }}
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
@@ -910,14 +911,14 @@ function LessonDetailPanel({ lessonId, lessonSummary, onRefresh }) {
           <h3 style={{ fontSize: 15 }}>{isAdmin ? "Edit lesson" : "Lesson"}</h3>
           {!isAdmin && <Badge style={{ fontSize: 11 }}>Read-Only</Badge>}
         </div>
-        <label style={labelStyle}>Title</label>
-        <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <label style={labelStyle}>Video URL (optional)</label>
-        <input style={inputStyle} disabled={!isAdmin} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
-        <label style={labelStyle}>PDF URL (optional)</label>
-        <input style={inputStyle} disabled={!isAdmin} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
-        <label style={labelStyle}>Estimated minutes</label>
-        <input style={inputStyle} type="number" min="1" disabled={!isAdmin} value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+        <label style={labelStyle} htmlFor="lesson-detail-title">Title</label>
+        <input id="lesson-detail-title" style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <label style={labelStyle} htmlFor="lesson-detail-video-url">Video URL (optional)</label>
+        <input id="lesson-detail-video-url" style={inputStyle} disabled={!isAdmin} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
+        <label style={labelStyle} htmlFor="lesson-detail-pdf-url">PDF URL (optional)</label>
+        <input id="lesson-detail-pdf-url" style={inputStyle} disabled={!isAdmin} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
+        <label style={labelStyle} htmlFor="lesson-detail-est-minutes">Estimated minutes</label>
+        <input id="lesson-detail-est-minutes" style={inputStyle} type="number" min="1" disabled={!isAdmin} value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
           <input type="checkbox" disabled={!isAdmin} checked={!!form.isModuleTest} onChange={(e) => setForm({ ...form, isModuleTest: e.target.checked })} />
           This is the module's gating practice test (batch-submitted, must pass to unlock the next module)
@@ -1012,10 +1013,10 @@ function ContentVersionPanel({ lessonId, onPublished }) {
 
       {isAdmin && (
         <>
-          <label style={labelStyle}>Content (HTML — headings, &lt;p&gt;, &lt;pre&gt;&lt;code&gt;, &lt;ul&gt;) {openDraft ? `— editing ${openDraft.status === "IN_REVIEW" ? "in-review" : "draft"} v${openDraft.versionNumber}` : "— new draft"}</label>
-          <textarea style={{ ...inputStyle, minHeight: 220, fontFamily: "var(--font-mono)", fontSize: 12 }} value={draftText} onChange={(e) => setDraftText(e.target.value)} />
-          <label style={labelStyle}>Change summary (required to publish)</label>
-          <input style={inputStyle} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="e.g. Added inheritance examples" />
+          <label style={labelStyle} htmlFor="content-version-draft-text">Content (HTML — headings, &lt;p&gt;, &lt;pre&gt;&lt;code&gt;, &lt;ul&gt;) {openDraft ? `— editing ${openDraft.status === "IN_REVIEW" ? "in-review" : "draft"} v${openDraft.versionNumber}` : "— new draft"}</label>
+          <textarea id="content-version-draft-text" style={{ ...inputStyle, minHeight: 220, fontFamily: "var(--font-mono)", fontSize: 12 }} value={draftText} onChange={(e) => setDraftText(e.target.value)} />
+          <label style={labelStyle} htmlFor="content-version-summary">Change summary (required to publish)</label>
+          <input id="content-version-summary" style={inputStyle} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="e.g. Added inheritance examples" />
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button type="button" className="btn btn-ghost" disabled={saving} onClick={saveDraft}>{saving ? "Saving…" : "Save Draft"}</button>
             {openDraft && (
@@ -1150,8 +1151,8 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
 
       {isAdmin && adding && (
         <form onSubmit={create} style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
-          <label style={labelStyle}>Type</label>
-          <select style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+          <label style={labelStyle} htmlFor="practice-question-type">Type</label>
+          <select id="practice-question-type" style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
             <option value="MCQ">Multiple Choice</option>
             <option value="DEBUG">Debugging (multiple choice)</option>
             <option value="OUTPUT_PREDICTION">Output Prediction (multiple choice)</option>
@@ -1159,8 +1160,8 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
             <option value="CODING">Coding</option>
           </select>
 
-          <label style={labelStyle}>Prompt</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} required value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
+          <label style={labelStyle} htmlFor="practice-question-prompt">Prompt</label>
+          <textarea id="practice-question-prompt" style={{ ...inputStyle, minHeight: 60 }} required value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} />
 
           {(form.type === "MCQ" || form.type === "DEBUG" || form.type === "OUTPUT_PREDICTION") && (
             <>
@@ -1180,22 +1181,22 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
 
           {form.type === "FILL_BLANK" && (
             <>
-              <label style={labelStyle}>Correct answer</label>
-              <input style={inputStyle} value={form.correctAnswer} onChange={(e) => setForm({ ...form, correctAnswer: e.target.value })} />
+              <label style={labelStyle} htmlFor="practice-question-correct-answer">Correct answer</label>
+              <input id="practice-question-correct-answer" style={inputStyle} value={form.correctAnswer} onChange={(e) => setForm({ ...form, correctAnswer: e.target.value })} />
             </>
           )}
 
           {form.type === "CODING" && (
             <>
-              <label style={labelStyle}>Title (optional)</label>
-              <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              <label style={labelStyle}>Tags (comma-separated, optional)</label>
-              <input style={inputStyle} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Arrays, Loops" />
+              <label style={labelStyle} htmlFor="practice-question-title">Title (optional)</label>
+              <input id="practice-question-title" style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <label style={labelStyle} htmlFor="practice-question-tags">Tags (comma-separated, optional)</label>
+              <input id="practice-question-tags" style={inputStyle} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Arrays, Loops" />
 
               <ProblemStatementFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
 
-              <label style={labelStyle}>Default language</label>
-              <select style={inputStyle} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+              <label style={labelStyle} htmlFor="practice-question-language">Default language</label>
+              <select id="practice-question-language" style={inputStyle} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
                 <option value="java">Java</option>
                 <option value="javascript">JavaScript</option>
                 <option value="python">Python</option>
@@ -1227,8 +1228,8 @@ function PracticeQuestionsPanel({ lesson, onRefresh }) {
             </>
           )}
 
-          <label style={labelStyle}>Explanation (shown after answering)</label>
-          <textarea style={{ ...inputStyle, minHeight: 50 }} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
+          <label style={labelStyle} htmlFor="practice-question-explanation">Explanation (shown after answering)</label>
+          <textarea id="practice-question-explanation" style={{ ...inputStyle, minHeight: 50 }} value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} />
 
           <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Adding…" : "Add question"}</button>
         </form>
@@ -1374,17 +1375,17 @@ function CodingTestPanel({ moduleId }) {
 function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
   return (
     <>
-      <label style={labelStyle}>Title</label>
-      <input style={inputStyle} disabled={readOnly} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-      <label style={labelStyle}>Instructions</label>
-      <textarea style={{ ...inputStyle, minHeight: 50 }} disabled={readOnly} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+      <label style={labelStyle} htmlFor="coding-test-config-title">Title</label>
+      <input id="coding-test-config-title" style={inputStyle} disabled={readOnly} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+      <label style={labelStyle} htmlFor="coding-test-config-instructions">Instructions</label>
+      <textarea id="coding-test-config-instructions" style={{ ...inputStyle, minHeight: 50 }} disabled={readOnly} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
-        <div><label style={labelStyle}>Questions per attempt</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.questionCount} onChange={(e) => setForm({ ...form, questionCount: e.target.value })} /></div>
-        <div><label style={labelStyle}>Time limit (min)</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.timeLimitMin} onChange={(e) => setForm({ ...form, timeLimitMin: e.target.value })} /></div>
-        <div><label style={labelStyle}>Passing %</label><input style={inputStyle} type="number" min="0" max="100" disabled={readOnly} value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
-        <div><label style={labelStyle}>Max attempts (blank = unlimited)</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
-        <div><label style={labelStyle}>Cooldown between attempts (min)</label><input style={inputStyle} type="number" min="0" disabled={readOnly} value={form.cooldownMinutes} onChange={(e) => setForm({ ...form, cooldownMinutes: e.target.value })} /></div>
-        <div><label style={labelStyle}>Max violations before auto-submit</label><input style={inputStyle} type="number" min="1" disabled={readOnly} value={form.maxViolations} onChange={(e) => setForm({ ...form, maxViolations: e.target.value })} /></div>
+        <div><label style={labelStyle} htmlFor="coding-test-config-question-count">Questions per attempt</label><input id="coding-test-config-question-count" style={inputStyle} type="number" min="1" disabled={readOnly} value={form.questionCount} onChange={(e) => setForm({ ...form, questionCount: e.target.value })} /></div>
+        <div><label style={labelStyle} htmlFor="coding-test-config-time-limit">Time limit (min)</label><input id="coding-test-config-time-limit" style={inputStyle} type="number" min="1" disabled={readOnly} value={form.timeLimitMin} onChange={(e) => setForm({ ...form, timeLimitMin: e.target.value })} /></div>
+        <div><label style={labelStyle} htmlFor="coding-test-config-passing-percent">Passing %</label><input id="coding-test-config-passing-percent" style={inputStyle} type="number" min="0" max="100" disabled={readOnly} value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
+        <div><label style={labelStyle} htmlFor="coding-test-config-max-attempts">Max attempts (blank = unlimited)</label><input id="coding-test-config-max-attempts" style={inputStyle} type="number" min="1" disabled={readOnly} value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
+        <div><label style={labelStyle} htmlFor="coding-test-config-cooldown">Cooldown between attempts (min)</label><input id="coding-test-config-cooldown" style={inputStyle} type="number" min="0" disabled={readOnly} value={form.cooldownMinutes} onChange={(e) => setForm({ ...form, cooldownMinutes: e.target.value })} /></div>
+        <div><label style={labelStyle} htmlFor="coding-test-config-max-violations">Max violations before auto-submit</label><input id="coding-test-config-max-violations" style={inputStyle} type="number" min="1" disabled={readOnly} value={form.maxViolations} onChange={(e) => setForm({ ...form, maxViolations: e.target.value })} /></div>
       </div>
       <label style={labelStyle}>Allowed languages</label>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
@@ -1667,16 +1668,16 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
 
       {adding && (
         <form onSubmit={create} style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
-          <label style={labelStyle}>Title</label>
-          <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <label style={labelStyle}>Description / prompt</label>
-          <textarea style={{ ...inputStyle, minHeight: 70 }} required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <label style={labelStyle}>Difficulty</label>
-          <select style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+          <label style={labelStyle} htmlFor="coding-question-title">Title</label>
+          <input id="coding-question-title" style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle} htmlFor="coding-question-description">Description / prompt</label>
+          <textarea id="coding-question-description" style={{ ...inputStyle, minHeight: 70 }} required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={labelStyle} htmlFor="coding-question-difficulty">Difficulty</label>
+          <select id="coding-question-difficulty" style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
             <option value="EASY">Easy</option><option value="MEDIUM">Medium</option><option value="HARD">Hard</option>
           </select>
-          <label style={labelStyle}>Tags (comma-separated, optional)</label>
-          <input style={inputStyle} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Arrays, Recursion" />
+          <label style={labelStyle} htmlFor="coding-question-tags">Tags (comma-separated, optional)</label>
+          <input id="coding-question-tags" style={inputStyle} value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Arrays, Recursion" />
 
           <ProblemStatementFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
 
@@ -1945,12 +1946,12 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
             </div>
             {resetMode === "custom" && (
               <div style={{ marginTop: 10 }}>
-                <label style={labelStyle}>Attempts to restore</label>
-                <input type="number" min="0" max={maxAttempts || undefined} style={inputStyle} value={customRemaining} onChange={(e) => setCustomRemaining(e.target.value)} />
+                <label style={labelStyle} htmlFor="coding-attempt-restore-count">Attempts to restore</label>
+                <input id="coding-attempt-restore-count" type="number" min="0" max={maxAttempts || undefined} style={inputStyle} value={customRemaining} onChange={(e) => setCustomRemaining(e.target.value)} />
               </div>
             )}
-            <label style={labelStyle}>Reason (optional)</label>
-            <textarea style={{ ...inputStyle, minHeight: 60 }} value={reason} onChange={(e) => setReason(e.target.value)} />
+            <label style={labelStyle} htmlFor="coding-attempt-reset-reason">Reason (optional)</label>
+            <textarea id="coding-attempt-reset-reason" style={{ ...inputStyle, minHeight: 60 }} value={reason} onChange={(e) => setReason(e.target.value)} />
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
               <button className="btn btn-ghost" onClick={() => setResetTarget(null)}>Cancel</button>
               <button className="btn btn-primary" style={{ background: "var(--rust)", color: "#fff" }} disabled={resetting} onClick={doReset}>{resetting ? "Resetting…" : "Reset attempts"}</button>
@@ -2021,12 +2022,12 @@ function ChapterListPanel({ moduleId, onSelect }) {
       {isAdmin && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
-            <label style={labelStyle}>New chapter title</label>
-            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label style={labelStyle} htmlFor="chapter-list-new-title">New chapter title</label>
+            <input id="chapter-list-new-title" style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div style={{ flex: "3 1 260px" }}>
-            <label style={labelStyle}>Description</label>
-            <input style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <label style={labelStyle} htmlFor="chapter-list-new-description">Description</label>
+            <input id="chapter-list-new-description" style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add chapter"}</button>
         </form>
@@ -2097,10 +2098,10 @@ function ChapterDetailPanel({ chapter, onBack }) {
           {!isAdmin && (
             <Badge style={{ fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</Badge>
           )}
-          <label style={labelStyle}>Title</label>
-          <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <label style={labelStyle}>Description</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={labelStyle} htmlFor="chapter-detail-title">Title</label>
+          <input id="chapter-detail-title" style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle} htmlFor="chapter-detail-description">Description</label>
+          <textarea id="chapter-detail-description" style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
             <input type="checkbox" disabled={!isAdmin} checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
             Active
@@ -2175,12 +2176,12 @@ function ChapterTopicsPanel({ chapterId }) {
       {isAdmin && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
-            <label style={labelStyle}>New topic title</label>
-            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label style={labelStyle} htmlFor="chapter-topic-new-title">New topic title</label>
+            <input id="chapter-topic-new-title" style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
           <div style={{ flex: "1 1 120px" }}>
-            <label style={labelStyle}>Est. minutes</label>
-            <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+            <label style={labelStyle} htmlFor="chapter-topic-new-est-minutes">Est. minutes</label>
+            <input id="chapter-topic-new-est-minutes" style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
           </div>
           <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add topic"}</button>
         </form>
@@ -2254,14 +2255,14 @@ function TopicDetailPanel({ topicId, onBack }) {
           {/* fieldset's disabled attribute cascades to every nested input/textarea/button — including
               inside TopicBlockEditor/TableBlockEditor — without gating each field individually. */}
           <fieldset disabled={!isAdmin} style={{ border: "none", padding: 0, margin: 0 }}>
-            <label style={labelStyle}>Title</label>
-            <input style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            <label style={labelStyle}>Video URL (optional)</label>
-            <input style={inputStyle} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
-            <label style={labelStyle}>PDF URL (optional)</label>
-            <input style={inputStyle} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
-            <label style={labelStyle}>Estimated minutes</label>
-            <input style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
+            <label style={labelStyle} htmlFor="topic-detail-title">Title</label>
+            <input id="topic-detail-title" style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label style={labelStyle} htmlFor="topic-detail-video-url">Video URL (optional)</label>
+            <input id="topic-detail-video-url" style={inputStyle} value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} />
+            <label style={labelStyle} htmlFor="topic-detail-pdf-url">PDF URL (optional)</label>
+            <input id="topic-detail-pdf-url" style={inputStyle} value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} />
+            <label style={labelStyle} htmlFor="topic-detail-est-minutes">Estimated minutes</label>
+            <input id="topic-detail-est-minutes" style={inputStyle} type="number" min="1" value={form.estimatedMinutes} onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })} />
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
               <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
               Active
@@ -2273,8 +2274,8 @@ function TopicDetailPanel({ topicId, onBack }) {
             </p>
             <TopicBlockEditor blocks={form.blocks} onChange={(blocks) => setForm({ ...form, blocks })} />
 
-            <label style={labelStyle}>Legacy HTML content (used only when no blocks above)</label>
-            <textarea style={{ ...inputStyle, minHeight: 140, fontFamily: "var(--font-mono)", fontSize: 12 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+            <label style={labelStyle} htmlFor="topic-detail-legacy-content">Legacy HTML content (used only when no blocks above)</label>
+            <textarea id="topic-detail-legacy-content" style={{ ...inputStyle, minHeight: 140, fontFamily: "var(--font-mono)", fontSize: 12 }} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
           </fieldset>
 
           {isAdmin && <button className="btn btn-primary" style={{ width: "100%", marginTop: 14 }} disabled={saving}>{saving ? "Saving…" : "Save topic"}</button>}
@@ -2658,18 +2659,18 @@ function ProjectListPanel({ moduleId, onSelect }) {
       {isAdmin && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
-            <label style={labelStyle}>New project title</label>
-            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Student Management System" />
+            <label style={labelStyle} htmlFor="project-list-new-title">New project title</label>
+            <input id="project-list-new-title" style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Student Management System" />
           </div>
           <div style={{ flex: "1 1 160px" }}>
-            <label style={labelStyle}>Level</label>
-            <select style={inputStyle} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+            <label style={labelStyle} htmlFor="project-list-new-level">Level</label>
+            <select id="project-list-new-level" style={inputStyle} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
               {PROJECT_LEVELS.map((l) => <option key={l} value={l}>{l.replace(/_/g, " ")}</option>)}
             </select>
           </div>
           <div style={{ flex: "1 1 120px" }}>
-            <label style={labelStyle}>Difficulty</label>
-            <select style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+            <label style={labelStyle} htmlFor="project-list-new-difficulty">Difficulty</label>
+            <select id="project-list-new-difficulty" style={inputStyle} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
               <option value="EASY">Easy</option>
               <option value="MEDIUM">Medium</option>
               <option value="HARD">Hard</option>
@@ -2747,34 +2748,34 @@ function ProjectDetailPanel({ project, onBack }) {
       {tab === "settings" && (
         <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 16, maxWidth: 560 }}>
           {!isAdmin && <Badge style={{ fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</Badge>}
-          <label style={labelStyle}>Title</label>
-          <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <label style={labelStyle}>Description</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <label style={labelStyle}>Objective</label>
-          <input style={inputStyle} disabled={!isAdmin} value={form.objective} onChange={(e) => setForm({ ...form, objective: e.target.value })} placeholder="What the student will build" />
-          <label style={labelStyle}>Real-world scenario</label>
-          <textarea style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.realWorldScenario} onChange={(e) => setForm({ ...form, realWorldScenario: e.target.value })} />
-          <label style={labelStyle}>Requirements (one per line)</label>
-          <textarea style={{ ...inputStyle, minHeight: 80 }} disabled={!isAdmin} value={form.requirements} onChange={(e) => setForm({ ...form, requirements: e.target.value })} />
-          <label style={labelStyle}>Expected output</label>
-          <textarea style={{ ...inputStyle, minHeight: 50 }} disabled={!isAdmin} value={form.expectedOutput} onChange={(e) => setForm({ ...form, expectedOutput: e.target.value })} />
-          <label style={labelStyle}>Skills required (comma-separated)</label>
-          <input style={inputStyle} disabled={!isAdmin} value={form.skillsRequired} onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })} placeholder="OOP, Collections, File I/O" />
-          <label style={labelStyle}>Possible improvements (one per line)</label>
-          <textarea style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.possibleImprovements} onChange={(e) => setForm({ ...form, possibleImprovements: e.target.value })} placeholder="Add input validation for negative amounts&#10;Persist data to a file instead of memory" />
-          <label style={labelStyle}>Interview questions based on this project (one per line)</label>
-          <textarea style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.interviewQuestions} onChange={(e) => setForm({ ...form, interviewQuestions: e.target.value })} placeholder="Why did you choose a HashMap here instead of an ArrayList?" />
+          <label style={labelStyle} htmlFor="project-detail-title">Title</label>
+          <input id="project-detail-title" style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <label style={labelStyle} htmlFor="project-detail-description">Description</label>
+          <textarea id="project-detail-description" style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={labelStyle} htmlFor="project-detail-objective">Objective</label>
+          <input id="project-detail-objective" style={inputStyle} disabled={!isAdmin} value={form.objective} onChange={(e) => setForm({ ...form, objective: e.target.value })} placeholder="What the student will build" />
+          <label style={labelStyle} htmlFor="project-detail-scenario">Real-world scenario</label>
+          <textarea id="project-detail-scenario" style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.realWorldScenario} onChange={(e) => setForm({ ...form, realWorldScenario: e.target.value })} />
+          <label style={labelStyle} htmlFor="project-detail-requirements">Requirements (one per line)</label>
+          <textarea id="project-detail-requirements" style={{ ...inputStyle, minHeight: 80 }} disabled={!isAdmin} value={form.requirements} onChange={(e) => setForm({ ...form, requirements: e.target.value })} />
+          <label style={labelStyle} htmlFor="project-detail-expected-output">Expected output</label>
+          <textarea id="project-detail-expected-output" style={{ ...inputStyle, minHeight: 50 }} disabled={!isAdmin} value={form.expectedOutput} onChange={(e) => setForm({ ...form, expectedOutput: e.target.value })} />
+          <label style={labelStyle} htmlFor="project-detail-skills">Skills required (comma-separated)</label>
+          <input id="project-detail-skills" style={inputStyle} disabled={!isAdmin} value={form.skillsRequired} onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })} placeholder="OOP, Collections, File I/O" />
+          <label style={labelStyle} htmlFor="project-detail-improvements">Possible improvements (one per line)</label>
+          <textarea id="project-detail-improvements" style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.possibleImprovements} onChange={(e) => setForm({ ...form, possibleImprovements: e.target.value })} placeholder="Add input validation for negative amounts&#10;Persist data to a file instead of memory" />
+          <label style={labelStyle} htmlFor="project-detail-interview-questions">Interview questions based on this project (one per line)</label>
+          <textarea id="project-detail-interview-questions" style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.interviewQuestions} onChange={(e) => setForm({ ...form, interviewQuestions: e.target.value })} placeholder="Why did you choose a HashMap here instead of an ArrayList?" />
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Level</label>
-              <select style={inputStyle} disabled={!isAdmin} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
+              <label style={labelStyle} htmlFor="project-detail-level">Level</label>
+              <select id="project-detail-level" style={inputStyle} disabled={!isAdmin} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}>
                 {PROJECT_LEVELS.map((l) => <option key={l} value={l}>{l.replace(/_/g, " ")}</option>)}
               </select>
             </div>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Difficulty</label>
-              <select style={inputStyle} disabled={!isAdmin} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
+              <label style={labelStyle} htmlFor="project-detail-difficulty">Difficulty</label>
+              <select id="project-detail-difficulty" style={inputStyle} disabled={!isAdmin} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })}>
                 <option value="EASY">Easy</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HARD">Hard</option>
@@ -2843,8 +2844,8 @@ function ProjectTasksPanel({ projectId }) {
       {isAdmin && (
         <form onSubmit={create} className="card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
           <div style={{ flex: "2 1 200px" }}>
-            <label style={labelStyle}>New task title</label>
-            <input style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Task 1: Create Student class" />
+            <label style={labelStyle} htmlFor="project-task-new-title">New task title</label>
+            <input id="project-task-new-title" style={inputStyle} required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Task 1: Create Student class" />
           </div>
           <button className="btn btn-primary" disabled={saving}>{saving ? "Adding…" : "Add task"}</button>
         </form>
@@ -2910,19 +2911,19 @@ function TaskDetailPanel({ task, onBack }) {
       <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onBack}>← Back to tasks</button>
       <form onSubmit={save} className="card" style={{ padding: 20, marginTop: 12, maxWidth: 640 }}>
         {!isAdmin && <Badge style={{ fontSize: 11, marginBottom: 10, display: "inline-block" }}>Read-Only</Badge>}
-        <label style={labelStyle}>Title</label>
-        <input style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <label style={labelStyle}>Instructions (what the student must do)</label>
-        <textarea style={{ ...inputStyle, minHeight: 100 }} disabled={!isAdmin} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
-        <label style={labelStyle}>Progressive hints (one per line — shown to the student one at a time, "Show hint 1 of N")</label>
-        <textarea style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.hints} onChange={(e) => setForm({ ...form, hints: e.target.value })} placeholder={"Think about which fields the class needs\nUse a List to store multiple students"} />
+        <label style={labelStyle} htmlFor="task-detail-title">Title</label>
+        <input id="task-detail-title" style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <label style={labelStyle} htmlFor="task-detail-instructions">Instructions (what the student must do)</label>
+        <textarea id="task-detail-instructions" style={{ ...inputStyle, minHeight: 100 }} disabled={!isAdmin} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+        <label style={labelStyle} htmlFor="task-detail-hints">Progressive hints (one per line — shown to the student one at a time, "Show hint 1 of N")</label>
+        <textarea id="task-detail-hints" style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.hints} onChange={(e) => setForm({ ...form, hints: e.target.value })} placeholder={"Think about which fields the class needs\nUse a List to store multiple students"} />
 
         <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--card-bg, #F7F7F5)", fontSize: 12, marginTop: 14 }}>
           Leave test cases empty for a <strong>Manual</strong> task (a written/design step the student self-marks complete). Add test cases to make this task auto-graded by the compiler, exactly like a Practice Coding question.
         </div>
 
-        <label style={labelStyle}>Default language</label>
-        <select style={inputStyle} disabled={!isAdmin} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+        <label style={labelStyle} htmlFor="task-detail-language">Default language</label>
+        <select id="task-detail-language" style={inputStyle} disabled={!isAdmin} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
           <option value="java">Java</option>
           <option value="javascript">JavaScript</option>
           <option value="python">Python</option>

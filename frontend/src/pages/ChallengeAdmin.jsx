@@ -108,15 +108,15 @@ function ScopePicker({ instituteId, academicGroupId, onChange }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }}>Institute (blank = Global)</label>
-        <select style={{ ...inputStyle, marginTop: 6 }} value={instituteId || ""} onChange={(e) => onChange({ instituteId: e.target.value || null, academicGroupId: null })}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }} htmlFor="challenge-institute">Institute (blank = Global)</label>
+        <select id="challenge-institute" style={{ ...inputStyle, marginTop: 6 }} value={instituteId || ""} onChange={(e) => onChange({ instituteId: e.target.value || null, academicGroupId: null })}>
           <option value="">— Global (every institute) —</option>
           {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }}>Academic Group (blank = whole institute)</label>
-        <select style={{ ...inputStyle, marginTop: 6 }} value={academicGroupId || ""} disabled={!instituteId} onChange={(e) => onChange({ instituteId, academicGroupId: e.target.value || null })}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }} htmlFor="challenge-academic-group">Academic Group (blank = whole institute)</label>
+        <select id="challenge-academic-group" style={{ ...inputStyle, marginTop: 6 }} value={academicGroupId || ""} disabled={!instituteId} onChange={(e) => onChange({ instituteId, academicGroupId: e.target.value || null })}>
           <option value="">— Whole institute —</option>
           {groups.map((g) => <option key={g.id} value={g.id}>{g.department?.name} · {g.batch} · {g.section}</option>)}
         </select>
@@ -169,10 +169,10 @@ function ScheduleForm({ kind, onScheduled, initialQuestionId }) {
   return (
     <div className="card" style={{ padding: 16, display: "grid", gap: 10 }}>
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-dim)" }} htmlFor="challenge-when">
           {kind === "daily" ? "Date" : "Any day in the target week"}
         </label>
-        <input type="date" style={{ ...inputStyle, marginTop: 6 }} value={when} onChange={(e) => setWhen(e.target.value)} />
+        <input id="challenge-when" type="date" style={{ ...inputStyle, marginTop: 6 }} value={when} onChange={(e) => setWhen(e.target.value)} />
         {kind === "weekly" && (
           <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>
             Scheduled for the week of {isoWeekStart(when).toDateString()} (Monday–Sunday).

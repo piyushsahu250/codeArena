@@ -134,8 +134,9 @@ export default function ClerkDashboard() {
 
         <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginTop: 24 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }}>Batch (optional)</label>
+            <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4 }} htmlFor="clerkdash-batch">Batch (optional)</label>
             <input
+              id="clerkdash-batch"
               style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--line)", fontSize: 13 }}
               placeholder="e.g. 2022-2026"
               value={batchFilter}

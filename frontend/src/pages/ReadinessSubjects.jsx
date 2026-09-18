@@ -394,30 +394,30 @@ export default function ReadinessSubjects() {
                   filter that also has no business existing for a STAFF/institute-scoped Admin. */}
               {!user?.instituteId && (
                 <div style={{ flex: "1 1 160px" }}>
-                  <label style={{ ...labelStyle, marginTop: 0 }}>Institute</label>
-                  <select style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
+                  <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-institute">Institute</label>
+                  <select id="filter-institute" style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
                     <option value="">All institutes</option>
                     {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                   </select>
                 </div>
               )}
               <div style={{ flex: "1 1 140px" }}>
-                <label style={{ ...labelStyle, marginTop: 0 }}>Batch</label>
-                <select style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}>
+                <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-batch">Batch</label>
+                <select id="filter-batch" style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}>
                   <option value="">All batches</option>
                   {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
               <div style={{ flex: "1 1 180px" }}>
-                <label style={{ ...labelStyle, marginTop: 0 }}>Department</label>
-                <select style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)}>
+                <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-department">Department</label>
+                <select id="filter-department" style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)}>
                   <option value="">All departments</option>
                   {departmentOptions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
               <div style={{ flex: "1 1 140px" }}>
-                <label style={{ ...labelStyle, marginTop: 0 }}>Section</label>
-                <select style={inputStyle} value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+                <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-section">Section</label>
+                <select id="filter-section" style={inputStyle} value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
                   <option value="">All sections</option>
                   {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -499,17 +499,17 @@ export default function ReadinessSubjects() {
               </p>
             )}
 
-            <label style={labelStyle}>Test Name</label>
-            <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Data Structures &amp; Algorithms" />
+            <label style={labelStyle} htmlFor="subject-name">Test Name</label>
+            <input id="subject-name" style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Data Structures &amp; Algorithms" />
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Code</label><input style={inputStyle} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
-              <div><label style={labelStyle}>Department</label><input style={inputStyle} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></div>
-              <div><label style={labelStyle}>Program</label><input style={inputStyle} value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="subject-code">Code</label><input id="subject-code" style={inputStyle} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="subject-department">Department</label><input id="subject-department" style={inputStyle} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="subject-program">Program</label><input id="subject-program" style={inputStyle} value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></div>
             </div>
 
-            <label style={labelStyle}>Description</label>
-            <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <label style={labelStyle} htmlFor="subject-description">Description</label>
+            <textarea id="subject-description" style={{ ...inputStyle, minHeight: 70 }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
             <div className="card" style={{ padding: 14, marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>Assign to Academic Groups</div>
@@ -540,8 +540,8 @@ export default function ReadinessSubjects() {
               {!viewOnly && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
                   <AcademicGroupPicker multi groups={academicGroups} value={pickerGroupIds} onChange={setPickerGroupIds} />
-                  <label style={{ ...labelStyle, marginTop: 10 }}>Program (optional — blank applies to every program in the selected groups)</label>
-                  <input style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
+                  <label style={{ ...labelStyle, marginTop: 10 }} htmlFor="picker-program">Program (optional — blank applies to every program in the selected groups)</label>
+                  <input id="picker-program" style={inputStyle} value={pickerProgram} onChange={(e) => setPickerProgram(e.target.value)} placeholder="e.g. Integrated M.Tech" />
                   {editingId === "NEW" ? (
                     pickerGroupIds.length > 0 && (
                       <p style={{ fontSize: 12, opacity: 0.7, marginTop: 10 }}>{pickerGroupIds.length} group(s) selected — assigned automatically when you save the test below.</p>
@@ -655,9 +655,9 @@ export default function ReadinessSubjects() {
             )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
-              <div><label style={labelStyle}>Duration (min)</label><input style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
-              <div><label style={labelStyle}>Passing %</label><input style={inputStyle} type="number" value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
-              <div><label style={labelStyle}>Max attempts (blank = unlimited)</label><input style={inputStyle} type="number" min={1} placeholder="Unlimited" value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="subject-duration">Duration (min)</label><input id="subject-duration" style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="subject-passing-percent">Passing %</label><input id="subject-passing-percent" style={inputStyle} type="number" value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="subject-max-attempts">Max attempts (blank = unlimited)</label><input id="subject-max-attempts" style={inputStyle} type="number" min={1} placeholder="Unlimited" value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
             </div>
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>
@@ -695,8 +695,8 @@ export default function ReadinessSubjects() {
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginTop: 8 }}>
                       {BTL_LEVELS.map((lvl) => (
                         <div key={lvl}>
-                          <label style={{ ...labelStyle, marginTop: 0, fontSize: 11 }}>BTL {lvl}</label>
-                          <input style={inputStyle} type="number" min="0" max="100" value={form.defaultBtlDistribution[String(lvl)]}
+                          <label style={{ ...labelStyle, marginTop: 0, fontSize: 11 }} htmlFor={`btl-distribution-${lvl}`}>BTL {lvl}</label>
+                          <input id={`btl-distribution-${lvl}`} style={inputStyle} type="number" min="0" max="100" value={form.defaultBtlDistribution[String(lvl)]}
                             onChange={(e) => setForm({ ...form, defaultBtlDistribution: { ...form.defaultBtlDistribution, [String(lvl)]: e.target.value } })} />
                         </div>
                       ))}
@@ -722,8 +722,8 @@ export default function ReadinessSubjects() {
                     <button type="button" className="btn btn-ghost" style={{ ...smallBtn, marginTop: 8 }} onClick={addMode}>+ Add Mode</button>
                   </div>
 
-                  <label style={labelStyle}>Employability Indicators (comma-separated, optional)</label>
-                  <input style={inputStyle} value={form.employabilityIndicators} onChange={(e) => setForm({ ...form, employabilityIndicators: e.target.value })} placeholder="e.g. SQL, Database Design, Transactions" />
+                  <label style={labelStyle} htmlFor="subject-employability-indicators">Employability Indicators (comma-separated, optional)</label>
+                  <input id="subject-employability-indicators" style={inputStyle} value={form.employabilityIndicators} onChange={(e) => setForm({ ...form, employabilityIndicators: e.target.value })} placeholder="e.g. SQL, Database Design, Transactions" />
 
                   <div className="card" style={{ padding: 14, marginTop: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>Readiness Level Thresholds</div>
@@ -748,8 +748,8 @@ export default function ReadinessSubjects() {
                     </label>
                     {form.certificateEnabled && (
                       <div style={{ marginTop: 10 }}>
-                        <label style={labelStyle}>Minimum Readiness Level Required</label>
-                        <select style={inputStyle} value={form.certificateMinLevel} onChange={(e) => setForm({ ...form, certificateMinLevel: e.target.value })}>
+                        <label style={labelStyle} htmlFor="subject-certificate-min-level">Minimum Readiness Level Required</label>
+                        <select id="subject-certificate-min-level" style={inputStyle} value={form.certificateMinLevel} onChange={(e) => setForm({ ...form, certificateMinLevel: e.target.value })}>
                           {[...DEFAULT_THRESHOLDS].reverse().map((t) => (
                             <option key={t.label} value={t.label}>{t.label.replace(/_/g, " ")}</option>
                           ))}

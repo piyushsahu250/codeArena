@@ -85,8 +85,9 @@ export default function Login() {
             </p>
           )}
 
-          <label style={labelStyle}>Email</label>
+          <label style={labelStyle} htmlFor="login-email">Email</label>
           <input
+            id="login-email"
             style={inputStyle}
             type="email"
             required
@@ -96,12 +97,13 @@ export default function Login() {
           />
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <label style={{ ...labelStyle, marginTop: 14 }}>Password</label>
+            <label style={{ ...labelStyle, marginTop: 14 }} htmlFor="login-password">Password</label>
             <Link to="/forgot-password" style={{ fontSize: 12, color: "var(--amber-dark)", fontWeight: 600 }}>
               Forgot password?
             </Link>
           </div>
           <input
+            id="login-password"
             style={inputStyle}
             type="password"
             required

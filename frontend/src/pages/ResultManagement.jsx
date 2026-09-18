@@ -187,34 +187,34 @@ export default function ResultManagement() {
             {creating && (
               <form onSubmit={createExam} className="card" style={{ padding: 20, marginTop: 16, display: "grid", gap: 12 }}>
                 <div>
-                  <label style={labelStyle}>Examination Title</label>
-                  <input style={inputStyle} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Placement Readiness Examination" required />
+                  <label style={labelStyle} htmlFor="exam-title">Examination Title</label>
+                  <input id="exam-title" style={inputStyle} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Placement Readiness Examination" required />
                 </div>
                 {institutes.length > 0 && (
                   <div>
-                    <label style={labelStyle}>Institute (only needed if your account isn't tied to one institute)</label>
-                    <select style={inputStyle} value={form.instituteId} onChange={(e) => setForm((f) => ({ ...f, instituteId: e.target.value }))}>
+                    <label style={labelStyle} htmlFor="exam-institute">Institute (only needed if your account isn't tied to one institute)</label>
+                    <select id="exam-institute" style={inputStyle} value={form.instituteId} onChange={(e) => setForm((f) => ({ ...f, instituteId: e.target.value }))}>
                       <option value="">— Use my own institute —</option>
                       {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                     </select>
                   </div>
                 )}
                 <div>
-                  <label style={labelStyle}>Description (Optional)</label>
-                  <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+                  <label style={labelStyle} htmlFor="exam-description">Description (Optional)</label>
+                  <textarea id="exam-description" style={{ ...inputStyle, minHeight: 60 }} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                   <div>
-                    <label style={labelStyle}>Batch (Optional)</label>
-                    <input style={inputStyle} value={form.batch} onChange={(e) => setForm((f) => ({ ...f, batch: e.target.value }))} placeholder="e.g. 2025-2028" />
+                    <label style={labelStyle} htmlFor="exam-batch">Batch (Optional)</label>
+                    <input id="exam-batch" style={inputStyle} value={form.batch} onChange={(e) => setForm((f) => ({ ...f, batch: e.target.value }))} placeholder="e.g. 2025-2028" />
                   </div>
                   <div>
-                    <label style={labelStyle}>Division(s) (Optional)</label>
-                    <input style={inputStyle} value={form.divisions} onChange={(e) => setForm((f) => ({ ...f, divisions: e.target.value }))} placeholder="e.g. A, B" />
+                    <label style={labelStyle} htmlFor="exam-divisions">Division(s) (Optional)</label>
+                    <input id="exam-divisions" style={inputStyle} value={form.divisions} onChange={(e) => setForm((f) => ({ ...f, divisions: e.target.value }))} placeholder="e.g. A, B" />
                   </div>
                   <div>
-                    <label style={labelStyle}>Semester (Optional)</label>
-                    <input style={inputStyle} value={form.semester} onChange={(e) => setForm((f) => ({ ...f, semester: e.target.value }))} placeholder="e.g. Semester 5" />
+                    <label style={labelStyle} htmlFor="exam-semester">Semester (Optional)</label>
+                    <input id="exam-semester" style={inputStyle} value={form.semester} onChange={(e) => setForm((f) => ({ ...f, semester: e.target.value }))} placeholder="e.g. Semester 5" />
                   </div>
                 </div>
                 {departments.length > 0 && (
@@ -270,36 +270,36 @@ export default function ResultManagement() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
-                    <label style={labelStyle}>Examination Date</label>
-                    <input type="date" style={inputStyle} value={form.examDate} onChange={(e) => setForm((f) => ({ ...f, examDate: e.target.value }))} required />
+                    <label style={labelStyle} htmlFor="exam-date">Examination Date</label>
+                    <input id="exam-date" type="date" style={inputStyle} value={form.examDate} onChange={(e) => setForm((f) => ({ ...f, examDate: e.target.value }))} required />
                   </div>
                   <div>
-                    <label style={labelStyle}>Result Publish Date (Optional)</label>
-                    <input type="date" style={inputStyle} value={form.publishDate} onChange={(e) => setForm((f) => ({ ...f, publishDate: e.target.value }))} />
+                    <label style={labelStyle} htmlFor="exam-publish-date">Result Publish Date (Optional)</label>
+                    <input id="exam-publish-date" type="date" style={inputStyle} value={form.publishDate} onChange={(e) => setForm((f) => ({ ...f, publishDate: e.target.value }))} />
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                   <div>
-                    <label style={labelStyle}>Total Marks</label>
-                    <input type="number" min="1" style={inputStyle} value={form.totalMarks} onChange={(e) => setForm((f) => ({ ...f, totalMarks: e.target.value }))} required />
+                    <label style={labelStyle} htmlFor="exam-total-marks">Total Marks</label>
+                    <input id="exam-total-marks" type="number" min="1" style={inputStyle} value={form.totalMarks} onChange={(e) => setForm((f) => ({ ...f, totalMarks: e.target.value }))} required />
                   </div>
                   <div>
-                    <label style={labelStyle}>Passing Marks</label>
-                    <input type="number" min="0" style={inputStyle} value={form.passingMarks} onChange={(e) => setForm((f) => ({ ...f, passingMarks: e.target.value, passingPercent: "" }))} placeholder="or use %" />
+                    <label style={labelStyle} htmlFor="exam-passing-marks">Passing Marks</label>
+                    <input id="exam-passing-marks" type="number" min="0" style={inputStyle} value={form.passingMarks} onChange={(e) => setForm((f) => ({ ...f, passingMarks: e.target.value, passingPercent: "" }))} placeholder="or use %" />
                   </div>
                   <div>
-                    <label style={labelStyle}>Passing Percentage</label>
-                    <input type="number" min="0" max="100" style={inputStyle} value={form.passingPercent} onChange={(e) => setForm((f) => ({ ...f, passingPercent: e.target.value, passingMarks: "" }))} placeholder="or use marks" />
+                    <label style={labelStyle} htmlFor="exam-passing-percent">Passing Percentage</label>
+                    <input id="exam-passing-percent" type="number" min="0" max="100" style={inputStyle} value={form.passingPercent} onChange={(e) => setForm((f) => ({ ...f, passingPercent: e.target.value, passingMarks: "" }))} placeholder="or use marks" />
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
-                    <label style={labelStyle}>Pass Label</label>
-                    <input style={inputStyle} value={form.passLabel} onChange={(e) => setForm((f) => ({ ...f, passLabel: e.target.value }))} placeholder='e.g. "Pass" or "Qualified"' />
+                    <label style={labelStyle} htmlFor="exam-pass-label">Pass Label</label>
+                    <input id="exam-pass-label" style={inputStyle} value={form.passLabel} onChange={(e) => setForm((f) => ({ ...f, passLabel: e.target.value }))} placeholder='e.g. "Pass" or "Qualified"' />
                   </div>
                   <div>
-                    <label style={labelStyle}>Fail Label</label>
-                    <input style={inputStyle} value={form.failLabel} onChange={(e) => setForm((f) => ({ ...f, failLabel: e.target.value }))} placeholder='e.g. "Fail" or "Not Qualified"' />
+                    <label style={labelStyle} htmlFor="exam-fail-label">Fail Label</label>
+                    <input id="exam-fail-label" style={inputStyle} value={form.failLabel} onChange={(e) => setForm((f) => ({ ...f, failLabel: e.target.value }))} placeholder='e.g. "Fail" or "Not Qualified"' />
                   </div>
                 </div>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
@@ -804,12 +804,12 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             {editingExam ? (
               <div style={{ display: "grid", gap: 8, maxWidth: 480 }}>
                 <div>
-                  <label style={labelStyle}>Examination Title</label>
-                  <input style={inputStyle} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                  <label style={labelStyle} htmlFor="exam-edit-title">Examination Title</label>
+                  <input id="exam-edit-title" style={inputStyle} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Description</label>
-                  <textarea style={{ ...inputStyle, minHeight: 50 }} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+                  <label style={labelStyle} htmlFor="exam-edit-description">Description</label>
+                  <textarea id="exam-edit-description" style={{ ...inputStyle, minHeight: 50 }} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={saveExamEdit} disabled={savingExamEdit || !editTitle.trim()}>{savingExamEdit ? "Saving…" : "Save"}</button>
@@ -1015,8 +1015,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
 
         {addingEntry && (
           <div style={{ marginTop: 14, padding: 14, border: "1px solid var(--line)", borderRadius: 8 }}>
-            <label style={labelStyle}>Search Student (name, roll number, email)</label>
-            <input style={inputStyle} value={studentQuery} onChange={(e) => { setStudentQuery(e.target.value); setSelectedStudent(null); }} placeholder="Type to search…" />
+            <label style={labelStyle} htmlFor="student-search">Search Student (name, roll number, email)</label>
+            <input id="student-search" style={inputStyle} value={studentQuery} onChange={(e) => { setStudentQuery(e.target.value); setSelectedStudent(null); }} placeholder="Type to search…" />
             {studentResults.length > 0 && !selectedStudent && (
               <div style={{ border: "1px solid var(--line)", borderRadius: 8, marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
                 {studentResults.map((s) => (
@@ -1028,24 +1028,25 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginTop: 10, alignItems: "end" }}>
               <div>
-                <label style={labelStyle}>Status</label>
-                <select style={inputStyle} value={markStatus} onChange={(e) => setMarkStatus(e.target.value)}>
+                <label style={labelStyle} htmlFor="mark-status">Status</label>
+                <select id="mark-status" style={inputStyle} value={markStatus} onChange={(e) => setMarkStatus(e.target.value)}>
                   {MARK_STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Marks Obtained</label>
-                <input type="number" min="0" max={exam.totalMarks} style={inputStyle} value={marks} onChange={(e) => setMarks(e.target.value)} disabled={markStatus !== "PRESENT"} placeholder={markStatus !== "PRESENT" ? "No mark — " + markStatus.toLowerCase() : undefined} />
+                <label style={labelStyle} htmlFor="marks-obtained">Marks Obtained</label>
+                <input id="marks-obtained" type="number" min="0" max={exam.totalMarks} style={inputStyle} value={marks} onChange={(e) => setMarks(e.target.value)} disabled={markStatus !== "PRESENT"} placeholder={markStatus !== "PRESENT" ? "No mark — " + markStatus.toLowerCase() : undefined} />
               </div>
               <div>
-                <label style={labelStyle}>Grade (Optional)</label>
-                <input style={inputStyle} value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Auto if configured" />
+                <label style={labelStyle} htmlFor="mark-grade">Grade (Optional)</label>
+                <input id="mark-grade" style={inputStyle} value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="Auto if configured" />
               </div>
               <button className="btn btn-primary" disabled={!selectedStudent || (markStatus === "PRESENT" && !marks) || (markStatus === "EXEMPTED" && !remarks.trim()) || savingEntry} onClick={saveEntry}>{savingEntry ? "Saving…" : "Save"}</button>
             </div>
             <div style={{ marginTop: 10 }}>
-              <label style={labelStyle}>{markStatus === "EXEMPTED" ? "Remarks (required — reason for exemption)" : "Remarks (Optional)"}</label>
+              <label style={labelStyle} htmlFor="mark-remarks">{markStatus === "EXEMPTED" ? "Remarks (required — reason for exemption)" : "Remarks (Optional)"}</label>
               <input
+                id="mark-remarks"
                 style={{ ...inputStyle, borderColor: markStatus === "EXEMPTED" && !remarks.trim() ? "var(--rust)" : undefined }}
                 value={remarks} onChange={(e) => setRemarks(e.target.value)}
                 placeholder={markStatus === "EXEMPTED" ? 'e.g. "Placed", "Medical"' : 'e.g. "Excellent performance"'}
@@ -1053,8 +1054,8 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             </div>
             {exam.status === "PUBLISHED" && (
               <div style={{ marginTop: 10 }}>
-                <label style={labelStyle}>Reason for Correction (required — this examination is already published)</label>
-                <input style={inputStyle} value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} placeholder='e.g. "Correction after re-verification"' />
+                <label style={labelStyle} htmlFor="correction-reason">Reason for Correction (required — this examination is already published)</label>
+                <input id="correction-reason" style={inputStyle} value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} placeholder='e.g. "Correction after re-verification"' />
               </div>
             )}
           </div>
@@ -1075,14 +1076,14 @@ function ExamDetail({ examId, isAdmin, onBack }) {
             </p>
 
             <div style={{ maxWidth: 320, marginTop: 10 }}>
-              <label style={labelStyle}>{exam.groupSelectionMode === "TALENT_POOL" ? "Talent Pool" : "Academic Group"}</label>
+              <label style={labelStyle} htmlFor="bulk-group-select">{exam.groupSelectionMode === "TALENT_POOL" ? "Talent Pool" : "Academic Group"}</label>
               {exam.groupSelectionMode === "TALENT_POOL" ? (
-                <select style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                <select id="bulk-group-select" style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
                   <option value="">Select…</option>
                   {(exam.talentPools || []).map((tp) => <option key={tp.poolId} value={tp.poolId}>{tp.pool.name}</option>)}
                 </select>
               ) : (
-                <select style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
+                <select id="bulk-group-select" style={inputStyle} value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
                   <option value="">Select a batch/department/section…</option>
                   {academicGroups.filter((g) => !exam.academicGroupIds?.length || exam.academicGroupIds.includes(g.id)).map((g) => (
                     <option key={g.id} value={g.id}>{g.batch} · {g.department?.name} · {g.section} ({g._count?.users ?? 0} students)</option>

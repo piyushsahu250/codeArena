@@ -186,8 +186,8 @@ export default function CompanyProfilesPanel() {
           {error && <p style={{ color: "var(--rust)", fontSize: 12 }}>{error}</p>}
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
             <div>
-              <label style={labelStyle}>Company</label>
-              <input style={inputStyle} list="company-profile-companies" value={form.company} disabled={!!form.id} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} />
+              <label style={labelStyle} htmlFor="company-profile-company">Company</label>
+              <input id="company-profile-company" style={inputStyle} list="company-profile-companies" value={form.company} disabled={!!form.id} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} />
               <datalist id="company-profile-companies">
                 {companies.map((c) => <option key={c} value={c} />)}
               </datalist>
@@ -219,8 +219,8 @@ export default function CompanyProfilesPanel() {
           )}
 
           <div>
-            <label style={labelStyle}>Notes (sourcing / rationale, not shown to students)</label>
-            <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="e.g. Sourced from general public interview-prep guidance" />
+            <label style={labelStyle} htmlFor="company-profile-notes">Notes (sourcing / rationale, not shown to students)</label>
+            <textarea id="company-profile-notes" style={{ ...inputStyle, minHeight: 60 }} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="e.g. Sourced from general public interview-prep guidance" />
           </div>
 
           <div style={{ display: "flex", gap: 8 }}>

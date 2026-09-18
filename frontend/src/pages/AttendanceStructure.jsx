@@ -60,8 +60,8 @@ export default function AttendanceStructure() {
         </p>
 
         <div className="card" style={{ padding: 16, marginTop: 20, maxWidth: 420 }}>
-          <label style={labelStyle}>Institute</label>
-          <select style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
+          <label style={labelStyle} htmlFor="attstruct-institute">Institute</label>
+          <select id="attstruct-institute" style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
             <option value="">Select institute…</option>
             {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </select>
@@ -137,13 +137,14 @@ function AttendanceRulesTab({ instituteId, setError }) {
 
   return (
     <div className="card" style={{ padding: 20, marginTop: 20, maxWidth: 420 }}>
-      <label style={labelStyle}>Minimum Attendance Percentage</label>
+      <label style={labelStyle} htmlFor="attrules-min-percent">Minimum Attendance Percentage</label>
       <p style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 10 }}>
         Students below this percentage (per subject) see a warning badge on their own Attendance page. This is
         informational only — it never blocks a test or any other feature. Leave blank to turn the warning off.
       </p>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <input
+          id="attrules-min-percent"
           type="number" min="0" max="100" style={{ ...inputStyle, maxWidth: 120 }}
           placeholder="e.g. 75" value={value} onChange={(e) => setValue(e.target.value)}
         />
@@ -296,8 +297,8 @@ function GroupAssignmentTab({ staff, instituteId, setError }) {
       </p>
       <div className="card" style={{ padding: 16, marginTop: 10, display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 200px" }}>
-          <label style={labelStyle}>Batch</label>
-          <select style={inputStyle} value={batchYear} onChange={(e) => setBatchYear(e.target.value)}>
+          <label style={labelStyle} htmlFor="groupassign-batch">Batch</label>
+          <select id="groupassign-batch" style={inputStyle} value={batchYear} onChange={(e) => setBatchYear(e.target.value)}>
             <option value="">Select batch…</option>
             {batches.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>

@@ -31,8 +31,8 @@ export default function ForgotPassword() {
           Enter your account email and we'll send you a link to reset your password.
         </p>
 
-        <label style={labelStyle}>Email</label>
-        <input style={inputStyle} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@codearena.edu.in" />
+        <label style={labelStyle} htmlFor="forgot-email">Email</label>
+        <input id="forgot-email" style={inputStyle} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@codearena.edu.in" />
 
         {error && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{error}</p>}
         {message && <p style={{ color: "var(--mint)", fontSize: 13, marginTop: 8 }}>{message}</p>}

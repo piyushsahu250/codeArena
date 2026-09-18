@@ -493,59 +493,59 @@ export default function StudentProfile() {
           <form onSubmit={savePersonal} className="card" style={{ padding: 20, marginTop: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Demographic Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>First Name</label><input style={inputStyle} value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Last Name</label><input style={inputStyle} value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-first-name">First Name</label><input id="profile-first-name" style={inputStyle} value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-last-name">Last Name</label><input id="profile-last-name" style={inputStyle} value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Email</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Personal Email</label><input style={inputStyle} type="email" value={form.personalEmail} onChange={(e) => setForm({ ...form, personalEmail: e.target.value })} /></div>
-              <div><label style={labelStyle}>College Email</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.email || ""} disabled /></div>
+              <div><label style={labelStyle} htmlFor="profile-personal-email">Personal Email</label><input id="profile-personal-email" style={inputStyle} type="email" value={form.personalEmail} onChange={(e) => setForm({ ...form, personalEmail: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-college-email">College Email</label><input id="profile-college-email" style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.email || ""} disabled /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Academic Identifiers</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Institute / College Name</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.institute?.name || ""} disabled /></div>
-              <div><label style={labelStyle}>Registration Number (PRN)</label><input style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.registrationNumber || ""} disabled /></div>
-              <div><label style={labelStyle}>Roll Number</label><input style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Max 3 characters" /></div>
+              <div><label style={labelStyle} htmlFor="profile-institute-name">Institute / College Name</label><input id="profile-institute-name" style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.institute?.name || ""} disabled /></div>
+              <div><label style={labelStyle} htmlFor="profile-registration-number">Registration Number (PRN)</label><input id="profile-registration-number" style={{ ...inputStyle, background: "var(--line)" }} value={data?.user?.registrationNumber || ""} disabled /></div>
+              <div><label style={labelStyle} htmlFor="profile-roll-number">Roll Number</label><input id="profile-roll-number" style={inputStyle} maxLength={3} value={form.rollNumber} onChange={(e) => setForm({ ...form, rollNumber: e.target.value.slice(0, 3) })} placeholder="Max 3 characters" /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Phone</div>
-            <label style={labelStyle}>Mobile Number</label>
-            <input style={inputStyle} value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="+91XXXXXXXXXX" />
+            <label style={labelStyle} htmlFor="profile-mobile">Mobile Number</label>
+            <input id="profile-mobile" style={inputStyle} value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="+91XXXXXXXXXX" />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Address</div>
-            <label style={labelStyle}>Address</label>
-            <textarea style={{ ...inputStyle, minHeight: 60 }} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            <label style={labelStyle} htmlFor="profile-address">Address</label>
+            <textarea id="profile-address" style={{ ...inputStyle, minHeight: 60 }} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>State</label><input style={inputStyle} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
-              <div><label style={labelStyle}>District</label><input style={inputStyle} value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} /></div>
-              <div><label style={labelStyle}>Pincode</label><input style={inputStyle} value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-state">State</label><input id="profile-state" style={inputStyle} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-district">District</label><input id="profile-district" style={inputStyle} value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-pincode">Pincode</label><input id="profile-pincode" style={inputStyle} value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Personal Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={labelStyle}>Gender</label>
-                <select style={inputStyle} value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                <label style={labelStyle} htmlFor="profile-gender">Gender</label>
+                <select id="profile-gender" style={inputStyle} value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                   <option value="">Select…</option>
                   <option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option>
                 </select>
               </div>
-              <div><label style={labelStyle}>Date of Birth</label><input style={inputStyle} type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} max={new Date().toISOString().slice(0, 10)} /></div>
+              <div><label style={labelStyle} htmlFor="profile-dob">Date of Birth</label><input id="profile-dob" style={inputStyle} type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} max={new Date().toISOString().slice(0, 10)} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Parents' Information</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={labelStyle}>Father's Name *</label><input style={inputStyle} value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Father's Contact Number *</label><input style={inputStyle} value={form.fatherContact} onChange={(e) => setForm({ ...form, fatherContact: e.target.value })} /></div>
-              <div><label style={labelStyle}>Mother's Name *</label><input style={inputStyle} value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value })} /></div>
-              <div><label style={labelStyle}>Mother's Contact Number *</label><input style={inputStyle} value={form.motherContact} onChange={(e) => setForm({ ...form, motherContact: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-father-name">Father's Name *</label><input id="profile-father-name" style={inputStyle} value={form.fatherName} onChange={(e) => setForm({ ...form, fatherName: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-father-contact">Father's Contact Number *</label><input id="profile-father-contact" style={inputStyle} value={form.fatherContact} onChange={(e) => setForm({ ...form, fatherContact: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-mother-name">Mother's Name *</label><input id="profile-mother-name" style={inputStyle} value={form.motherName} onChange={(e) => setForm({ ...form, motherName: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="profile-mother-contact">Mother's Contact Number *</label><input id="profile-mother-contact" style={inputStyle} value={form.motherContact} onChange={(e) => setForm({ ...form, motherContact: e.target.value })} /></div>
             </div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>About</div>
-            <label style={labelStyle}>Short Description *</label>
-            <textarea style={{ ...inputStyle, minHeight: 70 }} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} placeholder="A couple of sentences about yourself" />
+            <label style={labelStyle} htmlFor="profile-short-description">Short Description *</label>
+            <textarea id="profile-short-description" style={{ ...inputStyle, minHeight: 70 }} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} placeholder="A couple of sentences about yourself" />
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 18 }}>Profile Picture</div>
             <div style={{ marginTop: 6, maxWidth: 260 }}>
@@ -567,8 +567,9 @@ export default function StudentProfile() {
               />
             </div>
 
-            <label style={labelStyle}>LinkedIn Profile URL</label>
+            <label style={labelStyle} htmlFor="profile-linkedin-url">LinkedIn Profile URL</label>
             <input
+              id="profile-linkedin-url"
               style={inputStyle} type="url" placeholder="https://linkedin.com/in/yourname"
               value={form.linkedinUrl} onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })}
             />
@@ -627,11 +628,11 @@ export default function StudentProfile() {
               competitive-programming and assessment handles below.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
-              <div><label style={labelStyle}>LeetCode</label><input style={inputStyle} value={skillsForm.leetcodeHandle} onChange={(e) => setSkillsForm({ ...skillsForm, leetcodeHandle: e.target.value })} /></div>
-              <div><label style={labelStyle}>HackerRank</label><input style={inputStyle} value={skillsForm.hackerrankHandle} onChange={(e) => setSkillsForm({ ...skillsForm, hackerrankHandle: e.target.value })} /></div>
-              <div><label style={labelStyle}>StopStalk</label><input style={inputStyle} value={skillsForm.stopstalkHandle} onChange={(e) => setSkillsForm({ ...skillsForm, stopstalkHandle: e.target.value })} /></div>
-              <div><label style={labelStyle}>AMCAT ID</label><input style={inputStyle} value={skillsForm.amcatId} onChange={(e) => setSkillsForm({ ...skillsForm, amcatId: e.target.value })} /></div>
-              <div><label style={labelStyle}>CoCubes ID</label><input style={inputStyle} value={skillsForm.cocubesId} onChange={(e) => setSkillsForm({ ...skillsForm, cocubesId: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="skills-leetcode">LeetCode</label><input id="skills-leetcode" style={inputStyle} value={skillsForm.leetcodeHandle} onChange={(e) => setSkillsForm({ ...skillsForm, leetcodeHandle: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="skills-hackerrank">HackerRank</label><input id="skills-hackerrank" style={inputStyle} value={skillsForm.hackerrankHandle} onChange={(e) => setSkillsForm({ ...skillsForm, hackerrankHandle: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="skills-stopstalk">StopStalk</label><input id="skills-stopstalk" style={inputStyle} value={skillsForm.stopstalkHandle} onChange={(e) => setSkillsForm({ ...skillsForm, stopstalkHandle: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="skills-amcat-id">AMCAT ID</label><input id="skills-amcat-id" style={inputStyle} value={skillsForm.amcatId} onChange={(e) => setSkillsForm({ ...skillsForm, amcatId: e.target.value })} /></div>
+              <div><label style={labelStyle} htmlFor="skills-cocubes-id">CoCubes ID</label><input id="skills-cocubes-id" style={inputStyle} value={skillsForm.cocubesId} onChange={(e) => setSkillsForm({ ...skillsForm, cocubesId: e.target.value })} /></div>
             </div>
             <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
           </form>
@@ -668,15 +669,15 @@ export default function StudentProfile() {
 
             {placementForm.placementParticipation === "NOT_INTERESTED" && (
               <>
-                <label style={labelStyle}>Reason</label>
-                <select style={inputStyle} value={placementForm.placementDeclineReason} onChange={(e) => setPlacementForm({ ...placementForm, placementDeclineReason: e.target.value })}>
+                <label style={labelStyle} htmlFor="placement-decline-reason">Reason</label>
+                <select id="placement-decline-reason" style={inputStyle} value={placementForm.placementDeclineReason} onChange={(e) => setPlacementForm({ ...placementForm, placementDeclineReason: e.target.value })}>
                   <option value="">Select a reason…</option>
                   {DECLINE_REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
                 {placementForm.placementDeclineReason === "OTHER" && (
                   <>
-                    <label style={labelStyle}>Please describe</label>
-                    <textarea style={{ ...inputStyle, minHeight: 60 }} value={placementForm.placementDeclineOther} onChange={(e) => setPlacementForm({ ...placementForm, placementDeclineOther: e.target.value })} />
+                    <label style={labelStyle} htmlFor="placement-decline-other">Please describe</label>
+                    <textarea id="placement-decline-other" style={{ ...inputStyle, minHeight: 60 }} value={placementForm.placementDeclineOther} onChange={(e) => setPlacementForm({ ...placementForm, placementDeclineOther: e.target.value })} />
                   </>
                 )}
               </>
@@ -715,34 +716,34 @@ export default function StudentProfile() {
                   <OfferCompanyField form={offerForm} setForm={setOfferForm} companies={companies} />
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
                     <div>
-                      <label style={labelStyle}>Offer Type</label>
-                      <select style={inputStyle} value={offerForm.offerType} onChange={(e) => setOfferForm({ ...offerForm, offerType: e.target.value })}>
+                      <label style={labelStyle} htmlFor="offer-type">Offer Type</label>
+                      <select id="offer-type" style={inputStyle} value={offerForm.offerType} onChange={(e) => setOfferForm({ ...offerForm, offerType: e.target.value })}>
                         <option value="PLACEMENT">Placement</option>
                         <option value="INTERNSHIP">Internship</option>
                       </select>
                     </div>
                     <div>
-                      <label style={labelStyle}>Source</label>
-                      <select style={inputStyle} value={offerForm.source} onChange={(e) => setOfferForm({ ...offerForm, source: e.target.value })}>
+                      <label style={labelStyle} htmlFor="offer-source">Source</label>
+                      <select id="offer-source" style={inputStyle} value={offerForm.source} onChange={(e) => setOfferForm({ ...offerForm, source: e.target.value })}>
                         <option value="ON_CAMPUS">On-Campus</option>
                         <option value="OFF_CAMPUS">Off-Campus</option>
                       </select>
                     </div>
                     <div>
-                      <label style={labelStyle}>{offerForm.offerType === "INTERNSHIP" ? "Stipend (per month)" : "Offered Package (LPA)"}</label>
-                      <input style={inputStyle} type="number" step="0.01" min="0" required value={offerForm.offeredPackage} onChange={(e) => setOfferForm({ ...offerForm, offeredPackage: e.target.value })} />
+                      <label style={labelStyle} htmlFor="offer-offered-package">{offerForm.offerType === "INTERNSHIP" ? "Stipend (per month)" : "Offered Package (LPA)"}</label>
+                      <input id="offer-offered-package" style={inputStyle} type="number" step="0.01" min="0" required value={offerForm.offeredPackage} onChange={(e) => setOfferForm({ ...offerForm, offeredPackage: e.target.value })} />
                     </div>
                     <div>
-                      <label style={labelStyle}>Offer Status</label>
-                      <select style={inputStyle} value={offerForm.offerStatus} onChange={(e) => setOfferForm({ ...offerForm, offerStatus: e.target.value })}>
+                      <label style={labelStyle} htmlFor="offer-status">Offer Status</label>
+                      <select id="offer-status" style={inputStyle} value={offerForm.offerStatus} onChange={(e) => setOfferForm({ ...offerForm, offerStatus: e.target.value })}>
                         <option value="HOLDING">Holding</option>
                         <option value="ACCEPTED">Accepted</option>
                         <option value="REJECTED">Rejected</option>
                       </select>
                     </div>
                     <div>
-                      <label style={labelStyle}>Joining Status (optional)</label>
-                      <select style={inputStyle} value={offerForm.joiningStatus} onChange={(e) => setOfferForm({ ...offerForm, joiningStatus: e.target.value })}>
+                      <label style={labelStyle} htmlFor="offer-joining-status">Joining Status (optional)</label>
+                      <select id="offer-joining-status" style={inputStyle} value={offerForm.joiningStatus} onChange={(e) => setOfferForm({ ...offerForm, joiningStatus: e.target.value })}>
                         <option value="">Not set</option>
                         <option value="Joined">Joined</option>
                         <option value="Not Yet Joined">Not Yet Joined</option>
@@ -750,8 +751,8 @@ export default function StudentProfile() {
                       </select>
                     </div>
                   </div>
-                  <label style={labelStyle}>Document Proof Link *</label>
-                  <input style={inputStyle} required type="url" placeholder="https://drive.google.com/… or offer letter PDF link" value={offerForm.proofLink} onChange={(e) => setOfferForm({ ...offerForm, proofLink: e.target.value })} />
+                  <label style={labelStyle} htmlFor="offer-proof-link">Document Proof Link *</label>
+                  <input id="offer-proof-link" style={inputStyle} required type="url" placeholder="https://drive.google.com/… or offer letter PDF link" value={offerForm.proofLink} onChange={(e) => setOfferForm({ ...offerForm, proofLink: e.target.value })} />
                   {offerError && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{offerError}</p>}
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                     <button className="btn btn-primary" style={{ fontSize: 12 }} disabled={offerSaving}>{offerSaving ? "Saving…" : "Save Offer"}</button>
@@ -810,21 +811,21 @@ export default function StudentProfile() {
 
               {showDocumentForm && (
                 <form onSubmit={saveDocument} className="card" style={{ padding: 16, marginTop: 12, background: "#FBFAF6" }}>
-                  <label style={labelStyle}>Document Type *</label>
-                  <select style={inputStyle} required value={documentForm.documentType} onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}>
+                  <label style={labelStyle} htmlFor="document-type">Document Type *</label>
+                  <select id="document-type" style={inputStyle} required value={documentForm.documentType} onChange={(e) => setDocumentForm({ ...documentForm, documentType: e.target.value })}>
                     <option value="">Select…</option>
                     {docTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
 
                   {LABEL_REQUIRED_DOC_TYPES.includes(documentForm.documentType) && (
                     <>
-                      <label style={labelStyle}>Label *</label>
-                      <input style={inputStyle} required placeholder="e.g. Semester 5 Mark Sheet" value={documentForm.label} onChange={(e) => setDocumentForm({ ...documentForm, label: e.target.value })} />
+                      <label style={labelStyle} htmlFor="document-label">Label *</label>
+                      <input id="document-label" style={inputStyle} required placeholder="e.g. Semester 5 Mark Sheet" value={documentForm.label} onChange={(e) => setDocumentForm({ ...documentForm, label: e.target.value })} />
                     </>
                   )}
 
-                  <label style={labelStyle}>Document Link *</label>
-                  <input style={inputStyle} required type="url" placeholder="https://drive.google.com/… or document PDF link" value={documentForm.documentLink} onChange={(e) => setDocumentForm({ ...documentForm, documentLink: e.target.value })} />
+                  <label style={labelStyle} htmlFor="document-link">Document Link *</label>
+                  <input id="document-link" style={inputStyle} required type="url" placeholder="https://drive.google.com/… or document PDF link" value={documentForm.documentLink} onChange={(e) => setDocumentForm({ ...documentForm, documentLink: e.target.value })} />
 
                   {documentError && <p style={{ color: "var(--rust)", fontSize: 13, marginTop: 8 }}>{documentError}</p>}
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -896,8 +897,9 @@ function OfferCompanyField({ form, setForm, companies }) {
   const matched = form.companyId && companies.some((c) => c.id === form.companyId);
   return (
     <div>
-      <label style={labelStyle}>Company Name *</label>
+      <label style={labelStyle} htmlFor="offer-company-name">Company Name *</label>
       <select
+        id="offer-company-name"
         style={inputStyle}
         value={matched ? form.companyId : "OTHER"}
         onChange={(e) => {
@@ -928,13 +930,13 @@ function EducationForm({ draft, setDraft, onSave, onCancel, saving }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
         {EDUCATION_FIELDS.map((f) => (
           <div key={f.key}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-dim)" }}>{f.label}</label>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-dim)" }} htmlFor={`education-${f.key}`}>{f.label}</label>
             {f.type === "select" ? (
-              <select style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}>
+              <select id={`education-${f.key}`} style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}>
                 {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             ) : (
-              <input style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
+              <input id={`education-${f.key}`} style={inputStyle} value={draft[f.key] || ""} onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
             )}
           </div>
         ))}

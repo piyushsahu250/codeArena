@@ -133,12 +133,12 @@ export default function TalentPools() {
           <form onSubmit={createPool} className="card" style={{ padding: 16, marginTop: 20, display: "grid", gap: 10 }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
               <div style={{ flex: "1 1 220px" }}>
-                <label style={labelStyle}>New Pool Name</label>
-                <input style={inputStyle} placeholder="e.g. Elite Coders" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                <label style={labelStyle} htmlFor="new-pool-name">New Pool Name</label>
+                <input id="new-pool-name" style={inputStyle} placeholder="e.g. Elite Coders" value={newName} onChange={(e) => setNewName(e.target.value)} />
               </div>
               <div style={{ flex: "1 1 260px" }}>
-                <label style={labelStyle}>Description (optional)</label>
-                <input style={inputStyle} placeholder="e.g. Top 30 CS students by coding score" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+                <label style={labelStyle} htmlFor="new-pool-description">Description (optional)</label>
+                <input id="new-pool-description" style={inputStyle} placeholder="e.g. Top 30 CS students by coding score" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
               </div>
               <button className="btn btn-primary" disabled={creating}>{creating ? "Creating…" : "+ New Pool"}</button>
             </div>
@@ -263,28 +263,28 @@ function AnalyticsPanel({ institutes, pools, isAdmin }) {
     <div className="card" style={{ padding: 16, marginTop: 12 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div>
-          <label style={labelStyle}>Pool</label>
-          <select style={inputStyle} value={filters.poolId} onChange={(e) => setFilters((f) => ({ ...f, poolId: e.target.value }))}>
+          <label style={labelStyle} htmlFor="analytics-pool">Pool</label>
+          <select id="analytics-pool" style={inputStyle} value={filters.poolId} onChange={(e) => setFilters((f) => ({ ...f, poolId: e.target.value }))}>
             <option value="">All pools</option>
             {pools.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         {isAdmin && (
           <div>
-            <label style={labelStyle}>Institute</label>
-            <select style={inputStyle} value={filters.instituteId} onChange={(e) => setFilters((f) => ({ ...f, instituteId: e.target.value }))}>
+            <label style={labelStyle} htmlFor="analytics-institute">Institute</label>
+            <select id="analytics-institute" style={inputStyle} value={filters.instituteId} onChange={(e) => setFilters((f) => ({ ...f, instituteId: e.target.value }))}>
               <option value="">All institutes</option>
               {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
         )}
         <div>
-          <label style={labelStyle}>Pool created from</label>
-          <input type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} />
+          <label style={labelStyle} htmlFor="analytics-date-from">Pool created from</label>
+          <input id="analytics-date-from" type="date" style={inputStyle} value={filters.dateFrom} onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))} />
         </div>
         <div>
-          <label style={labelStyle}>to</label>
-          <input type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} />
+          <label style={labelStyle} htmlFor="analytics-date-to">to</label>
+          <input id="analytics-date-to" type="date" style={inputStyle} value={filters.dateTo} onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))} />
         </div>
         <button className="btn btn-primary" onClick={load} disabled={loading}>{loading ? "…" : "Apply"}</button>
       </div>
@@ -415,19 +415,19 @@ function MembersTab({ pool, pools, setError, onChange, isAdmin }) {
 
       <div style={{ display: "flex", gap: 8, marginTop: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 260px" }}>
-          <label style={labelStyle}>Filter current members</label>
-          <input style={inputStyle} placeholder="Search by name, roll number, PRN, email, or mobile…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
+          <label style={labelStyle} htmlFor="member-search-filter">Filter current members</label>
+          <input id="member-search-filter" style={inputStyle} placeholder="Search by name, roll number, PRN, email, or mobile…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} />
         </div>
         <div style={{ flex: "0 1 200px" }}>
-          <label style={labelStyle}>Department</label>
-          <select style={inputStyle} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+          <label style={labelStyle} htmlFor="member-department-filter">Department</label>
+          <select id="member-department-filter" style={inputStyle} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
             <option value="">All departments</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         <div style={{ flex: "0 1 180px" }}>
-          <label style={labelStyle}>Placement Status</label>
-          <select style={inputStyle} value={placementStatus} onChange={(e) => setPlacementStatus(e.target.value)}>
+          <label style={labelStyle} htmlFor="member-placement-status-filter">Placement Status</label>
+          <select id="member-placement-status-filter" style={inputStyle} value={placementStatus} onChange={(e) => setPlacementStatus(e.target.value)}>
             <option value="">All</option>
             <option value="INTERESTED">Registered</option>
             <option value="NOT_INTERESTED">Not Registered</option>
@@ -616,8 +616,8 @@ function BrowseAddPanel({ pool, members, setError, onChange }) {
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
         {showInstitutePicker ? (
           <div>
-            <label style={labelStyle}>Institute</label>
-            <select style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
+            <label style={labelStyle} htmlFor="browse-institute">Institute</label>
+            <select id="browse-institute" style={inputStyle} value={instituteId} onChange={(e) => setInstituteId(e.target.value)}>
               <option value="">Select institute…</option>
               {poolInstitutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
@@ -626,15 +626,15 @@ function BrowseAddPanel({ pool, members, setError, onChange }) {
           instituteId && <div style={{ fontSize: 13, alignSelf: "center" }}>Institute: <strong>{poolInstitutes.find((i) => i.id === instituteId)?.name}</strong></div>
         )}
         <div>
-          <label style={labelStyle}>Department</label>
-          <select style={inputStyle} value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setSection(""); }} disabled={!instituteId}>
+          <label style={labelStyle} htmlFor="browse-department">Department</label>
+          <select id="browse-department" style={inputStyle} value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setSection(""); }} disabled={!instituteId}>
             <option value="">Select department…</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Section</label>
-          <select style={inputStyle} value={section} onChange={(e) => setSection(e.target.value)} disabled={!departmentId}>
+          <label style={labelStyle} htmlFor="browse-section">Section</label>
+          <select id="browse-section" style={inputStyle} value={section} onChange={(e) => setSection(e.target.value)} disabled={!departmentId}>
             <option value="">Select section…</option>
             {sections.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -805,15 +805,15 @@ function TransferPanel({ pool, pools, members, setError, onChange }) {
 
       <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div>
-          <label style={labelStyle}>Target Pool</label>
-          <select style={inputStyle} value={targetPoolId} onChange={(e) => setTargetPoolId(e.target.value)}>
+          <label style={labelStyle} htmlFor="transfer-target-pool">Target Pool</label>
+          <select id="transfer-target-pool" style={inputStyle} value={targetPoolId} onChange={(e) => setTargetPoolId(e.target.value)}>
             <option value="">Select pool…</option>
             {otherPools.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Action</label>
-          <select style={inputStyle} value={mode} onChange={(e) => setMode(e.target.value)}>
+          <label style={labelStyle} htmlFor="transfer-action-mode">Action</label>
+          <select id="transfer-action-mode" style={inputStyle} value={mode} onChange={(e) => setMode(e.target.value)}>
             <option value="MOVE">Move</option>
             <option value="COPY">Copy</option>
           </select>
@@ -919,16 +919,18 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
       </p>
       {RULE_FIELDS.map((f) => (
         <div key={f.key} style={{ marginTop: 12 }}>
-          <label style={labelStyle}>{f.label}</label>
+          <label style={labelStyle} htmlFor={`rule-field-${f.key}`}>{f.label}</label>
           <input
+            id={`rule-field-${f.key}`}
             type="number" min="0" max={f.max} step={f.step} style={inputStyle}
             value={rule[f.key] ?? ""} onChange={(e) => setField(f.key, e.target.value)}
           />
         </div>
       ))}
       <div style={{ marginTop: 12 }}>
-        <label style={labelStyle}>Readiness Level At Least</label>
+        <label style={labelStyle} htmlFor="rule-readiness-level">Readiness Level At Least</label>
         <select
+          id="rule-readiness-level"
           style={inputStyle} value={rule.readinessLevelAtLeast || ""}
           onChange={(e) => { setRule((r) => ({ ...r, readinessLevelAtLeast: e.target.value || null })); setPreview(null); }}
         >
@@ -936,8 +938,9 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
         </select>
       </div>
       <div style={{ marginTop: 12 }}>
-        <label style={labelStyle}>Readiness Subject</label>
+        <label style={labelStyle} htmlFor="rule-readiness-subject">Readiness Subject</label>
         <select
+          id="rule-readiness-subject"
           style={inputStyle} value={rule.readinessSubjectId || ""}
           onChange={(e) => { setRule((r) => ({ ...r, readinessSubjectId: e.target.value || null })); setPreview(null); }}
         >
@@ -946,8 +949,8 @@ function AutoRuleTab({ poolId, setError, onChange, isAdmin }) {
         </select>
       </div>
       <div style={{ marginTop: 12 }}>
-        <label style={labelStyle}>Match Mode</label>
-        <select style={inputStyle} value={rule.matchMode || "ALL"} onChange={(e) => setRule((r) => ({ ...r, matchMode: e.target.value }))}>
+        <label style={labelStyle} htmlFor="rule-match-mode">Match Mode</label>
+        <select id="rule-match-mode" style={inputStyle} value={rule.matchMode || "ALL"} onChange={(e) => setRule((r) => ({ ...r, matchMode: e.target.value }))}>
           <option value="ALL">Must meet ALL set thresholds</option>
           <option value="ANY">Must meet ANY set threshold</option>
         </select>

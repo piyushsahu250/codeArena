@@ -413,24 +413,24 @@ function AddPlanModal({ assignmentId, subject, suggestedNumber, editingPlan, onC
         {(isEdit || mode === "manual") && (
           <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
             <div>
-              <label style={labelStyle}>Subject</label>
-              <input style={{ ...inputStyle, background: "var(--line)" }} value={form.subject} disabled />
+              <label style={labelStyle} htmlFor="attendance-subject">Subject</label>
+              <input id="attendance-subject" style={{ ...inputStyle, background: "var(--line)" }} value={form.subject} disabled />
             </div>
             <div>
-              <label style={labelStyle}>Lecture Number</label>
-              <input type="number" min="1" style={inputStyle} value={form.lectureNumber} onChange={setField("lectureNumber")} />
+              <label style={labelStyle} htmlFor="attendance-lecture-number">Lecture Number</label>
+              <input id="attendance-lecture-number" type="number" min="1" style={inputStyle} value={form.lectureNumber} onChange={setField("lectureNumber")} />
             </div>
             <div>
-              <label style={labelStyle}>Topic</label>
-              <input style={inputStyle} value={form.topic} onChange={setField("topic")} placeholder="e.g. Introduction to Arrays" />
+              <label style={labelStyle} htmlFor="attendance-topic">Topic</label>
+              <input id="attendance-topic" style={inputStyle} value={form.topic} onChange={setField("topic")} placeholder="e.g. Introduction to Arrays" />
             </div>
             <div>
-              <label style={labelStyle}>Schedule Date</label>
-              <input type="date" style={inputStyle} value={form.scheduleDate} onChange={setField("scheduleDate")} />
+              <label style={labelStyle} htmlFor="attendance-schedule-date">Schedule Date</label>
+              <input id="attendance-schedule-date" type="date" style={inputStyle} value={form.scheduleDate} onChange={setField("scheduleDate")} />
             </div>
             <div>
-              <label style={labelStyle}>Slot</label>
-              <select style={inputStyle} value={form.slotLabel} onChange={selectSlot}>
+              <label style={labelStyle} htmlFor="attendance-slot">Slot</label>
+              <select id="attendance-slot" style={inputStyle} value={form.slotLabel} onChange={selectSlot}>
                 {SLOTS.map((s) => <option key={s.label} value={s.label}>{s.label} : {s.startTime} – {s.endTime}</option>)}
                 <option value="Other">Other</option>
               </select>
@@ -438,18 +438,18 @@ function AddPlanModal({ assignmentId, subject, suggestedNumber, editingPlan, onC
             {isOther && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelStyle}>Start Time</label>
-                  <input type="time" style={inputStyle} value={form.startTime} onChange={setField("startTime")} />
+                  <label style={labelStyle} htmlFor="attendance-start-time">Start Time</label>
+                  <input id="attendance-start-time" type="time" style={inputStyle} value={form.startTime} onChange={setField("startTime")} />
                 </div>
                 <div>
-                  <label style={labelStyle}>End Time</label>
-                  <input type="time" style={inputStyle} value={form.endTime} onChange={setField("endTime")} />
+                  <label style={labelStyle} htmlFor="attendance-end-time">End Time</label>
+                  <input id="attendance-end-time" type="time" style={inputStyle} value={form.endTime} onChange={setField("endTime")} />
                 </div>
               </div>
             )}
             <div>
-              <label style={labelStyle}>Lecture Type</label>
-              <select style={inputStyle} value={form.lectureType} onChange={setField("lectureType")}>
+              <label style={labelStyle} htmlFor="attendance-lecture-type">Lecture Type</label>
+              <select id="attendance-lecture-type" style={inputStyle} value={form.lectureType} onChange={setField("lectureType")}>
                 {LECTURE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>

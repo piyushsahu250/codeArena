@@ -46,16 +46,16 @@ export default function AcademicGroupPicker({ groups, value, onChange, multi = f
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {institutes.length > 1 && (
           <div style={{ flex: "1 1 200px" }}>
-            <label style={labelStyle}>Institute</label>
-            <select style={inputStyle} value={instituteId} onChange={(e) => { setInstituteId(e.target.value); setBatchYear(""); }}>
+            <label style={labelStyle} htmlFor="agp-institute">Institute</label>
+            <select id="agp-institute" style={inputStyle} value={instituteId} onChange={(e) => { setInstituteId(e.target.value); setBatchYear(""); }}>
               <option value="">Select institute…</option>
               {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           </div>
         )}
         <div style={{ flex: "1 1 160px" }}>
-          <label style={labelStyle}>Batch</label>
-          <select style={inputStyle} value={batchYear} onChange={(e) => setBatchYear(e.target.value)} disabled={institutes.length > 1 && !instituteId}>
+          <label style={labelStyle} htmlFor="agp-batch">Batch</label>
+          <select id="agp-batch" style={inputStyle} value={batchYear} onChange={(e) => setBatchYear(e.target.value)} disabled={institutes.length > 1 && !instituteId}>
             <option value="">Select batch…</option>
             {batches.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>

@@ -2152,8 +2152,9 @@ export default function TestTaking() {
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
-                <label className="mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }}>Your answer</label>
+                <label className="mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)" }} htmlFor={`numeric-answer-${current.id}`}>Your answer</label>
                 <input
+                  id={`numeric-answer-${current.id}`}
                   type="text"
                   inputMode="text"
                   autoComplete="off"

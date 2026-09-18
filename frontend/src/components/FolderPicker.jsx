@@ -145,22 +145,22 @@ export default function FolderPicker({ value, onChange }) {
 
       {mode === "new" && (
         <div className="card" style={{ padding: 14, marginTop: 10 }}>
-          <label style={labelStyle}>Name</label>
-          <input style={inputStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Percentages" />
+          <label style={labelStyle} htmlFor="folder-new-name">Name</label>
+          <input id="folder-new-name" style={inputStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Percentages" />
 
-          <label style={labelStyle}>Parent bank (optional — leave blank for a top-level bank)</label>
-          <select style={inputStyle} value={newParentId} onChange={(e) => setNewParentId(e.target.value)}>
+          <label style={labelStyle} htmlFor="folder-new-parent">Parent bank (optional — leave blank for a top-level bank)</label>
+          <select id="folder-new-parent" style={inputStyle} value={newParentId} onChange={(e) => setNewParentId(e.target.value)}>
             <option value="">— None (top-level) —</option>
             {items.map((it) => (
               <option key={it.id} value={it.id}>{it.label}</option>
             ))}
           </select>
 
-          <label style={labelStyle}>Category (optional)</label>
-          <input style={inputStyle} value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Aptitude" />
+          <label style={labelStyle} htmlFor="folder-new-category">Category (optional)</label>
+          <input id="folder-new-category" style={inputStyle} value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="e.g. Aptitude" />
 
-          <label style={labelStyle}>Description (optional)</label>
-          <textarea style={{ ...inputStyle, minHeight: 50 }} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+          <label style={labelStyle} htmlFor="folder-new-description">Description (optional)</label>
+          <textarea id="folder-new-description" style={{ ...inputStyle, minHeight: 50 }} value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
 
           {error && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 6 }}>{error}</p>}
 

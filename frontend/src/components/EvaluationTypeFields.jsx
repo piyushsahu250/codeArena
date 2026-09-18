@@ -78,12 +78,12 @@ export default function EvaluationTypeFields({ evaluationType, onEvaluationTypeC
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={labelStyle}>Method name</label>
-              <input style={inputStyle} value={signature.methodName} onChange={(e) => onSignatureChange({ ...signature, methodName: e.target.value })} placeholder="twoSum" />
+              <label style={labelStyle} htmlFor="eval-method-name">Method name</label>
+              <input id="eval-method-name" style={inputStyle} value={signature.methodName} onChange={(e) => onSignatureChange({ ...signature, methodName: e.target.value })} placeholder="twoSum" />
             </div>
             <div>
-              <label style={labelStyle}>Return type</label>
-              <select style={inputStyle} value={signature.returnType} onChange={(e) => onSignatureChange({ ...signature, returnType: e.target.value })}>
+              <label style={labelStyle} htmlFor="eval-return-type">Return type</label>
+              <select id="eval-return-type" style={inputStyle} value={signature.returnType} onChange={(e) => onSignatureChange({ ...signature, returnType: e.target.value })}>
                 {SIGNATURE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
@@ -140,8 +140,8 @@ export default function EvaluationTypeFields({ evaluationType, onEvaluationTypeC
         </div>
       ) : (
         <>
-          <label style={labelStyle}>Starter code (optional)</label>
-          <textarea style={{ ...inputStyle, minHeight: 80, fontFamily: "var(--font-mono)" }} value={starterCode || ""} onChange={(e) => onStarterCodeChange(e.target.value)} />
+          <label style={labelStyle} htmlFor="eval-starter-code">Starter code (optional)</label>
+          <textarea id="eval-starter-code" style={{ ...inputStyle, minHeight: 80, fontFamily: "var(--font-mono)" }} value={starterCode || ""} onChange={(e) => onStarterCodeChange(e.target.value)} />
         </>
       )}
     </div>
