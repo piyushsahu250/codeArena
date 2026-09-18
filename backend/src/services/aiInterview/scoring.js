@@ -12,9 +12,33 @@
 // reinterpreting them.
 const DECISION_RULE_VERSION = "v1";
 
+// Env-var overridable — the same "tune via env var, don't hardcode" convention already used for
+// every other tunable knob on this platform (AI_RPM_LIMIT, AI_CONCURRENCY, AI_DAILY_LIMIT_*,
+// GEMINI_MAX_RETRIES, etc.), applied here as a real but PARTIAL answer to "weights must be
+// configurable": an ops/admin person can retune these by setting an env var and redeploying,
+// without touching this file or any LLM prompt. This is NOT the full admin-UI-with-no-redeploy
+// version the spec ultimately calls for (still a further phase, per the comment above) — being
+// explicit about that gap rather than quietly overstating what this closes. DECISION_RULE_VERSION
+// intentionally stays "v1" even when these are overridden: it identifies the RULE'S FORMULA/SHAPE
+// (weighted-average-then-threshold), which is unchanged, not a specific weight configuration —
+// bump it only if the calculation itself changes shape.
+function envNumber(name, fallback) {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) ? v : fallback;
+}
+
 const RUBRIC = {
-  weights: { technical: 0.4, problemSolving: 0.25, communication: 0.2, confidence: 0.15 },
-  thresholds: { STRONG: 80, GOOD: 65, BORDERLINE: 50 },
+  weights: {
+    technical: envNumber("AI_INTERVIEW_WEIGHT_TECHNICAL", 0.4),
+    problemSolving: envNumber("AI_INTERVIEW_WEIGHT_PROBLEM_SOLVING", 0.25),
+    communication: envNumber("AI_INTERVIEW_WEIGHT_COMMUNICATION", 0.2),
+    confidence: envNumber("AI_INTERVIEW_WEIGHT_CONFIDENCE", 0.15),
+  },
+  thresholds: {
+    STRONG: envNumber("AI_INTERVIEW_THRESHOLD_STRONG", 80),
+    GOOD: envNumber("AI_INTERVIEW_THRESHOLD_GOOD", 65),
+    BORDERLINE: envNumber("AI_INTERVIEW_THRESHOLD_BORDERLINE", 50),
+  },
 };
 
 // "If evaluation confidence is insufficient, mark REVIEW_REQUIRED instead of pretending

@@ -84,3 +84,34 @@ test("aggregateScores.reviewRequired is false (not undefined-truthy) for an empt
   assert.equal(scores.reviewRequired, false);
   assert.equal(scores.lowConfidenceTurnCount, 0);
 });
+
+test("RUBRIC weights/thresholds are overridable via env vars (same convention as AI_RPM_LIMIT etc.), defaulting to the documented values when unset", () => {
+  // scoring.js reads process.env once at module load, so verifying the override requires a fresh
+  // require with the env vars set first — same pattern as aiQueue.test.js's AI_RPM_LIMIT test.
+  const keys = [
+    "AI_INTERVIEW_WEIGHT_TECHNICAL", "AI_INTERVIEW_WEIGHT_PROBLEM_SOLVING",
+    "AI_INTERVIEW_WEIGHT_COMMUNICATION", "AI_INTERVIEW_WEIGHT_CONFIDENCE",
+    "AI_INTERVIEW_THRESHOLD_STRONG", "AI_INTERVIEW_THRESHOLD_GOOD", "AI_INTERVIEW_THRESHOLD_BORDERLINE",
+  ];
+  const prior = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+  try {
+    delete require.cache[require.resolve("../src/services/aiInterview/scoring")];
+    const defaultRubric = require("../src/services/aiInterview/scoring").RUBRIC;
+    assert.deepEqual(defaultRubric.weights, { technical: 0.4, problemSolving: 0.25, communication: 0.2, confidence: 0.15 }, "documented defaults when no env vars are set");
+    assert.deepEqual(defaultRubric.thresholds, { STRONG: 80, GOOD: 65, BORDERLINE: 50 });
+
+    process.env.AI_INTERVIEW_WEIGHT_TECHNICAL = "0.5";
+    process.env.AI_INTERVIEW_THRESHOLD_STRONG = "90";
+    delete require.cache[require.resolve("../src/services/aiInterview/scoring")];
+    const overriddenRubric = require("../src/services/aiInterview/scoring").RUBRIC;
+    assert.equal(overriddenRubric.weights.technical, 0.5, "an env var actually overrides its weight");
+    assert.equal(overriddenRubric.thresholds.STRONG, 90, "an env var actually overrides its threshold");
+    assert.equal(overriddenRubric.weights.problemSolving, 0.25, "an unset env var still falls back to its default even when a sibling is overridden");
+  } finally {
+    for (const k of keys) {
+      if (prior[k] === undefined) delete process.env[k];
+      else process.env[k] = prior[k];
+    }
+    delete require.cache[require.resolve("../src/services/aiInterview/scoring")];
+  }
+});
