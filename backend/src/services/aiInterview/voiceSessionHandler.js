@@ -20,6 +20,31 @@ function send(ws, payload) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(payload));
 }
 
+// Single-process deployment (one backend container, no horizontal scaling) — an in-memory map is
+// sufficient and avoids a schema migration for something this narrow in scope. Without this, two
+// tabs/devices on the same sessionId would each open an independent Gemini Live STT session and
+// independently call processAnswer() on the SAME open turn once each detects turnComplete —
+// double-evaluating one answer and racing to create the next turn (spec §20's "duplicate
+// submission" concern, concretely). A closed WS still fires its own "close" event, so a stale
+// connection cleans itself out of this map the normal way; nothing here needs a heartbeat.
+const activeConnections = new Map(); // sessionId -> ws
+
+// Newest connection always wins (kick the old one, not the new one) — a page refresh is, from the
+// server's point of view, indistinguishable from "opened a second tab," and rejecting the refresh
+// would leave the candidate stuck behind a dead connection until it times out on its own.
+function claimConnection(sessionId, ws) {
+  const existing = activeConnections.get(sessionId);
+  if (existing && existing !== ws && existing.readyState === existing.OPEN) {
+    send(existing, { type: "error", error: "This interview was opened in another tab or device." });
+    existing.close();
+  }
+  activeConnections.set(sessionId, ws);
+}
+
+function releaseConnection(sessionId, ws) {
+  if (activeConnections.get(sessionId) === ws) activeConnections.delete(sessionId);
+}
+
 async function speakText(ws, text) {
   try {
     const { audioBase64, mimeType, sampleRateHz } = await synthesizeSpeech(text);
@@ -45,6 +70,7 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
   function cleanup() {
     if (closed) return;
     closed = true;
+    releaseConnection(sessionId, ws);
     if (expiryTimer) clearTimeout(expiryTimer);
     if (liveStt) liveStt.close();
     if (ws.readyState === ws.OPEN || ws.readyState === ws.CONNECTING) ws.close();
@@ -60,6 +86,8 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
       send(ws, { type: "error", error: `Cannot start voice for an interview in status ${session.status}` });
       return cleanup();
     }
+
+    claimConnection(sessionId, ws);
 
     await prisma.aiInterviewSession.update({ where: { id: sessionId }, data: { voiceEnabled: true, realtimeProvider: "gemini_live" } });
 

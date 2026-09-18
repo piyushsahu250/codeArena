@@ -64,7 +64,15 @@ export default function AiInterviewSession() {
   }, []);
 
   useEffect(() => {
-    api.get(`/ai-interviews/${id}`).then((res) => setSession(res.data)).then(() => setPhase(PHASES.PREFLIGHT)).catch((err) => {
+    api.get(`/ai-interviews/${id}`).then((res) => {
+      setSession(res.data);
+      // A page load with an already-open question means this is a resume (refresh, reconnect,
+      // or voice started mid a text-mode interview) rather than a fresh start — known immediately
+      // from the session fetch, so both the preflight copy and the text-mode fallback (which used
+      // to show a blank "Loading the next question…" here, since it never called /start for an
+      // already-started session) have the right question text from the very first render.
+      if (res.data.currentQuestion?.questionText) setCurrentQuestionText(res.data.currentQuestion.questionText);
+    }).then(() => setPhase(PHASES.PREFLIGHT)).catch((err) => {
       setFatalError(err.response?.data?.error || "Could not load this interview.");
       setPhase(PHASES.ERROR);
     });
@@ -334,21 +342,28 @@ export default function AiInterviewSession() {
   }
 
   if (phase === PHASES.PREFLIGHT) {
+    const isResuming = session.status !== "CREATED";
     return (
       <div className="ai-int-page ai-int-centered">
         <div className="ai-int-preflight-card">
-          <h2>System check</h2>
+          <h2>{isResuming ? "Resume your interview" : "System check"}</h2>
           <p>{session.role} · {session.interviewType.replace(/_/g, " ")} · {session.durationMin} minutes</p>
-          <ul className="ai-int-checklist">
-            <li>Find a quiet space with a stable internet connection.</li>
-            <li>Speak clearly — the AI will ask a follow-up if it needs you to repeat something.</li>
-            <li>You can interrupt the AI at any time if you want it to repeat or rephrase.</li>
-          </ul>
+          {isResuming ? (
+            <p style={{ color: "var(--ink-dim)", fontSize: 13 }}>
+              You already have a question in progress — reconnecting will pick up exactly where you left off, not start over.
+            </p>
+          ) : (
+            <ul className="ai-int-checklist">
+              <li>Find a quiet space with a stable internet connection.</li>
+              <li>Speak clearly — the AI will ask a follow-up if it needs you to repeat something.</li>
+              <li>You can interrupt the AI at any time if you want it to repeat or rephrase.</li>
+            </ul>
+          )}
           {mic.error && <p className="ai-int-error">{mic.error}</p>}
           <Button variant="primary" loading={mic.permission === "requesting"} onClick={beginInterview} style={{ width: "100%", justifyContent: "center" }}>
-            <Mic size={16} /> Enable microphone &amp; begin
+            <Mic size={16} /> {isResuming ? "Reconnect & continue" : "Enable microphone & begin"}
           </Button>
-          {mic.error && (
+          {(mic.error || isResuming) && (
             <Button variant="ghost" onClick={switchToText} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>
               Continue by typing your answers instead
             </Button>

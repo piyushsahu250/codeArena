@@ -97,7 +97,17 @@ router.get("/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
     const session = await loadOwnSession(req, res);
     if (!session) return;
     const remainingSeconds = session.expiresAt ? Math.max(0, Math.round((new Date(session.expiresAt) - Date.now()) / 1000)) : null;
-    res.json({ ...session, remainingSeconds, competencyPlan: undefined }); // hidden plan never leaves the server, spec §34
+    // The still-open (unanswered) turn, if any — lets the frontend show/resume the right question
+    // immediately on a page load/refresh (spec §15's session recovery) without first opening a
+    // voice connection just to find out what was being asked.
+    const currentTurn = ACTIVE_QUESTIONING_STATES.includes(session.status)
+      ? await prisma.aiInterviewTurn.findFirst({
+          where: { sessionId: session.id, evaluation: { equals: Prisma.DbNull } },
+          orderBy: { turnIndex: "desc" },
+          select: { id: true, turnIndex: true, questionText: true, questionType: true },
+        })
+      : null;
+    res.json({ ...session, remainingSeconds, competencyPlan: undefined, currentQuestion: currentTurn }); // hidden plan never leaves the server, spec §34
   } catch (err) {
     console.error("[ai-interviews] get session failed:", err.message);
     res.status(500).json({ error: "Failed to load interview session" });
