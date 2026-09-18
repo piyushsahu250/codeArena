@@ -70,6 +70,7 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
   function cleanup() {
     if (closed) return;
     closed = true;
+    console.log("[voiceSession] disconnected", { sessionId });
     releaseConnection(sessionId, ws);
     if (expiryTimer) clearTimeout(expiryTimer);
     if (liveStt) liveStt.close();
@@ -88,6 +89,7 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
     }
 
     claimConnection(sessionId, ws);
+    console.log("[voiceSession] connected", { sessionId, status: session.status });
 
     await prisma.aiInterviewSession.update({ where: { id: sessionId }, data: { voiceEnabled: true, realtimeProvider: "gemini_live" } });
 
@@ -133,8 +135,10 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
           answerText: finalText, skipped: !finalText, userId: studentId, instituteId,
         });
         send(ws, { type: "answer_processed", status: result.status, evaluation: result.evaluation });
+        console.log("[voiceSession] answer processed", { sessionId, turnIndex: turnBeingAnswered.turnIndex, resultStatus: result.status, skipped: !!skipped });
 
         if (result.status === "COMPLETED" || !result.nextQuestion) {
+          console.log("[voiceSession] interview completed", { sessionId, terminationReason: "PLAN_COMPLETE_OR_TIME" });
           send(ws, { type: "completed", terminationReason: "PLAN_COMPLETE_OR_TIME" });
           return cleanup();
         }
@@ -173,6 +177,7 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
           ]);
           currentTurn = turn;
           scheduleExpiry(expiresAt);
+          console.log("[voiceSession] interview started", { sessionId, role: session.role, interviewType: session.interviewType });
           await speakText(ws, firstQuestion.questionText);
         } else {
           // Resuming (reconnect, or voice started mid text-mode interview, spec §29) — re-speak
@@ -181,6 +186,7 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
           currentTurn = await prisma.aiInterviewTurn.findFirst({
             where: { sessionId, evaluation: { equals: Prisma.DbNull } }, orderBy: { turnIndex: "desc" },
           });
+          console.log("[voiceSession] interview resumed", { sessionId, turnIndex: currentTurn?.turnIndex ?? null });
           if (currentTurn) await speakText(ws, currentTurn.questionText);
         }
         send(ws, { type: "ready" });

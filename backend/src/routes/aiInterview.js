@@ -46,7 +46,7 @@ async function loadOwnSession(req, res) {
 // POST /api/ai-interviews — create a session (spec §1's configuration screen + §27).
 router.post("/", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("ai_voice_interview"), createLimiter, async (req, res) => {
   try {
-    const { role, experienceLevel, targetSkills, interviewType, durationMin, language, companyId, jobDescription } = req.body;
+    const { role, experienceLevel, targetSkills, interviewType, durationMin, language, companyId, jobDescription, company } = req.body;
 
     if (!role || typeof role !== "string" || !role.trim()) return res.status(400).json({ error: "Job role is required" });
     if (!VALID_EXPERIENCE_LEVELS.includes(experienceLevel)) return res.status(400).json({ error: "Invalid experience level" });
@@ -66,6 +66,18 @@ router.post("/", authenticate, requireRole("STUDENT"), attachRequesterInstitute,
 
     const competencyPlan = buildCompetencyPlan({ targetSkills, durationMin: duration });
 
+    // "Company-Style" interviews previously had no actual company context anywhere — the setup UI
+    // offered the interview type but collected no company name, so AIInterviewEngine.js generated
+    // fully generic questions with the label implying otherwise (a real "advertises a capability
+    // that doesn't exist" gap). No schema change needed: jobDescription already flows into the
+    // question-generation prompt as wrapped, untrusted context (AIInterviewEngine.js's
+    // generateNextQuestion), and that prompt's system instruction already forbids claiming to
+    // reproduce a real company's actual questions — this just gives it something to work with.
+    const companyContext = interviewType === "COMPANY_SPECIFIC" && company && String(company).trim()
+      ? `Interview style target: ${String(company).trim().slice(0, 200)} (style only — general public knowledge of how this company's interviews commonly run; never claim to reproduce their actual real questions).\n\n`
+      : "";
+    const trimmedJobDescription = jobDescription ? String(jobDescription).slice(0, 4000) : "";
+
     const session = await prisma.aiInterviewSession.create({
       data: {
         studentId: req.user.id,
@@ -79,11 +91,12 @@ router.post("/", authenticate, requireRole("STUDENT"), attachRequesterInstitute,
         durationMin: duration,
         competencyPlan,
         resumeSnapshot: resume || null,
-        jobDescription: jobDescription ? String(jobDescription).slice(0, 4000) : null,
+        jobDescription: (companyContext + trimmedJobDescription) || null,
         status: "CREATED",
       },
     });
 
+    console.log("[ai-interviews] session created", { sessionId: session.id, interviewType, role: role.trim() });
     res.status(201).json(session);
   } catch (err) {
     console.error("[ai-interviews] create failed:", err.message);
@@ -155,6 +168,7 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), createLimiter, a
       }),
     ]);
 
+    console.log("[ai-interviews] session started (text mode)", { sessionId: session.id });
     res.json({ introduction, status: "QUESTIONING", expiresAt, turn: { id: turn.id, turnIndex: 0, questionText: turn.questionText, questionType: turn.questionType } });
   } catch (err) {
     sendAiError(res, err, "Failed to start the interview");
@@ -206,6 +220,7 @@ router.post("/:id/answer", authenticate, requireRole("STUDENT"), answerLimiter, 
     // answerProcessor.js) — one implementation of "evaluate -> decide next -> generate," not two
     // that could drift apart between the text and voice transports.
     const result = await processAnswer({ session, currentTurn, answerText, skipped, userId: req.user.id, instituteId: session.instituteId });
+    console.log("[ai-interviews] answer processed (text mode)", { sessionId: session.id, turnIndex: currentTurn.turnIndex, resultStatus: result.status, skipped: !!skipped });
     res.json(result);
   } catch (err) {
     if (err.invalidTransition) return res.status(409).json({ error: err.message });
@@ -256,6 +271,7 @@ router.post("/:id/complete", authenticate, requireRole("STUDENT"), async (req, r
       where: { id: session.id },
       data: { status: "COMPLETED", completedAt: new Date(), terminationReason: reason },
     });
+    console.log("[ai-interviews] session completed", { sessionId: session.id, terminationReason: reason });
     res.json({ status: "COMPLETED", terminationReason: reason });
   } catch (err) {
     console.error("[ai-interviews] complete failed:", err.message);

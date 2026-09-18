@@ -37,7 +37,7 @@ export default function AiInterviewSetup() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     role: "", experienceLevel: "FRESHER", interviewType: "TECHNICAL",
-    targetSkills: [], durationMin: 20, language: "en", jobDescription: "",
+    targetSkills: [], durationMin: 20, language: "en", jobDescription: "", company: "",
   });
   const [skillInput, setSkillInput] = useState("");
   const [starting, setStarting] = useState(false);
@@ -68,6 +68,7 @@ export default function AiInterviewSetup() {
         durationMin: form.durationMin,
         language: form.language,
         jobDescription: form.jobDescription.trim() || undefined,
+        company: form.interviewType === "COMPANY_SPECIFIC" ? form.company.trim() || undefined : undefined,
       });
       navigate(`/ai-interview/session/${data.id}`);
     } catch (err) {
@@ -120,6 +121,21 @@ export default function AiInterviewSetup() {
               {INTERVIEW_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </FormRow>
+
+          {form.interviewType === "COMPANY_SPECIFIC" && (
+            <FormRow label="Target company (optional)" htmlFor="ai-int-company">
+              <input
+                id="ai-int-company"
+                className="ai-int-input"
+                placeholder="e.g. TCS, Amazon"
+                value={form.company}
+                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+              />
+              <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
+                Questions will be styled after this company's commonly-known interview approach — general public knowledge, not a claim of their actual real questions.
+              </p>
+            </FormRow>
+          )}
 
           <FormRow label="Skills to be assessed" htmlFor="ai-int-skill-input">
             <div className="ai-int-skill-input-row">
