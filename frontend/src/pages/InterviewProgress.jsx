@@ -8,9 +8,10 @@ import "./interviewPrep.css";
 
 export default function InterviewProgress() {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.get("/interview/progress").then((res) => setData(res.data));
+    api.get("/interview/progress").then((res) => setData(res.data)).catch(() => setError("Could not load your progress. Please try again later."));
   }, []);
 
   return (
@@ -22,7 +23,8 @@ export default function InterviewProgress() {
           <Link to="/interview" className="btn btn-ghost">← AI Mock Interview</Link>
         </div>
 
-        {!data && <p className="mono" style={{ marginTop: 24 }}>Loading…</p>}
+        {error && <div className="ip-glass" style={{ padding: 24, marginTop: 24, textAlign: "center", color: "var(--rust)" }}>{error}</div>}
+        {!data && !error && <p className="mono" style={{ marginTop: 24 }}>Loading…</p>}
         {data && data.history.length === 0 && <div className="ip-glass" style={{ padding: 24, marginTop: 24, textAlign: "center" }}>Complete a few interviews to see your progress here.</div>}
 
         {data && data.weekly.length > 0 && (

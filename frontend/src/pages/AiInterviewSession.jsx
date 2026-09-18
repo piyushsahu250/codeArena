@@ -34,6 +34,12 @@ export default function AiInterviewSession() {
   const [remainingSeconds, setRemainingSeconds] = useState(null);
   const [micMuted, setMicMuted] = useState(false);
   const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
+  // Text-mode fallback (spec: "never silently lose the candidate's answer" if voice fails). Reuses
+  // the same REST /start + /answer endpoints the voice WebSocket path calls server-side internally
+  // (see answerProcessor.js) — no separate backend logic, no separate turn/session model.
+  const [mode, setMode] = useState("voice"); // voice | text
+  const [textAnswer, setTextAnswer] = useState("");
+  const [textSubmitting, setTextSubmitting] = useState(false);
 
   const wsRef = useRef(null);
   const audioQueueRef = useRef([]);
@@ -207,6 +213,58 @@ export default function AiInterviewSession() {
     if (granted) connect();
   }
 
+  // Entered either from the preflight screen (mic denied/unsupported, interview never started) or
+  // mid-interview (candidate's mic fails or they just prefer typing). Either way this tears down
+  // the voice transport FIRST so the backend's one open turn is never raced by both a WS-driven
+  // voice answer and a REST-driven typed answer for the same question.
+  async function switchToText() {
+    stopListening();
+    mic.release();
+    wsRef.current?.close();
+    setFatalError(null);
+    setMode("text");
+    if (!session?.startedAt && phase !== PHASES.ACTIVE) {
+      setPhase(PHASES.CONNECTING);
+      try {
+        const { data } = await api.post(`/ai-interviews/${id}/start`);
+        setSession((s) => ({ ...s, expiresAt: data.expiresAt }));
+        setCurrentQuestionText(data.turn.questionText);
+        setPhase(PHASES.ACTIVE);
+      } catch (err) {
+        setFatalError(err.response?.data?.error || "Could not start the interview.");
+        setPhase(PHASES.ERROR);
+      }
+    } else {
+      setPhase(PHASES.ACTIVE);
+    }
+  }
+
+  async function submitTextAnswer(e) {
+    e.preventDefault();
+    if (!textAnswer.trim() || textSubmitting) return;
+    setTextSubmitting(true);
+    setFatalError(null);
+    try {
+      const { data } = await api.post(`/ai-interviews/${id}/answer`, { answerText: textAnswer });
+      setTextAnswer("");
+      setLastEvaluation(data.evaluation || null);
+      if (data.status === "COMPLETED" || !data.nextQuestion) {
+        setPhase(PHASES.COMPLETED);
+        setTimeout(() => navigate(`/ai-interview/report/${id}`), 1200);
+      } else {
+        setCurrentQuestionText(data.nextQuestion.questionText);
+      }
+    } catch (err) {
+      if (err.response?.status === 409) {
+        setFatalError(err.response?.data?.error || "That question is no longer open.");
+      } else {
+        setFatalError(err.response?.data?.error || "Could not submit your answer. Your progress up to now is saved — try again.");
+      }
+    } finally {
+      setTextSubmitting(false);
+    }
+  }
+
   function toggleMute() {
     const next = !micMuted;
     setMicMuted(next);
@@ -290,6 +348,11 @@ export default function AiInterviewSession() {
           <Button variant="primary" loading={mic.permission === "requesting"} onClick={beginInterview} style={{ width: "100%", justifyContent: "center" }}>
             <Mic size={16} /> Enable microphone &amp; begin
           </Button>
+          {mic.error && (
+            <Button variant="ghost" onClick={switchToText} style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>
+              Continue by typing your answers instead
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -322,38 +385,67 @@ export default function AiInterviewSession() {
       {fatalError && (
         <div className="ai-int-banner error">
           <span>{fatalError}</span>
-          <Button variant="ghost" onClick={reconnect}><RefreshCw size={14} /> Reconnect</Button>
+          {mode === "voice" && <Button variant="ghost" onClick={reconnect}><RefreshCw size={14} /> Reconnect</Button>}
         </div>
       )}
 
-      <div className="ai-int-main">
-        <div className={`ai-int-orb ${uiState}`}>
-          <Volume2 size={36} />
+      {mode === "text" ? (
+        <div className="ai-int-main">
+          <div className="ai-int-question-card">
+            <p>{currentQuestionText || "Loading the next question…"}</p>
+          </div>
+          {lastEvaluation && <div className="ai-int-eval-hint">Last answer recorded.</div>}
+          <form onSubmit={submitTextAnswer} style={{ width: "100%", marginTop: 16 }}>
+            <label className="ca-sr-only" htmlFor="ai-interview-text-answer">Your answer</label>
+            <textarea
+              id="ai-interview-text-answer"
+              value={textAnswer}
+              onChange={(e) => setTextAnswer(e.target.value)}
+              placeholder="Type your answer…"
+              rows={6}
+              style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid var(--line)", fontFamily: "inherit", fontSize: 14 }}
+              disabled={textSubmitting || phase !== PHASES.ACTIVE}
+            />
+            <Button type="submit" variant="primary" loading={textSubmitting} disabled={!textAnswer.trim()} style={{ marginTop: 10 }}>
+              Submit answer
+            </Button>
+          </form>
         </div>
-        <div className="ai-int-state-label">{stateLabel(uiState)}</div>
+      ) : (
+        <>
+          <div className="ai-int-main">
+            <div className={`ai-int-orb ${uiState}`}>
+              <Volume2 size={36} />
+            </div>
+            <div className="ai-int-state-label">{stateLabel(uiState)}</div>
 
-        <div className="ai-int-question-card">
-          <p>{currentQuestionText || "The interview is about to begin…"}</p>
-        </div>
+            <div className="ai-int-question-card">
+              <p>{currentQuestionText || "The interview is about to begin…"}</p>
+            </div>
 
-        {uiState === "listening" && partialTranscript && (
-          <div className="ai-int-caption">"{partialTranscript}"</div>
-        )}
+            {uiState === "listening" && partialTranscript && (
+              <div className="ai-int-caption">"{partialTranscript}"</div>
+            )}
 
-        {lastEvaluation && uiState !== "ai_speaking" && (
-          <div className="ai-int-eval-hint">Last answer recorded.</div>
-        )}
-      </div>
+            {lastEvaluation && uiState !== "ai_speaking" && (
+              <div className="ai-int-eval-hint">Last answer recorded.</div>
+            )}
+          </div>
 
-      <div className="ai-int-controls">
-        <button className={`ai-int-mic-btn ${micMuted ? "muted" : ""}`} onClick={toggleMute} aria-label={micMuted ? "Unmute microphone" : "Mute microphone"}>
-          {micMuted ? <MicOff size={20} /> : <Mic size={20} />}
-        </button>
-        <div className="ai-int-mic-level" style={{ "--level": mic.level }} />
-        {uiState === "ai_speaking" && (
-          <Button variant="ghost" onClick={sendInterrupt}>Interrupt</Button>
-        )}
-      </div>
+          <div className="ai-int-controls">
+            <button className={`ai-int-mic-btn ${micMuted ? "muted" : ""}`} onClick={toggleMute} aria-label={micMuted ? "Unmute microphone" : "Mute microphone"}>
+              {micMuted ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <div className="ai-int-mic-level" style={{ "--level": mic.level }} />
+            {uiState === "ai_speaking" && (
+              <Button variant="ghost" onClick={sendInterrupt}>Interrupt</Button>
+            )}
+          </div>
+          <Button variant="ghost" onClick={switchToText} style={{ marginTop: 8 }}>
+            Mic not working? Switch to typing
+          </Button>
+        </>
+      )}
     </div>
   );
 }

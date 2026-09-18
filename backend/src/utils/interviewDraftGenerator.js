@@ -1,5 +1,38 @@
 const prisma = require("../prisma");
 const aiService = require("../services/ai/aiService");
+const { checkNearDuplicate } = require("../utils/textSimilarity");
+
+// How many existing, already-published InterviewQuestion rows (same category, and same company
+// when one was requested) to scan a freshly-drafted question against before saving the draft —
+// same bounded-scan pattern as routes/aiQuestions.js's generic question-bank duplicate check
+// (NEAR_DUPLICATE_SCAN_LIMIT there). This module previously ran no duplicate check at all: a
+// draft could be an exact rewording of an already-active question and an admin reviewing
+// InterviewDraftReview.jsx would have no way to know without manually searching the bank first.
+const NEAR_DUPLICATE_SCAN_LIMIT = 200;
+
+// Never let a duplicate-check failure block draft generation itself — same defensive shape as
+// aiQuestions.js's findDuplicate.
+async function findLikelyDuplicate({ category, company, title, prompt }) {
+  try {
+    const candidates = await prisma.interviewQuestion.findMany({
+      where: { category, ...(company ? { company } : {}) },
+      select: { id: true, title: true, prompt: true },
+      orderBy: { createdAt: "desc" },
+      take: NEAR_DUPLICATE_SCAN_LIMIT,
+    });
+    let best = null;
+    for (const candidate of candidates) {
+      const { isMatch, similarity } = checkNearDuplicate(
+        { title, description: prompt },
+        { title: candidate.title, description: candidate.prompt }
+      );
+      if (isMatch && (!best || similarity > best.similarity)) best = { ...candidate, similarity };
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
 
 // Generates AI-drafted InterviewQuestion candidates and CompanyPatternNote checklists — the core
 // content-generation logic behind the AI-Powered Auto-Updating Mock Interview System. Deliberately
@@ -68,13 +101,18 @@ async function generateQuestionDrafts({ category, company, count, difficulty, pa
   });
   const questions = Array.isArray(draft?.questions) ? draft.questions : [];
   const rows = await Promise.all(
-    questions.slice(0, n).map((q) =>
-      prisma.interviewQuestionDraft.create({
+    questions.slice(0, n).map(async (q) => {
+      // Flagged in the title, not silently dropped or auto-rejected — an admin reviewing
+      // InterviewDraftReview.jsx still makes the final call (spec's "human review" requirement),
+      // this just surfaces what a manual bank search would have found.
+      const dup = await findLikelyDuplicate({ category, company, title: q.title, prompt: q.prompt });
+      const titlePrefix = dup ? `[Possible duplicate ~${Math.round(dup.similarity * 100)}% of "${dup.title || dup.id}"] ` : "";
+      return prisma.interviewQuestionDraft.create({
         data: {
           category,
           company: company || null,
           difficulty: q.difficulty || difficulty || "EASY",
-          title: q.title || null,
+          title: dup ? `${titlePrefix}${q.title || "(untitled)"}` : (q.title || null),
           prompt: q.prompt || "",
           expectedKeywords: q.expectedKeywords ?? undefined,
           modelAnswer: q.modelAnswer || null,
@@ -86,8 +124,8 @@ async function generateQuestionDrafts({ category, company, count, difficulty, pa
           testCases: q.testCases ?? undefined,
           sourceRun: sourceRun || null,
         },
-      })
-    )
+      });
+    })
   );
   return rows;
 }
