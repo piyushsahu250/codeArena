@@ -1,16 +1,27 @@
 /**
- * One-time (idempotent) backfill for the new Course.status lifecycle + institute assignment.
- * Every currently-`isActive: true` Course becomes PUBLISHED (preserves today's live set
- * exactly); everything else becomes DRAFT (today's "coming soon" set was never truly live).
- * Every PUBLISHED course then gets a CourseInstituteAssignment row for every existing
- * Institute, so no current student loses access once student-facing visibility gating ships
- * (Phase A5) - a course with zero assignment rows is invisible under the new strict-visibility
- * default, so this backfill MUST run (and be verified) before that phase deploys.
+ * One-time backfill for the new Course.status lifecycle + institute assignment, run as part of
+ * the standard migrate/backfill/seed chain (scripts/migrateAndSeed.sh) on EVERY container boot on
+ * this deployment (not a genuine one-shot Cloud Run migration Job here) — so "one-time" had to be
+ * enforced explicitly, not just implied by the docstring.
  *
- * Uses `status: "DRAFT"` (the schema default) as the "never touched since this migration ran"
- * signal, so a course an admin already explicitly re-drafted through the new UI is left alone
- * on a re-run. Assignment backfill uses createMany + skipDuplicates instead of a per-pair
- * findOrCreate loop, so re-running this script is always safe.
+ * BUG FOUND AND FIXED (2026-09-21): the institute-assignment step below used to run its full
+ * "every PUBLISHED course -> every institute" backfill unconditionally on every single boot, not
+ * just the first one. That was fine (a true no-op) for courses already fully assigned, but for
+ * ANY course that got marked PUBLISHED afterward and simply hadn't been assigned yet -- an admin
+ * mid-setup, testing, or who forgot the Assign step -- the very next deploy silently gave it a
+ * CourseInstituteAssignment row for every institute on the platform, exposing it to every
+ * student everywhere with zero admin intent behind that exposure. Confirmed live: "Java Bootcamp"
+ * (2 modules, 0 lessons, 0 prior assignments, published by an admin on 2026-09-19) was silently
+ * assigned to all 3 institutes the moment an unrelated backend deploy ran two days later. The
+ * ORIGINAL, legitimate one-time run of this exact backfill (2026-07-25/26, before institute-scoped
+ * visibility gating shipped) only ever touched "Java" -- confirmed via the audit trail before this
+ * fix, and left untouched by it.
+ *
+ * Fix: the institute-assignment step now runs only if it has NEVER run before on this database
+ * (no CourseInstituteAssignment row with assignedByUserId "system" exists yet) -- a genuine
+ * one-time gate, not just an idempotent-but-still-firing one. The DRAFT->PUBLISHED status
+ * normalization above is unrelated to this bug (a course an admin re-drafts through the UI is
+ * already excluded by the `status: "DRAFT"` filter) and is left exactly as before.
  */
 const prisma = require("../src/prisma");
 
@@ -29,6 +40,12 @@ async function backfillCourseVisibility() {
     }
   }
 
+  const alreadyRan = await prisma.courseInstituteAssignment.findFirst({ where: { assignedByUserId: "system" }, select: { id: true } });
+  if (alreadyRan) {
+    console.log("[backfillCourseVisibility] Institute-assignment backfill already ran previously — skipping (this is a one-time migration, not a per-deploy sync).");
+    return { publishedCount, assignmentsCreated: 0, publishedTotal: null, instituteTotal: null, skipped: true };
+  }
+
   const publishedCourses = await prisma.course.findMany({ where: { status: "PUBLISHED" }, select: { id: true } });
   const institutes = await prisma.institute.findMany({ select: { id: true } });
   const rows = publishedCourses.flatMap((c) =>
@@ -45,11 +62,13 @@ async function backfillCourseVisibility() {
 }
 
 async function main() {
-  const { publishedCount, assignmentsCreated, publishedTotal, instituteTotal } = await backfillCourseVisibility();
+  const { publishedCount, assignmentsCreated, publishedTotal, instituteTotal, skipped } = await backfillCourseVisibility();
   console.log(
-    `[backfillCourseVisibility] Done. Published ${publishedCount} course(s) this run. ` +
-    `${publishedTotal} course(s) are PUBLISHED total, ${instituteTotal} institute(s) exist, ` +
-    `created ${assignmentsCreated} institute-assignment row(s) this run.`
+    skipped
+      ? `[backfillCourseVisibility] Done. Published ${publishedCount} course(s) this run. Institute-assignment backfill already completed previously.`
+      : `[backfillCourseVisibility] Done. Published ${publishedCount} course(s) this run. ` +
+        `${publishedTotal} course(s) are PUBLISHED total, ${instituteTotal} institute(s) exist, ` +
+        `created ${assignmentsCreated} institute-assignment row(s) this run.`
   );
   await prisma.$disconnect();
 }
