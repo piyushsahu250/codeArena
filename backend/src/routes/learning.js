@@ -1066,6 +1066,22 @@ router.get("/courses/:slug/certificate/download", authenticate, requireRole("STU
 // audit-logged via logAudit for the same reason every other admin-changeable record on this
 // platform is: so "who deleted this course, and when" is answerable later.
 
+// The Course "Slug (URL id)" form field (LearningManagement.jsx) is free text with no client-side
+// normalization, and this route previously stored whatever was typed verbatim — confirmed live in
+// production: a course named "Java Bootcamp" got the literal slug "Java Bootcamp" (space,
+// mixed case), which is exactly what rendered as the ugly "/Java Bootcamp" suffix on the admin
+// course list. slug is also embedded directly into URLs (GET /courses/:slug and friends) and a
+// certificate-download filename, so un-normalized input is a real correctness issue there too,
+// not just cosmetic. Server-side normalization is mandatory regardless of what the frontend does —
+// never trust client input for something written into a unique, URL-facing column.
+function slugify(input) {
+  return String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 // Fields shared by create/edit — course metadata beyond the original slug/name/description/order.
 function extractCourseMetadata(body) {
   const { category, thumbnailUrl, bannerUrl, instructorName, skillsCovered, estimatedDurationMin, difficulty } = body;
@@ -1099,7 +1115,8 @@ async function setCoursePrerequisites(courseId, prerequisiteCourseIds) {
 
 router.post("/courses", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
   try {
-    const { slug, name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
+    const { name, description, order, isActive, status, prerequisiteCourseIds } = req.body;
+    const slug = slugify(req.body.slug);
     if (!slug || !name) return res.status(400).json({ error: "slug and name are required" });
     const resolvedStatus = status || "DRAFT";
     // An institute-scoped admin's course is always scoped to their own institute — never
@@ -1192,6 +1209,25 @@ router.delete("/courses/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
     if (certCount > 0) {
       return res.status(409).json({
         error: `${certCount} certificate${certCount === 1 ? "" : "s"} have been issued for this course. Revoke or reassign ${certCount === 1 ? "it" : "them"} first, then delete the course.`,
+      });
+    }
+
+    // Course->CourseModule is onDelete:Cascade (schema.prisma), and Lesson/Chapter/
+    // ModuleCodingTest cascade further down from there — Cascade never raises a catchable FK
+    // error, so without this check a course with real student history but no issued certificates
+    // yet would be silently, irreversibly wiped. Same guard DELETE /modules/:id already applies
+    // one level down (see its own comment) — this generalizes it to every module under the
+    // course, via the same dual-path attempt lookup (direct module-scoped ModuleCodingTest, and
+    // chapter-scoped ones a level further down).
+    const [progressCount, directAttemptCount, chapterAttemptCount] = await Promise.all([
+      prisma.lessonProgress.count({ where: { lesson: { module: { courseId: req.params.id } } } }),
+      prisma.moduleCodingAttempt.count({ where: { moduleCodingTest: { module: { courseId: req.params.id } } } }),
+      prisma.moduleCodingAttempt.count({ where: { moduleCodingTest: { chapter: { module: { courseId: req.params.id } } } } }),
+    ]);
+    const attemptCount = directAttemptCount + chapterAttemptCount;
+    if (progressCount > 0 || attemptCount > 0) {
+      return res.status(409).json({
+        error: `Cannot delete this course: ${progressCount} student lesson-progress record(s) and ${attemptCount} coding-assessment attempt(s) exist under it. Archive the course instead (set its status to ARCHIVED), or remove its modules first.`,
       });
     }
 
