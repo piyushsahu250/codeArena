@@ -1,5 +1,6 @@
 const prisma = require("../prisma");
 const { instituteWhere } = require("./questionVisibility");
+const { checkNearDuplicate } = require("./textSimilarity");
 
 // Question types this platform can actually grade automatically (see Question.questionType /
 // utils/judge.js) — the same constraint every other coding surface (Formal Tests, Practice,
@@ -31,6 +32,24 @@ async function subjectQuestionWhere(subject, extraWhere = {}) {
 
 function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
+}
+
+// Walks `pool` in order, keeping a candidate only if it's not a near-duplicate of anything already
+// accepted -- both questions already picked earlier in this blueprint (`alreadyPicked`, from a
+// prior BTL level) AND anything already accepted from `pool` itself in this same pass. The latter
+// matters because two near-duplicate rows at the SAME level (the common case: both authored around
+// the same topic/difficulty) would otherwise never be compared against each other at all -- a
+// filter that only checked against `alreadyPicked` sees an empty list on a subject's very first
+// (or only) level and lets both through.
+function filterNearDuplicates(pool, alreadyPicked) {
+  const accepted = [...alreadyPicked];
+  const kept = [];
+  for (const q of pool) {
+    if (accepted.some((a) => checkNearDuplicate(q, a).isMatch)) continue;
+    accepted.push(q);
+    kept.push(q);
+  }
+  return kept;
 }
 
 // Spreads a level's selection across its available topics round-robin (pool grouped by
@@ -156,11 +175,21 @@ async function buildAssessmentBlueprint({ subject, assessmentMode, questionCount
     // student-facing payload (routes/readiness.js's sanitizeQuestionForStudent filters out hidden
     // ones) without a second round-trip query.
     let pool = await prisma.question.findMany({ where: levelWhere, include: { testCases: true } });
+    // `already`/`excludeIds` above only stop the exact same Question row from being picked twice
+    // (or repeated within the anti-repeat window) -- two DIFFERENT rows that are the same question
+    // reworded (the exact "same concept, changed wording" case textSimilarity.js exists to catch)
+    // were still both eligible and could both land in one student's assessment, including two such
+    // rows within a single level's own pool. Filtered against every question already picked in
+    // THIS blueprint, not the whole question bank -- controlled overlap across different students/
+    // attempts is fine and unaffected (spec: "across different students, controlled overlap is
+    // acceptable").
+    pool = filterNearDuplicates(pool, items);
     if (pool.length < target && excludeIds.length > 0) {
       // Drop the anti-repeat exclusion first, same fallback ordering as interview.js's pickQuestions
       // — a repeat question is a smaller compromise than an under-filled BTL level.
       usedFallback = true;
       pool = await prisma.question.findMany({ where: { ...baseWhere, btlLevel: level, id: { ...(baseWhere.id || {}), notIn: [...already] } }, include: { testCases: true } });
+      pool = filterNearDuplicates(pool, items);
     }
 
     const picked = spreadAcrossTopics(pool, target);
