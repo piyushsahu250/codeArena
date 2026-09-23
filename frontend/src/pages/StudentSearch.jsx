@@ -142,7 +142,11 @@ export default function StudentSearch({ basePath }) {
   useEffect(loadGroups, [user?.role, browseInstituteId]);
 
   const departments = [...new Map(groups.map((g) => [g.department.id, g.department])).values()].sort((a, b) => a.name.localeCompare(b.name));
-  const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.section))].sort();
+  // Scoped by batch too (when one is picked), not just department — otherwise two different
+  // batches under the same department with differently-named sections (e.g. "Section A" for one
+  // batch, "A" for another — a real live case) would both show up regardless of which batch is
+  // actually selected, offering a section that doesn't even exist in that batch.
+  const sections = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId && (!browseBatch || g.batch === browseBatch)).map((g) => g.section))].sort();
   const batches = [...new Set(groups.filter((g) => g.department.id === browseDepartmentId).map((g) => g.batch))].filter(Boolean).sort();
 
   // Keeps the sessionStorage snapshot in sync with every filter/result change (see loadPersisted
@@ -373,7 +377,7 @@ export default function StudentSearch({ basePath }) {
             </div>
             <div style={{ flex: "1 1 140px" }}>
               <label style={labelStyle} htmlFor="student-search-browse-batch">Batch</label>
-              <select id="student-search-browse-batch" style={inputStyle} value={browseBatch} onChange={(e) => setBrowseBatch(e.target.value)} disabled={!browseDepartmentId}>
+              <select id="student-search-browse-batch" style={inputStyle} value={browseBatch} onChange={(e) => { setBrowseBatch(e.target.value); setBrowseSection(""); }} disabled={!browseDepartmentId}>
                 <option value="">All batches</option>
                 {batches.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
