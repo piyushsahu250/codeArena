@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import AcademicGroupPicker from "../components/AcademicGroupPicker";
 import { useToast } from "../context/ToastContext";
+import { useConfirm } from "../context/ConfirmContext";
 
 const cardStyle = { padding: 20 };
 
@@ -14,6 +15,7 @@ const cardStyle = { padding: 20 };
 // or many Courses -> many Institutes/groups at once (bulk assign).
 export default function CourseAssignments() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
   const preselectCourseId = searchParams.get("courseId");
 
@@ -48,11 +50,46 @@ export default function CourseAssignments() {
     setCourseIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
+  function groupLabel(g) {
+    return `${g.institute?.name} · ${g.department?.name} · ${g.section} (${g.batch})`;
+  }
+
+  // Builds the pre-commit preview text (mega-prompt section 5): every Assign/Unassign click used
+  // to commit immediately with no summary of what was about to change or how many students it
+  // would reach — a single wrong checkbox on a multi-course, multi-institute bulk assign could
+  // silently expose (or remove) a course for the wrong audience with zero chance to catch it.
+  function buildPreview(actionLabel) {
+    const selectedCourses = publishedCourses.filter((c) => courseIds.includes(c.id));
+    const selectedInstitutes = institutes.filter((i) => instituteIds.includes(i.id));
+    const selectedGroups = academicGroups.filter((g) => academicGroupIds.includes(g.id));
+
+    const lines = [];
+    lines.push(`Course(s): ${selectedCourses.map((c) => c.name).join(", ")}`);
+    if (selectedInstitutes.length) {
+      lines.push(`Institute(s) (institute-wide): ${selectedInstitutes.map((i) => `${i.name} (${i._count?.users ?? "?"} members)`).join(", ")}`);
+    }
+    if (selectedGroups.length) {
+      lines.push(`Academic group(s): ${selectedGroups.map((g) => `${groupLabel(g)} (${g._count?.users ?? "?"} students)`).join(", ")}`);
+    }
+    const groupStudentReach = selectedGroups.reduce((sum, g) => sum + (g._count?.users || 0), 0);
+    const instituteReach = selectedInstitutes.reduce((sum, i) => sum + (i._count?.users || 0), 0);
+    if (selectedInstitutes.length || selectedGroups.length) {
+      const parts = [];
+      if (instituteReach) parts.push(`~${instituteReach} institute member(s)`);
+      if (groupStudentReach) parts.push(`~${groupStudentReach} student(s) in the selected group(s)`);
+      lines.push(`Estimated reach: ${parts.join(" + ")} per course${selectedCourses.length > 1 ? " (x " + selectedCourses.length + " courses)" : ""}.`);
+    }
+    return { title: `${actionLabel} — review before committing`, message: lines.join("\n") };
+  }
+
   async function assign() {
     if (courseIds.length === 0 || (instituteIds.length === 0 && academicGroupIds.length === 0)) {
       toast.error("Select at least one course and one institute or academic group.");
       return;
     }
+    const { title, message } = buildPreview("Assign");
+    const ok = await confirm({ title, message, confirmLabel: "Assign", cancelLabel: "Cancel" });
+    if (!ok) return;
     setSaving(true);
     try {
       if (courseIds.length === 1) {
@@ -74,6 +111,9 @@ export default function CourseAssignments() {
       toast.error("Select exactly one course and at least one institute or academic group to unassign.");
       return;
     }
+    const { title, message } = buildPreview("Unassign");
+    const ok = await confirm({ title, message, confirmLabel: "Unassign", cancelLabel: "Cancel", danger: true });
+    if (!ok) return;
     setSaving(true);
     try {
       await api.delete(`/learning/courses/${courseIds[0]}/assignments`, { data: { instituteIds, academicGroupIds } });
