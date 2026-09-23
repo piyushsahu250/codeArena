@@ -15,6 +15,7 @@ const { cached, invalidate } = require("../utils/cache");
 const { GRADABLE_QUESTION_TYPES } = require("../utils/readinessBlueprint");
 const { generateReadinessReportPdf } = require("../utils/readinessReportPdf");
 const { readinessSubjectEligibilityWhere, studentCanAccessReadinessSubject } = require("../utils/readinessEligibility");
+const { notifyReadinessTestAssigned } = require("../utils/notifications");
 const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
 
 const router = express.Router();
@@ -326,6 +327,15 @@ router.post("/admin/subjects/:id/assignments", authenticate, requireRole("ADMIN"
     });
     await logAudit({ req, action: AUDIT_ACTIONS.READINESS_TEST_ASSIGNED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: subject.instituteId, details: { subjectId: subject.id, name: subject.name, assignedCount: assignments.length } });
     res.json({ success: true });
+    // Fire-and-forget, after the response — same posture as learning.js's identical
+    // notifyCourseAssigned call site (Phase 52; previously silent, found during the 2026-09-23
+    // Readiness Tests audit).
+    prisma.user.findMany({
+      where: { role: "STUDENT", academicGroupId: { in: assignments.map((a) => a.academicGroupId) } },
+      select: { id: true, name: true, email: true },
+    })
+      .then((students) => notifyReadinessTestAssigned(prisma, students, subject))
+      .catch((err) => console.error("Failed to send readiness test assignment notifications:", err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to assign academic groups" });

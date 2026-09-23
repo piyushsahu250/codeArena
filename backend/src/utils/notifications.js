@@ -270,6 +270,28 @@ async function notifyCourseAssigned(prisma, students, course) {
   ]);
 }
 
+// Fired when a Readiness subject's academic-group assignment changes (routes/readiness.js
+// POST /admin/subjects/:id/assignments) — mirrors notifyCourseAssigned exactly; previously silent,
+// found during the 2026-09-23 Readiness Tests audit (Phase 52).
+async function notifyReadinessTestAssigned(prisma, students, subject) {
+  if (!students || students.length === 0) return;
+  const link = "/readiness";
+  await Promise.all([
+    notifyMany(prisma, students.map((s) => s.id), {
+      type: "READINESS_TEST_ASSIGNED",
+      message: `New readiness test "${subject.name}" has been assigned to you`,
+      link,
+    }),
+    ...students.map((s) =>
+      emailStudent(
+        prisma, s, `New readiness test assigned: "${subject.name}"`,
+        `<p>Hi ${s.name},</p><p>A new readiness test, <strong>${subject.name}</strong>, has been assigned to you.</p><p><a href="${FRONTEND_URL}${link}">View your Readiness Tests</a></p>`,
+        "READINESS_TEST_ASSIGNED"
+      )
+    ),
+  ]);
+}
+
 // Fired from utils/certificates.js's issueCertificate() itself (not from each individual route
 // that calls it) so every issuance path — manual (certificates.js), and the three auto-issue
 // paths (learning.js course completion, gradeModuleCodingAttempt.js, readiness.js) — notifies
@@ -289,7 +311,7 @@ async function notifyCertificateIssued(prisma, student, certificate) {
 module.exports = {
   notify, notifyMany, notifyPoolAdded, notifyPoolRemoved, notifyAssessmentAssigned, notifyDeadlineReminder, notifyResultsPublished,
   notifyResultPublished, notifyAccountStatusChanged, notifyPermissionUpdated, notifyPasswordResetByAdmin, notifyDocumentVerification,
-  notifyTestAssigned, notifyCourseAssigned, notifyCertificateIssued,
+  notifyTestAssigned, notifyCourseAssigned, notifyReadinessTestAssigned, notifyCertificateIssued,
   // Exported for routes/tests.js's manual "Send Notification" action, which needs the same
   // institute-branded single-student email send this file's own notify* wrappers already use,
   // but with its own idempotency/logging around the batch rather than going through a notifyX
