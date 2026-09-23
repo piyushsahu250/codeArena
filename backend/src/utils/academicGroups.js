@@ -1,4 +1,5 @@
 const prisma = require("../prisma");
+const { invalidate } = require("./cache");
 
 // Called after any write that can reduce a group's membership to zero (a student's batch/
 // department/section/institute edited, or a student deleted) — see users.js's PATCH /:id and
@@ -24,6 +25,7 @@ async function deleteAcademicGroupIfEmpty(academicGroupId) {
     if (err.code === "P2025") return false;
     throw err;
   }
+  invalidate("academic-groups:");
   await deleteDepartmentIfEmpty(departmentId);
   return true;
 }

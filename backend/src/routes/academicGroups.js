@@ -4,7 +4,7 @@ const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { generateTempPassword, recordPasswordChange } = require("../utils/password");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
@@ -175,6 +175,7 @@ router.delete("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITU
       prisma.user.deleteMany({ where: { id: { in: studentIds } } }),
       prisma.academicGroup.delete({ where: { id: req.params.id } }),
     ]);
+    invalidate("academic-groups:");
 
     await logAudit({
       req,

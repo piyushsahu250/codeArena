@@ -83,7 +83,16 @@ const FIELD_ALIASES = {
 // don't fragment groups. `cache` is an optional per-request Map to avoid redundant lookups when a
 // bulk upload has many rows sharing the same group.
 async function resolveAcademicGroup({ instituteId, batchYear, departmentName, section }, cache) {
-  const batch = String(batchYear || "").trim() || "Unassigned";
+  // Whitespace around the batch's own dash ("2026 - 2031" vs "2026-2031") used to fragment one
+  // real cohort into two AcademicGroup rows, because the match below was an exact string equality
+  // with no normalization -- confirmed live 2026-09-23 for Sanjivani University's Integrated
+  // M.Tech batches (see backend/scripts/fixSanjivaniBatches.js, the one-time cleanup for the data
+  // this had already produced). This only collapses whitespace around the dash; it deliberately
+  // does NOT try to reconcile genuinely different strings for the same intended batch (e.g. a bare
+  // "2030" vs "2025-2030") -- there's no safe way to infer that transform for every institute's
+  // own batch-naming convention (SCOE's real, intentional short form "2023-27" must NOT be
+  // touched), so that class of duplicate still needs a human decision, same as before.
+  const batch = String(batchYear || "").trim().replace(/\s*-\s*/g, "-") || "Unassigned";
   const deptName = String(departmentName || "").trim() || "Unassigned";
   const sectionName = String(section || "").trim() || "Section A";
   const key = `${instituteId}::${batch.toLowerCase()}::${deptName.toLowerCase()}::${sectionName.toLowerCase()}`;
@@ -120,6 +129,10 @@ async function resolveAcademicGroup({ instituteId, batchYear, departmentName, se
       create: { instituteId, batch, departmentId: department.id, section: sectionName },
       include: { department: true },
     });
+    // Module-level response cache, not the per-request dedup Map this function received as its
+    // own `cache` parameter (shadowed here) -- GET /academic-groups otherwise keeps serving a list
+    // missing this brand-new group for up to its own 2-minute TTL.
+    require("../utils/cache").invalidate("academic-groups:");
   }
   if (cache) cache.set(key, group);
   return group;
