@@ -18,6 +18,24 @@ const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
+// GET /analytics (below) caches its result for 60s under `talentPoolAnalytics:...`, but none of
+// this file's pool create/edit/delete or member add/remove/transfer routes ever invalidated it
+// (only the separate leaderboard/rank caches get invalidated, at their own call sites above) —
+// confirmed as a live bug class 2026-09-23 alongside the same gap in several other cached routes.
+// Same fix as questions.js's identical router-level hook: invalidate after any non-GET request
+// that succeeds, covering every mutation in this file uniformly instead of hand-instrumenting each
+// one.
+router.use((req, res, next) => {
+  if (req.method !== "GET") {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode < 400) invalidate("talentPoolAnalytics:");
+      return originalJson(body);
+    };
+  }
+  next();
+});
+
 const MEMBER_SELECT = { id: true, name: true, email: true, rollNumber: true, registrationNumber: true };
 const INSTITUTES_INCLUDE = { institutes: { include: { institute: { select: { id: true, name: true } } } } };
 

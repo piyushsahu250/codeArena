@@ -197,6 +197,7 @@ router.patch("/:id/status", ...guard, async (req, res) => {
       ...(status === "ACTIVE" ? [] : [prisma.loginSession.updateMany({ where: { userId: existing.id, isActive: true }, data: { isActive: false, logoutAt: new Date() } })]),
     ]);
     for (const token of revokedTokens) cache.invalidate(`session-active:${token}`);
+    cache.invalidate("staff-clerk-overview:");
 
     await logAudit({
       req, action, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,

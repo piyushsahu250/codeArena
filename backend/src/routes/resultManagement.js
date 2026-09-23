@@ -27,6 +27,19 @@ const STUDENT_SELECT = {
 // leaks into every existing list/search/export response that spreads that constant.
 const MARKSHEET_STUDENT_SELECT = { ...STUDENT_SELECT, profilePhotoUrl: true };
 
+// Every examination/entry mutation used to only invalidate `resultExamStats:<id>` (the one
+// per-examination stat cache), leaving `resultDashboard:`/`resultAnalytics:`/`resultSearch:` --
+// the institute-wide aggregates most of these same routes feed into -- stale for up to their own
+// TTL (20-60s). Short-lived, but the same stale-dashboard bug class as the AcademicGroup incident
+// this was found alongside, so every mutation below now calls this instead of invalidating
+// `resultExamStats:` alone.
+function invalidateResultCaches(examId) {
+  if (examId) invalidate(`resultExamStats:${examId}`);
+  invalidate("resultDashboard:");
+  invalidate("resultAnalytics:");
+  invalidate("resultSearch:");
+}
+
 // ============================================================
 // Shared helpers
 // ============================================================
@@ -421,6 +434,7 @@ router.post("/admin/examinations", authenticate, requireRole("ADMIN", "SUPER_ADM
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: effectiveInstituteId, details: { examinationId: examination.id, title: examination.title, status },
     });
+    invalidateResultCaches(examination.id);
     res.json(examination);
   } catch (err) {
     console.error(err);
@@ -511,6 +525,7 @@ router.patch("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUPE
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_EDITED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: existing.instituteId, details: { examinationId: updated.id, thresholdsChanged },
     });
+    invalidateResultCaches(updated.id);
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -527,6 +542,7 @@ router.delete("/admin/examinations/:id", authenticate, requireRole("ADMIN", "SUP
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: existing.instituteId, details: { examinationId: existing.id, title: existing.title },
     });
+    invalidateResultCaches(existing.id);
     res.json({ message: "Examination deleted" });
   } catch (err) {
     console.error(err);
@@ -573,6 +589,7 @@ router.patch("/admin/examinations/:id/publish", authenticate, requireRole("ADMIN
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_PUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: existing.instituteId, details: { examinationId: examination.id, title: examination.title, studentsNotified: entries.length },
     });
+    invalidateResultCaches(examination.id);
     res.json(examination);
   } catch (err) {
     console.error(err);
@@ -644,6 +661,7 @@ router.patch("/admin/examinations/:id/unpublish", authenticate, requireRole("ADM
       req, action: AUDIT_ACTIONS.RESULT_EXAMINATION_UNPUBLISHED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: existing.instituteId, details: { examinationId: examination.id, title: examination.title },
     });
+    invalidateResultCaches(examination.id);
     res.json(examination);
   } catch (err) {
     console.error(err);
@@ -673,6 +691,7 @@ function simpleTransition(fromStatuses, toStatus, action) {
         req, action, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
         instituteId: existing.instituteId, details: { examinationId: examination.id, title: examination.title, from: existing.status, to: toStatus },
       });
+      invalidateResultCaches(examination.id);
       res.json(examination);
     } catch (err) {
       console.error(err);
@@ -777,6 +796,7 @@ router.post("/admin/examinations/:id/subjects", authenticate, requireRole("ADMIN
     const subject = await prisma.resultSubject.create({
       data: { examinationId: req.params.id, name: name.trim(), maxMarks: max, passingMarks: passingMarks != null && passingMarks !== "" ? Number(passingMarks) : null, order: count },
     });
+    invalidateResultCaches(req.params.id);
     res.json(subject);
   } catch (err) {
     if (err.code === "P2002") return res.status(409).json({ error: "A subject with this name already exists on this examination" });
@@ -793,6 +813,7 @@ router.delete("/admin/examinations/:id/subjects/:subjectId", authenticate, requi
     const subject = await prisma.resultSubject.findUnique({ where: { id: req.params.subjectId } });
     if (!subject || subject.examinationId !== req.params.id) return res.status(404).json({ error: "Subject not found" });
     await prisma.resultSubject.delete({ where: { id: req.params.subjectId } });
+    invalidateResultCaches(req.params.id);
     res.json({ message: "Subject removed" });
   } catch (err) {
     console.error(err);
@@ -865,7 +886,7 @@ router.post("/admin/examinations/:id/entries/:entryId/subject-marks", authentica
       });
     });
 
-    invalidate(`resultExamStats:${req.params.id}`);
+    invalidateResultCaches(req.params.id);
     await logAudit({
       req, action: examination.status === "PUBLISHED" ? AUDIT_ACTIONS.RESULT_ENTRY_CORRECTED : AUDIT_ACTIONS.RESULT_ENTRY_EDITED,
       actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
@@ -1104,7 +1125,7 @@ router.post("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN"
       });
     });
 
-    invalidate(`resultExamStats:${req.params.id}`);
+    invalidateResultCaches(req.params.id);
     await logAudit({
       req, action: existing ? AUDIT_ACTIONS.RESULT_ENTRY_EDITED : AUDIT_ACTIONS.RESULT_ENTRY_CREATED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: examination.instituteId, details: { examinationId: req.params.id, entryId: entry.id, studentId, status },
@@ -1171,7 +1192,7 @@ router.patch("/admin/examinations/:id/entries/:entryId", authenticate, requireRo
       if (changes.length) await recordEntryHistory(tx, { entryId: existingEntry.id, changes, user: req.user, reason: req.body.reason || "Marks entry updated" });
       return tx.resultEntry.update({ where: { id: req.params.entryId }, data, include: { student: { select: STUDENT_SELECT }, ...SUBJECT_MARKS_INCLUDE } });
     });
-    invalidate(`resultExamStats:${req.params.id}`);
+    invalidateResultCaches(req.params.id);
     await logAudit({
       req, action: examination.status === "PUBLISHED" ? AUDIT_ACTIONS.RESULT_ENTRY_CORRECTED : AUDIT_ACTIONS.RESULT_ENTRY_EDITED,
       actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
@@ -1194,7 +1215,7 @@ router.delete("/admin/examinations/:id/entries/:entryId", authenticate, requireR
     const existingEntry = await prisma.resultEntry.findUnique({ where: { id: req.params.entryId }, include: { student: { select: { name: true } } } });
     if (!existingEntry || existingEntry.examinationId !== req.params.id) return res.status(404).json({ error: "Entry not found" });
     await prisma.resultEntry.delete({ where: { id: req.params.entryId } });
-    invalidate(`resultExamStats:${req.params.id}`);
+    invalidateResultCaches(req.params.id);
     await logAudit({
       req, action: AUDIT_ACTIONS.RESULT_ENTRY_DELETED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: examination.instituteId, details: { examinationId: req.params.id, entryId: existingEntry.id, studentName: existingEntry.student?.name },
@@ -1512,7 +1533,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
       }
     }
 
-    if (commit && imported.length) invalidate(`resultExamStats:${req.params.id}`);
+    if (commit && imported.length) invalidateResultCaches(req.params.id);
 
     if (commit) {
       await logAudit({

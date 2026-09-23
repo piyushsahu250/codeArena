@@ -9,7 +9,7 @@ const { runQueued } = require("../utils/queue");
 const { processGamification } = require("../utils/gamification");
 const { resolveMostSpecificChallenge, loadStudentScope } = require("../utils/challengeScoping");
 const { safeErrorMessage } = require("../utils/errors");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
@@ -392,6 +392,11 @@ router.post("/daily/:id/submit", authenticate, requireRole("STUDENT"), attachReq
       update: { ...fields, ...(nowSolved && !wasAlreadySolved ? { solvedAt: new Date() } : {}) },
       create: { dailyChallengeId: dc.id, studentId: req.user.id, ...fields, solvedAt: nowSolved ? new Date() : null },
     });
+    // GET /admin/daily/:id/analytics caches its aggregate (2 min TTL) but nothing ever invalidated
+    // it on a new submission — the admin panel could show stale pass/attempt counts for up to 2
+    // minutes after a student submits, confirmed as the same cache-invalidation bug class found
+    // platform-wide 2026-09-23.
+    invalidate(`challenge:analytics:daily:${dc.id}`);
 
     let gamification = null;
     if (nowSolved && !wasAlreadySolved) {
@@ -544,6 +549,7 @@ router.post("/weekly/:id/submit", authenticate, requireRole("STUDENT"), attachRe
       update: { ...fields, ...(nowSolved && !wasAlreadySolved ? { solvedAt: new Date() } : {}) },
       create: { weeklyChallengeId: wc.id, studentId: req.user.id, ...fields, solvedAt: nowSolved ? new Date() : null },
     });
+    invalidate(`challenge:analytics:weekly:${wc.id}`);
 
     let gamification = null;
     if (nowSolved && !wasAlreadySolved) {

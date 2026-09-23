@@ -20,7 +20,7 @@ const { generateInterviewReportPdf } = require("../utils/interviewReportPdf");
 const { sendMailLogged, wrapBranded } = require("../utils/mailer");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { dedupe, isInFlight } = require("../utils/requestDedup");
 const { classifyViolation } = require("../utils/proctoringSeverity");
 const { COMPANIES } = require("../utils/companies");
@@ -32,6 +32,24 @@ const logger = require("../utils/logger");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
+
+// GET routes below cache `interview:subjects` / `interview:companies` / `interview:companies:browse`
+// / `interview:questions:browse:...` / `interview:stats:...` (60-120s), but admin question CRUD,
+// company-profile CRUD, and question import never invalidated any of them -- confirmed as a live
+// bug class 2026-09-23 alongside the same gap in several other cached routes. Scoped to `/admin`
+// only (unlike questions.js/talentPools.js's whole-router hooks) since this router also carries
+// much higher-traffic student-facing interview-session/submission routes that have nothing to do
+// with this content cache and shouldn't pay for an invalidate() on every answer submitted.
+router.use("/admin", (req, res, next) => {
+  if (req.method !== "GET") {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode < 400) invalidate("interview:");
+      return originalJson(body);
+    };
+  }
+  next();
+});
 // Real, billed Claude API calls — tighter than the global per-user limiter, same rationale as
 // learning.js's hintLimiter and resume.js's aiReviewLimiter.
 const aiInsightsLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });

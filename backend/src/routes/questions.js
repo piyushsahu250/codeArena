@@ -19,10 +19,29 @@ const { extractImageZip, validateZipImage } = require("../utils/bulkImageZip");
 const { canStaffUseSubject, resolveSubjectUnitTopic, staffAuthorizedSubjectIds } = require("../utils/subjectAccess");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { guardStarterCodeIsNotSolution } = require("../utils/starterCodeGuard");
 
 const router = express.Router();
+
+// GET /analytics (below) caches its result per institute+user for 60s, but with ~25 separate
+// question/folder mutation routes in this file (create, bulk-move/status/delete/copy, several
+// bulk-import variants, folder CRUD/merge/share/clear, patch/delete, image upload/delete) none of
+// them invalidated it -- confirmed as a live bug class 2026-09-23 alongside the same gap in
+// several other cached routes. Rather than hand-instrument every one of those routes individually
+// (error-prone, and silently stops covering any new mutation route added here later), this single
+// router-level hook invalidates the cache after any non-GET request that actually succeeds --
+// covers every mutation in this file uniformly, present and future.
+router.use((req, res, next) => {
+  if (req.method !== "GET") {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode < 400) invalidate("questionAnalytics:");
+      return originalJson(body);
+    };
+  }
+  next();
+});
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 // Question-image upload: accepts anything up front (the real check is the magic-byte sniff on
 // the buffer in the route below, which is the only check that can't be fooled by a renamed file

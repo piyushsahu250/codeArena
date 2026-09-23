@@ -5,7 +5,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { validateOfferInput } = require("../utils/placementOfferValidation");
 const { generatePlacementPdf } = require("../utils/placementPdf");
-const { cached } = require("../utils/cache");
+const { cached, invalidate } = require("../utils/cache");
 const { decryptProfile } = require("../utils/piiEncryption");
 
 const router = express.Router();
@@ -37,6 +37,7 @@ router.post("/offers", authenticate, requireRole("STUDENT"), async (req, res) =>
     if (error) return res.status(400).json({ error });
     const data = pickOfferData(req.body);
     const offer = await prisma.placementOffer.create({ data: { studentId: req.user.id, ...data } });
+    invalidate("placementAnalytics:");
     res.json(offer);
   } catch (err) {
     console.error(err);
@@ -64,6 +65,7 @@ router.patch("/offers/:id", authenticate, requireRole("STUDENT"), async (req, re
       data.rejectionReason = null;
     }
     const offer = await prisma.placementOffer.update({ where: { id: req.params.id }, data });
+    invalidate("placementAnalytics:");
     res.json(offer);
   } catch (err) {
     console.error(err);
@@ -76,6 +78,7 @@ router.delete("/offers/:id", authenticate, requireRole("STUDENT"), async (req, r
     const existing = await prisma.placementOffer.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.studentId !== req.user.id) return res.status(404).json({ error: "Offer not found" });
     await prisma.placementOffer.delete({ where: { id: req.params.id } });
+    invalidate("placementAnalytics:");
     res.json({ message: "Offer deleted" });
   } catch (err) {
     console.error(err);
@@ -169,6 +172,7 @@ router.patch("/offers/:id/verify", authenticate, requireRole("ADMIN", "SUPER_ADM
       studentId: offer.studentId, instituteId: student.instituteId,
       details: { offerId: offer.id, companyName: offer.companyName, status },
     });
+    invalidate("placementAnalytics:");
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -204,6 +208,7 @@ router.patch("/students/:studentId/department-eligibility", authenticate, requir
       studentId: req.params.studentId, instituteId: student.instituteId,
       details: { type: "department", status },
     });
+    invalidate("placementAnalytics:");
     res.json(decryptProfile(profile));
   } catch (err) {
     console.error(err);
@@ -229,6 +234,7 @@ router.patch("/students/:studentId/clerk-eligibility", authenticate, requireRole
       studentId: req.params.studentId, instituteId: student.instituteId,
       details: { type: "clerk", status },
     });
+    invalidate("placementAnalytics:");
     res.json(decryptProfile(profile));
   } catch (err) {
     console.error(err);
