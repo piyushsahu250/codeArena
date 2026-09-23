@@ -654,9 +654,16 @@ export default function ReadinessSubjects() {
               />
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
+            {/* "Passing %" is deliberately NOT shown here (2026-09-23 audit finding): this feature
+                reports readiness via the 6-tier readinessThresholds labels (Foundation Required ..
+                Excellently Ready) below, not a binary pass/fail -- ReadinessSubject.passingPercent
+                is a leftover config field from an earlier design that no route/report/certificate
+                path has ever actually read. Showing an editable "Passing %" input that silently did
+                nothing was more misleading than not having the control at all. The DB field/value
+                is left untouched (existing subjects keep whatever they were set to), so this can be
+                wired up for real later without a migration if a genuine pass/fail gate is wanted. */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <div><label style={labelStyle} htmlFor="subject-duration">Duration (min)</label><input id="subject-duration" style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
-              <div><label style={labelStyle} htmlFor="subject-passing-percent">Passing %</label><input id="subject-passing-percent" style={inputStyle} type="number" value={form.passingPercent} onChange={(e) => setForm({ ...form, passingPercent: e.target.value })} /></div>
               <div><label style={labelStyle} htmlFor="subject-max-attempts">Max attempts (blank = unlimited)</label><input id="subject-max-attempts" style={inputStyle} type="number" min={1} placeholder="Unlimited" value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
             </div>
 

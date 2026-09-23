@@ -442,7 +442,17 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
       return tx.readinessAssessment.create({
         data: {
           studentId: req.user.id, subjectId, assessmentMode, blueprint, durationMin: subject.defaultDurationMin,
-          config: { usedFallback, shortfallLevels },
+          config: {
+            usedFallback, shortfallLevels,
+            // Snapshotted at attempt-start so an admin editing readinessThresholds/
+            // employabilityIndicators WHILE a student is mid-attempt can't retroactively change
+            // which policy their in-flight attempt gets graded against at finalize (Phase 39: "must
+            // ... affect only future attempts"). Completed reports were already fully frozen (see
+            // buildReadinessReport's one-time write into ReadinessReport at finalize) -- this closes
+            // the one remaining window, between attempt-start and attempt-finalize, where the LIVE
+            // subject row was still being read instead of what was in effect when the student began.
+            scoringPolicy: { readinessThresholds: subject.readinessThresholds, employabilityIndicators: subject.employabilityIndicators },
+          },
         },
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -559,7 +569,14 @@ router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), a
     const questions = await prisma.question.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
     const answersWithQuestions = answers.map((a) => ({ ...a, question: questions.find((q) => q.id === a.questionId) || {} }));
 
-    const built = buildReadinessReport(answersWithQuestions, assessment.subject);
+    // Grade against the scoring policy that was in effect when this attempt STARTED, not whatever
+    // the subject looks like now -- see the scoringPolicy comment at attempt-creation above.
+    // Assessments created before this fix have no config.scoringPolicy; falling back to the live
+    // subject for those is unavoidable (nothing was snapshotted) and matches this route's exact
+    // prior behavior, so no existing in-flight attempt breaks.
+    const scoringPolicy = assessment.config?.scoringPolicy;
+    const effectiveSubject = scoringPolicy ? { ...assessment.subject, ...scoringPolicy } : assessment.subject;
+    const built = buildReadinessReport(answersWithQuestions, effectiveSubject);
     // Distinguishes a submission the server's own clock confirms was on time from one accepted
     // only because it's finalize's job to always be able to close out an attempt (matches
     // tests.js's identical "finalize is never blocked by the deadline" reasoning -- a legitimately
