@@ -227,8 +227,19 @@ export default function ReadinessSubjects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjects]);
 
+  // Same pre-commit preview pattern as the Course Assignments page (CourseAssignments.jsx): before
+  // this fix, "Assign N Selected Group(s)" committed immediately with only a bare group count, no
+  // indication of how many actual students that reaches — the exact Phase 33/35 gap. academicGroups
+  // already carries _count.users per group (same GET /academic-groups response CourseAssignments.jsx
+  // reads it from), so no new API call is needed to compute this.
   async function assignGroups() {
     if (!pickerGroupIds.length) return;
+    const selectedGroups = academicGroups.filter((g) => pickerGroupIds.includes(g.id));
+    const studentReach = selectedGroups.reduce((sum, g) => sum + (g._count?.users || 0), 0);
+    const lines = selectedGroups.map((g) => `${g.institute?.name ? g.institute.name + " · " : ""}${g.batch} · ${g.department?.name || "—"} · ${g.section} (${g._count?.users ?? "?"} students)`);
+    lines.push(`Estimated reach: ~${studentReach} student(s).`);
+    const ok = await confirmDialog({ title: "Assign academic group(s) — review before committing", message: lines.join("\n"), confirmLabel: "Assign" });
+    if (!ok) return;
     setAssigning(true);
     try {
       await api.post(`/readiness/admin/subjects/${editingId}/assignments`, {
