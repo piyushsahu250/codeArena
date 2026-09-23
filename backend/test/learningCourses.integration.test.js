@@ -239,6 +239,57 @@ test("student course visibility respects institute assignment (the core institut
   }
 });
 
+test("an institute-scoped admin cannot READ another institute's chapters/lessons/projects (IDOR info-disclosure, regression test for a confirmed live gap)", async (t) => {
+  if (!serverReachable) return t.skip("no live server/fixture data reachable at localhost:4000");
+  if (!instituteAdminA || !instituteAdminB) return t.skip("fewer than 2 institute-scoped admins across distinct institutes in fixture data");
+  let courseId, moduleId, chapterId, projectId;
+  try {
+    // Institute A's admin builds a course with a chapter (containing a lesson) and a project
+    // (containing test cases / starter code) under their own institute.
+    const create = await httpRequest("POST", "/api/learning/courses", instituteAdminAToken, {
+      slug: `regression-read-idor-${Date.now()}`, name: "P1 Regression Read-IDOR Course", status: "DRAFT",
+    });
+    assert.equal(create.status, 200);
+    courseId = create.body.id;
+
+    const modRes = await httpRequest("POST", `/api/learning/courses/${courseId}/modules`, instituteAdminAToken, { title: "M1", order: 0 });
+    assert.equal(modRes.status, 200);
+    moduleId = modRes.body.id;
+
+    const chapterRes = await httpRequest("POST", `/api/learning/modules/${moduleId}/chapters`, instituteAdminAToken, { title: "Ch1", order: 0 });
+    assert.equal(chapterRes.status, 200);
+    chapterId = chapterRes.body.id;
+
+    const projectRes = await httpRequest("POST", `/api/learning/modules/${moduleId}/projects`, instituteAdminAToken, { title: "Proj1" });
+    assert.equal(projectRes.status, 200);
+    projectId = projectRes.body.id;
+
+    // Institute B's admin must be rejected reading ANY of these by ID -- 403, not a silent
+    // cross-institute content leak (this used to return 200 with the full chapter/lesson/project
+    // content, including project test cases and starter code, before the ownership check was added).
+    const chapters = await httpRequest("GET", `/api/learning/modules/${moduleId}/chapters`, instituteAdminBToken);
+    assert.equal(chapters.status, 403, "reading another institute's chapter list must be rejected");
+
+    const lessons = await httpRequest("GET", `/api/learning/chapters/${chapterId}/lessons`, instituteAdminBToken);
+    assert.equal(lessons.status, 403, "reading another institute's lesson content by chapter id must be rejected");
+
+    const projects = await httpRequest("GET", `/api/learning/modules/${moduleId}/projects`, instituteAdminBToken);
+    assert.equal(projects.status, 403, "reading another institute's project list must be rejected");
+
+    const projectAdmin = await httpRequest("GET", `/api/learning/projects/${projectId}/admin`, instituteAdminBToken);
+    assert.equal(projectAdmin.status, 403, "reading another institute's project detail (including task test cases/starter code) must be rejected");
+
+    // Institute A's own admin must still be able to read all of these normally (the fix must not
+    // have broken the legitimate same-institute case).
+    const ownChapters = await httpRequest("GET", `/api/learning/modules/${moduleId}/chapters`, instituteAdminAToken);
+    assert.equal(ownChapters.status, 200, "the owning institute's admin must still be able to read their own chapters");
+  } finally {
+    if (projectId) await prisma.courseProject.delete({ where: { id: projectId } }).catch(() => {});
+    if (chapterId) await prisma.chapter.delete({ where: { id: chapterId } }).catch(() => {});
+    await cleanupCourse(courseId);
+  }
+});
+
 test("publishing a course with zero modules is rejected", async (t) => {
   if (!serverReachable) return t.skip("no live server/fixture data reachable at localhost:4000");
   let courseId;

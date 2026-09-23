@@ -1623,8 +1623,15 @@ router.delete("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
 // that gate progress past it. Every pre-Chapter module gets backfilled with one "General"
 // chapter (see scripts/backfillChapters.js) so this is purely additive on top of existing data.
 
-router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    // IDOR guard: must never leak another institute's chapter list, matching the same check
+    // moduleCoding.js's structurally-identical admin GET routes already enforce.
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only view courses under your own institute" });
+    }
     const chapters = await prisma.chapter.findMany({
       where: { moduleId: req.params.id },
       orderBy: { order: "asc" },
@@ -1668,8 +1675,15 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_A
 
 // Full topic list for one chapter (the chapter list route above only returns a count) — used by
 // the admin CMS's "Learn" tab.
-router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    // IDOR guard: this returns full lesson content (body, video/PDF links), so an unguarded
+    // lookup by chapter id would leak another institute's course content, not just its structure.
+    const chapterInstituteId = await resolveChapterCourseInstituteId(req.params.id);
+    if (chapterInstituteId === undefined) return res.status(404).json({ error: "Chapter not found" });
+    if (!ownsLmsInstitute(req, chapterInstituteId)) {
+      return res.status(403).json({ error: "You can only view courses under your own institute" });
+    }
     const lessons = await prisma.lesson.findMany({
       where: { chapterId: req.params.id },
       orderBy: { order: "asc" },
@@ -2348,8 +2362,14 @@ function sanitizeProjectTask(t, progress) {
 
 // ---- Admin/Staff CRUD ----
 
-router.get("/modules/:id/projects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/modules/:id/projects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
+    // IDOR guard: must never leak another institute's project list.
+    const moduleInstituteId = await resolveModuleCourseInstituteId(req.params.id);
+    if (moduleInstituteId === undefined) return res.status(404).json({ error: "Module not found" });
+    if (!ownsLmsInstitute(req, moduleInstituteId)) {
+      return res.status(403).json({ error: "You can only view courses under your own institute" });
+    }
     const projects = await prisma.courseProject.findMany({
       where: { moduleId: req.params.id },
       orderBy: { order: "asc" },
@@ -2442,12 +2462,18 @@ router.delete("/projects/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
 });
 
 // Admin/Staff: full project detail with unsanitized tasks (hidden test cases included) for the CMS edit form.
-router.get("/projects/:id/admin", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/projects/:id/admin", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const project = await prisma.courseProject.findUnique({
     where: { id: req.params.id },
     include: { tasks: { orderBy: { order: "asc" } } },
   });
   if (!project) return res.status(404).json({ error: "Project not found" });
+  // IDOR guard: tasks include test cases and starter code (near/exact solutions in some cases) —
+  // must never leak another institute's project content, not just block editing it.
+  const instituteId = await resolveProjectCourseInstituteId(req.params.id);
+  if (!ownsLmsInstitute(req, instituteId)) {
+    return res.status(403).json({ error: "You can only view courses under your own institute" });
+  }
   res.json(project);
 });
 
