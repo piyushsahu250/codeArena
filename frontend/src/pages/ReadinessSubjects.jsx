@@ -106,13 +106,31 @@ export default function ReadinessSubjects() {
   const [institutes, setInstitutes] = useState([]);
   const [filterInstituteId, setFilterInstituteId] = useState("");
 
+  // Institute -> Batch -> Department -> Section, each option list scoped by every filter already
+  // picked above it in that chain — not just flattened across the whole institute/platform. Fixes
+  // a real reported case (2026-09-23): two different batches under the same department using
+  // different section-naming conventions ("Section A" for one, bare "A" for the other) both showed
+  // up in the Section dropdown regardless of which batch was actually selected, since this used to
+  // be one flat `new Set(academicGroups.map(...))` with no cross-filtering at all.
+  const groupsForInstitute = useMemo(
+    () => (filterInstituteId ? academicGroups.filter((g) => g.institute?.id === filterInstituteId) : academicGroups),
+    [academicGroups, filterInstituteId]
+  );
+  const batchOptions = useMemo(() => [...new Set(groupsForInstitute.map((g) => g.batch))].sort().reverse(), [groupsForInstitute]);
+  const groupsForBatch = useMemo(
+    () => (filterBatch ? groupsForInstitute.filter((g) => g.batch === filterBatch) : groupsForInstitute),
+    [groupsForInstitute, filterBatch]
+  );
   const departmentOptions = useMemo(() => {
     const map = new Map();
-    academicGroups.forEach((g) => g.department && map.set(g.department.id, g.department.name));
+    groupsForBatch.forEach((g) => g.department && map.set(g.department.id, g.department.name));
     return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [academicGroups]);
-  const batchOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.batch))].sort().reverse(), [academicGroups]);
-  const sectionOptions = useMemo(() => [...new Set(academicGroups.map((g) => g.section))].sort(), [academicGroups]);
+  }, [groupsForBatch]);
+  const groupsForDepartment = useMemo(
+    () => (filterDepartmentId ? groupsForBatch.filter((g) => g.department?.id === filterDepartmentId) : groupsForBatch),
+    [groupsForBatch, filterDepartmentId]
+  );
+  const sectionOptions = useMemo(() => [...new Set(groupsForDepartment.map((g) => g.section))].sort(), [groupsForDepartment]);
 
   function load() {
     api.get("/readiness/admin/subjects", { params: { batch: filterBatch || undefined, departmentId: filterDepartmentId || undefined, section: filterSection || undefined, instituteId: filterInstituteId || undefined } })
@@ -395,7 +413,7 @@ export default function ReadinessSubjects() {
               {!user?.instituteId && (
                 <div style={{ flex: "1 1 160px" }}>
                   <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-institute">Institute</label>
-                  <select id="filter-institute" style={inputStyle} value={filterInstituteId} onChange={(e) => setFilterInstituteId(e.target.value)}>
+                  <select id="filter-institute" style={inputStyle} value={filterInstituteId} onChange={(e) => { setFilterInstituteId(e.target.value); setFilterBatch(""); setFilterDepartmentId(""); setFilterSection(""); }}>
                     <option value="">All institutes</option>
                     {institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                   </select>
@@ -403,14 +421,14 @@ export default function ReadinessSubjects() {
               )}
               <div style={{ flex: "1 1 140px" }}>
                 <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-batch">Batch</label>
-                <select id="filter-batch" style={inputStyle} value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}>
+                <select id="filter-batch" style={inputStyle} value={filterBatch} onChange={(e) => { setFilterBatch(e.target.value); setFilterDepartmentId(""); setFilterSection(""); }}>
                   <option value="">All batches</option>
                   {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
               <div style={{ flex: "1 1 180px" }}>
                 <label style={{ ...labelStyle, marginTop: 0 }} htmlFor="filter-department">Department</label>
-                <select id="filter-department" style={inputStyle} value={filterDepartmentId} onChange={(e) => setFilterDepartmentId(e.target.value)}>
+                <select id="filter-department" style={inputStyle} value={filterDepartmentId} onChange={(e) => { setFilterDepartmentId(e.target.value); setFilterSection(""); }}>
                   <option value="">All departments</option>
                   {departmentOptions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
