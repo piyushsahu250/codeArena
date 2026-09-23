@@ -47,8 +47,12 @@ function httpRequest(method, path, token, body) {
   });
 }
 
+// Must match the real shape utils/sessions.js signs at login ({ id, role, email, name, jti }) --
+// omitting `name` here was confirmed live to be the reason "assign a course" returned 500
+// (assignedByName: req.user.name), which looked exactly like a real app bug until checking
+// sessions.js's actual jwt.sign() call showed name genuinely is included for every real session.
 function tokenFor(user) {
-  return jwt.sign({ id: user.id, role: user.role, email: user.email }, process.env.JWT_SECRET, { expiresIn: "10m" });
+  return jwt.sign({ id: user.id, role: user.role, email: user.email, name: user.name }, process.env.JWT_SECRET, { expiresIn: "10m" });
 }
 
 let serverReachable = false;
@@ -56,6 +60,8 @@ let superAdmin, superAdminToken;
 let instituteAdminA, instituteAdminAToken; // two DIFFERENT institutes, for the IDOR test
 let instituteAdminB, instituteAdminBToken;
 let student;
+let studentX, studentXToken; // two DIFFERENT institutes, for the visibility isolation test
+let studentY, studentYToken;
 
 test.before(async () => {
   try {
@@ -84,6 +90,21 @@ test.before(async () => {
     [instituteAdminA, instituteAdminB] = distinct;
     instituteAdminAToken = tokenFor(instituteAdminA);
     instituteAdminBToken = tokenFor(instituteAdminB);
+  }
+
+  // Two students from two DIFFERENT institutes, for the visibility isolation test.
+  const students = await prisma.user.findMany({
+    where: { role: "STUDENT", instituteId: { not: null } },
+    select: { id: true, role: true, email: true, instituteId: true },
+    take: 100,
+  });
+  const studentsByInstitute = new Map();
+  for (const s of students) if (!studentsByInstitute.has(s.instituteId)) studentsByInstitute.set(s.instituteId, s);
+  const distinctStudents = [...studentsByInstitute.values()];
+  if (distinctStudents.length >= 2) {
+    [studentX, studentY] = distinctStudents;
+    studentXToken = tokenFor(studentX);
+    studentYToken = tokenFor(studentY);
   }
 });
 
@@ -169,6 +190,51 @@ test("an institute-scoped admin cannot edit or delete another institute's course
     const stillThere = await prisma.course.findUnique({ where: { id: courseId } });
     assert.equal(stillThere.name, "P1 Regression IDOR Course", "the course must be completely unchanged after both rejected attempts");
   } finally {
+    await cleanupCourse(courseId);
+  }
+});
+
+test("student course visibility respects institute assignment (the core institute-isolation guarantee)", async (t) => {
+  if (!serverReachable) return t.skip("no live server/fixture data reachable at localhost:4000");
+  if (!studentX || !studentY) return t.skip("fewer than 2 students across distinct institutes in fixture data");
+  let courseId, moduleId;
+  try {
+    const create = await httpRequest("POST", "/api/learning/courses", superAdminToken, {
+      slug: `regression-visibility-${Date.now()}`, name: "P1 Regression Visibility Course", status: "DRAFT",
+    });
+    assert.equal(create.status, 200);
+    courseId = create.body.id;
+    const slug = create.body.slug;
+
+    const mod = await prisma.courseModule.create({ data: { courseId, title: "M1", order: 0 } });
+    moduleId = mod.id;
+
+    const publish = await httpRequest("PATCH", `/api/learning/courses/${courseId}`, superAdminToken, { status: "PUBLISHED" });
+    assert.equal(publish.status, 200, "a course with one module must be publishable");
+
+    const assign = await httpRequest("POST", `/api/learning/courses/${courseId}/assignments`, superAdminToken, { instituteIds: [studentX.instituteId] });
+    assert.equal(assign.status, 200, `assignment to ${studentX.instituteId} must succeed`);
+
+    // The assigned student's institute sees it in their course list...
+    const listX = await httpRequest("GET", "/api/learning/courses", studentXToken);
+    assert.ok(listX.body.some((c) => c.id === courseId), "student X (assigned institute) must see the course in their list");
+
+    // ...and can open it directly by slug.
+    const openX = await httpRequest("GET", `/api/learning/courses/${slug}`, studentXToken);
+    assert.equal(openX.status, 200, "student X must be able to open the course they're assigned to");
+
+    // A DIFFERENT institute's student sees neither.
+    const listY = await httpRequest("GET", "/api/learning/courses", studentYToken);
+    assert.ok(!listY.body.some((c) => c.id === courseId), "student Y (unassigned institute) must NOT see the course in their list");
+
+    // ...and cannot open it directly by slug either, even knowing it exists (URL-guessing / IDOR
+    // per the spec's "server must verify, not just filter the list" requirement) -- 404, not 403,
+    // same "don't confirm it exists" convention used elsewhere on this platform.
+    const openY = await httpRequest("GET", `/api/learning/courses/${slug}`, studentYToken);
+    assert.equal(openY.status, 404, "student Y must be rejected opening a course from another institute directly by slug, not just filtered out of the list");
+  } finally {
+    if (moduleId) await prisma.courseModule.delete({ where: { id: moduleId } }).catch(() => {});
+    if (courseId) await prisma.courseInstituteAssignment.deleteMany({ where: { courseId } }).catch(() => {});
     await cleanupCourse(courseId);
   }
 });

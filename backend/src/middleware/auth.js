@@ -24,7 +24,7 @@ async function authenticate(req, res, next) {
     if (payload.jti && !(await isSessionActive(payload.jti))) {
       return res.status(401).json({ error: "This session has been signed out. Please log in again.", authExpired: true });
     }
-    req.user = payload; // { id, role, email, jti }
+    req.user = payload; // { id, role, email, name, jti } — see utils/sessions.js's jwt.sign() for the exact signed shape
     next();
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token", authExpired: true });
