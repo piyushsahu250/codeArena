@@ -275,7 +275,41 @@ export default function AiInterviewSession() {
         setPhase(PHASES.ERROR);
       }
     } else {
-      setPhase(PHASES.ACTIVE);
+      // Session was already started (typically: voice connected/attempted first, then the mic
+      // failed or the candidate chose to type instead). This used to just flip the phase and trust
+      // whatever currentQuestionText/session.expiresAt already happened to be in state -- but
+      // voice's own connection flow doesn't always get far enough to ever set them (a mic error
+      // before the WS finished its handshake, for instance), and nothing else in the text-mode path
+      // ever fetches them. Confirmed live: a candidate landed here with currentQuestionText still
+      // "" and session.expiresAt still unset, saw "Loading the next question..." and "--:--" as the
+      // permanent state of the page, and the interview silently timed out 20 minutes later having
+      // never shown them the first question at all (turn 0 existed in the DB the whole time).
+      // Re-fetching here guarantees both are correct regardless of what voice mode did or didn't
+      // manage to set, the same way the initial page-load fetch does.
+      setPhase(PHASES.CONNECTING);
+      try {
+        const { data } = await api.get(`/ai-interviews/${id}`);
+        setSession(data);
+        if (data.currentQuestion?.questionText) {
+          setCurrentQuestionText(data.currentQuestion.questionText);
+          setPhase(PHASES.ACTIVE);
+        } else if (data.status === "COMPLETED" || data.status === "ABANDONED" || data.status === "REPORT_READY") {
+          if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+          setPhase(PHASES.COMPLETED);
+          navigate(`/ai-interview/report/${id}`);
+        } else {
+          // No open question exists even after a fresh fetch, and the session isn't actually over
+          // -- a genuinely inconsistent state (see this branch's own header comment for the exact
+          // incident this whole fix is for). Surfacing this clearly beats the previous behavior of
+          // silently sitting on "Loading the next question..." until the candidate's timer just
+          // runs out with no explanation.
+          setFatalError("Your interview couldn't be resumed automatically. Please contact support with this interview's link.");
+          setPhase(PHASES.ERROR);
+        }
+      } catch (err) {
+        setFatalError(err.response?.data?.error || "Could not load your interview.");
+        setPhase(PHASES.ERROR);
+      }
     }
   }
 

@@ -26,26 +26,39 @@ async function processAnswer({ session, currentTurn, answerText, skipped, userId
     session, turn: currentTurn, answerText: skipped ? null : answerText, userId, instituteId,
   });
 
-  await prisma.aiInterviewTurn.update({
-    where: { id: currentTurn.id },
-    data: { answerText: skipped ? null : answerText, answeredAt: new Date(), skipped: !!skipped, evaluation },
-  });
+  // The current turn's evaluation write is deliberately NOT committed here on its own — it's
+  // deferred until it can go into the SAME transaction as whatever this answer produces next (a
+  // new turn, or the COMPLETED transition). Confirmed live as the root cause of the interview page
+  // getting stuck forever on "Loading the next question...": this used to write+commit the turn
+  // close immediately, then call engine.generateNextQuestion (a real, billed AI call) — if THAT
+  // call threw for any reason (provider timeout, rate limit, malformed response), the current turn
+  // was already permanently closed with no successor ever created. The session was left with NO
+  // open turn at all: GET /:id's currentTurn lookup (evaluation: DbNull) then found nothing, so
+  // currentQuestion came back null forever and the candidate had no way to recover, not even by
+  // refreshing. Deferring the write means a failure below leaves the current turn genuinely still
+  // open server-side, so the candidate can just resubmit their answer instead of being stranded.
+  const turnCloseData = { answerText: skipped ? null : answerText, answeredAt: new Date(), skipped: !!skipped, evaluation };
+  const turnCloseWrite = prisma.aiInterviewTurn.update({ where: { id: currentTurn.id }, data: turnCloseData });
 
-  const allTurns = await prisma.aiInterviewTurn.findMany({ where: { sessionId: session.id }, orderBy: { turnIndex: "asc" } });
-  const recentCorrectness = allTurns.filter((t) => t.evaluation).map((t) => t.evaluation.correctness);
+  const priorTurns = await prisma.aiInterviewTurn.findMany({ where: { sessionId: session.id, id: { not: currentTurn.id } }, orderBy: { turnIndex: "asc" } });
+  const evaluatedTurns = [...priorTurns, { ...currentTurn, ...turnCloseData }];
+  const recentCorrectness = evaluatedTurns.filter((t) => t.evaluation).map((t) => t.evaluation.correctness);
   const nextDifficulty = computeDifficultyTrend({ currentDifficulty: session.difficulty, recentCorrectness });
 
   const updatedPlan = recordObjectiveAsked(session.competencyPlan, currentTurn.objective, evaluation.correctness);
 
   const completionReason = checkCompletion({
-    now: new Date(), expiresAt: session.expiresAt, turnsCount: allTurns.length, competencyPlan: updatedPlan,
+    now: new Date(), expiresAt: session.expiresAt, turnsCount: evaluatedTurns.length, competencyPlan: updatedPlan,
   });
 
   if (completionReason) {
-    await prisma.aiInterviewSession.update({
-      where: { id: session.id },
-      data: { status: "COMPLETED", completedAt: new Date(), terminationReason: completionReason, difficulty: nextDifficulty, competencyPlan: updatedPlan },
-    });
+    await prisma.$transaction([
+      turnCloseWrite,
+      prisma.aiInterviewSession.update({
+        where: { id: session.id },
+        data: { status: "COMPLETED", completedAt: new Date(), terminationReason: completionReason, difficulty: nextDifficulty, competencyPlan: updatedPlan },
+      }),
+    ]);
     return { status: "COMPLETED", evaluation: publicEvaluation(evaluation), nextQuestion: null };
   }
 
@@ -68,7 +81,7 @@ async function processAnswer({ session, currentTurn, answerText, skipped, userId
   }
 
   const nextQuestion = await engine.generateNextQuestion({
-    session: { ...session, difficulty: nextDifficulty }, recentTurns: allTurns,
+    session: { ...session, difficulty: nextDifficulty }, recentTurns: evaluatedTurns,
     objective: nextObjective, stage,
     resumeSnapshot: session.resumeSnapshot, jobDescription: session.jobDescription,
     userId, instituteId,
@@ -76,7 +89,10 @@ async function processAnswer({ session, currentTurn, answerText, skipped, userId
 
   const finalPlan = recordObjectiveAsked(updatedPlan, nextObjective, 0);
 
-  const [, newTurn] = await prisma.$transaction([
+  // turnCloseWrite only actually commits here, alongside the new turn it produced — see this
+  // function's opening comment for why that atomicity is the whole point of the fix.
+  const [, , newTurn] = await prisma.$transaction([
+    turnCloseWrite,
     prisma.aiInterviewSession.update({
       where: { id: session.id },
       data: { status: stage, difficulty: nextDifficulty, currentObjective: nextObjective, competencyPlan: finalPlan },
