@@ -114,9 +114,14 @@ test("editing a subject's readinessThresholds mid-attempt does not change how an
     });
     assert.equal(editThresholds.status, 200);
 
-    // Answer the question WRONG on purpose (deterministic 0% -> hits the *_FLOOR label either way)
-    // and finalize.
-    const answer = await httpRequest("POST", `/api/readiness/assessments/${assessmentId}/answer`, studentToken, { questionId, selectedOptions: [0] });
+    // Skip the question on purpose (deterministic 0% -- gradeReadinessAnswer scores `skipped`
+    // unconditionally as 0 before it even looks at options, see readinessScoring.js -- so this
+    // reliably hits the *_FLOOR label either way). A hardcoded "wrong" option index would NOT be
+    // reliable here: options are shuffled per-attempt with a seed derived from this assessment's
+    // own id (readiness.js's sanitizeQuestionForStudent), so a fixed index like 0 sometimes maps
+    // back to the actual correct answer after the server un-shuffles it for grading -- confirmed
+    // live as a genuinely flaky ~1-in-3 failure rate on this exact test before this fix.
+    const answer = await httpRequest("POST", `/api/readiness/assessments/${assessmentId}/answer`, studentToken, { questionId, skipped: true });
     assert.equal(answer.status, 200, `failed to save answer: ${JSON.stringify(answer.body)}`);
 
     const finalize = await httpRequest("POST", `/api/readiness/assessments/${assessmentId}/finalize`, studentToken, {});

@@ -1092,7 +1092,18 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
 
     const now = new Date();
     if (now < test.startTime) return res.status(403).json({ error: "Test has not started yet" });
-    if (now > test.endTime) return res.status(403).json({ error: "Test window has closed" });
+    // An admin-approved reattempt (see TestReattemptGrant's own schema comment) is a one-time,
+    // single-use exception to the window-closed check below -- checked here, before that check,
+    // rather than after, so a student who's just outside the window but has a live grant isn't
+    // rejected before we even look. Only ever relevant when `existing` is falsy (a genuinely new
+    // attempt to create): a resume of an already-IN_PROGRESS attempt has no reason to consult this.
+    let reattemptGrant = null;
+    if (now > test.endTime && !existing) {
+      reattemptGrant = await prisma.testReattemptGrant.findUnique({ where: { testId_studentId: { testId, studentId: req.user.id } } });
+      if (!reattemptGrant) return res.status(403).json({ error: "Test window has closed" });
+    } else if (now > test.endTime) {
+      return res.status(403).json({ error: "Test window has closed" });
+    }
 
     // The random order is generated exactly once, right here at attempt creation — never
     // recomputed on subsequent /start calls (page refresh, logout/login) since `existing` short-
@@ -1127,6 +1138,11 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
         } else {
           throw err;
         }
+      }
+      // Consumed the moment a new attempt actually gets created off the back of it — a reattempt
+      // grant is a one-time pass, not standing permission to keep restarting past the window.
+      if (reattemptGrant) {
+        await prisma.testReattemptGrant.delete({ where: { id: reattemptGrant.id } }).catch(() => {});
       }
     }
     // Include already-saved submissions (auto-saved MCQ answers, locked coding submissions)
@@ -1350,6 +1366,17 @@ router.post("/:testId/attempts/:studentId/reattempt", authenticate, requireRole(
 
     await prisma.$transaction([
       prisma.testAttempt.delete({ where: { id: attempt.id } }), // cascades that attempt's Submissions
+      // Grants a one-time bypass of the test's own startTime/endTime window on this student's next
+      // POST /:id/start (see TestReattemptGrant's own schema comment for why this is needed at
+      // all — deleting the old attempt alone does nothing about an already-closed test window,
+      // which is the single most common reason to grant a reattempt in the first place). Upsert,
+      // not create: granting a reattempt twice in a row (e.g. the student still doesn't manage to
+      // start it in time) must refresh this, not collide on the unique constraint.
+      prisma.testReattemptGrant.upsert({
+        where: { testId_studentId: { testId, studentId } },
+        create: { testId, studentId, grantedByUserId: req.user.id, grantedByName: admin?.name || req.user.email },
+        update: { grantedByUserId: req.user.id, grantedByName: admin?.name || req.user.email, grantedAt: new Date() },
+      }),
       prisma.auditLog.create({
         data: {
           action: "REATTEMPT_GRANTED",

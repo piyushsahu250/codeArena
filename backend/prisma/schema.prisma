@@ -268,6 +268,7 @@ model User {
   sharedTests  TestShare[]    @relation("TestSharedWith") // tests explicitly shared with this staff member by someone else
   attempts     TestAttempt[]
   submissions  Submission[]
+  testReattemptGrants TestReattemptGrant[]
   createdQuestions Question[] @relation("QuestionCreatedBy")
   updatedQuestions Question[] @relation("QuestionUpdatedBy")
   createdInterviewQuestions InterviewQuestion[] @relation("InterviewQuestionCreatedBy")
@@ -455,6 +456,8 @@ model Test {
   lecturePlans       LecturePlan[]
   // Manual "Send Notification" action's history — see TestNotificationSend's own comment.
   notificationSends  TestNotificationSend[]
+  // Per-student "Allow Reattempt" grants still outstanding — see TestReattemptGrant's own comment.
+  reattemptGrants    TestReattemptGrant[]
 
   @@index([createdById])
   @@index([isPublished])
@@ -1093,6 +1096,29 @@ model TestAttempt {
   @@index([testId])
   // Composite unique above leads with testId, so it can't serve a studentId-only lookup (used by
   // dashboard.js's "my attempts" query and users.js's per-student attempt count) — dedicated index.
+  @@index([studentId])
+}
+
+// "Allow Reattempt" (tests.js's POST /:testId/attempts/:studentId/reattempt) deletes the student's
+// old TestAttempt so their next POST /:id/start creates a fresh one -- but that route's own
+// startTime/endTime window check is completely unaware an admin just approved a reattempt, so once
+// a test's scheduled window has closed (the single most common reason to grant a reattempt in the
+// first place -- a student missed or failed a test that already ran), the student was rejected
+// with "Test window has closed" regardless, making the whole feature silently non-functional for
+// its main use case. Confirmed live 2026-09-29. This row is the fix: a one-time, single-use pass
+// that /start checks and consumes (deletes) the moment it actually lets a new attempt through,
+// so it never grants standing access beyond the one reattempt an admin explicitly approved.
+model TestReattemptGrant {
+  id              String   @id @default(uuid())
+  test            Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  testId          String
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId       String
+  grantedByUserId String
+  grantedByName   String
+  grantedAt       DateTime @default(now())
+
+  @@unique([testId, studentId])
   @@index([studentId])
 }
 
