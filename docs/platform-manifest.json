@@ -1,10 +1,10 @@
 {
   "platform": "CodeArena",
   "documentationVersion": "1.0.0",
-  "lastUpdated": "2026-09-12",
+  "lastUpdated": "2026-09-29",
   "lastCodeReview": "2026-08-08",
   "platformRevision": {
-    "backend": "c622bb8",
+    "backend": "548f2de",
     "frontend": "994c5b5"
   },
   "techStack": {
@@ -112,7 +112,7 @@
   },
   "businessRulesCount": 11,
   "databaseEntities": {
-    "modelCount": 112,
+    "modelCount": 113,
     "enumCount": 30,
     "migrationStrategy": "prisma db push --accept-data-loss on every deploy (no formal Migrate history)",
     "source": "backend/prisma/schema.prisma"
