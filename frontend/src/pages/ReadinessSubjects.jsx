@@ -227,6 +227,56 @@ export default function ReadinessSubjects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjects]);
 
+  // "Reset a student's attempts" (Phase: reattempt support for every test type, 2026-09-29) — this
+  // subject had no equivalent at all of the reattempt-granting lever Formal Tests/Module Coding
+  // already have, so a student who'd used up subject.maxAttempts had no way to get another one
+  // short of an admin manually deleting DB rows. Looks the student up by roll number/email/PRN
+  // (same GET /users/lookup/:query the Formal Test admin tools already use), then resets their
+  // finalized (COMPLETED/EXPIRED) attempts on this subject -- optionally scoped to one assessment
+  // mode, or every mode if left blank.
+  const [reattemptQuery, setReattemptQuery] = useState("");
+  const [reattemptStudent, setReattemptStudent] = useState(null);
+  const [reattemptLookingUp, setReattemptLookingUp] = useState(false);
+  const [reattemptError, setReattemptError] = useState("");
+  const [reattemptMode, setReattemptMode] = useState("");
+  const [reattempting, setReattempting] = useState(false);
+
+  async function lookupReattemptStudent(e) {
+    e.preventDefault();
+    if (!reattemptQuery.trim()) return;
+    setReattemptLookingUp(true);
+    setReattemptError("");
+    setReattemptStudent(null);
+    try {
+      const { data } = await api.get(`/users/lookup/${encodeURIComponent(reattemptQuery.trim())}`);
+      setReattemptStudent(data);
+    } catch (err) {
+      setReattemptError(err.response?.data?.error || "Student not found");
+    } finally {
+      setReattemptLookingUp(false);
+    }
+  }
+
+  async function resetReattempt() {
+    const modeLabel = reattemptMode ? form.assessmentModes.find((m) => m.key === reattemptMode)?.label || reattemptMode : "every mode";
+    const ok = await confirmDialog({
+      title: "Reset attempts?", danger: true, confirmLabel: "Reset",
+      message: `Reset ${reattemptStudent.name}'s completed attempts on "${form.name}" (${modeLabel})? They'll be able to attempt it again.`,
+    });
+    if (!ok) return;
+    setReattempting(true);
+    try {
+      const { data } = await api.delete(`/readiness/admin/subjects/${editingId}/students/${reattemptStudent.id}/attempts`, {
+        data: reattemptMode ? { assessmentMode: reattemptMode } : {},
+      });
+      toast.success(`Reset ${data.deletedCount} attempt(s) — ${reattemptStudent.name} can attempt this test again.`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to reset attempts");
+    } finally {
+      setReattempting(false);
+    }
+  }
+
   // Same pre-commit preview pattern as the Course Assignments page (CourseAssignments.jsx): before
   // this fix, "Assign N Selected Group(s)" committed immediately with only a bare group count, no
   // indication of how many actual students that reaches — the exact Phase 33/35 gap. academicGroups
@@ -583,6 +633,35 @@ export default function ReadinessSubjects() {
                 </div>
               )}
             </div>
+
+            {!viewOnly && editingId !== "NEW" && (
+              <div className="card" style={{ padding: 14, marginTop: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>Reset a student's attempts</div>
+                <p style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
+                  Look up a student to grant them another attempt once they've used up this subject's max attempts.
+                </p>
+                <form onSubmit={lookupReattemptStudent} style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <input
+                    style={{ ...inputStyle, marginTop: 0 }} placeholder="Roll number, PRN, email, or student ID"
+                    value={reattemptQuery} onChange={(e) => setReattemptQuery(e.target.value)}
+                  />
+                  <button className="btn btn-ghost" style={smallBtn} disabled={reattemptLookingUp}>{reattemptLookingUp ? "Searching…" : "Search"}</button>
+                </form>
+                {reattemptError && <p style={{ color: "var(--rust)", fontSize: 12, marginTop: 8 }}>{reattemptError}</p>}
+                {reattemptStudent && (
+                  <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13 }}>{reattemptStudent.rollNumber || "—"} · {reattemptStudent.name} <span style={{ color: "var(--ink-dim)" }}>({reattemptStudent.email})</span></span>
+                    <select style={{ ...inputStyle, width: "auto", marginTop: 0 }} value={reattemptMode} onChange={(e) => setReattemptMode(e.target.value)}>
+                      <option value="">Every mode</option>
+                      {form.assessmentModes.filter((m) => m.key.trim()).map((m) => <option key={m.key} value={m.key}>{m.label || m.key}</option>)}
+                    </select>
+                    <button type="button" className="btn btn-primary" style={smallBtn} disabled={reattempting} onClick={resetReattempt}>
+                      {reattempting ? "Resetting…" : "Reset Attempts"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="card" style={{ padding: 14, marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>Topics &amp; Subtopics</div>

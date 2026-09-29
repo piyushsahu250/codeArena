@@ -1230,10 +1230,21 @@ router.delete("/admin/tests/:id/students/:studentId/attempts", authenticate, req
       const desiredFinalizedAfter = test.maxAttempts - desiredRemaining;
       const toDelete = Math.max(0, finalizedBefore - desiredFinalizedAfter);
       if (toDelete > 0) {
-        const oldest = await prisma.moduleCodingAttempt.findMany({
-          where: finalizedWhere, orderBy: { startedAt: "asc" }, take: toDelete, select: { id: true },
+        // A passed attempt is prioritized into this deletion set even if it isn't among the
+        // chronologically oldest ones -- POST /module/:moduleId/start's separate "already passed"
+        // check has absolute priority over the attempts-remaining count below it, so leaving a
+        // passed attempt un-deleted here would silently defeat the whole point of this reset: the
+        // student would still see "You have already passed this assessment" no matter how many
+        // attempts this call just restored. Confirmed live 2026-09-29 alongside the same bug class
+        // in tests.js's "Allow Reattempt" (closed test window instead of a passed-attempt block).
+        const passedFirst = await prisma.moduleCodingAttempt.findMany({
+          where: { ...finalizedWhere, passed: true }, orderBy: { startedAt: "asc" }, select: { id: true },
         });
-        await prisma.moduleCodingAttempt.deleteMany({ where: { id: { in: oldest.map((a) => a.id) } } });
+        const rest = await prisma.moduleCodingAttempt.findMany({
+          where: { ...finalizedWhere, passed: { not: true } }, orderBy: { startedAt: "asc" }, select: { id: true },
+        });
+        const toDeleteIds = [...passedFirst, ...rest].slice(0, toDelete).map((a) => a.id);
+        await prisma.moduleCodingAttempt.deleteMany({ where: { id: { in: toDeleteIds } } });
       }
     } else {
       await prisma.moduleCodingAttempt.deleteMany({ where: { moduleCodingTestId: req.params.id, studentId: req.params.studentId } });

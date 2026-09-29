@@ -366,6 +366,59 @@ router.delete("/admin/subjects/:id/assignments", authenticate, requireRole("ADMI
   }
 });
 
+// ADMIN/STAFF (own institute only): reset a student's completed attempts on this subject so they
+// can attempt it again past subject.maxAttempts -- the same "manual approval of additional
+// attempts" lever tests.js and moduleCoding.js already have, which Readiness Tests had no
+// equivalent of at all (confirmed 2026-09-29: no route anywhere in this file could reset a
+// student's readiness attempt count). Unlike Formal Tests, there's no absolute time window to
+// separately bypass here -- a subject's assessment modes are available whenever the subject/
+// assignment itself is active, so deleting the finalized ReadinessAssessment row(s) is the whole
+// fix; POST /assessments's maxAttempts count (COMPLETED + EXPIRED) naturally drops the moment the
+// row is gone, no separate grant record needed. `assessmentMode` optionally scopes the reset to
+// just one mode (a subject can have several, each with its own maxAttempts-worth of history);
+// omitted, every mode's attempts for this student are cleared.
+router.delete("/admin/subjects/:id/students/:studentId/attempts", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.id } });
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) {
+      return res.status(404).json({ error: "Subject not found" });
+    }
+    if (!isSubjectOwner(req, subject)) {
+      return res.status(403).json({ error: "You can only manage attempts for readiness tests you created" });
+    }
+    const student = await prisma.user.findUnique({
+      where: { id: req.params.studentId },
+      select: { id: true, name: true, instituteId: true, institute: { select: { name: true } } },
+    });
+    if (!student) return res.status(404).json({ error: "Student not found" });
+    if (req.requesterInstituteId && student.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only manage students in your own institute" });
+    }
+
+    const { assessmentMode } = req.body || {};
+    const where = {
+      subjectId: subject.id, studentId: student.id, status: { in: ["COMPLETED", "EXPIRED"] },
+      ...(assessmentMode ? { assessmentMode } : {}),
+    };
+    const { count: deletedCount } = await prisma.readinessAssessment.deleteMany({ where }); // cascades Answers/Report
+
+    await logAudit({
+      req, action: AUDIT_ACTIONS.READINESS_SUBJECT_SAVED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
+      instituteId: student.instituteId,
+      details: {
+        subAction: "READINESS_REATTEMPT_GRANTED", subjectId: subject.id, subjectName: subject.name,
+        studentId: student.id, studentName: student.name, instituteName: student.institute?.name || null,
+        assessmentMode: assessmentMode || "all", deletedCount,
+      },
+    });
+    res.json({ success: true, deletedCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to reset attempts" });
+  }
+});
+
 // =========================== Student: browse subjects ===========================
 
 router.get("/subjects", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("readiness_test"), async (req, res) => {
