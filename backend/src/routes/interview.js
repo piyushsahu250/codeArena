@@ -1384,6 +1384,14 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
       category, subject, company, aptitudeCategory, difficulty, title, prompt, expectedKeywords, modelAnswer, options, correctAnswer, explanation, starterCode, testCases, language, tags, followUpQuestionId,
       estimatedTimeMin, realWorldScenario, constraints, inputFormat, outputFormat, notes, edgeCases, problemExplanation,
       evaluationType, functionSignature, starterCodeByLanguage, hints, timeComplexity, spaceComplexity, editorial, similarQuestions,
+      // experienceLevel/role: SOFT_FILTER_FIELDS above matches BOTH as hard exact-match conditions
+      // for company-round question selection (pickQuestions()) — missing from this destructure (and
+      // from the create call below) meant no admin could ever set them through this route at all,
+      // silently dropped on every create regardless of what the request sent. Confirmed live: a
+      // batch of company-round questions created with experienceLevel intentionally set in the
+      // request body all saved with experienceLevel: null, so every one of them was excluded the
+      // moment a real session (which always sends experienceLevel) tried to match against them.
+      experienceLevel, role,
     } = req.body;
     if (!category || !prompt) return res.status(400).json({ error: "category and prompt are required" });
     // CODING was previously the one category with no minimum test-case check at all (every other
@@ -1416,6 +1424,7 @@ router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN"
         editorial: editorial ?? undefined, similarQuestions: similarQuestions ?? undefined,
         followUpQuestionId: followUpQuestionId || null,
         evaluationType: resolved.evaluationType, functionSignature: resolved.functionSignature, starterCodeByLanguage: resolved.starterCodeByLanguage,
+        experienceLevel: experienceLevel || null, role: role || null,
         instituteId: req.requesterInstituteId || null,
         createdById: req.user.id,
       },
@@ -1446,6 +1455,8 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
       "options", "correctAnswer", "explanation", "starterCode", "testCases", "language", "tags", "isActive", "followUpQuestionId",
       "estimatedTimeMin", "realWorldScenario", "constraints", "inputFormat", "outputFormat", "notes", "edgeCases", "problemExplanation",
       "hints", "timeComplexity", "spaceComplexity", "editorial", "similarQuestions",
+      // Same missing-field bug as POST /admin/questions above — see its own comment.
+      "experienceLevel", "role",
     ];
     const data = {};
     for (const f of fields) if (req.body[f] !== undefined) data[f] = f === "isActive" ? !!req.body[f] : req.body[f];
