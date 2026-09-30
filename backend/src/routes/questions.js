@@ -2609,10 +2609,17 @@ router.post("/bulk-import-combined/confirm", authenticate, requireRole("ADMIN", 
     res.json({
       total: mcqResult.total + codingResult.total,
       createdCount: mcqResult.createdCount + codingResult.createdCount,
+      // Confirmed missing 2026-09-30: every other bulk-import confirm route (quiz-only,
+      // coding-only, and this same combined route's own preview) reports skippedCount/skipped —
+      // this one silently dropped them, so a Combined-template confirm with duplicate rows told
+      // staff "N created" with zero indication some rows were skipped as dupes, unlike every other
+      // path. Same shape as preview's skippedCount/skipped above.
+      skippedCount: mcqResult.skippedCount + codingResult.skippedCount,
       errorCount: mcqResult.errorCount + codingResult.errorCount,
       mcqCount: mcqResult.createdCount,
       codingCount: codingResult.createdCount,
       created: [...(mcqResult.created || []), ...(codingResult.created || [])],
+      skipped: [...tagSheet(mcqResult.skipped, "MCQ"), ...tagSheet(codingResult.skipped, "Coding")],
       errors: [...tagSheet(mcqResult.errors, "MCQ"), ...tagSheet(codingResult.errors, "Coding")],
     });
   } catch (err) {

@@ -205,23 +205,37 @@ function parseNotepadMcqText(text) {
 // Parses a TEST_CASES: block of repeated INPUT:/OUTPUT: line pairs into "in->out||in->out" —
 // the exact packed format questions.js's existing parseHiddenTestCases() already unpacks, so
 // that function is reused verbatim rather than re-implemented here.
+//
+// Tracks a mutable `current` pair + which field (`mode`) a continuation line belongs to, rather
+// than resetting to no-field-at-all the instant OUTPUT: is seen — the previous version did the
+// latter, so any line after OUTPUT: that wasn't itself a new INPUT:/OUTPUT: label matched neither
+// regex nor "still inside the input" (already reset to null) and was silently dropped. Confirmed:
+// a multi-line expected OUTPUT: (e.g. a question that prints several result lines) lost every
+// line but the first, with no error shown anywhere. Multi-line INPUT: was never affected — this
+// only fixes the OUTPUT: side.
 function parseTestCasesBlock(raw) {
   const lines = String(raw || "").replace(/\r\n/g, "\n").split("\n");
   const pairs = [];
-  let pendingInput = null;
+  let current = null; // { input, output } currently being built
+  let mode = null; // "input" | "output" — which field a plain continuation line appends to
   for (const line of lines) {
     const inMatch = line.match(/^\s*INPUT\s*:\s*(.*)$/i);
     const outMatch = line.match(/^\s*OUTPUT\s*:\s*(.*)$/i);
     if (inMatch) {
-      pendingInput = inMatch[1];
-    } else if (outMatch && pendingInput !== null) {
-      pairs.push({ input: pendingInput.trim(), output: outMatch[1].trim() });
-      pendingInput = null;
-    } else if (pendingInput !== null) {
-      pendingInput += `\n${line}`; // multi-line input
+      if (current) pairs.push(current);
+      current = { input: inMatch[1], output: "" };
+      mode = "input";
+    } else if (outMatch && current) {
+      current.output = outMatch[1];
+      mode = "output";
+    } else if (mode === "input" && current) {
+      current.input += `\n${line}`;
+    } else if (mode === "output" && current) {
+      current.output += `\n${line}`;
     }
   }
-  return pairs.map((p) => `${p.input}->${p.output}`).join("||");
+  if (current) pairs.push(current);
+  return pairs.map((p) => `${p.input.trim()}->${p.output.trim()}`).join("||");
 }
 
 // -> array of objects keyed by the exact canonical header strings questions.js's
@@ -254,4 +268,4 @@ function parseNotepadCodingText(text) {
   });
 }
 
-module.exports = { parseNotepadMcqText, parseNotepadCodingText, extractBtlDigit, letterToOptionNumber, splitLetterList, resolveCorrectLetterToken };
+module.exports = { parseNotepadMcqText, parseNotepadCodingText, parseTestCasesBlock, extractBtlDigit, letterToOptionNumber, splitLetterList, resolveCorrectLetterToken };

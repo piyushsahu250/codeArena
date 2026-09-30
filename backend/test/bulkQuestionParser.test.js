@@ -3,7 +3,7 @@
 // the existing letter->option-number mapping it depends on. Run with `npm test`.
 const { test, describe } = require("node:test");
 const assert = require("node:assert/strict");
-const { letterToOptionNumber, splitLetterList, resolveCorrectLetterToken } = require("../src/utils/bulkQuestionParser");
+const { letterToOptionNumber, splitLetterList, resolveCorrectLetterToken, parseTestCasesBlock } = require("../src/utils/bulkQuestionParser");
 
 describe("letterToOptionNumber", () => {
   test("maps A-F (case-insensitive) to a 1-based option number", () => {
@@ -88,5 +88,35 @@ describe("resolveCorrectLetterToken — single Correct Option cell auto-correcti
     assert.equal(resolveCorrectLetterToken(""), null);
     assert.equal(resolveCorrectLetterToken("AB"), null); // two letters together is not a single reference
     assert.equal(resolveCorrectLetterToken("G"), null); // out of A-F range
+  });
+});
+
+describe("parseTestCasesBlock — Notepad TEST_CASES: INPUT:/OUTPUT: pairing", () => {
+  test("single-line input and output pairs", () => {
+    const raw = "INPUT: 5\n10 20 5 40 15\nOUTPUT: 40\nINPUT: 3\n1 2 3\nOUTPUT: 3";
+    assert.equal(parseTestCasesBlock(raw), "5\n10 20 5 40 15->40||3\n1 2 3->3");
+  });
+
+  test("multi-line INPUT is preserved (already worked before this fix)", () => {
+    const raw = "INPUT: 2\n1 2\nextra line\nOUTPUT: 3";
+    assert.equal(parseTestCasesBlock(raw), "2\n1 2\nextra line->3");
+  });
+
+  // Bug fixed 2026-09-30: every line of OUTPUT: after the first used to be silently dropped —
+  // the state machine reset to "no field at all" the instant OUTPUT: matched, so a continuation
+  // line matched neither the INPUT:/OUTPUT: regexes nor "still inside the input" (already null).
+  test("multi-line OUTPUT is preserved, not silently truncated to its first line", () => {
+    const raw = "INPUT: 3\n1 2 3\nOUTPUT: 1\n2\n3";
+    assert.equal(parseTestCasesBlock(raw), "3\n1 2 3->1\n2\n3");
+  });
+
+  test("multiple cases each with multi-line output", () => {
+    const raw = "INPUT: 1\nOUTPUT: a\nb\nINPUT: 2\nOUTPUT: c\nd\ne";
+    assert.equal(parseTestCasesBlock(raw), "1->a\nb||2->c\nd\ne");
+  });
+
+  test("empty input produces an empty packed string", () => {
+    assert.equal(parseTestCasesBlock(""), "");
+    assert.equal(parseTestCasesBlock(null), "");
   });
 });
