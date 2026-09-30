@@ -172,7 +172,14 @@ router.post("/generate-question", authenticate, requireRole("ADMIN", "SUPER_ADMI
         prompt: `Write one ${difficulty || "MEDIUM"}-difficulty CODING question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. The student writes a complete stdin/stdout program in any language — no function-signature harness.${btlInstruction}${skillInstruction}
 Return JSON exactly shaped: {"title": string, "description": string (full problem statement including input/output format and constraints), "explanation": string (brief solution approach), "testCases": [{"input": string, "expected": string, "isHidden": boolean}], "referenceSolution": string (a complete, correct Python 3 program reading from stdin and writing to stdout that solves the problem exactly as stated)}.
 Provide exactly 7 testCases: 2 with isHidden=false (visible samples shown to students) and 5 with isHidden=true (used only for grading — cover a basic case, a small/boundary case, a typical case, an edge case, and a large/stress case within the stated constraints).`,
-        maxTokens: 2200,
+        // Bug fixed 2026-09-30: was 2200, confirmed live to intermittently truncate the JSON
+        // response mid-output ("AI returned a response that could not be validated after
+        // retrying"). This request asks for MORE than generateInterviewQuestions() ever does for
+        // CODING (a full problem statement + explanation + 7 test cases + a complete working
+        // reference solution, vs. that function's title+prompt+testCases only) — yet that sibling
+        // generator already uses 4096 for its own, lighter CODING shape. Matched here for the
+        // same reason, not an arbitrary bump.
+        maxTokens: 4096,
         injectionGuard: false, // subject/topic/skillTested are short admin-typed labels, not free-form student content
         validate: (v) => (!v?.title || !v?.description || !Array.isArray(v?.testCases)) ? "missing title/description/testCases" : null,
       });
