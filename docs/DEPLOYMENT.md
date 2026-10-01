@@ -1,6 +1,6 @@
 # Deployment
 
-**Documentation Version:** 1.2.0 · **Last Updated:** 2026-08-25
+**Documentation Version:** 1.3.0 · **Last Updated:** 2026-10-01
 
 ## Backend — AWS EC2 + Docker (current production)
 
@@ -9,20 +9,34 @@ documented anywhere in the repo until now, having only ever lived in ad-hoc depl
 down any change to this command immediately, since the flags below are security-load-bearing, not
 cosmetic (see the `--pids-limit` note).
 
-- **Instance:** EC2 `i-075147bbdfea613de`, `ap-south-1`, reached via AWS Systems Manager (`aws ssm
-  send-command` / `Send-SSMCommand`), not direct SSH.
-- **Secrets:** AWS Secrets Manager, secret `codearena/backend/secrets` (plain name, not ARN).
-  `/opt/codearena/fetch-secrets-envfile.sh /opt/codearena/container.env` regenerates the env file
-  from it — **run this before every deploy**, not just the first one; a stale `container.env` was
-  the root cause of a real mail-delivery outage earlier in this project's history.
-- **Build:** `cd /opt/codearena/backend && docker build -t codearena-backend:<tag> .` — context
-  must be `backend/`, not the repo root (`COPY package*.json ./` in the Dockerfile expects it).
+Corrected 2026-10-01 against what's actually running: the instance ID and run command below had
+drifted from reality (confirmed live) — the previous `i-075147bbdfea613de` / `--pids-limit`-only /
+`fetch-secrets-envfile.sh` version of this section described a setup that no longer exists on the
+host. Trust this version; if it drifts again, re-verify with `docker inspect codearena-backend`
+rather than assuming the doc is still right.
+
+- **Instance:** EC2 `i-02bedc5ba41539f46`, `ap-south-1`, reached via AWS Systems Manager (`aws ssm
+  send-command` / `Send-SSMCommand`), not direct SSH. Repo checkout lives at `/opt/codearena`
+  (`git pull origin main` there before every build).
+- **Secrets/env:** `/opt/codearena/container.env` — a plain env file, **not** regenerated from AWS
+  Secrets Manager by any script on the host (the previously-documented
+  `fetch-secrets-envfile.sh` does not exist; do not assume it does). Edit this file directly for any
+  env var change, non-secret config included (there's no separate "config vs secrets" split in
+  practice despite `codearena/backend/secrets` in Secrets Manager holding the handful of truly
+  sensitive values — DATABASE_URL, DIRECT_DATABASE_URL, GEMINI_API_KEY, GEMINI_MODEL, JWT_SECRET,
+  MAIL_PASSWORD, PII_ENCRYPTION_KEY). Reconstruct it from a running container if it's ever lost:
+  `docker inspect codearena-backend --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -vE '^(PATH|NODE_VERSION|YARN_VERSION)=' > /opt/codearena/container.env`.
+- **Build:** `cd /opt/codearena/backend && docker build -t codearena-backend:latest .` — context
+  must be `backend/`, not the repo root (`COPY package*.json ./` in the Dockerfile expects it). Tag
+  the current `latest` as a timestamped rollback checkpoint first: `docker tag codearena-backend:latest codearena-backend:rollback-<date>`.
 - **Run** (the complete, correct command — every flag here was added for a real reason, don't drop one):
   ```bash
   docker run -d --name codearena-backend --restart unless-stopped \
     --pids-limit=512 \
+    --cap-add=NET_ADMIN \
     -p 127.0.0.1:4000:4000 \
     --env-file /opt/codearena/container.env \
+    --mount source=codearena-backend-logs,target=/app/logs \
     codearena-backend:latest
   ```
   - `--pids-limit=512`: **security-critical, not optional.** The judge's in-process `ulimit -u`
@@ -31,11 +45,23 @@ cosmetic (see the `--pids-limit` note).
     [SECURITY.md](SECURITY.md)'s Coding Judge Sandbox section). This container-level, cgroup-
     enforced limit is the real fork-bomb defense; omitting it on a future recreation silently
     regresses that protection with no error or warning.
+  - `--cap-add=NET_ADMIN`: **required**, not optional — the judge sandbox manages its own iptables
+    DROP rule for the unprivileged submission-execution uid (see `docker-entrypoint.sh`); without
+    this capability that rule can't be installed and the judge falls back to a weaker defense.
   - `-p 127.0.0.1:4000:4000` (not a custom `--network`): matches nginx's `proxy_pass
     http://127.0.0.1:4000` — a guessed custom network once caused a real ~2-3 minute outage.
+  - `--mount source=codearena-backend-logs,target=/app/logs`: a **named Docker volume**, not a host
+    bind-mount — it persists independently of any one container, so `docker stop && docker rm` on a
+    redeploy (the normal swap procedure, below) never deletes it the way it deletes Docker's own
+    per-container `json-file` log driver output. Added 2026-10-01 after losing an entire exam day's
+    request logs to exactly that: a redeploy's `docker rm` destroyed the only copy, right as someone
+    needed to root-cause students' "page not found" reports from it. `utils/logger.js` writes the
+    same structured JSON lines here (`/app/logs/app-YYYY-MM-DD.log`, 30-day retention) in addition to
+    stdout — `docker logs` still works exactly as before, this is pure addition. First run creates
+    the volume automatically; nothing to provision ahead of time.
   - No `USER` directive drops the main app process to non-root in the Dockerfile itself yet (see
     Docker Known Issues below) — the judge's own child processes are dropped to the unprivileged
-    `sandbox` uid at spawn time regardless (`JUDGE_DROP_PRIVILEGES=true`, set in Secrets Manager).
+    `sandbox` uid at spawn time regardless (`JUDGE_DROP_PRIVILEGES=true`).
 - **Health check:** `curl http://127.0.0.1:4000/api/health` (from the instance) or the public
   domain externally.
 - **Standard swap procedure**: tag the current `latest` as a timestamped rollback checkpoint before
