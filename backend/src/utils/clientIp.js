@@ -1,17 +1,22 @@
 // Resolves the real client IP for rate-limit keying, audit logs, and session records.
 //
-// Confirmed via a temporary debug route (see git history) that this deployment sits behind TWO
-// proxy hops - Cloudflare's edge, then Render's own internal load balancer - and both hops' own
-// addresses change per request (Cloudflare's depending on which edge node served it, Render's
-// bouncing between at least two internal addresses). No single `trust proxy` hop-count reliably
-// resolves Express's req.ip to the real client through that chain. Cloudflare, however, always
-// sets CF-Connecting-IP to the verified original client IP (it strips/overwrites any client-
-// supplied value at its own edge, so this can't be spoofed by the caller) - confirmed stable
-// across every test request. Preferring that header sidesteps the hop-counting problem entirely,
-// and still works correctly in any environment without Cloudflare in front (local dev, or if the
-// hosting provider ever changes) by falling back to Express's own req.ip.
+// SECURITY FIX (2026-10-01): this used to prefer the CF-Connecting-IP header, written back when
+// this deployment sat behind Cloudflare in front of Render. That's no longer the topology --
+// confirmed live that api-aws.codearena.site is served directly by nginx on the EC2 host, with no
+// Cloudflare in front. CF-Connecting-IP is therefore just an ordinary client-supplied header now,
+// no longer edge-verified or stripped by anything -- confirmed exploitable live: sending a
+// different fake CF-Connecting-IP on every request fully defeated the login rate limiter (5
+// attempts/15min) and would equally defeat forgot-password's, plus poison every audit-log/
+// session IP record with attacker-chosen values. Never trust a client-supplied IP header directly.
+//
+// req.ip is the correct source instead: index.js sets `trust proxy` to exactly the real hop count
+// (1, matching this single nginx hop -- see its own comment), which makes Express parse
+// X-Forwarded-For itself, trusting only the one entry nginx actually appended and discarding
+// anything a client tried to prepend -- the standard, spoof-resistant pattern for this topology.
+// If a CDN/WAF is ever placed in front of nginx again, update `TRUST_PROXY_HOPS` (env var) to
+// match the new real hop count -- req.ip adapts automatically, no code change needed here.
 function getClientIp(req) {
-  return req.headers["cf-connecting-ip"] || req.ip;
+  return req.ip;
 }
 
 module.exports = { getClientIp };
