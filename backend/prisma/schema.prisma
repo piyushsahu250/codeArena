@@ -1278,6 +1278,15 @@ model EmailLog {
   batchId         String?
   createdAt       DateTime    @default(now())
   sentAt          DateTime?
+  // Id of the record this email was actually about (e.g. an InterviewSession id for
+  // INTERVIEW_REPORT_READY) -- free-form like emailType itself, since the referenced table varies
+  // by type, so no FK. Added so a FAILED row can be safely auto-retried later by re-fetching
+  // CURRENT data and rebuilding the email, instead of needing (and never having) the original
+  // rendered body on hand. Null for every email type that predates this field, and for any type
+  // where auto-retry isn't safe to attempt at all (see emailRetryScheduler.js's own comment for
+  // exactly which types that covers and why) -- those still only ever retry via the existing
+  // manual admin action, unchanged.
+  sourceId        String?
 
   @@index([status])
   @@index([studentId])

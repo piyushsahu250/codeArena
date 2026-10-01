@@ -178,7 +178,7 @@ async function sendMail({ to, subject, html }) {
 // Same as sendMail(), but writes an EmailLog row so admins can see real delivery status/history
 // per student instead of a fire-and-forget send. `prisma` is passed in rather than required at
 // module load, since utils/mailer.js has no other dependency on the Prisma client.
-async function sendMailLogged(prisma, { to, name, subject, html, emailType, studentId, instituteId, batchId }) {
+async function sendMailLogged(prisma, { to, name, subject, html, emailType, studentId, instituteId, batchId, sourceId }) {
   // Callers that already know the institute (bulk operations, anything running under
   // attachRequesterInstitute) can pass instituteId explicitly. Everyone else gets it derived
   // from the student for free here — one extra indexed lookup, not a burden every call site
@@ -191,7 +191,7 @@ async function sendMailLogged(prisma, { to, name, subject, html, emailType, stud
     resolvedInstituteId = student?.instituteId || null;
   }
   const log = await prisma.emailLog.create({
-    data: { studentId: studentId || null, instituteId: resolvedInstituteId, recipientName: name || "", recipientEmail: to || "", emailType, status: "PENDING", batchId: batchId || null },
+    data: { studentId: studentId || null, instituteId: resolvedInstituteId, recipientName: name || "", recipientEmail: to || "", emailType, status: "PENDING", batchId: batchId || null, sourceId: sourceId || null },
   });
   const result = await sendMail({ to, subject, html });
   await prisma.emailLog.update({

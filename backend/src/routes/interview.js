@@ -1017,7 +1017,7 @@ async function finalizeSession(session, { status = "COMPLETED", terminationReaso
       if (!student?.email) return;
       sendMailLogged(prisma, {
         to: student.email, name: student.name, studentId: session.studentId,
-        emailType: "INTERVIEW_REPORT_READY",
+        emailType: "INTERVIEW_REPORT_READY", sourceId: updated.id,
         subject: "Your AI Mock Interview Report is Ready",
         html: wrapBranded(`
           <p>Hi ${student.name},</p>
@@ -2253,3 +2253,7 @@ router.get("/admin/sessions/export", authenticate, requireRole("ADMIN", "SUPER_A
 });
 
 module.exports = router;
+// Exported alongside the router so emailRetryScheduler.js can rebuild an INTERVIEW_REPORT_READY
+// email's content using the exact same logic this file uses to send it the first time, rather
+// than a second, separately-maintained copy that could silently drift.
+module.exports.sessionTypeLabel = sessionTypeLabel;
