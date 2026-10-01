@@ -137,7 +137,18 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       results.push(...tests.map((t) => ({ type: "Assessment", label: t.title, url: `/staff/tests/${t.id}/results` })));
 
       if (req.user.role === "ADMIN") {
-        const institutes = await prisma.institute.findMany({ where: { name: insensitive(q) }, take: LIMIT });
+        // ADMIN is historically dual-purpose -- platform-wide OR institute-scoped (instituteId
+        // set), pending a route-by-route migration to the newer INSTITUTE_ADMIN role (see
+        // schema.prisma's Role enum comment) -- so this can't assume every ADMIN account is
+        // unscoped the way every other branch in this function already (correctly) doesn't
+        // assume it. Institute's own primary key is `id`, not `instituteId` -- instituteFilter
+        // (built for every other model here, which HAS an instituteId column) doesn't apply
+        // directly; scope by id instead. A no-op for a genuinely platform-wide account
+        // (requesterInstituteId null), matching every GET /institutes/:id check elsewhere.
+        const institutes = await prisma.institute.findMany({
+          where: { name: insensitive(q), ...(req.requesterInstituteId ? { id: req.requesterInstituteId } : {}) },
+          take: LIMIT,
+        });
         results.push(...institutes.map((i) => ({ type: "Institute", label: i.name, url: "/admin/institutes" })));
       }
     }
