@@ -32,6 +32,13 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
+      # The `canvas` npm package (node-canvas) needs these headers to compile its native binding —
+      # same packages backend/Dockerfile installs for the same reason (see its own comment). Without
+      # them, `npm install` on this bare ubuntu-latest runner fails at node-pre-gyp's source-build
+      # fallback with a misleading-looking ERESOLVE-adjacent error (confirmed live, 2026-10-01) —
+      # it's a missing-system-library build failure, not an actual npm dependency conflict. The
+      # production Docker build never hits this because its Dockerfile already has this step.
+      - run: sudo apt-get update -o Acquire::Retries=3 && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
       # npm ci (not npm install) requires package-lock.json to exactly match package.json, and
       # this repo's lockfiles have drifted out of sync with their package.json (dependencies added
       # over time without a local `npm install` to regenerate the lock — this environment has no
