@@ -662,7 +662,7 @@ router.post("/:id/notify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
 
     if (sendInApp && recipients.length > 0) {
       await notifyMany(prisma, recipients.map((s) => s.id), {
-        type: "TEST_NOTIFICATION", message: `Reminder: "${test.title}" is available`, link: "/tests",
+        type: "TEST_NOTIFICATION", message: `Reminder: "${test.title}" is available`, link: "/dashboard",
       });
     }
 

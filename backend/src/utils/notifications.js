@@ -232,7 +232,7 @@ async function notifyDocumentVerification(prisma, student, { document, status, v
 // tracking this function doesn't do.
 async function notifyTestAssigned(prisma, students, test, { sendEmail = false } = {}) {
   if (!students || students.length === 0) return;
-  const link = "/tests";
+  const link = "/dashboard";
   await Promise.all([
     notifyMany(prisma, students.map((s) => s.id), {
       type: "TEST_ASSIGNED",

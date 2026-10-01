@@ -40,7 +40,7 @@ export default function Navbar({ onBack } = {}) {
       if (user?.role === "STUDENT") requests.push(api.get("/dashboard/student"));
       Promise.all(requests)
         .then(([notifRes, dashRes]) => {
-          const persisted = (notifRes.data.notifications || []).map((n) => ({ id: n.id, message: n.message, date: n.createdAt, read: n.read }));
+          const persisted = (notifRes.data.notifications || []).map((n) => ({ id: n.id, message: n.message, date: n.createdAt, read: n.read, link: n.link }));
           const live = dashRes ? (dashRes.data.notifications || []).map((n) => ({ message: n.text, date: n.date, read: true })) : [];
           setNotifications([...persisted, ...live].sort((a, b) => new Date(b.date) - new Date(a.date)));
         })
@@ -49,10 +49,15 @@ export default function Navbar({ onBack } = {}) {
     }
   }
 
-  function markRead(n) {
-    if (!n.id || n.read) return;
-    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
-    api.patch(`/notifications/${n.id}/read`).catch(() => {});
+  function openNotification(n) {
+    if (n.id && !n.read) {
+      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+      api.patch(`/notifications/${n.id}/read`).catch(() => {});
+    }
+    if (n.link) {
+      setNotifOpen(false);
+      navigate(n.link);
+    }
   }
 
   function markAllRead() {
@@ -108,8 +113,8 @@ export default function Navbar({ onBack } = {}) {
                         <div
                           key={n.id || i}
                           className="ca-dropdown-item"
-                          style={{ cursor: n.id ? "pointer" : "default", opacity: n.read ? 0.6 : 1 }}
-                          onClick={() => markRead(n)}
+                          style={{ cursor: n.id || n.link ? "pointer" : "default", opacity: n.read ? 0.6 : 1 }}
+                          onClick={() => openNotification(n)}
                         >
                           {n.message}
                         </div>
