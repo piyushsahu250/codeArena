@@ -290,6 +290,9 @@ startChallengeScheduler();
 const { startTestScheduledPublishScheduler } = require("./utils/testScheduledPublishScheduler");
 startTestScheduledPublishScheduler();
 
+const { startTestAttemptAutoFinalizeScheduler } = require("./utils/testAttemptAutoFinalizeScheduler");
+startTestAttemptAutoFinalizeScheduler();
+
 const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => {
   console.log(`CodeArena API running on port ${PORT}`);
