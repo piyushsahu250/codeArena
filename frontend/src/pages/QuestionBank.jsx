@@ -155,6 +155,41 @@ export default function QuestionBank() {
     }
   }
 
+  async function deleteSubject(subject) {
+    const ok = await confirmDialog({
+      title: `Delete "${subject.name}"?`,
+      message: "This permanently deletes the subject. It must be empty first — any question or test still classified under it will block this.",
+      confirmLabel: "Delete Permanently",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/subjects/${subject.id}`);
+      setSubjects((prev) => (prev || []).filter((s) => s.id !== subject.id));
+      if (activeSubject?.id === subject.id) setActiveSubject(null);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete subject");
+    }
+  }
+
+  async function deleteUnit(unit) {
+    const ok = await confirmDialog({
+      title: `Delete "${unit.name}"?`,
+      message: "This permanently deletes the unit. It must be empty first — any question still classified under it will block this.",
+      confirmLabel: "Delete Permanently",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/subjects/units/${unit.id}`);
+      setSubjects((prev) => (prev || []).map((s) => (s.id === activeSubject?.id ? { ...s, units: s.units.filter((u) => u.id !== unit.id) } : s)));
+      setActiveSubject((prev) => (prev ? { ...prev, units: prev.units.filter((u) => u.id !== unit.id) } : prev));
+      if (activeUnit?.id === unit.id) setActiveUnit(null);
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to delete unit");
+    }
+  }
+
   // ADMIN-only: who currently has authoring access to activeSubject (spec section 10's actual UI).
   function loadAssignments(subjectId) {
     setSubjectAssignments(null);
@@ -730,6 +765,13 @@ export default function QuestionBank() {
                     {s.createdBy?.name && (
                       <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>by {s.createdBy.name}</div>
                     )}
+                    <button
+                      className="btn btn-ghost"
+                      style={{ fontSize: 11, padding: "4px 8px", color: "var(--rust)", marginTop: 10 }}
+                      onClick={(e) => { e.stopPropagation(); deleteSubject(s); }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
                 {meta.noSubjectCount > 0 && (
@@ -766,6 +808,13 @@ export default function QuestionBank() {
                     <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>
                       {u._count.questions} question{u._count.questions === 1 ? "" : "s"}{u._count.topics > 0 ? ` · ${u._count.topics} topic${u._count.topics === 1 ? "" : "s"}` : ""}
                     </div>
+                    <button
+                      className="btn btn-ghost"
+                      style={{ fontSize: 11, padding: "4px 8px", color: "var(--rust)", marginTop: 8 }}
+                      onClick={(e) => { e.stopPropagation(); deleteUnit(u); }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
                 {activeSubject.units.length === 0 && <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>No units yet — add one below.</p>}
