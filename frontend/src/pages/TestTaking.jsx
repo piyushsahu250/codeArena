@@ -279,20 +279,27 @@ export default function TestTaking() {
   async function requestMedia() {
     setRequestingMedia(true);
     setMediaError(null);
+    const needsWebcam = !!testMeta?.requireWebcam;
+    const needsMic = !!testMeta?.requireMicrophone;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: !!testMeta?.requireWebcam,
-        audio: !!testMeta?.requireMicrophone,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: needsWebcam, audio: needsMic });
       mediaStreamRef.current = stream;
       setMediaGranted(true);
     } catch (err) {
+      // Was previously hardcoded to always say "Camera and microphone... allow both" regardless
+      // of what this test actually requires (and regardless of what getUserMedia just above was
+      // even asked for) -- misleading on the common case of a test needing only one of the two
+      // (e.g. told to "allow both" after only camera was ever requested). Every other message on
+      // this same pre-start screen (instructions, section header below) already varies correctly
+      // by needsWebcam/needsMic; this was the one place that didn't.
+      const both = needsWebcam && needsMic;
+      const label = both ? "Camera and microphone" : needsWebcam ? "Camera" : "Microphone";
       const reason =
         err.name === "NotAllowedError"
-          ? "Camera and microphone access was denied. Please allow both to begin this test."
+          ? `${label} access was denied. Please allow ${both ? "both" : "it"} to begin this test.`
           : err.name === "NotFoundError"
-          ? "No camera or microphone was found on this device. Both are required to begin this test."
-          : "Could not access your camera/microphone. Please check your device and browser permissions.";
+          ? `No ${both ? "camera or microphone was" : needsWebcam ? "camera was" : "microphone was"} found on this device. ${both ? "Both are" : "It's"} required to begin this test.`
+          : `Could not access your ${both ? "camera/microphone" : needsWebcam ? "camera" : "microphone"}. Please check your device and browser permissions.`;
       setMediaError(reason);
       setMediaGranted(false);
     } finally {
