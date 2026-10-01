@@ -6,7 +6,7 @@ const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
-const { notifyPermissionUpdated } = require("../utils/notifications");
+const { notifyPermissionUpdated, notifyMany } = require("../utils/notifications");
 const { sendExport } = require("../utils/exportFile");
 const { generateAttendancePdf } = require("../utils/attendancePdf");
 const { testEligibilityWhere } = require("../utils/testEligibility");
@@ -797,6 +797,45 @@ router.get("/assignments/:assignmentId/plans/:planId/execute", authenticate, req
   }
 });
 
+const CONSECUTIVE_ABSENCE_ALERT_THRESHOLD = 3;
+
+// Fires once, exactly when a student's streak of consecutive ABSENT records *in one subject*
+// first reaches CONSECUTIVE_ABSENCE_ALERT_THRESHOLD -- never re-fires on the 4th/5th/etc.
+// consecutive absence (checked by also requiring the record just before the streak to NOT be
+// ABSENT, or not exist), so a prolonged absence doesn't spam a fresh notification every time
+// attendance is next marked. "Consecutive" means consecutive HELD sessions for that subject (by
+// LecturePlan.scheduleDate), not consecutive calendar days -- matches how attendance streaks are
+// actually tracked everywhere else on this platform (e.g. computeAttendancePercent). Subject is
+// intentionally scoped (not "3 absences across any subject") per the spec's own "subject-specific
+// absence detection" requirement. Fire-and-forget, like every other notification on this platform
+// — must never fail or slow down the attendance save it's attached to.
+async function checkConsecutiveAbsenceAlerts(studentIds, subject) {
+  if (!subject || studentIds.length === 0) return;
+  try {
+    for (const studentId of studentIds) {
+      const recent = await prisma.attendanceRecord.findMany({
+        where: { studentId, session: { plan: { subject } } },
+        orderBy: { session: { plan: { scheduleDate: "desc" } } },
+        take: CONSECUTIVE_ABSENCE_ALERT_THRESHOLD + 1,
+        select: { status: true },
+      });
+      if (recent.length < CONSECUTIVE_ABSENCE_ALERT_THRESHOLD) continue;
+      const streak = recent.slice(0, CONSECUTIVE_ABSENCE_ALERT_THRESHOLD);
+      const justBefore = recent[CONSECUTIVE_ABSENCE_ALERT_THRESHOLD]; // undefined if streak is the student's entire history
+      const streakJustReachedThreshold = streak.every((r) => r.status === "ABSENT") && justBefore?.status !== "ABSENT";
+      if (streakJustReachedThreshold) {
+        await notifyMany(prisma, [studentId], {
+          type: "ATTENDANCE_ABSENCE_ALERT",
+          message: `You've been marked absent for ${CONSECUTIVE_ABSENCE_ALERT_THRESHOLD} classes in a row in ${subject}. Please contact your faculty if there's an issue.`,
+          link: "/attendance",
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Consecutive-absence alert check failed:", err);
+  }
+}
+
 router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("attendance"), async (req, res) => {
   try {
     const assignment = await resolveAssignmentAccess(req, res, req.params.assignmentId);
@@ -850,6 +889,11 @@ router.post("/assignments/:assignmentId/plans/:planId/attendance", authenticate,
       }
       return saved;
     });
+
+    // Fire-and-forget, after the save has fully committed — never block or fail the attendance
+    // save itself over a notification. Only checks students marked ABSENT in THIS save (not the
+    // whole roster) since only a fresh absence can possibly newly complete a 3-in-a-row streak.
+    checkConsecutiveAbsenceAlerts(cleanRecords.filter((r) => r.status === "ABSENT").map((r) => r.studentId), plan.subject);
 
     logAudit({
       req, action: AUDIT_ACTIONS.ATTENDANCE_MARKED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
