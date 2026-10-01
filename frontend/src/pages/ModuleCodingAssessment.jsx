@@ -177,6 +177,11 @@ export default function ModuleCodingAssessment() {
     onViolation,
   });
   const micBlocked = !!status?.test?.requireMicrophone && proctor.micStatus === "UNAVAILABLE";
+  // Mirrors micBlocked -- previously had no equivalent at all, so a webcam-required assessment
+  // showed no warning and never disabled Run/Submit if the camera disconnected or permission was
+  // revoked mid-attempt, silently defeating the proctoring requirement that's the whole reason
+  // requireWebcam exists on this test. Confirmed missing 2026-10-01.
+  const cameraBlocked = !!status?.test?.requireWebcam && proctor.cameraStatus === "UNAVAILABLE";
 
   async function beginOrResume() {
     setPhase("starting");
@@ -776,6 +781,14 @@ export default function ModuleCodingAssessment() {
         <button className="btn btn-primary" onClick={() => finalize(null)}>Submit Assessment</button>
       </div>
 
+      {cameraBlocked && (
+        <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "12px 24px", fontSize: 13, fontWeight: 700, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
+          <span>Camera is unavailable — it may be off, blocked, or permission was revoked.</span>
+          <button className="btn btn-ghost" style={{ borderColor: "#fff", color: "#fff" }} onClick={proctor.requestMedia} disabled={proctor.requestingMedia}>
+            {proctor.requestingMedia ? "Reconnecting…" : "Reconnect Camera"}
+          </button>
+        </div>
+      )}
       {micBlocked && (
         <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "12px 24px", fontSize: 13, fontWeight: 700, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
           <span>Microphone is disabled. Please enable your microphone to continue.</span>
@@ -926,8 +939,8 @@ export default function ModuleCodingAssessment() {
               onSubmit={handleSubmitCode}
               running={running}
               submitting={submittingCode}
-              runDisabled={micBlocked}
-              submitDisabled={micBlocked}
+              runDisabled={micBlocked || cameraBlocked}
+              submitDisabled={micBlocked || cameraBlocked}
             />
           </div>
           <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", padding: "6px 16px 0" }}>

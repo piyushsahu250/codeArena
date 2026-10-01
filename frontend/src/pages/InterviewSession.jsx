@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL, performExpiredRedirect } from "../api";
-import { Mic, Square, Move } from "lucide-react";
+import { Mic, Square, Move, Camera } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
 import useIsMobile from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
@@ -721,8 +721,11 @@ export default function InterviewSession() {
           </div>
         )}
         {proctor.cameraStatus === "UNAVAILABLE" && (
-          <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "10px 20px", fontSize: 12, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8 }}>
-            Camera is unavailable — it may be off, blocked, or permission was revoked. Please reconnect it.
+          <div className="mono" style={{ background: "var(--rust)", color: "#fff", padding: "14px 20px", fontSize: 13, fontWeight: 700, textAlign: "center", marginTop: 12, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Camera size={14} /> Camera is unavailable — it may be off, blocked, or permission was revoked.</span>
+            <button className="btn btn-ghost" style={{ borderColor: "#fff", color: "#fff" }} onClick={proctor.requestMedia} disabled={proctor.requestingMedia}>
+              {proctor.requestingMedia ? "Reconnecting…" : "Reconnect Camera"}
+            </button>
           </div>
         )}
         {proctor.micStatus === "UNAVAILABLE" && (
