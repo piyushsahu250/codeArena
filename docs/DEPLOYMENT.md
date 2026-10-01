@@ -58,10 +58,17 @@ rather than assuming the doc is still right.
     needed to root-cause students' "page not found" reports from it. `utils/logger.js` writes the
     same structured JSON lines here (`/app/logs/app-YYYY-MM-DD.log`, 30-day retention) in addition to
     stdout — `docker logs` still works exactly as before, this is pure addition. First run creates
-    the volume automatically; nothing to provision ahead of time.
-  - No `USER` directive drops the main app process to non-root in the Dockerfile itself yet (see
-    Docker Known Issues below) — the judge's own child processes are dropped to the unprivileged
-    `sandbox` uid at spawn time regardless (`JUDGE_DROP_PRIVILEGES=true`).
+    the volume automatically; nothing to provision ahead of time. Must land in the image owned by
+    `app` (see Dockerfile) — a fresh named volume inherits whatever's already at its mount path,
+    ownership included, and the actual Node process runs as `app` (uid 10000), not root (see next
+    bullet), so a root-owned volume means every write silently fails EACCES. Confirmed live
+    2026-10-01 setting this up: the first attempt did exactly that.
+  - The container **starts** as root (no `USER` directive) only so `docker-entrypoint.sh` can
+    install the judge's network-isolation iptables rule, which needs real uid 0 — it then drops to
+    `setpriv --reuid=10000 --regid=10000` (the `app` user) before `npm start` ever runs. The
+    previous version of this doc claimed the main app process stays root the whole time; it
+    doesn't, and hasn't for a while — verify against `docker-entrypoint.sh` directly if this ever
+    matters again rather than trusting this line.
 - **Health check:** `curl http://127.0.0.1:4000/api/health` (from the instance) or the public
   domain externally.
 - **Standard swap procedure**: tag the current `latest` as a timestamped rollback checkpoint before
@@ -71,12 +78,15 @@ rather than assuming the doc is still right.
   run` returns.
 
 ## Docker Known Issues
-The application process still runs as root inside the container (no `USER` directive in the final
-Dockerfile stage) — per this project's own standing instruction, do NOT add one until the judge's
-privilege-isolation architecture is separately verified end-to-end, since the two are coupled
-(historically, reversing the tmpDir ownership handover order in `judge.js`'s `prepare()` only
-surfaced as a bug once the process actually ran non-root). The Coding Judge Sandbox itself (its own
-child processes, not the main app process) was live-verified 2026-08-25 — see SECURITY.md.
+Outdated as of 2026-10-01 — this used to say the application process runs as root with no `USER`
+directive. That's no longer true: the container starts as root only long enough for
+`docker-entrypoint.sh` to install the judge's network-isolation iptables rule, then drops to
+`setpriv --reuid=10000 --regid=10000` (the `app` user, uid 10000) before `npm start` runs — the main
+app process has been non-root for a while. The Coding Judge Sandbox's own child processes (a
+separate privilege boundary one level below `app`, dropped to the `sandbox` uid at spawn time) were
+live-verified 2026-08-25 — see SECURITY.md. If a future change to this privilege chain is being
+considered, verify the current state directly (`docker exec codearena-backend ps -o user,pid,cmd`)
+rather than trusting either this paragraph or its predecessor.
 
 ## Backend — Render / Cloud Run (historical, not current — kept for reference only)
 

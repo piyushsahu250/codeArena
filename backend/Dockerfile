@@ -97,6 +97,13 @@ RUN chown -R app:app /app && chmod -R 750 /app
 # which only needed this lock file fixed.
 RUN touch /run/xtables.lock && chown app:app /run/xtables.lock && chmod 600 /run/xtables.lock
 
+# utils/logger.js writes persisted request logs here (meant to be mounted as a named Docker
+# volume — see docs/DEPLOYMENT.md). A fresh named volume is initialized from whatever already
+# exists at this path in the image, ownership included — pre-creating it owned by `app` here is
+# what lets the actual runtime process (uid 10000, see docker-entrypoint.sh's privilege drop
+# below) write to it; without this the volume comes up root-owned and every write fails EACCES.
+RUN mkdir -p /app/logs && chown app:app /app/logs
+
 # Grants the `node` binary itself (not the `app` user broadly, and not the whole container via
 # --cap-add) exactly the capabilities judge.js needs: CAP_SETUID/CAP_SETGID to drop its
 # child processes to `sandbox` before executing student code; CAP_CHOWN because judge.js
