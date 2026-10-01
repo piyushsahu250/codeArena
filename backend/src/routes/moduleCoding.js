@@ -16,6 +16,7 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { safeErrorMessage } = require("../utils/errors");
 const { classifyViolation } = require("../utils/proctoringSeverity");
+const { ownsQuestionRow } = require("../utils/questionVisibility");
 const {
   ownsLmsInstitute, resolveModuleCourseInstituteId, resolveChapterCourseInstituteId,
   resolveModuleCodingTestCourseInstituteId,
@@ -812,6 +813,14 @@ router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN"
 
     const source = await prisma.question.findUnique({ where: { id: req.body.questionId }, include: { testCases: true } });
     if (!source || source.questionType !== "CODING") return res.status(404).json({ error: "Coding question not found" });
+    // IDOR fix 2026-10-01: every other question-bank route (questions.js, and this file's own
+    // duplicate/bulk-copy routes) checks ownsQuestionRow before touching a Question row by a
+    // client-supplied id — this one didn't, letting any Institute Admin clone another institute's
+    // private question (full statement, hidden test cases, editorial) into their own test just by
+    // supplying its id. ownsQuestionRow's STAFF-only share-check branch never triggers here (this
+    // route's role gate is ADMIN/SUPER_ADMIN/INSTITUTE_ADMIN only), so the plain institute check is
+    // all that applies.
+    if (!ownsQuestionRow(req, source)) return res.status(404).json({ error: "Coding question not found" });
 
     const visible = source.testCases.filter((tc) => !tc.isHidden).length;
     const hidden = source.testCases.filter((tc) => tc.isHidden).length;
