@@ -47,8 +47,8 @@ const check = (l, ok, x = "") => { if (!ok) fails++; console.log(`${ok ? "PASS" 
     check("rows ordered by score desc, rank 1..n", rows.every((r, i) => r.Rank === i + 1) && rows.every((r, i) => i === 0 || rows[i - 1].Score >= r.Score));
 
     const csvRes = await fetch(`${BASE}/tests/${testId}/results/export?format=csv`, { headers: a.h });
-    const csvText = await csvRes.text();
-    check("csv export has BOM and header", csvRes.status === 200 && csvText.charCodeAt(0) === 0xfeff && csvText.includes("Registration No. (PRN)"), csvText.split("\n")[0].slice(0, 70));
+    const csvBytes = Buffer.from(await csvRes.arrayBuffer()); const csvText = "FEFF".slice(0, 0) + csvBytes.toString("utf8"); const hasBom = csvBytes[0] === 0xef && csvBytes[1] === 0xbb && csvBytes[2] === 0xbf;
+    check("csv export has BOM and header", csvRes.status === 200 && hasBom && csvText.includes("Registration No. (PRN)"), csvText.split("\n")[0].slice(0, 70));
 
     const roll = rows.find((r) => r["Roll No."])?.["Roll No."];
     if (roll) {
@@ -64,11 +64,11 @@ const check = (l, ok, x = "") => { if (!ok) fails++; console.log(`${ok ? "PASS" 
     const missing = await fetch(`${BASE}/tests/${crypto.randomUUID()}/results/export`, { headers: a.h });
     check("unknown test -> 404 JSON error", missing.status === 404 && (await missing.json()).error, String(missing.status));
 
-    const mct = await prisma.moduleCodingAttempt.groupBy({ by: ["moduleCodingTestId"], _count: true, take: 1 });
+    const mct = await prisma.moduleCodingAttempt.groupBy({ by: ["moduleCodingTestId"], _count: true, orderBy: { moduleCodingTestId: "asc" }, take: 1 });
     if (mct.length) {
       const m1 = await fetch(`${BASE}/module-coding/admin/tests/${mct[0].moduleCodingTestId}/export`, { headers: a.h });
-      const t1 = await m1.text();
-      check("module-coding csv export OK with BOM", m1.status === 200 && t1.charCodeAt(0) === 0xfeff && t1.includes("Student"), String(m1.status));
+      const b1 = Buffer.from(await m1.arrayBuffer()); const t1 = b1.toString("utf8");
+      check("module-coding csv export OK with BOM", m1.status === 200 && b1[0] === 0xef && b1[1] === 0xbb && t1.includes("Student"), String(m1.status));
       const m2 = await fetch(`${BASE}/module-coding/admin/tests/${mct[0].moduleCodingTestId}/export?format=xlsx`, { headers: a.h });
       const w2 = XLSX.read(Buffer.from(await m2.arrayBuffer()), { type: "buffer" });
       check("module-coding xlsx export parses", m2.status === 200 && XLSX.utils.sheet_to_json(w2.Sheets.Attempts).length === mct[0]._count, `${m2.status}`);
@@ -79,4 +79,4 @@ const check = (l, ok, x = "") => { if (!ok) fails++; console.log(`${ok ? "PASS" 
   }
   console.log(fails ? `\n${fails} FAILED` : "\nALL EXPORT CHECKS PASSED");
   process.exit(fails ? 1 : 0);
-})().catch((e) => { console.error("FAILED:", e.message); process.exit(1); });
+})().catch((e) => { console.error("FAILED:", e.stack || e); process.exit(1); });
