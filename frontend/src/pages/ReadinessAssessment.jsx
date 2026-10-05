@@ -1,114 +1,182 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import Navbar from "../components/Navbar";
 import ProblemStatement from "../components/ProblemStatement";
 import MathText from "../components/MathText";
+import ReadinessChecklist from "../components/ReadinessChecklist";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
+import { useProctoring } from "../hooks/useProctoring";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
+import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 import useIsMobile from "../hooks/useIsMobile";
-import api from "../api";
+import api, { API_BASE_URL } from "../api";
 
 const QUIZ_TYPES = ["MCQ", "TRUE_FALSE", "MULTISELECT"];
+const AUTOSAVE_INTERVAL_MS = 10000;
 
-// Student-facing assessment-taking flow for the Employability & Readiness module. Unlike Formal
-// Tests, a Readiness assessment has no proctoring/lockdown config on ReadinessSubject (see RA1
-// schema) — it's a self-paced diagnostic, not a locked-down exam — so this page intentionally
-// carries no useProctoring wiring. MCQ/TRUE_FALSE/MULTISELECT answers save the instant a student
-// picks an option (cheap, no judge run); CODING/SQL answers only grade on an explicit "Save
-// Answer" click, since every save triggers a real judge run against hidden cases (same
-// hidden-case-grading policy as every other coding surface).
+const VIOLATION_LABEL = {
+  TAB_SWITCH: "switching tabs",
+  TAB_SWITCH_BRIEF: "the assessment screen losing focus briefly",
+  FULLSCREEN_EXIT: "exiting fullscreen",
+  COPY: "copying text",
+  PASTE: "pasting text",
+  CUT: "cutting text",
+  RIGHT_CLICK: "right-clicking",
+  DEVTOOLS: "opening developer tools",
+  PRINT_SCREEN_ATTEMPT: "attempting a screenshot",
+  REFRESH_ATTEMPT: "attempting to refresh/leave the page",
+  MULTI_MONITOR: "using multiple monitors",
+  SCREEN_OVERLAY_DETECTED: "an on-screen search/assistant overlay being detected",
+  FACE_MISSING: "no face being detected in the camera frame",
+  MULTIPLE_FACES: "multiple faces being detected in the camera frame",
+  CAMERA_DROPPED: "your camera being turned off or disconnected",
+  MIC_DROPPED: "your microphone being turned off or disconnected",
+  BROWSER_SHORTCUT: "using a restricted keyboard shortcut",
+};
+
+// Student-facing assessment-taking flow for the Employability & Readiness module.
+//
+// Strictness model (all enforced server-side, this page only reflects it):
+//  - No feedback while in progress: the server never returns correctness or score for an answer
+//    until the attempt is submitted, so nothing here can be used as an answer oracle. Every pick /
+//    code draft is just stored; grading happens once at submit.
+//  - The countdown is derived from the server's clock (serverTime offset) and the attempt's
+//    startedAt + duration, so changing the device clock gains nothing, and the server independently
+//    rejects saves after the deadline and sweeps abandoned attempts.
+//  - If the subject has proctoring on (snapshotted onto assessment.config.proctoring at start), the
+//    attempt runs fullscreen with optional camera/mic, every violation is reported to the server,
+//    which counts it and terminates the attempt at the configured limit.
 export default function ReadinessAssessment() {
   const { assessmentId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
   const confirmDialog = useConfirm();
+  const isMobile = useIsMobile();
 
   const [assessment, setAssessment] = useState(null);
   const [subjectName, setSubjectName] = useState("");
   const [questions, setQuestions] = useState([]);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [answers, setAnswers] = useState({}); // questionId -> { selected: [idx], code, language, skipped, score, isCorrect }
+  const [answers, setAnswers] = useState({}); // questionId -> { selected: [idx], code, language, skipped }
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [remainingSec, setRemainingSec] = useState(null);
   const [loadError, setLoadError] = useState("");
-  const autoFinalizedRef = useRef(false);
-  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
-  // Whatever compiler language the student is already using on this assessment — set the first
-  // time any coding question resolves a language (default or explicit pick) and again on every
-  // explicit switch (setLanguage below), then reused as the default for every subsequent
-  // not-yet-opened question instead of each one independently resetting to the platform default.
+  const [phase, setPhase] = useState("loading"); // loading | preflight | starting | active | finalize-failed | terminated
+  const [readinessReady, setReadinessReady] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
+  const [violationWarning, setViolationWarning] = useState(null);
+  const [suspiciousNotice, setSuspiciousNotice] = useState(null);
+  const [terminatedReason, setTerminatedReason] = useState("");
+  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment
+
+  const monacoEditorRef = useRef(null);
   const preferredLanguageRef = useRef(null);
-  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
+  const deadlineRef = useRef(null);
+  const clockOffsetRef = useRef(0); // serverTime - Date.now(): a skewed device clock can't shorten/lengthen the test
+  const finalizingRef = useRef(false);
+  const finalizedRef = useRef(false);
+  const answersRef = useRef({});
+  const dirtyRef = useRef(new Set()); // questionIds with changes not yet confirmed saved
+  const inFlightRef = useRef(new Set());
+  const againRef = useRef(new Set()); // changed again while a save was in flight
+  const questionsRef = useRef([]);
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { questionsRef.current = questions; }, [questions]);
+
+  const proctoringCfg = assessment?.config?.proctoring || { enabled: false };
+  const proctored = !!proctoringCfg.enabled;
+  const maxViolations = proctoringCfg.maxViolations || 3;
 
   function handleEditorMount(editor) {
     monacoEditorRef.current = editor;
     applyPlainTextInputHints(editor);
     watchForNonAsciiInput(editor, () => setImeWarning(true));
   }
-  const isMobile = useIsMobile();
+
+  // Server-classified violations (see backend utils/proctoringSeverity.js): CONFIRMED always counts,
+  // SUSPICIOUS only after repeating, INTERRUPTION never. The server decides; we only display.
+  async function onViolation(type) {
+    if (finalizedRef.current || !proctored) return;
+    try {
+      const { data } = await api.post(`/readiness/assessments/${assessmentId}/violation`, { type });
+      if (data.penalized) setViolationCount(data.violationCount);
+      if (data.autoSubmitted) {
+        finalizedRef.current = true;
+        setTerminatedReason(VIOLATION_LABEL[type] || "a proctoring violation");
+        proctor.stopMedia();
+        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+        setPhase("terminated");
+      } else if (data.penalized) {
+        const msg = `Warning ${data.violationCount}/${data.maxViolations}: ${VIOLATION_LABEL[type] || type}. The assessment will be terminated if this continues.`;
+        setViolationWarning(msg);
+        setTimeout(() => setViolationWarning((m) => (m === msg ? null : m)), 6000);
+      } else if (data.severity === "SUSPICIOUS") {
+        const msg = `Notice: ${VIOLATION_LABEL[type] || type} was detected. This didn't count this time, but repeating it will.`;
+        setSuspiciousNotice(msg);
+        setTimeout(() => setSuspiciousNotice((m) => (m === msg ? null : m)), 5000);
+      }
+    } catch {
+      // best-effort; the server keeps its own log
+    }
+  }
+
+  const proctor = useProctoring({
+    active: phase === "active" && proctored,
+    requireFullscreen: proctored,
+    requireWebcam: !!proctoringCfg.requireWebcam,
+    requireMicrophone: !!proctoringCfg.requireMicrophone,
+    onViolation,
+  });
+  const cameraBlocked = !!proctoringCfg.requireWebcam && proctor.cameraStatus === "UNAVAILABLE";
+  const micBlocked = !!proctoringCfg.requireMicrophone && proctor.micStatus === "UNAVAILABLE";
 
   useEffect(() => {
     api.get(`/readiness/assessments/${assessmentId}`).then((res) => {
-      const { assessment: a, questions: qs } = res.data;
+      const { assessment: a, questions: qs, serverTime } = res.data;
       if (a.status !== "IN_PROGRESS") {
         navigate(`/readiness/report/${a.id}`, { replace: true });
         return;
       }
+      if (serverTime) clockOffsetRef.current = new Date(serverTime).getTime() - Date.now();
+      deadlineRef.current = new Date(a.startedAt).getTime() + a.durationMin * 60 * 1000;
       setAssessment(a);
       setSubjectName(a.subject?.name || "");
       setQuestions(qs);
+      setViolationCount(a.violationCount || 0);
       const initial = {};
       let lastKnownLang = null;
       for (const q of qs) {
         const ans = q.answer || {};
+        const answered = ans.skipped === false;
         if (q.questionType === "SQL") {
-          initial[q.id] = {
-            selected: Array.isArray(ans.selectedOptions) ? ans.selectedOptions : [],
-            code: ans.code ?? (q.starterCode || ""),
-            language: "sql",
-            skipped: ans.skipped !== false,
-            score: ans.skipped === false ? ans.score : null,
-            isCorrect: ans.isCorrect ?? null,
-          };
+          initial[q.id] = { selected: [], code: ans.code ?? (q.starterCode || ""), language: "sql", skipped: !answered };
         } else if (q.questionType === "CODING" && !ans.language) {
-          // Deliberately left without a language/code here — only a question with a REAL saved
-          // answer gets one at load time. A not-yet-answered coding question is resolved lazily
-          // the first time it's actually opened (see the activeIdx effect below), against whatever
-          // language the student is already using elsewhere in this attempt, instead of every
-          // question independently defaulting and a later switch having nothing left to propagate to.
-          initial[q.id] = {
-            selected: [],
-            code: undefined,
-            language: undefined,
-            skipped: ans.skipped !== false,
-            score: ans.skipped === false ? ans.score : null,
-            isCorrect: ans.isCorrect ?? null,
-          };
+          // Resolved lazily the first time it's opened (see the activeIdx effect below), against the
+          // language the student is already using elsewhere in this attempt.
+          initial[q.id] = { selected: [], code: undefined, language: undefined, skipped: !answered };
         } else {
           initial[q.id] = {
             selected: Array.isArray(ans.selectedOptions) ? ans.selectedOptions : [],
-            code: ans.code,
-            language: ans.language,
-            skipped: ans.skipped !== false,
-            score: ans.skipped === false ? ans.score : null,
-            isCorrect: ans.isCorrect ?? null,
+            code: ans.code, language: ans.language, skipped: !answered,
           };
           if (q.questionType === "CODING" && ans.language) lastKnownLang = ans.language;
         }
       }
       setAnswers(initial);
-      // Resuming after a refresh carries the most recently-known coding language forward as the
-      // preference for any question not yet opened this session, same as picking it live would.
+      answersRef.current = initial;
       if (lastKnownLang) preferredLanguageRef.current = lastKnownLang;
-      if (a.durationMin) {
-        const elapsedSec = Math.floor((Date.now() - new Date(a.startedAt).getTime()) / 1000);
-        setRemainingSec(Math.max(0, a.durationMin * 60 - elapsedSec));
-      }
-    }).catch((err) => setLoadError(err.response?.data?.error || "Failed to load assessment"));
+      setRemainingSec(Math.max(0, Math.floor((deadlineRef.current - (Date.now() + clockOffsetRef.current)) / 1000)));
+      setPhase(a.config?.proctoring?.enabled ? "preflight" : "active");
+    }).catch((err) => {
+      if (err.response?.data?.finalized) { navigate(`/readiness/report/${assessmentId}`, { replace: true }); return; }
+      setLoadError(err.response?.data?.error || "Failed to load assessment");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId]);
 
@@ -116,34 +184,30 @@ export default function ReadinessAssessment() {
   const isQuiz = current && QUIZ_TYPES.includes(current.questionType);
   const isMulti = current?.questionType === "MULTISELECT";
 
-  // Lazily resolves THIS question's language/code the first time it's actually opened with no
-  // language set yet (no real saved answer) — using whatever language the student is already
-  // using elsewhere in this attempt (preferredLanguageRef, seeded on resume and updated on every
-  // explicit setLanguage switch) instead of independently falling back to a fixed default. Only
-  // ever touches a question with no language at all — an already-answered question is never
-  // silently changed underneath the student.
+  // Lazily resolves a coding question's language/code the first time it's opened with none set.
   useEffect(() => {
     if (!current || current.questionType !== "CODING") return;
     setAnswers((prev) => {
       const a = prev[current.id];
       if (a?.language) return prev;
-      const lang = preferredLanguageRef.current || "python"; // platform-wide default compiler
+      const lang = preferredLanguageRef.current || "python";
       preferredLanguageRef.current = lang;
       const code = current.starterCodeByLanguage?.[lang] || current.starterCode || defaultStarter(lang);
       return { ...prev, [current.id]: { ...a, language: lang, code } };
     });
   }, [current]);
 
+  // Countdown: always recomputed from the fixed deadline + server clock offset, never decremented.
   useEffect(() => {
-    if (remainingSec == null) return;
-    if (remainingSec <= 0) {
-      if (!autoFinalizedRef.current) { autoFinalizedRef.current = true; finalize(true); }
-      return;
-    }
-    const t = setInterval(() => setRemainingSec((s) => (s == null ? s : s - 1)), 1000);
+    if (remainingSec == null || phase === "loading" || phase === "terminated") return;
+    const t = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((deadlineRef.current - (Date.now() + clockOffsetRef.current)) / 1000));
+      setRemainingSec(remaining);
+      if (remaining <= 0 && !finalizingRef.current && !finalizedRef.current) finalize(true);
+    }, 1000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remainingSec]);
+  }, [remainingSec == null, phase]);
 
   function fmtTime(sec) {
     if (sec == null) return "";
@@ -151,73 +215,128 @@ export default function ReadinessAssessment() {
     return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
   }
 
-  // Recovery path for the server's own deadline check on POST /answer (new — see readiness.js's
-  // readinessDeadlineOf) rejecting a save because time is genuinely up. Normally the client's own
-  // countdown below reaches 0 first and calls finalize(true) on its own; this only matters when
-  // that path somehow didn't run yet (a backgrounded tab throttling the interval is the realistic
-  // case) — without it, a student in that narrow window would just see a rejected save and stay
-  // stuck on the assessment with no way to reach their (already-locked-in-server-side) result.
-  function isDeadlinePassedError(err) {
-    return err.response?.status === 403 && /time is up/i.test(err.response?.data?.error || "");
+  function payloadFor(q, a) {
+    return QUIZ_TYPES.includes(q.questionType)
+      ? { questionId: q.id, selectedOptions: a.selected || [], skipped: false }
+      : { questionId: q.id, code: a.code ?? "", language: q.questionType === "SQL" ? "sql" : a.language, skipped: false };
   }
 
-  async function saveQuizAnswer(questionId, selected) {
-    setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], selected, skipped: false } }));
+  // Saves one question's latest state. Serialized per question so two overlapping saves can never
+  // land out of order and let an older draft overwrite a newer one; a change that arrives while a
+  // save is in flight triggers one more save of the then-latest state right after.
+  async function saveQuestion(qid) {
+    if (finalizedRef.current) return;
+    if (inFlightRef.current.has(qid)) { againRef.current.add(qid); return; }
+    const q = questionsRef.current.find((x) => x.id === qid);
+    const a = answersRef.current[qid];
+    if (!q || !a || a.skipped !== false) { dirtyRef.current.delete(qid); return; }
+    inFlightRef.current.add(qid);
+    dirtyRef.current.delete(qid);
     setSaving(true);
     try {
-      const res = await api.post(`/readiness/assessments/${assessmentId}/answer`, { questionId, selectedOptions: selected, skipped: false });
-      setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], selected, skipped: false, score: res.data.answer.score, isCorrect: res.data.answer.isCorrect } }));
+      await api.post(`/readiness/assessments/${assessmentId}/answer`, payloadFor(q, a));
+      setLastSavedAt(new Date());
+      setSaveFailed(false);
     } catch (err) {
-      // Was a bare generic message regardless of cause -- now matches saveCodeAnswer's existing
-      // pattern of surfacing the server's actual reason (e.g. the new server-side deadline check:
-      // "Time is up for this assessment" reads very differently from a transient save failure, and
-      // the student should see which one actually happened).
-      toast.error(err.response?.data?.error || "Failed to save your answer — try again.");
-      if (isDeadlinePassedError(err) && !autoFinalizedRef.current) { autoFinalizedRef.current = true; finalize(true); }
+      dirtyRef.current.add(qid); // retried on the next tick and again at submit
+      setSaveFailed(true);
+      if (err.response?.status === 403 && /time is up/i.test(err.response?.data?.error || "") && !finalizingRef.current) finalize(true);
     } finally {
-      setSaving(false);
+      inFlightRef.current.delete(qid);
+      setSaving(inFlightRef.current.size > 0);
+      if (againRef.current.delete(qid)) saveQuestion(qid);
     }
+  }
+
+  async function flushAutosave() {
+    await Promise.all([...dirtyRef.current].map((qid) => saveQuestion(qid)));
+  }
+
+  useEffect(() => {
+    if (phase !== "active") return;
+    const i = setInterval(() => flushAutosave(), AUTOSAVE_INTERVAL_MS);
+    return () => clearInterval(i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // Never lose work on tab close / refresh / reconnect: keepalive fetch survives page teardown
+  // (unlike axios) and keeps the Authorization header (unlike sendBeacon).
+  useEffect(() => {
+    function flushOnUnload() {
+      if (finalizedRef.current) return;
+      const token = localStorage.getItem("token");
+      for (const qid of dirtyRef.current) {
+        const q = questionsRef.current.find((x) => x.id === qid);
+        const a = answersRef.current[qid];
+        if (!q || !a || a.skipped !== false) continue;
+        try {
+          fetch(`${API_BASE_URL}/readiness/assessments/${assessmentId}/answer`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify(payloadFor(q, a)), keepalive: true,
+          }).catch(() => {});
+        } catch { /* best-effort */ }
+      }
+    }
+    const onOnline = () => flushAutosave();
+    window.addEventListener("beforeunload", flushOnUnload);
+    window.addEventListener("pagehide", flushOnUnload);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("beforeunload", flushOnUnload);
+      window.removeEventListener("pagehide", flushOnUnload);
+      window.removeEventListener("online", onOnline);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assessmentId]);
+
+  // Flush the outgoing question the moment the student navigates away from it.
+  useEffect(() => {
+    const outgoingId = questions[activeIdx]?.id;
+    return () => { if (outgoingId && dirtyRef.current.has(outgoingId)) saveQuestion(outgoingId); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIdx]);
+
+  function markChanged(qid, patch) {
+    const next = { ...answersRef.current[qid], ...patch, skipped: false };
+    answersRef.current = { ...answersRef.current, [qid]: next }; // visible to saveQuestion before React re-renders
+    setAnswers(answersRef.current);
+    dirtyRef.current.add(qid);
   }
 
   function toggleOption(idx) {
     const cur = answers[current.id]?.selected || [];
     const next = isMulti ? (cur.includes(idx) ? cur.filter((i) => i !== idx) : [...cur, idx]) : [idx];
-    saveQuizAnswer(current.id, next);
-  }
-
-  async function saveCodeAnswer() {
-    const a = answers[current.id];
-    setSaving(true);
-    try {
-      const res = await api.post(`/readiness/assessments/${assessmentId}/answer`, {
-        questionId: current.id, code: a.code, language: current.questionType === "SQL" ? "sql" : a.language, skipped: false,
-      });
-      setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], skipped: false, score: res.data.answer.score, isCorrect: res.data.answer.isCorrect } }));
-      toast.success(`Saved — scored ${res.data.answer.score}%`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to save your answer — try again.");
-      if (isDeadlinePassedError(err) && !autoFinalizedRef.current) { autoFinalizedRef.current = true; finalize(true); }
-    } finally {
-      setSaving(false);
-    }
+    markChanged(current.id, { selected: next });
+    saveQuestion(current.id); // picks save immediately; code saves on the 10s tick / navigation / Save Draft
   }
 
   function setCode(code) {
-    setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], code } }));
+    if (!current) return;
+    // The untouched starter template isn't an answer -- only a real edit marks the question answered.
+    markChanged(current.id, { code });
   }
 
   function setLanguage(language) {
     const a = answers[current.id];
     const code = a.code && a.code.trim() && a.code !== defaultStarter(a.language) ? a.code : (current.starterCodeByLanguage?.[language] || defaultStarter(language));
-    setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], language, code } }));
-    // An explicit switch becomes the new preference for every not-yet-opened question too — see
-    // preferredLanguageRef's own comment.
+    if (a.skipped === false) markChanged(current.id, { language, code });
+    else setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], language, code } }));
     preferredLanguageRef.current = language;
   }
 
-  const answeredCount = useMemo(() => Object.values(answers).filter((a) => !a.skipped).length, [answers]);
+  const answeredCount = useMemo(() => Object.values(answers).filter((a) => a.skipped === false).length, [answers]);
+
+  async function beginAssessment() {
+    setPhase("starting");
+    try {
+      if (proctored) await proctor.requestFullscreen();
+    } catch { /* surfaced by the fullscreen banner below */ }
+    setPhase("active");
+  }
 
   async function finalize(auto = false) {
+    if (finalizedRef.current || finalizingRef.current) return;
     if (!auto) {
       const ok = await confirmDialog({
         title: "Submit assessment?",
@@ -226,14 +345,33 @@ export default function ReadinessAssessment() {
       });
       if (!ok) return;
     }
+    finalizingRef.current = true;
     setSubmitting(true);
-    try {
-      await api.post(`/readiness/assessments/${assessmentId}/finalize`);
-      navigate(`/readiness/report/${assessmentId}`, { replace: true });
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to submit assessment");
-      setSubmitting(false);
+    // Last-chance flush so the final keystrokes are on the server before grading. A failed flush
+    // (time already up / offline) never blocks submitting what the server already holds.
+    await flushAutosave().catch(() => {});
+
+    // Up to 3 tries with backoff -- never navigate to a "result" unless the server confirmed it.
+    let ok = false;
+    for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
+      try {
+        await api.post(`/readiness/assessments/${assessmentId}/finalize`);
+        ok = true;
+      } catch {
+        if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2000));
+      }
     }
+    finalizingRef.current = false;
+    if (!ok) {
+      setSubmitting(false);
+      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      setPhase("finalize-failed");
+      return;
+    }
+    finalizedRef.current = true;
+    proctor.stopMedia();
+    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+    navigate(`/readiness/report/${assessmentId}`, { replace: true });
   }
 
   if (loadError) {
@@ -242,12 +380,13 @@ export default function ReadinessAssessment() {
         <Navbar />
         <div style={{ maxWidth: 700, margin: "0 auto", padding: 48 }}>
           <p style={{ color: "var(--rust)" }}>{loadError}</p>
+          <Link to="/readiness" className="btn btn-ghost" style={{ marginTop: 12, display: "inline-block" }}>← Back to Readiness</Link>
         </div>
       </div>
     );
   }
 
-  if (!assessment || !current) {
+  if (!assessment || !current || phase === "loading") {
     return (
       <div>
         <Navbar />
@@ -256,24 +395,154 @@ export default function ReadinessAssessment() {
     );
   }
 
+  if (phase === "terminated") {
+    return (
+      <div>
+        <Navbar />
+        <div style={{ maxWidth: 640, margin: "80px auto", padding: 24 }}>
+          <div className="card" style={{ padding: 32, textAlign: "center" }}>
+            <div style={{ fontSize: 32 }}>⚠️</div>
+            <h2 style={{ marginTop: 12, color: "var(--rust)" }}>Assessment terminated</h2>
+            <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>
+              Your assessment was ended after repeated proctoring violations, most recently {terminatedReason}. Answers saved before termination were graded and recorded, and this counts as one of your attempts.
+            </p>
+            <Link to={`/readiness/report/${assessmentId}`} className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>View report</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "finalize-failed") {
+    return (
+      <div>
+        <Navbar />
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: 48, textAlign: "center" }}>
+          <p style={{ fontSize: 16, color: "var(--rust)" }}>
+            We couldn't confirm your submission was received — this attempt has <strong>not</strong> been marked as submitted. Check your internet connection and try again. Do not close this page.
+          </p>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} disabled={submitting} onClick={() => finalize(true)}>
+            {submitting ? "Retrying…" : "Retry submission"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (submitting) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <div className="card" style={{ padding: 32, maxWidth: 440, textAlign: "center" }}>
+          <p className="mono">⏳ Grading your assessment — this can take a few seconds. Please don't close this tab.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "preflight" || phase === "starting") {
+    return (
+      <div>
+        <Navbar />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div className="card" style={{ padding: 32, maxWidth: 560, marginTop: 24 }}>
+            <span className="badge" style={{ background: "var(--amber)" }}>Proctored assessment</span>
+            <h2 style={{ marginTop: 10 }}>{subjectName}</h2>
+            <p style={{ fontSize: 13, marginTop: 12, color: "var(--ink-dim)" }}>
+              This assessment runs in fullscreen. Switching tabs, exiting fullscreen, copy/paste, right-click, and devtools shortcuts are blocked or logged
+              {proctoringCfg.requireWebcam ? ", your face must stay visible in the camera" : ""}
+              {proctoringCfg.requireMicrophone ? ", and your microphone must stay enabled" : ""}.
+              Reaching {maxViolations} violations terminates the assessment.
+            </p>
+            <p className="mono" style={{ fontSize: 13, marginTop: 12, fontWeight: 700 }}>
+              ⏱ The timer is already running: {fmtTime(remainingSec)} left.
+            </p>
+            <ReadinessChecklist
+              proctor={proctor}
+              requireWebcam={!!proctoringCfg.requireWebcam}
+              requireMicrophone={!!proctoringCfg.requireMicrophone}
+              requireFullscreen
+              onReadyChange={setReadinessReady}
+            />
+            <button
+              className="btn btn-primary"
+              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: readinessReady ? 1 : 0.4 }}
+              onClick={beginAssessment}
+              disabled={phase === "starting" || !readinessReady}
+            >
+              {phase === "starting" ? "Starting…" : "Begin Assessment (Fullscreen)"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const ans = answers[current.id] || {};
+  const banner = (bg, fg, children, extra) => (
+    <div className="mono" style={{ background: bg, color: fg, padding: "10px 24px", fontSize: 13, fontWeight: 700, textAlign: "center", ...extra }}>{children}</div>
+  );
 
   return (
     <div>
-      <Navbar />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "12px" : "24px" }}>
+      {!proctored && <Navbar />}
+
+      {proctored && cameraBlocked && banner("var(--rust)", "#fff", (
+        <span>Camera is unavailable — it may be off, blocked, or permission was revoked.{" "}
+          <button className="btn btn-ghost" style={{ borderColor: "#fff", color: "#fff", marginLeft: 10 }} onClick={proctor.requestMedia} disabled={proctor.requestingMedia}>
+            {proctor.requestingMedia ? "Reconnecting…" : "Reconnect Camera"}
+          </button>
+        </span>
+      ))}
+      {proctored && micBlocked && banner("var(--rust)", "#fff", (
+        <span>Microphone is disabled. Please enable your microphone to continue.{" "}
+          <button className="btn btn-ghost" style={{ borderColor: "#fff", color: "#fff", marginLeft: 10 }} onClick={proctor.requestMedia} disabled={proctor.requestingMedia}>
+            {proctor.requestingMedia ? "Reconnecting…" : "Re-enable Microphone"}
+          </button>
+        </span>
+      ))}
+      {proctored && proctoringCfg.requireWebcam && (
+        <video ref={proctor.videoRef} autoPlay muted playsInline style={{
+          position: "fixed", bottom: 16, right: 16, width: isMobile ? 84 : 140, height: isMobile ? 63 : 105, borderRadius: 8,
+          objectFit: "cover", background: "#000", zIndex: 50,
+          border: proctor.faceStatus !== "OK" ? "3px solid var(--rust)" : "2px solid var(--amber)",
+        }} />
+      )}
+      {proctored && proctoringCfg.requireWebcam && proctor.faceModelStatus === "unavailable" && banner("var(--amber)", "#3a2c00",
+        "⚠ Face detection could not start (likely a network/firewall issue) — your camera feed is still shown, but presence isn't being automatically checked this session.")}
+      {proctored && proctor.faceStatus === "MISSING" && banner("var(--rust)", "#fff", "⚠ No face detected — please stay visible in the camera frame.")}
+      {proctored && proctor.faceStatus === "MULTIPLE" && banner("var(--rust)", "#fff", "⚠ Multiple faces detected — only you may be in frame during this assessment.")}
+      {violationWarning && banner("var(--rust)", "#fff", `⚠ ${violationWarning}`)}
+      {suspiciousNotice && banner("var(--amber)", "#3a2c00", suspiciousNotice, { fontSize: 12 })}
+      {proctored && proctor.orientationNotice && (
+        <div className="mono" style={{ color: "var(--ink-dim)", padding: "8px 24px", fontSize: 12, textAlign: "center", borderBottom: "1px solid var(--line)" }}>
+          Screen orientation changed. Please continue your assessment.
+        </div>
+      )}
+      {proctored && !proctor.fullscreenOk && banner("var(--amber)", "#3a2c00", (
+        <span>⚠ Fullscreen isn't active — leaving fullscreen counts as a violation.{" "}
+          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", background: "#fff", color: "#1C1B18", marginLeft: 8 }} onClick={() => proctor.requestFullscreen()}>
+            Enter Fullscreen
+          </button>
+        </span>
+      ))}
+
+      <div className={proctored ? "exam-protected-content" : undefined} style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "12px" : "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: isMobile ? 14 : 16 }}>{subjectName}</div>
             <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{assessment.assessmentMode.replace(/_/g, " ")} · Question {activeIdx + 1} of {questions.length}</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flex: isMobile ? "1 1 100%" : "0 1 auto", justifyContent: isMobile ? "space-between" : "flex-start" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", flex: isMobile ? "1 1 100%" : "0 1 auto", justifyContent: isMobile ? "space-between" : "flex-start" }}>
+            {proctored && (
+              <span className="mono" style={{ fontSize: 12, color: violationCount > 0 ? "var(--rust)" : "var(--ink-dim)" }}>⚠ Violations: {violationCount}/{maxViolations}</span>
+            )}
+            <span className="mono" style={{ fontSize: 11, color: saveFailed ? "var(--rust)" : "var(--ink-dim)" }}>
+              {saveFailed ? "⚠ Not saved — retrying…" : saving ? "Saving…" : lastSavedAt ? `● Saved ${lastSavedAt.toLocaleTimeString()}` : "● Auto-save on"}
+            </span>
             {remainingSec != null && (
               <span className="mono" style={{ fontSize: 14, fontWeight: 700, color: remainingSec < 120 ? "var(--rust)" : "var(--ink)" }}>⏱ {fmtTime(remainingSec)}</span>
             )}
-            <button type="button" className="btn btn-primary" disabled={submitting} onClick={() => finalize(false)}>
-              {submitting ? "Submitting…" : "Submit Assessment"}
-            </button>
+            <button type="button" className="btn btn-primary" disabled={submitting} onClick={() => finalize(false)}>Submit Assessment</button>
           </div>
         </div>
 
@@ -290,10 +559,8 @@ export default function ReadinessAssessment() {
             const color = i === activeIdx || a.skipped === false ? "#fff" : "var(--ink)";
             const size = isMobile ? 28 : 32;
             return (
-              <button
-                key={q.id} type="button" onClick={() => setActiveIdx(i)}
-                style={{ width: size, height: size, borderRadius: 6, border: "1px solid var(--line)", background: bg, color, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-              >
+              <button key={q.id} type="button" onClick={() => setActiveIdx(i)}
+                style={{ width: size, height: size, borderRadius: 6, border: "1px solid var(--line)", background: bg, color, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                 {i + 1}
               </button>
             );
@@ -315,9 +582,6 @@ export default function ReadinessAssessment() {
                   </label>
                 ))}
               </div>
-              {ans.skipped === false && (
-                <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>{saving ? "Saving…" : "✓ Saved"}</p>
-              )}
             </>
           ) : (
             <div style={{ display: isMobile ? "flex" : "grid", flexDirection: isMobile ? "column" : undefined, gridTemplateColumns: isMobile ? undefined : "1fr 1fr", gap: 20 }}>
@@ -333,23 +597,16 @@ export default function ReadinessAssessment() {
                       {CODE_LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                     </select>
                   )}
-                  <button type="button" className="btn btn-primary" disabled={saving} onClick={saveCodeAnswer} style={{ fontSize: 13, padding: "6px 14px" }}>
-                    {saving ? "Saving…" : "Save Answer"}
+                  <button type="button" className="btn btn-ghost" disabled={saving || ans.skipped !== false} onClick={() => saveQuestion(current.id)} style={{ fontSize: 13, padding: "6px 14px" }}>
+                    {saving ? "Saving…" : "Save draft now"}
                   </button>
                 </div>
-                {/* A touch keyboard has no physical Tab key — these trigger Monaco's own built-in
-                    tab/outdent commands directly. onPointerDown preventDefaults so tapping never
-                    steals focus/selection away from the editor first. */}
                 {isMobile && (
                   <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                     <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
-                      onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "tab", null)}>
-                      ⇥ Indent
-                    </button>
+                      onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "tab", null)}>⇥ Indent</button>
                     <button type="button" className="btn btn-ghost" style={{ fontSize: 11, padding: "3px 10px" }}
-                      onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>
-                      ⇤ Outdent
-                    </button>
+                      onPointerDown={(e) => e.preventDefault()} onClick={() => monacoEditorRef.current?.trigger("toolbar", "outdent", null)}>⇤ Outdent</button>
                   </div>
                 )}
                 {imeWarning && (
@@ -364,19 +621,14 @@ export default function ReadinessAssessment() {
                     language={current.questionType === "SQL" ? "sql" : (CODE_LANGUAGES.find((l) => l.id === ans.language)?.monaco || "python")}
                     theme="vs-dark"
                     value={ans.code || ""}
-                    onChange={(v) => setCode(v ?? "")}
+                    onChange={(v) => { if ((v ?? "") !== (ans.code ?? "")) setCode(v ?? ""); }}
                     onMount={handleEditorMount}
                     options={{ fontSize: 13, minimap: { enabled: false } }}
                   />
                 </div>
                 <p className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>
-                  Saving grades your answer immediately against real test cases — you can save again to update your score any time before you submit the whole assessment.
+                  Your code is auto-saved every 10 seconds and graded against the real test cases once, when you submit. No results are shown during the assessment.
                 </p>
-                {ans.score != null && ans.skipped === false && (
-                  <p style={{ fontSize: 13, marginTop: 8, fontWeight: 700, color: ans.score >= 100 ? "#16a34a" : ans.score > 0 ? "#f59e0b" : "var(--rust)" }}>
-                    Current score: {ans.score}%
-                  </p>
-                )}
               </div>
             </div>
           )}

@@ -50,7 +50,36 @@ async function runOnce() {
       details: { finalized, failed, attemptIds: finalizedAttemptIds.slice(0, 100) },
     });
   }
-  return { candidateCount: candidates.length, finalized, failed };
+  const readiness = await sweepExpiredReadinessAssessments().catch((err) => {
+    console.error("[testAttemptAutoFinalizeScheduler] readiness sweep failed:", err.message);
+    return { closed: 0 };
+  });
+  return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed };
+}
+
+// Readiness assessments have no outer test window, only a per-attempt startedAt+durationMin deadline,
+// and (like Formal Tests above) depend on the client to submit. A closed tab leaves them IN_PROGRESS
+// forever -- which also blocks the student from starting a fresh attempt on that subject/mode.
+// A 2-minute grace after the deadline lets a legitimately in-flight client submit land first.
+async function sweepExpiredReadinessAssessments() {
+  const { completeReadinessAssessment, readinessDeadlineOf } = require("./readinessCompletion");
+  const grace = 2 * 60 * 1000;
+  const open = await prisma.readinessAssessment.findMany({
+    where: { status: "IN_PROGRESS", startedAt: { lt: new Date(Date.now() - grace) } },
+    select: { id: true, startedAt: true, durationMin: true },
+    take: 200,
+  });
+  const expired = open.filter((a) => Date.now() > readinessDeadlineOf(a) + grace);
+  let closed = 0;
+  for (const a of expired) {
+    try {
+      const r = await completeReadinessAssessment(a.id);
+      if (r && !r.alreadyCompleted) closed++;
+    } catch (err) {
+      console.error(`[testAttemptAutoFinalizeScheduler] Failed to close readiness assessment ${a.id}:`, err.message);
+    }
+  }
+  return { closed };
 }
 
 // Off by default like every other background scheduler on this platform — see

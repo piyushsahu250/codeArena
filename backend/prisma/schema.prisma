@@ -3857,6 +3857,19 @@ model ReadinessSubject {
   // (readiness.js) by counting existing ReadinessAssessment rows, never trusted from the client.
   maxAttempts        Int?
 
+  // Proctored (exam-grade) mode, added 2026-10-05. Off by default so every existing subject keeps
+  // behaving as the self-paced diagnostic it was built as. When on: fullscreen + tab/focus/copy-
+  // paste/devtools monitoring with server-side violation counting and auto-submit at
+  // maxViolations; optional webcam (face presence) and microphone requirements; answers are
+  // autosaved as ungraded drafts and graded only at submission, and no per-answer score or
+  // correctness is ever returned during the attempt (see routes/readiness.js). These four values
+  // are SNAPSHOTTED onto ReadinessAssessment.config.proctoring at attempt start, so an admin editing
+  // them mid-exam can't change the rules for an attempt already in flight.
+  proctoringEnabled  Boolean @default(false)
+  requireWebcam      Boolean @default(false)
+  requireMicrophone  Boolean @default(false)
+  maxViolations      Int     @default(3)
+
   // Certificate-on-completion policy (spec CRITICAL RULE: never auto-issue employment-readiness
   // certificates unless policy supports it — both fields default to "off"/unset so issuance stays
   // opt-in per subject, admin-configured). certificateMinLevel is one of ReadinessReport.readinessLevel's
@@ -3955,14 +3968,37 @@ model ReadinessAssessment {
   startedAt   DateTime @default(now())
   submittedAt DateTime?
   durationMin Int
-  config      Json? // adaptive-mode flag, any per-attempt overrides
+  config      Json? // adaptive-mode flag, any per-attempt overrides, scoringPolicy + proctoring snapshots
 
-  answers ReadinessAnswer[]
-  report  ReadinessReport?
+  // Proctored-mode bookkeeping (see ReadinessSubject.proctoringEnabled). violationCount only counts
+  // PENALIZED events (utils/proctoringSeverity.js decides which), incremented atomically server-
+  // side; terminationReason is set only when the attempt was force-submitted ("MAX_VIOLATIONS").
+  violationCount    Int     @default(0)
+  terminationReason String?
+
+  answers    ReadinessAnswer[]
+  report     ReadinessReport?
+  violations ReadinessViolation[]
 
   @@index([studentId])
   @@index([subjectId])
   @@index([status])
+}
+
+// Every proctoring event reported during a proctored readiness attempt, penalized or not, so a
+// reviewer can see exactly what happened. severity/penalized are always decided server-side by
+// classifyViolation() -- never a client-supplied flag. Same shape as ProctoringViolation (Module
+// Coding) and TestViolation (Formal Tests).
+model ReadinessViolation {
+  id           String   @id @default(uuid())
+  assessment   ReadinessAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessmentId String
+  type         String
+  severity     String
+  penalized    Boolean
+  createdAt    DateTime @default(now())
+
+  @@index([assessmentId])
 }
 
 model ReadinessAnswer {

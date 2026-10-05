@@ -108,6 +108,11 @@ export default function ReadinessReport() {
         {assessment.academicContext && (
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>{assessment.academicContext}</p>
         )}
+        {assessment.status === "TERMINATED" && (
+          <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, border: "1px solid var(--rust)", color: "var(--rust)", fontSize: 13, fontWeight: 600 }}>
+            ⚠ This attempt was terminated for exceeding the proctoring violation limit. Only answers saved before termination were scored, and no certificate is awarded for it.
+          </div>
+        )}
 
         <div className="card" style={{ padding: 28, marginTop: 24, textAlign: "center", background: `${color}14`, border: `1px solid ${color}55` }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink-dim)", letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -46,6 +46,7 @@ function emptyForm() {
     assessmentModes: DEFAULT_MODES.map((m) => ({ ...m })),
     employabilityIndicators: "",
     defaultDurationMin: 45, passingPercent: 50, maxAttempts: "",
+    proctoringEnabled: false, requireWebcam: false, requireMicrophone: false, maxViolations: 3,
     readinessThresholds: DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
     isActive: true,
     certificateEnabled: false, certificateMinLevel: "JOB_READY",
@@ -190,6 +191,7 @@ export default function ReadinessSubjects() {
       assessmentModes: s.assessmentModes?.length ? s.assessmentModes : DEFAULT_MODES.map((m) => ({ ...m })),
       employabilityIndicators: Array.isArray(s.employabilityIndicators) ? s.employabilityIndicators.join(", ") : "",
       defaultDurationMin: s.defaultDurationMin, passingPercent: s.passingPercent, maxAttempts: s.maxAttempts ?? "",
+      proctoringEnabled: !!s.proctoringEnabled, requireWebcam: !!s.requireWebcam, requireMicrophone: !!s.requireMicrophone, maxViolations: s.maxViolations ?? 3,
       readinessThresholds: s.readinessThresholds?.length ? s.readinessThresholds : DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
       isActive: s.isActive,
       certificateEnabled: !!s.certificateEnabled, certificateMinLevel: s.certificateMinLevel || "JOB_READY",
@@ -365,6 +367,9 @@ export default function ReadinessSubjects() {
         employabilityIndicators: form.employabilityIndicators.split(",").map((s) => s.trim()).filter(Boolean),
         defaultDurationMin: Number(form.defaultDurationMin) || 45, passingPercent: Number(form.passingPercent) || 50,
         maxAttempts: form.maxAttempts === "" ? null : Math.max(1, Number(form.maxAttempts) || 1),
+        proctoringEnabled: form.proctoringEnabled, requireWebcam: form.proctoringEnabled && form.requireWebcam,
+        requireMicrophone: form.proctoringEnabled && form.requireMicrophone,
+        maxViolations: Math.min(20, Math.max(1, Number(form.maxViolations) || 3)),
         readinessThresholds: form.readinessThresholds.filter((t) => t.label.trim()).map((t) => ({ label: t.label.trim(), min: Number(t.min) })),
         isActive: form.isActive,
         certificateEnabled: form.certificateEnabled, certificateMinLevel: form.certificateEnabled ? form.certificateMinLevel : null,
@@ -773,6 +778,20 @@ export default function ReadinessSubjects() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <div><label style={labelStyle} htmlFor="subject-duration">Duration (min)</label><input id="subject-duration" style={inputStyle} type="number" value={form.defaultDurationMin} onChange={(e) => setForm({ ...form, defaultDurationMin: e.target.value })} /></div>
               <div><label style={labelStyle} htmlFor="subject-max-attempts">Max attempts (blank = unlimited)</label><input id="subject-max-attempts" style={inputStyle} type="number" min={1} placeholder="Unlimited" value={form.maxAttempts} onChange={(e) => setForm({ ...form, maxAttempts: e.target.value })} /></div>
+            </div>
+
+            <div style={{ marginTop: 16, padding: 12, border: "1px solid var(--line)", borderRadius: 8 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700 }}>
+                <input type="checkbox" checked={form.proctoringEnabled} onChange={(e) => setForm({ ...form, proctoringEnabled: e.target.checked })} /> Proctored (fullscreen lockdown, violations auto-terminate)
+              </label>
+              {form.proctoringEnabled && (
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginTop: 10, fontSize: 13 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={form.requireWebcam} onChange={(e) => setForm({ ...form, requireWebcam: e.target.checked })} /> Require webcam</label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={form.requireMicrophone} onChange={(e) => setForm({ ...form, requireMicrophone: e.target.checked })} /> Require microphone</label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6 }}>Max violations <input style={{ ...inputStyle, width: 64 }} type="number" min={1} max={20} value={form.maxViolations} onChange={(e) => setForm({ ...form, maxViolations: e.target.value })} /></label>
+                </div>
+              )}
+              <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>Applies to attempts started after saving; in-progress attempts keep the rules they started with.</p>
             </div>
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>

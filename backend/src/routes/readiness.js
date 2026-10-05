@@ -17,6 +17,8 @@ const { generateReadinessReportPdf } = require("../utils/readinessReportPdf");
 const { readinessSubjectEligibilityWhere, studentCanAccessReadinessSubject } = require("../utils/readinessEligibility");
 const { notifyReadinessTestAssigned } = require("../utils/notifications");
 const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
+const { completeReadinessAssessment, readinessDeadlineOf } = require("../utils/readinessCompletion");
+const { classifyViolation } = require("../utils/proctoringSeverity");
 
 const router = express.Router();
 
@@ -66,19 +68,8 @@ async function assertReadinessAssignmentScope(req, res, academicGroupIds) {
   return true;
 }
 
-// Server-side source of truth for when an assessment's answers stop being acceptable -- mirrors
-// submissions.js's deadlineOf() for Formal Tests exactly (same startedAt+durationMin shape).
-// Previously this had no equivalent anywhere in this file: durationMin was stored on the
-// ReadinessAssessment at creation but never once compared against Date.now() by POST
-// /assessments/:id/answer or POST /assessments/:id/finalize -- the actual time limit lived only in
-// ReadinessAssessment.jsx's client-side countdown. A student whose client timer/auto-finalize call
-// never fired (closed tab, tampered devtools, a backgrounded browser throttling the interval) could
-// keep calling POST /answer to save/improve answers indefinitely past the configured duration, and
-// the server accepted every one of them -- exactly the "gained extra time by changing device time
-// or otherwise not letting the client timer act" scenario this kind of check exists to close.
-function readinessDeadlineOf(assessment) {
-  return new Date(assessment.startedAt).getTime() + assessment.durationMin * 60 * 1000;
-}
+// readinessDeadlineOf() (server-side time limit) now lives in utils/readinessCompletion.js next to
+// the shared completion routine that uses it.
 
 // Builds the "Institute · Batch · Department · Section · Program" line every generated readiness
 // report/export must carry (spec section 16) — resolved live off the student's current
@@ -114,6 +105,27 @@ function sanitizeQuestionForStudent(q, seed) {
     // convention as every other coding surface on this platform.
     testCases: Array.isArray(q.testCases) ? q.testCases.filter((tc) => !tc.isHidden) : undefined,
   };
+}
+
+// Proctoring policy frozen onto the attempt at start (config.proctoring) so an admin toggling the
+// subject mid-attempt can't loosen or tighten the rules for a student already sitting the test.
+function proctoringSnapshotOf(subject) {
+  return {
+    enabled: !!subject.proctoringEnabled,
+    requireWebcam: !!subject.proctoringEnabled && !!subject.requireWebcam,
+    requireMicrophone: !!subject.proctoringEnabled && !!subject.requireMicrophone,
+    maxViolations: subject.maxViolations || 3,
+  };
+}
+
+// While an attempt is IN_PROGRESS the student must never learn whether an answer was right or what
+// it scored -- that turns every question into a free oracle (pick, read the verdict, change, repeat)
+// and lets coding answers be probed against hidden tests via repeated saves. Grading happens once,
+// server-side, at completion (utils/readinessCompletion.js). Applied to every in-progress response.
+function stripAnswerFeedback(answer) {
+  if (!answer) return answer;
+  const { score, isCorrect, ...rest } = answer;
+  return rest;
 }
 
 // =========================== Admin/Staff: Subject configuration ===========================
@@ -201,7 +213,14 @@ function validateSubjectPayload(body) {
   return null;
 }
 
-const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive", "certificateEnabled", "certificateMinLevel", "maxAttempts"];
+const SUBJECT_FIELDS = ["name", "code", "department", "program", "description", "topics", "questionTypesAllowed", "defaultBtlDistribution", "assessmentModes", "employabilityIndicators", "defaultDurationMin", "passingPercent", "readinessThresholds", "isActive", "certificateEnabled", "certificateMinLevel", "maxAttempts", "proctoringEnabled", "requireWebcam", "requireMicrophone", "maxViolations"];
+
+// Proctoring settings arrive from an admin form; coerce so a stray string never reaches Prisma and a
+// nonsensical limit (0, negative, huge) can never disable or effectively bypass the auto-terminate.
+function coerceProctoringFields(data) {
+  for (const f of ["proctoringEnabled", "requireWebcam", "requireMicrophone"]) if (f in data) data[f] = data[f] === true || data[f] === "true";
+  if ("maxViolations" in data) data.maxViolations = Math.min(20, Math.max(1, parseInt(data.maxViolations, 10) || 3));
+}
 
 router.post("/admin/subjects", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
@@ -210,6 +229,7 @@ router.post("/admin/subjects", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
 
     const data = {};
     for (const f of SUBJECT_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f];
+    coerceProctoringFields(data);
     data.instituteId = req.requesterInstituteId || req.body.instituteId || null;
     data.createdById = req.user.id;
 
@@ -253,6 +273,7 @@ router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "SUPER_AD
 
     const data = {};
     for (const f of SUBJECT_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f];
+    coerceProctoringFields(data);
 
     // Same duplicate-name guard as POST above, only when the name is actually being changed —
     // instituteId can't move via PATCH (not in SUBJECT_FIELDS), so `existing.instituteId` is
@@ -398,7 +419,7 @@ router.delete("/admin/subjects/:id/students/:studentId/attempts", authenticate, 
 
     const { assessmentMode } = req.body || {};
     const where = {
-      subjectId: subject.id, studentId: student.id, status: { in: ["COMPLETED", "EXPIRED"] },
+      subjectId: subject.id, studentId: student.id, status: { in: ["COMPLETED", "EXPIRED", "TERMINATED"] },
       ...(assessmentMode ? { assessmentMode } : {}),
     };
     const { count: deletedCount } = await prisma.readinessAssessment.deleteMany({ where }); // cascades Answers/Report
@@ -450,15 +471,25 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
     const eligible = await studentCanAccessReadinessSubject(prisma, subjectId, student?.academicGroupId, student?.program, student?.instituteId);
     if (!eligible) return res.status(403).json({ error: "This subject is not assigned to your academic group" });
 
-    const existing = await prisma.readinessAssessment.findFirst({
+    let existing = await prisma.readinessAssessment.findFirst({
       where: { studentId: req.user.id, subjectId, assessmentMode, status: "IN_PROGRESS" },
       include: { answers: { orderBy: { createdAt: "asc" } } },
     });
+    // An in-progress attempt whose clock already ran out is closed out (graded, EXPIRED) instead of
+    // being resumed -- otherwise "Start" on a stale attempt would hand back a zero-second test.
+    // It then counts against the attempt cap like any other finished attempt, below.
+    if (existing && Date.now() > readinessDeadlineOf(existing)) {
+      await completeReadinessAssessment(existing.id);
+      existing = null;
+    }
     if (existing) {
       const questions = await prisma.question.findMany({ where: { id: { in: existing.answers.map((a) => a.questionId) } }, include: { testCases: true } });
       const ordered = existing.answers.map((a) => questions.find((q) => q.id === a.questionId)).filter(Boolean);
       logger.info("READINESS_ASSESSMENT_RESUMED", { assessmentId: existing.id, studentId: req.user.id, subjectId, questionCount: ordered.length });
-      return res.json({ assessment: existing, questions: ordered.map((q) => sanitizeQuestionForStudent(q, `${existing.id}:${q.id}`)), resumed: true });
+      // `answers` goes out with feedback stripped so a resumed attempt can restore the student's
+      // picks/drafts without revealing correctness or score.
+      const safeExisting = { ...existing, answers: existing.answers.map(stripAnswerFeedback) };
+      return res.json({ assessment: safeExisting, questions: ordered.map((q) => sanitizeQuestionForStudent(q, `${existing.id}:${q.id}`)), resumed: true, serverTime: new Date().toISOString() });
     }
 
     // Server-side attempt cap — a resumed in-progress attempt (handled above) never counts against
@@ -470,7 +501,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
     // by deliberately never finishing one in time.
     if (subject.maxAttempts != null) {
       const completedCount = await prisma.readinessAssessment.count({
-        where: { studentId: req.user.id, subjectId, assessmentMode, status: { in: ["COMPLETED", "EXPIRED"] } },
+        where: { studentId: req.user.id, subjectId, assessmentMode, status: { in: ["COMPLETED", "EXPIRED", "TERMINATED"] } },
       });
       if (completedCount >= subject.maxAttempts) {
         return res.status(403).json({ error: `You've used all ${subject.maxAttempts} attempt${subject.maxAttempts === 1 ? "" : "s"} for this assessment.`, maxAttemptsReached: true, maxAttempts: subject.maxAttempts, attemptsUsed: completedCount });
@@ -494,7 +525,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
     const createAssessment = () => prisma.$transaction(async (tx) => {
       if (subject.maxAttempts != null) {
         const recount = await tx.readinessAssessment.count({
-          where: { studentId: req.user.id, subjectId, assessmentMode, status: { in: ["COMPLETED", "EXPIRED"] } },
+          where: { studentId: req.user.id, subjectId, assessmentMode, status: { in: ["COMPLETED", "EXPIRED", "TERMINATED"] } },
         });
         if (recount >= subject.maxAttempts) {
           const err = new Error("Attempt cap reached");
@@ -507,6 +538,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
           studentId: req.user.id, subjectId, assessmentMode, blueprint, durationMin: subject.defaultDurationMin,
           config: {
             usedFallback, shortfallLevels,
+            proctoring: proctoringSnapshotOf(subject),
             // Snapshotted at attempt-start so an admin editing readinessThresholds/
             // employabilityIndicators WHILE a student is mid-attempt can't retroactively change
             // which policy their in-flight attempt gets graded against at finalize (Phase 39: "must
@@ -541,7 +573,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
 
     logger.info("READINESS_ASSESSMENT_CREATED", { assessmentId: assessment.id, studentId: req.user.id, subjectId, assessmentMode, questionCount: items.length, usedFallback });
 
-    res.json({ assessment, questions: items.map((q) => sanitizeQuestionForStudent(q, `${assessment.id}:${q.id}`)), resumed: false, usedFallback, shortfallLevels });
+    res.json({ assessment, questions: items.map((q) => sanitizeQuestionForStudent(q, `${assessment.id}:${q.id}`)), resumed: false, usedFallback, shortfallLevels, serverTime: new Date().toISOString() });
   } catch (err) {
     if (err.status === 400) return res.status(400).json({ error: err.message });
     console.error(err);
@@ -560,10 +592,18 @@ router.get("/assessments/:id", authenticate, requireRole("STUDENT"), async (req,
     });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(404).json({ error: "Assessment not found" });
     const questions = await prisma.question.findMany({ where: { id: { in: assessment.answers.map((a) => a.questionId) } }, include: { testCases: true } });
-    const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}, `${assessment.id}:${a.questionId}`), answer: a }));
+    // Time already up but nobody closed the attempt (tab closed, browser throttled): close it now so
+    // the student lands on a real report instead of a zero-second test.
+    if (assessment.status === "IN_PROGRESS" && Date.now() > readinessDeadlineOf(assessment)) {
+      await completeReadinessAssessment(assessment.id);
+      return res.status(409).json({ error: "Time is up for this assessment", finalized: true });
+    }
+    const inProgress = assessment.status === "IN_PROGRESS";
+    const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}, `${assessment.id}:${a.questionId}`), answer: inProgress ? stripAnswerFeedback(a) : a }));
     res.json({
-      assessment: { ...assessment, academicContext: formatAcademicContext(assessment.student), coverage: computeAssessmentCoverage(assessment.blueprint) },
+      assessment: { ...assessment, answers: inProgress ? assessment.answers.map(stripAnswerFeedback) : assessment.answers, academicContext: formatAcademicContext(assessment.student), coverage: computeAssessmentCoverage(assessment.blueprint) },
       questions: ordered,
+      serverTime: new Date().toISOString(),
     });
   } catch (err) {
     console.error(err);
@@ -576,9 +616,9 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
     const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id } });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
     if (assessment.status !== "IN_PROGRESS") return res.status(400).json({ error: "This assessment is already finalized" });
-    // Server-side deadline enforcement (see readinessDeadlineOf's own comment for why this was
-    // missing) -- rejects a save attempted after time is up rather than silently accepting it.
-    if (Date.now() > readinessDeadlineOf(assessment)) return res.status(403).json({ error: "Time is up for this assessment" });
+    // Server-side deadline enforcement -- rejects a save attempted after time is up rather than
+    // silently accepting it. A small grace covers the in-flight autosave of the final seconds.
+    if (Date.now() > readinessDeadlineOf(assessment) + 5000) return res.status(403).json({ error: "Time is up for this assessment" });
 
     const { questionId, answerText, code, language, selectedOptions, skipped, timeTakenSec } = req.body;
     // Every question in this assessment already has a readinessAnswer row pre-created (skipped:
@@ -592,111 +632,89 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
     const existingAnswer = await prisma.readinessAnswer.findUnique({ where: { assessmentId_questionId: { assessmentId: assessment.id, questionId } } });
     if (!existingAnswer) return res.status(403).json({ error: "This question is not part of your assessment" });
 
-    const question = await prisma.question.findUnique({ where: { id: questionId }, include: { testCases: true } });
+    const question = await prisma.question.findUnique({ where: { id: questionId }, select: { id: true, questionType: true } });
     if (!question) return res.status(404).json({ error: "Question not found" });
 
-    // selectedOptions arrives as positions in the shuffled display order this student was shown
-    // (see sanitizeQuestionForStudent — same `${assessmentId}:${questionId}` seed) — invert back to
-    // original Question.options/correctAnswer indices before grading. Stored as-submitted (shuffled
-    // space) below, same convention as Test/Submission — the review endpoint re-shuffles options
-    // the same way when displaying it back, so the stored value and the displayed options stay consistent.
-    const shuffleOrder = Array.isArray(question.options) ? shuffleQuestionOptions(question.options, null, `${assessment.id}:${questionId}`).order : null;
-    const originalSelectedOptions = Array.isArray(selectedOptions) ? toOriginalSelection(selectedOptions, shuffleOrder) : selectedOptions;
-
-    const { score, isCorrect } = await gradeReadinessAnswer(question, { answerText, code, language, selectedOptions: originalSelectedOptions, skipped });
-
-    const normalizedOptions = Array.isArray(selectedOptions) ? selectedOptions : null;
+    // This route only STORES the student's pick/draft -- it deliberately does not grade. Grading
+    // happens once at completion (completeReadinessAssessment -> gradePendingAnswers), mapping the
+    // stored shuffled-space selection back to original indices. That keeps the response free of any
+    // correctness/score signal (no per-answer oracle, no hidden-test probing via repeated saves) and
+    // makes a 10s autosave a cheap write instead of a judge run. selectedOptions is stored exactly
+    // as submitted (positions in the shuffled display order the student was shown).
+    const normalizedOptions = Array.isArray(selectedOptions) ? selectedOptions.map(Number).filter(Number.isInteger) : null;
+    const isSkipped = !!skipped;
     const answer = await prisma.readinessAnswer.update({
       where: { assessmentId_questionId: { assessmentId: assessment.id, questionId } },
-      data: { answerText: answerText ?? null, code: code ?? null, language: language ?? null, selectedOptions: normalizedOptions, skipped: !!skipped, score, isCorrect, timeTakenSec: timeTakenSec ?? null },
+      data: {
+        answerText: typeof answerText === "string" ? answerText.slice(0, 20000) : null,
+        code: typeof code === "string" ? code.slice(0, 100000) : null,
+        language: typeof language === "string" ? language.slice(0, 40) : null,
+        selectedOptions: normalizedOptions, skipped: isSkipped,
+        // Reset any earlier grade so the answer is re-graded from its FINAL content at completion.
+        score: 0, isCorrect: null, timeTakenSec: Number.isFinite(Number(timeTakenSec)) ? Math.max(0, Math.round(Number(timeTakenSec))) : null,
+      },
     });
-    logger.info("READINESS_ANSWER_SAVED", { assessmentId: assessment.id, questionId, questionType: question.questionType, skipped: !!skipped, score });
+    logger.info("READINESS_ANSWER_SAVED", { assessmentId: assessment.id, questionId, questionType: question.questionType, skipped: isSkipped });
 
-    res.json({ saved: true, answer });
+    res.json({ saved: true, answer: stripAnswerFeedback(answer) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to save answer" });
   }
 });
 
-router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), async (req, res) => {
+// STUDENT: report a proctoring violation. classifyViolation() is the sole source of truth for the
+// severity and whether this occurrence counts toward maxViolations -- never a client-supplied flag.
+// At the limit the attempt is terminated SERVER-SIDE (graded with whatever was saved, flagged
+// TERMINATED, no certificate): enforcement never depends on the browser still being cooperative.
+router.post("/assessments/:id/violation", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const assessment = await prisma.readinessAssessment.findUnique({
-      where: { id: req.params.id },
-      include: { report: true, subject: true, student: { include: { institute: true } } },
-    });
+    const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id } });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
-    if (assessment.status !== "IN_PROGRESS") return res.json({ assessment, report: assessment.report });
+    const proctoring = assessment.config?.proctoring || { enabled: false, maxViolations: 3 };
+    if (assessment.status !== "IN_PROGRESS") {
+      return res.json({ violationCount: assessment.violationCount, maxViolations: proctoring.maxViolations, autoSubmitted: true, status: assessment.status });
+    }
+    // Unproctored attempts record nothing and can never be terminated by a (forged) violation call.
+    if (!proctoring.enabled) return res.json({ violationCount: 0, maxViolations: proctoring.maxViolations, penalized: false, autoSubmitted: false });
 
-    const answers = await prisma.readinessAnswer.findMany({ where: { assessmentId: assessment.id } });
-    const questions = await prisma.question.findMany({ where: { id: { in: answers.map((a) => a.questionId) } } });
-    const answersWithQuestions = answers.map((a) => ({ ...a, question: questions.find((q) => q.id === a.questionId) || {} }));
+    const type = String(req.body.type || "UNKNOWN").toUpperCase().replace(/[^A-Z0-9_]/g, "").slice(0, 40) || "UNKNOWN";
+    const priorSuspiciousCount = await prisma.readinessViolation.count({ where: { assessmentId: assessment.id, severity: "SUSPICIOUS" } });
+    const { severity, penalized } = classifyViolation(type, priorSuspiciousCount);
 
-    // Grade against the scoring policy that was in effect when this attempt STARTED, not whatever
-    // the subject looks like now -- see the scoringPolicy comment at attempt-creation above.
-    // Assessments created before this fix have no config.scoringPolicy; falling back to the live
-    // subject for those is unavoidable (nothing was snapshotted) and matches this route's exact
-    // prior behavior, so no existing in-flight attempt breaks.
-    const scoringPolicy = assessment.config?.scoringPolicy;
-    const effectiveSubject = scoringPolicy ? { ...assessment.subject, ...scoringPolicy } : assessment.subject;
-    const built = buildReadinessReport(answersWithQuestions, effectiveSubject);
-    // Distinguishes a submission the server's own clock confirms was on time from one accepted
-    // only because it's finalize's job to always be able to close out an attempt (matches
-    // tests.js's identical "finalize is never blocked by the deadline" reasoning -- a legitimately
-    // in-flight submission at the moment time ran out must still go through) -- EXPIRED vs
-    // COMPLETED was already in the schema's documented status vocabulary but nothing ever set it.
-    const isLate = Date.now() > readinessDeadlineOf(assessment);
-
-    const [updatedAssessment, report] = await prisma.$transaction([
-      prisma.readinessAssessment.update({ where: { id: assessment.id }, data: { status: isLate ? "EXPIRED" : "COMPLETED", submittedAt: new Date() } }),
-      prisma.readinessReport.upsert({
-        where: { assessmentId: assessment.id },
-        update: built,
-        create: { assessmentId: assessment.id, studentId: assessment.studentId, ...built },
-      }),
-    ]);
-
-    logger.info("READINESS_ASSESSMENT_COMPLETED", { assessmentId: assessment.id, studentId: assessment.studentId, subjectId: assessment.subjectId, overallScore: report.overallScore, readinessLevel: report.readinessLevel });
-
-    // Every filter combination admin/staff have ever queried gets its own cache key (see
-    // GET /admin/analytics's filterKey), so a plain single-key invalidate can't target them all —
-    // invalidate() already supports prefix-matching for exactly this "whole family of cached reads"
-    // case (see its own comment in cache.js). Without this, a just-submitted assessment could stay
-    // invisible on the faculty dashboard for up to the 60s TTL.
-    invalidate("readinessAnalytics");
-    invalidate("readinessAnalyticsCompare");
-    invalidate("readinessPlacementOverview");
-
-    // Certificate-on-completion: opt-in per subject (CRITICAL RULE — never auto-issue unless the
-    // admin has explicitly enabled it and set a minimum level). One cert per student per subject —
-    // idempotency is the studentId+readinessSubjectId+type DB unique constraint, so a student
-    // re-attempting after already qualifying is a no-op here, and per this platform's "no
-    // downgrade on retake" convention a cert already earned is never revoked by a later, weaker
-    // attempt. Runs fire-and-forget (like the CODING_ASSESSMENT issuance in
-    // gradeModuleCodingAttempt.js) so a certificate failure never blocks the student's report.
-    const subject = assessment.subject;
-    if (subject.certificateEnabled && subject.certificateMinLevel) {
-      const requiredRank = READINESS_LEVEL_RANK[subject.certificateMinLevel] ?? 0;
-      const earnedRank = READINESS_LEVEL_RANK[report.readinessLevel] ?? 0;
-      if (earnedRank >= requiredRank) {
-        const already = await prisma.certificate.findUnique({
-          where: { studentId_readinessSubjectId_type: { studentId: assessment.studentId, readinessSubjectId: subject.id, type: "READINESS" } },
-        });
-        if (!already) {
-          issueCertificate({
-            type: "READINESS",
-            studentId: assessment.studentId,
-            readinessSubjectId: subject.id,
-            readinessLevel: report.readinessLevel,
-            title: `${subject.name} Employability Readiness`,
-            instituteCode: assessment.student.institute?.code,
-            programCode: subject.code,
-          }).catch((err) => console.error("Readiness certificate issuance failed:", err));
-        }
-      }
+    let violationCount = assessment.violationCount;
+    if (penalized) {
+      // Atomic increment: two violations landing together (blur + fullscreen exit) must both count.
+      const [, updated] = await prisma.$transaction([
+        prisma.readinessViolation.create({ data: { assessmentId: assessment.id, type, severity, penalized } }),
+        prisma.readinessAssessment.update({ where: { id: assessment.id }, data: { violationCount: { increment: 1 } }, select: { violationCount: true } }),
+      ]);
+      violationCount = updated.violationCount;
+    } else {
+      await prisma.readinessViolation.create({ data: { assessmentId: assessment.id, type, severity, penalized } });
     }
 
-    res.json({ assessment: updatedAssessment, report });
+    const autoSubmitted = penalized && violationCount >= proctoring.maxViolations;
+    if (autoSubmitted) {
+      await completeReadinessAssessment(assessment.id, { terminationReason: "MAX_VIOLATIONS" });
+      logger.warn("READINESS_ASSESSMENT_TERMINATED", { assessmentId: assessment.id, studentId: req.user.id, reason: "MAX_VIOLATIONS", violationCount });
+    }
+    res.json({ violationCount, maxViolations: proctoring.maxViolations, severity, penalized, autoSubmitted });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to record violation" });
+  }
+});
+
+// STUDENT: submit. Grading, report, status (COMPLETED / EXPIRED when late) and certificates all go
+// through completeReadinessAssessment so manual submit, timer auto-submit, violation termination
+// and the background sweep behave identically. Idempotent.
+router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id }, select: { id: true, studentId: true } });
+    if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
+    const result = await completeReadinessAssessment(assessment.id);
+    res.json({ assessment: result.assessment, report: result.report });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to finalize assessment" });
@@ -739,7 +757,7 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
     // Includes EXPIRED alongside COMPLETED -- an assessment that timed out still has a real,
     // scored report (finalize builds one either way, see readinessDeadlineOf's comment), so hiding
     // it from the student's own history would just look like the attempt vanished.
-    const where = { studentId: req.user.id, status: { in: ["COMPLETED", "EXPIRED"] }, ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}) };
+    const where = { studentId: req.user.id, status: { in: ["COMPLETED", "EXPIRED", "TERMINATED"] }, ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}) };
     const [assessments, total] = await Promise.all([
       prisma.readinessAssessment.findMany({
         where, include: { report: true, subject: { select: { id: true, name: true } } },
@@ -755,7 +773,7 @@ router.get("/history", authenticate, requireRole("STUDENT"), async (req, res) =>
     let trend = null;
     if (page === 1) {
       const all = await prisma.readinessAssessment.findMany({
-        where: { studentId: req.user.id, status: { in: ["COMPLETED", "EXPIRED"] } },
+        where: { studentId: req.user.id, status: { in: ["COMPLETED", "EXPIRED", "TERMINATED"] } },
         select: { submittedAt: true, subject: { select: { name: true } }, report: { select: { overallScore: true } } },
         orderBy: { submittedAt: "asc" },
       });
