@@ -28,8 +28,23 @@ const MAX_RETRY_AFTER_MS = Number(process.env.GEMINI_MAX_RETRY_AFTER_MS) || 1200
 // doesn't support thinkingConfig at all.
 const THINKING_LEVEL = process.env.GEMINI_THINKING_LEVEL || "minimal";
 
+// Optional extra keys (GEMINI_API_KEY_2, GEMINI_API_KEY_3 or a comma list in GEMINI_API_KEYS) turn
+// the per-key rate limit into a pool: a 429 on one key makes the retry use the next key right away
+// instead of waiting for the first key's quota window to reopen. With only GEMINI_API_KEY set,
+// behaviour is exactly as before. Keys come from the environment only and are never logged.
+function geminiKeys() {
+  const list = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2, process.env.GEMINI_API_KEY_3, ...String(process.env.GEMINI_API_KEYS || "").split(",")]
+    .map((k) => (k || "").trim()).filter(Boolean);
+  return [...new Set(list)];
+}
+let keyCursor = 0;
+function pickKey(offset = 0) {
+  const keys = geminiKeys();
+  return keys[(keyCursor + offset) % keys.length];
+}
+
 function isConfigured() {
-  return !!process.env.GEMINI_API_KEY;
+  return geminiKeys().length > 0;
 }
 
 function sleep(ms) {
@@ -44,8 +59,8 @@ function backoffDelay(attempt) {
   return base + Math.random() * base * 0.25;
 }
 
-async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode }) {
-  const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode, keyOffset = 0 }) {
+  const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${pickKey(keyOffset)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -136,14 +151,17 @@ async function generateContent({ model = DEFAULT_MODEL, system, prompt, maxToken
     throw err;
   }
 
+  keyCursor++; // round-robin the starting key per call so load spreads across a key pool
   let lastErr;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode });
+      return await callGeminiOnce({ model, system, prompt, maxTokens, temperature, jsonMode, keyOffset: attempt });
     } catch (err) {
       lastErr = err;
       if (!err.retryable || attempt === maxRetries) throw err;
-      await sleep(Math.max(backoffDelay(attempt), err.retryAfterMs || 0));
+      // With a key pool the next attempt uses a different key, so a 429 on this one needs no long wait.
+      const poolHasAnother = geminiKeys().length > 1;
+      await sleep(poolHasAnother ? backoffDelay(attempt) : Math.max(backoffDelay(attempt), err.retryAfterMs || 0));
     }
   }
   throw lastErr;

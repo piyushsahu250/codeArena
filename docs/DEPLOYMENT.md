@@ -23,7 +23,7 @@ rather than assuming the doc is still right.
   `fetch-secrets-envfile.sh` does not exist; do not assume it does). Edit this file directly for any
   env var change, non-secret config included (there's no separate "config vs secrets" split in
   practice despite `codearena/backend/secrets` in Secrets Manager holding the handful of truly
-  sensitive values — DATABASE_URL, DIRECT_DATABASE_URL, GEMINI_API_KEY, GEMINI_MODEL, JWT_SECRET,
+  sensitive values — DATABASE_URL, DIRECT_DATABASE_URL, GEMINI_API_KEY (optionally GEMINI_API_KEY_2/_3 or GEMINI_API_KEYS=a,b to pool keys and spread rate limits), GEMINI_MODEL, JWT_SECRET,
   MAIL_PASSWORD, PII_ENCRYPTION_KEY). Reconstruct it from a running container if it's ever lost:
   `docker inspect codearena-backend --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -vE '^(PATH|NODE_VERSION|YARN_VERSION)=' > /opt/codearena/container.env`.
 - **Build:** `cd /opt/codearena/backend && docker build -t codearena-backend:latest .` — context
