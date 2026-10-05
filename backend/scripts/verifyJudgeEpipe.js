@@ -9,7 +9,7 @@ const countEpipe = () => { try { return (fs.readFileSync(logFile, "utf8").match(
   let uncaught = 0;
   process.on("uncaughtException", () => { uncaught++; });
   const big = Array.from({ length: 200000 }, (_, i) => i).join(" ");
-  const langs = { python: "print(1)\n", java: "public class Main { public static void main(String[] a){ System.out.println(1); } }", c: "#include <stdio.h>\nint main(){printf(\"1\n\");return 0;}" };
+  const langs = { python: "print(1)\n", java: "public class Main { public static void main(String[] a){ System.out.println(1); } }", c: "#include <stdio.h>\nint main(){putchar(49);putchar(10);return 0;}" };
   let bad = 0;
   for (const [language, code] of Object.entries(langs)) {
     for (let i = 0; i < 5; i++) {
