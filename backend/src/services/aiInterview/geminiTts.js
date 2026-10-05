@@ -18,7 +18,7 @@ const TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Kore";
 const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 30000;
 
 function isConfigured() {
-  return !!process.env.GEMINI_API_KEY;
+  return require("../ai/geminiProvider").isConfigured();
 }
 
 // Synthesizes `text` verbatim as spoken audio — the whole reason this module exists as a SEPARATE
@@ -39,7 +39,7 @@ async function synthesizeSpeech(text) {
   }
   if (!text || !text.trim()) throw new Error("synthesizeSpeech: text must be non-empty");
 
-  const url = `${GEMINI_API_BASE}/${TTS_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url = `${GEMINI_API_BASE}/${TTS_MODEL}:generateContent?key=${require("../ai/geminiProvider").pickKey()}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {

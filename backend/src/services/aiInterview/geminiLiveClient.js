@@ -22,7 +22,7 @@ const LIVE_MODEL = process.env.GEMINI_LIVE_MODEL || "gemini-2.5-flash-native-aud
 const LIVE_WS_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 
 function isConfigured() {
-  return !!process.env.GEMINI_API_KEY;
+  return require("../ai/geminiProvider").isConfigured();
 }
 
 // Emits: "ready" (setup ack received, safe to start streaming audio), "partialTranscript" (text,
@@ -40,7 +40,7 @@ class GeminiLiveSttSession extends EventEmitter {
     }
     this._transcriptBuffer = "";
     this._closed = false;
-    this._ws = new WebSocket(`${LIVE_WS_URL}?key=${process.env.GEMINI_API_KEY}`);
+    this._ws = new WebSocket(`${LIVE_WS_URL}?key=${require("../ai/geminiProvider").pickKey()}`);
 
     this._ws.on("open", () => {
       // Setup message — must be the first client message on a fresh connection. Automatic

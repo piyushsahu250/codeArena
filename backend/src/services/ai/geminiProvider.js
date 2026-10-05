@@ -174,4 +174,4 @@ async function generateContent({ model = DEFAULT_MODEL, system, prompt, maxToken
   throw lastErr;
 }
 
-module.exports = { generateContent, isConfigured, DEFAULT_MODEL };
+module.exports = { generateContent, isConfigured, DEFAULT_MODEL, geminiKeys, pickKey };
