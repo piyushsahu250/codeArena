@@ -68,7 +68,7 @@ async function gradePendingAnswers(assessment) {
 // Idempotent and race-safe: report upsert is idempotent, and the status flip is an atomic
 // updateMany keyed on status still being IN_PROGRESS, so a manual submit racing a violation
 // auto-submit can't both "win" (and award a certificate twice).
-async function completeReadinessAssessment(assessmentId, { terminationReason = null } = {}) {
+async function completeReadinessAssessmentOnce(assessmentId, { terminationReason = null } = {}) {
   const assessment = await prisma.readinessAssessment.findUnique({
     where: { id: assessmentId },
     include: { report: true, subject: true, student: { include: { institute: true } } },
@@ -138,6 +138,18 @@ async function completeReadinessAssessment(assessmentId, { terminationReason = n
   }
 
   return { assessment: updated, report };
+}
+
+// Concurrent calls for the SAME assessment (a client retry after its own timeout, a manual submit
+// racing the violation auto-submit or the sweep) share one in-flight run instead of each grading
+// every answer again -- duplicate judge work is exactly what makes a submit stampede slower.
+const inflight = new Map();
+function completeReadinessAssessment(assessmentId, opts = {}) {
+  const existing = inflight.get(assessmentId);
+  if (existing) return existing;
+  const p = completeReadinessAssessmentOnce(assessmentId, opts).finally(() => inflight.delete(assessmentId));
+  inflight.set(assessmentId, p);
+  return p;
 }
 
 module.exports = { completeReadinessAssessment, readinessDeadlineOf };

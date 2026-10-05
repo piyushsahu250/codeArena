@@ -536,7 +536,7 @@ export default function ModuleCodingAssessment() {
     let lastErr = null;
     for (let attempt = 1; attempt <= 3 && !data; attempt++) {
       try {
-        const res = await api.post(`/module-coding/attempts/${attemptId}/finalize`, { reason });
+        const res = await api.post(`/module-coding/attempts/${attemptId}/finalize`, { reason }, { timeout: 180000 });
         data = res.data;
       } catch (err) {
         lastErr = err;

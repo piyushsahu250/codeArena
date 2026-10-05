@@ -372,7 +372,9 @@ export default function ReadinessAssessment() {
     let ok = false;
     for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
       try {
-        await api.post(`/readiness/assessments/${assessmentId}/finalize`);
+        // Grading runs every coding answer through the judge, which takes longer when a whole class
+        // submits together -- the 45s global axios default would time out and retry mid-grading.
+        await api.post(`/readiness/assessments/${assessmentId}/finalize`, null, { timeout: 180000 });
         ok = true;
       } catch {
         if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2000));
