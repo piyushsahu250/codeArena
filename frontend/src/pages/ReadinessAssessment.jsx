@@ -15,6 +15,13 @@ import useIsMobile from "../hooks/useIsMobile";
 import api, { API_BASE_URL } from "../api";
 
 const QUIZ_TYPES = ["MCQ", "TRUE_FALSE", "MULTISELECT"];
+
+// Starter for a coding question in a given language: the question's own per-language template, else
+// the generic one. Deliberately never the legacy single-language q.starterCode (it only matches one
+// language and showed up under the wrong selector).
+function starterFor(q, lang) {
+  return q.starterCodeByLanguage?.[lang] || defaultStarter(lang);
+}
 const AUTOSAVE_INTERVAL_MS = 10000;
 
 const VIOLATION_LABEL = {
@@ -83,6 +90,7 @@ export default function ReadinessAssessment() {
   const finalizedRef = useRef(false);
   const answersRef = useRef({});
   const dirtyRef = useRef(new Set()); // questionIds with changes not yet confirmed saved
+  const draftsRef = useRef({}); // { [questionId]: { [language]: code } } -- switching language never discards or cross-contaminates code
   const inFlightRef = useRef(new Set());
   const againRef = useRef(new Set()); // changed again while a save was in flight
   const questionsRef = useRef([]);
@@ -161,10 +169,12 @@ export default function ReadinessAssessment() {
           // language the student is already using elsewhere in this attempt.
           initial[q.id] = { selected: [], code: undefined, language: undefined, skipped: !answered };
         } else {
+          const code = q.questionType === "CODING" && ans.language ? (ans.code ?? starterFor(q, ans.language)) : ans.code;
           initial[q.id] = {
             selected: Array.isArray(ans.selectedOptions) ? ans.selectedOptions : [],
-            code: ans.code, language: ans.language, skipped: !answered,
+            code, language: ans.language, skipped: !answered,
           };
+          if (q.questionType === "CODING" && ans.language) draftsRef.current[q.id] = { [ans.language]: code };
           if (q.questionType === "CODING" && ans.language) lastKnownLang = ans.language;
         }
       }
@@ -192,7 +202,8 @@ export default function ReadinessAssessment() {
       if (a?.language) return prev;
       const lang = preferredLanguageRef.current || "python";
       preferredLanguageRef.current = lang;
-      const code = current.starterCodeByLanguage?.[lang] || current.starterCode || defaultStarter(lang);
+      const code = starterFor(current, lang);
+      draftsRef.current[current.id] = { ...draftsRef.current[current.id], [lang]: code };
       return { ...prev, [current.id]: { ...a, language: lang, code } };
     });
   }, [current]);
@@ -314,12 +325,18 @@ export default function ReadinessAssessment() {
   function setCode(code) {
     if (!current) return;
     // The untouched starter template isn't an answer -- only a real edit marks the question answered.
+    const lang = answers[current.id]?.language;
+    if (lang) draftsRef.current[current.id] = { ...draftsRef.current[current.id], [lang]: code };
     markChanged(current.id, { code });
   }
 
   function setLanguage(language) {
     const a = answers[current.id];
-    const code = a.code && a.code.trim() && a.code !== defaultStarter(a.language) ? a.code : (current.starterCodeByLanguage?.[language] || defaultStarter(language));
+    // Restore whatever was already written in the target language; otherwise that language's own
+    // starter -- never the previous language's code (that left Python under a "Java" selector).
+    if (a.language) draftsRef.current[current.id] = { ...draftsRef.current[current.id], [a.language]: a.code };
+    const code = draftsRef.current[current.id]?.[language] ?? starterFor(current, language);
+    draftsRef.current[current.id] = { ...draftsRef.current[current.id], [language]: code };
     if (a.skipped === false) markChanged(current.id, { language, code });
     else setAnswers((prev) => ({ ...prev, [current.id]: { ...prev[current.id], language, code } }));
     preferredLanguageRef.current = language;
