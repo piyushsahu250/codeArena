@@ -70,7 +70,17 @@ rather than assuming the doc is still right.
     doesn't, and hasn't for a while — verify against `docker-entrypoint.sh` directly if this ever
     matters again rather than trusting this line.
 - **Health check:** `curl http://127.0.0.1:4000/api/health` (from the instance) or the public
-  domain externally.
+  domain externally. `commit` in the response is the git commit baked into the running image
+  (Dockerfile `ARG COMMIT_SHA`) -- compare it to `git rev-parse --short HEAD` to confirm what's
+  actually deployed. It was always `null` on AWS before 2026-10-02, because nothing set it.
+- **Scripted deploy (preferred over typing the steps by hand):**
+  `aws ssm send-command --instance-ids i-02bedc5ba41539f46 --document-name AWS-RunShellScript --parameters commands='["bash /opt/codearena/scripts/deploy-aws-host.sh"]' --timeout-seconds 1800 --region ap-south-1`.
+  It pulls `main`, tags the current image as a rollback checkpoint, builds with the commit baked in,
+  swaps the container with the exact flags above, waits for a healthy response that reports the new
+  commit, and **automatically restores the previous image if it doesn't come up** (exit code
+  non-zero). Manual rollback: `docker rm -f codearena-backend` then run the `docker run` command
+  above against any `codearena-backend:rollback-<timestamp>` tag. Note the script is itself pulled
+  by `git pull`, so the very first run after this was added needs the manual steps once.
 - **Standard swap procedure**: tag the current `latest` as a timestamped rollback checkpoint before
   retagging the new build → stop/rm the old container → run the command above. A container
   recreation re-runs the full migrate/seed boot chain (see below), which takes ~20-30s before the

@@ -1,6 +1,7 @@
 const prisma = require("../prisma");
 const { gradePendingCodingSubmissions } = require("./gradeAttempt");
 const { processGamification } = require("./gamification");
+const { logAudit, AUDIT_ACTIONS } = require("./auditLog");
 
 // Finalize is normally driven entirely client-side (TestTaking.jsx's countdown calls
 // POST /finalize when it hits zero) or by the 3-strike violation handler in tests.js. Neither
@@ -19,6 +20,7 @@ async function runOnce() {
   });
 
   let finalized = 0, failed = 0;
+  const finalizedAttemptIds = [];
   for (const attempt of candidates) {
     try {
       await gradePendingCodingSubmissions(attempt.id);
@@ -28,6 +30,7 @@ async function runOnce() {
       });
       if (claim.count > 0) {
         finalized++;
+        finalizedAttemptIds.push(attempt.id);
         processGamification(attempt.studentId, {
           xpActivities: ["TEST_COMPLETE"], xpMeta: { attemptId: attempt.id }, streakEligible: true,
         }).catch((e) => console.error("[testAttemptAutoFinalizeScheduler] gamification failed", e));
@@ -36,6 +39,16 @@ async function runOnce() {
       failed++;
       console.error(`[testAttemptAutoFinalizeScheduler] Failed to finalize attempt ${attempt.id}:`, err.message);
     }
+  }
+  // One audit row per run that actually changed anything (not one per attempt, and nothing at all
+  // on an idle tick -- this runs every 5 minutes forever). Mirrors TEST_SCHEDULED_PUBLISH: the
+  // other scheduler that mutates records with no human actor, so the change is attributable and
+  // an admin investigating "why did this attempt flip to AUTO_SUBMITTED" has an answer.
+  if (finalized > 0) {
+    await logAudit({
+      action: AUDIT_ACTIONS.TEST_ATTEMPTS_AUTO_FINALIZED, actorName: "Auto-Finalize Scheduler",
+      details: { finalized, failed, attemptIds: finalizedAttemptIds.slice(0, 100) },
+    });
   }
   return { candidateCount: candidates.length, finalized, failed };
 }

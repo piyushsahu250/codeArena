@@ -143,6 +143,14 @@ RUN setcap cap_setuid,cap_setgid,cap_chown,cap_fowner,cap_kill=+ep "$(readlink -
 # above already ran as whatever user was active at each RUN line (root, same as always — this
 # directive only ever affected runtime, never build), so nothing above this line changes.
 
+# Git commit this image was built from, surfaced by GET /api/health ("commit") -- the only way to
+# confirm which code a running container actually has. Placed this late on purpose so a changing
+# value only invalidates this one tiny layer, never the expensive apt/npm layers above. Baked into
+# the image (not passed at `docker run`) so a rollback image reports the commit it really contains.
+# Pass with: docker build --build-arg COMMIT_SHA=$(git rev-parse --short HEAD) ...
+ARG COMMIT_SHA=unknown
+ENV COMMIT_SHA=$COMMIT_SHA
+
 EXPOSE 4000
 # docker-entrypoint.sh now has two jobs where it used to have one: a brief real-root phase to
 # install the network-isolation rule (see its own comment), then drop to `app` via `setpriv`
