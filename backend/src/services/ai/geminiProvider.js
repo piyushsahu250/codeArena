@@ -94,6 +94,11 @@ async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, j
         const m = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(body);
         const seconds = Number.isFinite(header) && header > 0 ? header : m ? Number(m[1]) : null;
         if (seconds) err.retryAfterMs = Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+        // A delay of minutes-to-hours (e.g. 48000s) is the DAILY free-tier request quota, not a
+        // per-minute burst limit: no amount of waiting inside this request, or retrying on the same
+        // key, can succeed. Flag it so callers fail fast with an honest message instead of burning
+        // retries (and more quota) on a request that cannot work.
+        if (seconds && seconds > 120) { err.dailyQuota = true; err.resetInSeconds = Math.round(seconds); }
       }
       throw err;
     }
@@ -159,6 +164,8 @@ async function generateContent({ model = DEFAULT_MODEL, system, prompt, maxToken
     } catch (err) {
       lastErr = err;
       if (!err.retryable || attempt === maxRetries) throw err;
+      // Daily quota on every key we have -> stop now; only worth trying again if another key exists.
+      if (err.dailyQuota && attempt + 1 >= geminiKeys().length) throw err;
       // With a key pool the next attempt uses a different key, so a 429 on this one needs no long wait.
       const poolHasAnother = geminiKeys().length > 1;
       await sleep(poolHasAnother ? backoffDelay(attempt) : Math.max(backoffDelay(attempt), err.retryAfterMs || 0));

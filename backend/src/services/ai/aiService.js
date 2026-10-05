@@ -62,6 +62,7 @@ function classifyError(err) {
   if (err.queueBusy) return "QUEUE_FULL";
   if (err.timedOut) return "TIMEOUT";
   if (err.blocked) return "BLOCKED";
+  if (err.dailyQuota) return "DAILY_QUOTA";
   if (err.status === 429) return "RATE_LIMITED";
   if (typeof err.status === "number" && err.status >= 500) return "PROVIDER_ERROR";
   if (err.invalidResponse) return "INVALID_RESPONSE";

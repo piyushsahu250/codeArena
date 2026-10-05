@@ -20,6 +20,10 @@ function sendAiError(res, err, fallbackMessage = "AI generation failed — pleas
   if (err.invalidResponse) {
     return res.status(502).json({ error: "AI service is temporarily unavailable. Please retry.", code: "AI_INVALID_RESPONSE" });
   }
+  if (err.dailyQuota) {
+    const hours = Math.max(1, Math.round((err.resetInSeconds || 0) / 3600));
+    return res.status(429).json({ error: `The AI provider's daily free usage limit has been reached. It resets in about ${hours} hour${hours === 1 ? "" : "s"}. Please try again later, or ask your administrator to enable paid AI usage.`, code: "AI_DAILY_QUOTA", resetInSeconds: err.resetInSeconds || null });
+  }
   if (err.status === 429) {
     return res.status(429).json({ error: "AI service is temporarily unavailable. Please retry.", code: "AI_RATE_LIMITED" });
   }
