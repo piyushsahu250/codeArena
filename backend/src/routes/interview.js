@@ -659,6 +659,7 @@ router.get("/sessions/:id/ai-insights", authenticate, requireRole("STUDENT"), ai
       const message = aiErr.notConfigured
         ? "AI features are not configured on this server yet."
         : aiErr.quotaExceeded ? aiErr.message
+        : aiErr.dailyQuota ? "The AI provider's daily free limit is used up, so the optional AI analysis is unavailable right now. Your interview score and report above are not affected — try the AI analysis again later."
         : "AI service is temporarily unavailable. Please retry.";
       await prisma.interviewReport.update({
         where: { id: report.id },
