@@ -355,22 +355,25 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
     await prisma.$queryRaw`SELECT 1`;
     const dbPingMs = Number(process.hrtime.bigint() - dbPingStart) / 1e6;
 
-    const [activeTestAttempts, activeModuleAttempts, activeInterviewSessions] = await Promise.all([
-      prisma.testAttempt.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.moduleCodingAttempt.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.interviewSession.count({ where: { status: "IN_PROGRESS" } }),
-    ]);
-
-    // "Active users" — LoginSession has no separate expiresAt column (session validity is purely
-    // the JWT's own exp claim, see utils/sessions.js), so this can't say "currently holds a valid
-    // token" with certainty. loginAt within the last 24h + never explicitly logged out is an
-    // honest, clearly-scoped proxy for "recently active," not a claim of live concurrent sessions.
-    const activeUsersSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const activeUserCount = await prisma.loginSession.findMany({
-      where: { isActive: true, loginAt: { gte: activeUsersSince } },
-      select: { userId: true },
-      distinct: ["userId"],
-    }).then((rows) => rows.length);
+    // Cached like the AI/email sections below: this page polls every 10s, and these four counts
+    // scan tables that grow with every attempt/login (LoginSession gets a row per login forever)
+    // and are only meaningful to a few seconds' precision. The distinct-user count is now done in
+    // SQL (it used to pull every matching row into Node just to read .length), and the status/
+    // loginAt columns it filters on are indexed (see schema.prisma).
+    const { activeTestAttempts, activeModuleAttempts, activeInterviewSessions, activeUserCount } = await cached("admin:monitoring:activity", 15000, async () => {
+      // "Active users" — LoginSession has no separate expiresAt column (session validity is purely
+      // the JWT's own exp claim, see utils/sessions.js), so this can't say "currently holds a valid
+      // token" with certainty. loginAt within the last 24h + never explicitly logged out is an
+      // honest, clearly-scoped proxy for "recently active," not a claim of live concurrent sessions.
+      const activeUsersSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [testAttempts, moduleAttempts, interviewSessions, userRows] = await Promise.all([
+        prisma.testAttempt.count({ where: { status: "IN_PROGRESS" } }),
+        prisma.moduleCodingAttempt.count({ where: { status: "IN_PROGRESS" } }),
+        prisma.interviewSession.count({ where: { status: "IN_PROGRESS" } }),
+        prisma.$queryRaw`SELECT COUNT(DISTINCT "userId")::int AS count FROM "LoginSession" WHERE "isActive" = true AND "loginAt" >= ${activeUsersSince}`,
+      ]);
+      return { activeTestAttempts: testAttempts, activeModuleAttempts: moduleAttempts, activeInterviewSessions: interviewSessions, activeUserCount: userRows[0]?.count ?? 0 };
+    });
 
     const snapshot = getSnapshot();
 

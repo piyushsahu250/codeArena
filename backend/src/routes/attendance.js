@@ -812,13 +812,23 @@ const CONSECUTIVE_ABSENCE_ALERT_THRESHOLD = 3;
 async function checkConsecutiveAbsenceAlerts(studentIds, subject) {
   if (!subject || studentIds.length === 0) return;
   try {
+    // One query for every absent student in this save, grouped in JS -- this used to run one
+    // joined query PER absent student (5-60+ per lecture, and a whole section absent is a normal
+    // case), multiplied by every staff member saving attendance at the same moment. Each student's
+    // rows are already newest-first (single orderBy), so slicing per student preserves the order.
+    const allRecent = await prisma.attendanceRecord.findMany({
+      where: { studentId: { in: studentIds }, session: { plan: { subject } } },
+      orderBy: { session: { plan: { scheduleDate: "desc" } } },
+      select: { studentId: true, status: true },
+    });
+    const recentByStudent = new Map();
+    for (const r of allRecent) {
+      const list = recentByStudent.get(r.studentId) || [];
+      if (list.length < CONSECUTIVE_ABSENCE_ALERT_THRESHOLD + 1) list.push({ status: r.status });
+      recentByStudent.set(r.studentId, list);
+    }
     for (const studentId of studentIds) {
-      const recent = await prisma.attendanceRecord.findMany({
-        where: { studentId, session: { plan: { subject } } },
-        orderBy: { session: { plan: { scheduleDate: "desc" } } },
-        take: CONSECUTIVE_ABSENCE_ALERT_THRESHOLD + 1,
-        select: { status: true },
-      });
+      const recent = recentByStudent.get(studentId) || [];
       if (recent.length < CONSECUTIVE_ABSENCE_ALERT_THRESHOLD) continue;
       const streak = recent.slice(0, CONSECUTIVE_ABSENCE_ALERT_THRESHOLD);
       const justBefore = recent[CONSECUTIVE_ABSENCE_ALERT_THRESHOLD]; // undefined if streak is the student's entire history

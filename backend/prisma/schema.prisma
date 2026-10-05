@@ -1097,6 +1097,10 @@ model TestAttempt {
   // Composite unique above leads with testId, so it can't serve a studentId-only lookup (used by
   // dashboard.js's "my attempts" query and users.js's per-student attempt count) — dedicated index.
   @@index([studentId])
+  // Status-only scans: admin.js /monitoring's IN_PROGRESS count, and
+  // testAttemptAutoFinalizeScheduler.js's every-5-minutes sweep for attempts still IN_PROGRESS
+  // after their test window closed. Neither filters on testId or studentId.
+  @@index([status])
 }
 
 // "Allow Reattempt" (tests.js's POST /:testId/attempts/:studentId/reattempt) deletes the student's
@@ -1187,6 +1191,14 @@ model AuditLog {
   @@index([studentId])
   @@index([instituteId])
   @@index([createdAt])
+  // Composite counterparts for the two real access patterns, both of which filter on one column and
+  // sort/range on createdAt (the single-column indexes above can only serve one side of that, so
+  // Postgres filtered or sorted the rest in memory): an institute-scoped history list
+  // (users.js GET /audit-log: where instituteId, order by createdAt desc) and the security
+  // dashboard's per-action recent-events lookups (admin.js: where action + createdAt >= since).
+  // This is the fastest-growing table on the platform -- every login and failed login writes a row.
+  @@index([instituteId, createdAt])
+  @@index([action, createdAt])
 }
 
 // Real Export History (spec: "Queued/Processing/Completed/Failed/Expired" per past export), backed
@@ -1241,6 +1253,10 @@ model LoginSession {
 
   @@index([userId])
   @@index([userId, isActive])
+  // Serves admin.js /monitoring's "active users in the last 24h" count, which filters on
+  // isActive + a loginAt range with no userId -- neither index above can lead with that. This table
+  // gains a row per login and is never pruned.
+  @@index([isActive, loginAt])
 }
 
 enum EmailStatus {
@@ -1906,6 +1922,7 @@ model ModuleCodingAttempt {
 
   @@index([moduleCodingTestId, studentId])
   @@index([studentId])
+  @@index([status]) // admin.js /monitoring counts IN_PROGRESS attempts across all tests
 }
 
 // Snapshot of which questions (and in what order) were drawn for this specific attempt — so a
