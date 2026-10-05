@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const XLSX = require("xlsx");
+const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -2239,7 +2240,7 @@ router.get("/admin/sessions/export", authenticate, requireRole("ADMIN", "SUPER_A
         "Score (%)": r.score ?? "", "Status": r.status,
       };
     });
-    const sheet = XLSX.utils.json_to_sheet(rows);
+    const sheet = XLSX.utils.json_to_sheet(rows.map(safeRow));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Interview Reports");
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });

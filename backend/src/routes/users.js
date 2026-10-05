@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const XLSX = require("xlsx");
+const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -1459,11 +1460,11 @@ router.get("/:id/performance/report.xlsx", authenticate, requireRole("ADMIN", "S
       ["Total MCQs Answered Correctly", data.summary.totalMcqCorrect],
       ["Total Time Spent (minutes)", data.summary.totalTimeSpentMin],
       ["Last Test Attempt Date", data.summary.lastAttemptDate ? new Date(data.summary.lastAttemptDate).toLocaleString() : "—"],
-    ]);
+    ].map((r) => r.map(safeCell)));
     XLSX.utils.book_append_sheet(wb, summarySheet, "Summary");
 
     const historySheet = XLSX.utils.json_to_sheet(
-      data.testHistory.map((h) => ({
+      data.testHistory.map((h) => safeRow({
         "Test Name": h.testName,
         "Date": new Date(h.date).toLocaleDateString(),
         "Score": h.resultsPending ? "Pending" : h.score,

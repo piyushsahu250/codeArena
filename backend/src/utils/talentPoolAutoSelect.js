@@ -116,7 +116,8 @@ async function evaluateCandidates(prismaClient, rule, candidateIds) {
     const reports = await prismaClient.readinessReport.findMany({
       where: {
         studentId: { in: candidateIds },
-        ...(rule.readinessSubjectId ? { assessment: { subjectId: rule.readinessSubjectId } } : {}),
+        // Proctoring-TERMINATED attempts (force-submitted with partial answers) never qualify a student.
+        assessment: { status: { in: ["COMPLETED", "EXPIRED"] }, ...(rule.readinessSubjectId ? { subjectId: rule.readinessSubjectId } : {}) },
       },
       select: { studentId: true, overallScore: true, readinessLevel: true, btlScores: true, dimensionScores: true },
     });

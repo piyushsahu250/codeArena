@@ -15,6 +15,9 @@ const { notifyResultPublished } = require("../utils/notifications");
 const { computeGrade, invalidateGradeCache } = require("../utils/resultGrading");
 const { computeResultTag, invalidateTagCache, validateRemarkBands } = require("../utils/resultTagging");
 const QRCode = require("qrcode");
+const { mapWithConcurrency } = require("../utils/queue");
+
+const BULK_IMPORT_MAX_ROWS = 5000; // per file; larger imports must be split so a request can't outlive the proxy timeout
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -1055,6 +1058,10 @@ router.get("/admin/examinations/:id/entries", authenticate, requireRole("ADMIN",
       where: { examinationId: req.params.id },
       include: { student: { select: STUDENT_SELECT }, ...SUBJECT_MARKS_INCLUDE },
       orderBy: { createdAt: "desc" },
+      // Bounded like every other list on this platform: an exam can't have more entries than one
+      // import allows (BULK_IMPORT_MAX_ROWS) in practice, but nothing previously stopped a
+      // pathological one from loading unbounded subject-marks joins into memory in one response.
+      take: BULK_IMPORT_MAX_ROWS,
     });
     res.json(entries.map(serializeEntry));
   } catch (err) {
@@ -1415,6 +1422,9 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
     if (rows.length === 0) return res.status(400).json({ error: "The uploaded file has no data rows." });
+    if (rows.length > BULK_IMPORT_MAX_ROWS) {
+      return res.status(400).json({ error: `This file has ${rows.length} rows; the limit is ${BULK_IMPORT_MAX_ROWS} per import. Split it into smaller files.` });
+    }
 
     const headerMap = buildBulkImportHeaderMap(Object.keys(rows[0]));
     if (!headerMap.instituteName || !headerMap.registrationNumber || !headerMap.obtainedMarks) {
@@ -1441,6 +1451,7 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
     const studentByInstituteAndRegNo = new Map(candidateStudents.map((s) => [`${s.instituteId}::${s.registrationNumber}`, s]));
 
     const imported = [], duplicate = [], invalidInstitute = [], invalidRegistrationNumber = [], failed = [];
+    const pendingWrites = [];
     const seen = new Set();
 
     for (let i = 0; i < rows.length; i++) {
@@ -1509,27 +1520,52 @@ router.post("/admin/examinations/:id/bulk-import", authenticate, requireRole("AD
         // Dry run (preview, the default): every validation above still ran in full — this is the
         // ONLY place that distinguishes preview from commit, so "what would happen" is guaranteed
         // to be exactly what DOES happen on the follow-up commit call with the same file.
+        // Validation above is cheap and in-memory; the DB writes are collected here and executed
+        // afterwards with bounded concurrency (see below) instead of one-at-a-time inside this loop,
+        // which made a few-thousand-row import cost thousands of sequential round trips and risk the
+        // request timeout.
+        const importedItem = { row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name, obtainedMarks: marks, status, updated: isUpdate };
+        imported.push(importedItem);
         if (commit) {
-          const autoGrade = status === "PRESENT" ? await computeGrade(examination.instituteId, percentage) : null;
-          const resultTag = status === "PRESENT" ? await computeResultTag(req.params.id, marks, percentage) : null;
-          if (isUpdate) {
-            await prisma.resultEntry.update({
-              where: { examinationId_studentId: { examinationId: req.params.id, studentId: student.id } },
-              data: { obtainedMarks: marks, status, percentage, passed, grade: autoGrade, resultTag, remarks: remarksRaw || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT", version: { increment: 1 } },
-            });
-          } else {
-            const verificationCode = await generateMarksheetCode({ instituteCode: institute.code });
-            await prisma.resultEntry.create({
-              data: {
-                examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, status, percentage, passed, grade: autoGrade, resultTag, remarks: remarksRaw || null, verificationCode,
-                enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
-              },
-            });
-          }
+          pendingWrites.push({
+            item: importedItem,
+            run: async () => {
+              const autoGrade = status === "PRESENT" ? await computeGrade(examination.instituteId, percentage) : null;
+              const resultTag = status === "PRESENT" ? await computeResultTag(req.params.id, marks, percentage) : null;
+              if (isUpdate) {
+                await prisma.resultEntry.update({
+                  where: { examinationId_studentId: { examinationId: req.params.id, studentId: student.id } },
+                  data: { obtainedMarks: marks, status, percentage, passed, grade: autoGrade, resultTag, remarks: remarksRaw || null, enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT", version: { increment: 1 } },
+                });
+              } else {
+                const verificationCode = await generateMarksheetCode({ instituteCode: institute.code });
+                await prisma.resultEntry.create({
+                  data: {
+                    examinationId: req.params.id, studentId: student.id, obtainedMarks: marks, status, percentage, passed, grade: autoGrade, resultTag, remarks: remarksRaw || null, verificationCode,
+                    enteredByAdminId: req.user.id, enteredByName: req.user.name, source: "BULK_IMPORT",
+                  },
+                });
+              }
+            },
+          });
         }
-        imported.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, name: student.name, obtainedMarks: marks, status, updated: isUpdate });
       } catch (rowErr) {
         failed.push({ row: rowNum, institute: instituteNameRaw, registrationNumber: registrationNumberRaw, reason: rowErr.message || "Unexpected error processing this row." });
+      }
+    }
+
+    // Execute the collected writes, 6 at a time (well under the DB pool size, so an import can't
+    // starve every other request the way an unbounded Promise.all would). A row whose write fails
+    // is moved from `imported` to `failed` so the admin sees the truth, not a false success.
+    if (commit && pendingWrites.length) {
+      const outcomes = await mapWithConcurrency(pendingWrites, 6, async (w) => {
+        try { await w.run(); return null; } catch (e) { return { w, message: e.message || "Database write failed." }; }
+      });
+      for (const o of outcomes) {
+        if (!o) continue;
+        const idx = imported.indexOf(o.w.item);
+        if (idx >= 0) imported.splice(idx, 1);
+        failed.push({ row: o.w.item.row, institute: o.w.item.institute, registrationNumber: o.w.item.registrationNumber, reason: o.message });
       }
     }
 

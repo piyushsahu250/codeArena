@@ -30,6 +30,7 @@ export default function AttendanceReports() {
     subject: "", semester: "", facultyId: "", lectureType: "", status: "", talentPoolId: "",
   });
   const [rows, setRows] = useState(null);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState("");
@@ -98,6 +99,7 @@ export default function AttendanceReports() {
     try {
       const { data } = await api.get("/attendance/reports", { params: activeParams() });
       setRows(data.rows);
+      setTruncated(!!data.truncated);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to load report");
     } finally {
@@ -264,6 +266,7 @@ export default function AttendanceReports() {
           <div style={{ marginTop: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>{filteredRows.length} of {rows.length} record(s)</p>
+              {truncated && <p style={{ fontSize: 12, color: "var(--amber-dark)", fontWeight: 700 }}>Showing the first {rows.length} records only. Narrow the filters, or use the download buttons for the full report.</p>}
               <input
                 style={{ ...inputStyle, maxWidth: 280 }}
                 placeholder="Search by roll number, registration number, or name…"

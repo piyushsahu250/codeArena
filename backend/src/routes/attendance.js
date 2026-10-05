@@ -16,6 +16,7 @@ const { computeAttendancePercent } = require("../utils/attendanceStats");
 const { safeErrorMessage } = require("../utils/errors");
 
 const router = express.Router();
+const ATTENDANCE_VIEW_ROW_CAP = 2000; // on-screen report cap; downloads (format=...) allow up to 10000
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
 
 const LECTURE_TYPES = ["REGULAR", "PRACTICE_TEST", "EXAM"];
@@ -1041,7 +1042,11 @@ router.get("/reports", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTIT
       // unrelated subjects; grouping by assignment keeps each subject's lectures in numeric order
       // instead of the scheduleDate-primary sort that let a rescheduled lecture drift out of order.
       orderBy: [{ session: { plan: { assignmentId: "asc" } } }, { session: { plan: { lectureNumber: "asc" } } }],
-      take: 10000, // hard ceiling — export/report views, not a paginated feed
+      // Exports keep the 10000 ceiling; the on-screen JSON view (every filter change reloads it, and each
+      // row drags a deep assignment/class/institute include) is capped far lower and flagged
+      // `truncated` so the UI can tell the admin to narrow filters or export instead of silently
+      // shipping a multi-megabyte payload.
+      take: req.query.format ? 10000 : ATTENDANCE_VIEW_ROW_CAP,
     });
 
     const rows = records.map((r) => {
@@ -1086,7 +1091,7 @@ router.get("/reports", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTIT
       return sendExport(res, { rows, filenameBase: `attendance-report-${new Date().toISOString().slice(0, 10)}`, format: req.query.format });
     }
 
-    res.json({ rows, total: rows.length });
+    res.json({ rows, total: rows.length, truncated: rows.length >= ATTENDANCE_VIEW_ROW_CAP, viewCap: ATTENDANCE_VIEW_ROW_CAP });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load attendance report" });

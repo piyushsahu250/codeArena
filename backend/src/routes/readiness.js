@@ -1,5 +1,6 @@
 const express = require("express");
 const XLSX = require("xlsx");
+const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { Prisma } = require("@prisma/client");
 const { authenticate, requireRole } = require("../middleware/auth");
@@ -955,6 +956,9 @@ async function loadFilteredReports(req, academicGroupOverride) {
   if (myGroupIds !== null) studentWhere.academicGroupId = { in: myGroupIds };
 
   const assessmentWhere = {
+    // A proctoring-TERMINATED attempt was force-submitted with partial answers: its report is kept for
+    // the student/record but must not feed readiness analytics, at-risk lists or exports.
+    status: { in: ["COMPLETED", "EXPIRED"] },
     ...(req.query.subjectId ? { subjectId: req.query.subjectId } : {}),
     ...(req.query.assessmentMode ? { assessmentMode: req.query.assessmentMode } : {}),
   };
@@ -1126,19 +1130,19 @@ router.get("/admin/analytics/export", authenticate, requireRole("ADMIN", "SUPER_
       ["Weakest Topics", "Average Accuracy", "Students Assessed"],
       ...analytics.topicWeaknesses.map((t) => [t.topic, `${t.averageAccuracy}%`, t.studentsAssessed]),
     ];
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows.map((r) => r.map(safeCell)));
 
     const atRiskRows = [
       ["Name", "Registration Number (PRN)", "Roll Number", "Subject", "Overall Score", "Readiness Level"],
       ...analytics.atRiskStudents.map((s) => [s.name, s.registrationNumber || "", s.rollNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
     ];
-    const atRiskSheet = XLSX.utils.aoa_to_sheet(atRiskRows);
+    const atRiskSheet = XLSX.utils.aoa_to_sheet(atRiskRows.map((r) => r.map(safeCell)));
 
     const topPerformerRows = [
       ["Name", "Registration Number (PRN)", "Roll Number", "Subject", "Overall Score", "Readiness Level"],
       ...analytics.topPerformers.map((s) => [s.name, s.registrationNumber || "", s.rollNumber || "", s.subject, `${s.overallScore}%`, s.readinessLevel.replace(/_/g, " ")]),
     ];
-    const topPerformerSheet = XLSX.utils.aoa_to_sheet(topPerformerRows);
+    const topPerformerSheet = XLSX.utils.aoa_to_sheet(topPerformerRows.map((r) => r.map(safeCell)));
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, summarySheet, "Summary");

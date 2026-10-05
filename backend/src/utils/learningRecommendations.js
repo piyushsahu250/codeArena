@@ -141,7 +141,7 @@ async function computeLearningRecommendations(prisma, studentId) {
   }
 
   // --- Priority 3: weakest topic from the student's own latest Employability Readiness report ---
-  const latestReport = await prisma.readinessReport.findFirst({ where: { studentId }, orderBy: { createdAt: "desc" } });
+  const latestReport = await prisma.readinessReport.findFirst({ where: { studentId, assessment: { status: { in: ["COMPLETED", "EXPIRED"] } } }, orderBy: { createdAt: "desc" } });
   if (latestReport && Array.isArray(latestReport.topicScores)) {
     const weakest = latestReport.topicScores.find((t) => t.strength === "CRITICAL");
     if (weakest) {
