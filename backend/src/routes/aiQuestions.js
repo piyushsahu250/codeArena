@@ -51,6 +51,20 @@ const BTL_TASK_DEFINITIONS = {
   6: "BTL 6 — Create: the question must require designing, constructing, or proposing a new solution, structure, or system from scratch — not selecting or applying an existing one.",
 };
 
+// Models regularly answer "correctAnswer": 2 (a bare number) or ["2"] (strings) instead of the
+// requested number[] -- the answer itself is fine, only its shape differs. Rejecting those as
+// INVALID_RESPONSE burned two AI calls per attempt and surfaced as "generation failed" (53% of
+// question_bank_generate calls failed in the 14-day usage log). Coerce to number[] in place; the
+// range/emptiness checks that follow stay strict, so a genuinely missing or out-of-range answer is
+// still rejected.
+function normalizeAnswerIndices(v) {
+  if (!v || typeof v !== "object") return;
+  let a = v.correctAnswer;
+  if (a === undefined || a === null) return;
+  if (!Array.isArray(a)) a = [a];
+  v.correctAnswer = a.map((x) => (typeof x === "string" && /^\s*\d+\s*$/.test(x) ? Number(x) : x));
+}
+
 // Independent second-opinion answer check for MCQ/TRUE_FALSE/MULTISELECT — spec section 13's
 // "mandatory... run a second validation/reasoning pass" for conceptual questions. Deliberately
 // shown the question and options WITHOUT being told which one the generator claimed was correct —
@@ -64,9 +78,9 @@ async function verifyChoiceAnswer({ userId, instituteId, description, options, c
       feature: aiService.FEATURES.QUESTION_BANK_GENERATE, userId, instituteId,
       system: "You are an independent exam-answer checker for a computer-science education platform. Solve the question yourself from scratch — you are not told which option anyone else picked. Respond with ONLY the requested JSON.",
       prompt: `Question: ${description}\nOptions:\n${options.map((o, i) => `${i}: ${o}`).join("\n")}\n\nWhich option index/indices (0-based) are correct? Return JSON exactly shaped: {"correctAnswer": number[], "reasoning": string (one sentence)}.`,
-      maxTokens: 400,
+      maxTokens: 800,
       injectionGuard: false,
-      validate: (v) => (!Array.isArray(v?.correctAnswer)) ? "missing correctAnswer array" : null,
+      validate: (v) => { normalizeAnswerIndices(v); return (!Array.isArray(v?.correctAnswer)) ? "missing correctAnswer array" : null; },
     });
     const agree = answerIndexSetsMatch(result.correctAnswer, claimedAnswer);
     return {
@@ -217,9 +231,10 @@ Provide exactly 7 testCases: 2 with isHidden=false (visible samples shown to stu
       // model's own bias (see the MCQ correct-answer distribution audit this fix was written for).
       prompt: `Write one ${difficulty || "MEDIUM"}-difficulty ${type} question about "${subject.trim()}"${topic ? ` (topic: ${topic.trim()})` : ""}${subtopicSuffix}. ${shapeHint}${btlInstruction}${skillInstruction}
 Return JSON exactly shaped: {"title": string, "description": string (the question text), "options": string[], "correctAnswer": number[] (0-based indices into options), "explanation": string}.`,
-      maxTokens: 800,
+      maxTokens: 1500, // was 800: a 4-6 option question with a full explanation plus model thinking could truncate mid-JSON
       injectionGuard: false,
       validate: (v) => {
+        normalizeAnswerIndices(v);
         if (!v?.title || !v?.description) return "missing title/description";
         // Don't blindly trust the model's own answer index (spec: never assume it's correct just
         // because it parsed) — a generation that names an out-of-range or missing correctAnswer is

@@ -836,3 +836,20 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   width: 100%;
   box-shadow: var(--shadow-md);
 }
+
+/* ===================== Mobile safeguards (global) =====================
+   Many admin/report pages render a bare <table style="width:100%"> straight into the page. On a
+   phone a wide table has nowhere to go but out of the viewport, which drags the WHOLE page into
+   horizontal scroll (and breaks the sticky header/sidebar layout). Below 768px every table becomes
+   its own horizontally-scrollable block instead, so only the table scrolls. */
+@media (max-width: 768px) {
+  table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  img, video, canvas, svg { max-width: 100%; }
+}
+/* iOS Safari zooms the whole page when focusing a form field whose font-size is under 16px, and
+   doesn't zoom back out -- a real usability bug on every inline-styled 13-14px input. 16px on
+   phones removes it (desktop sizing is untouched). !important is deliberate: pages set font size
+   inline per field. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px !important; }
+}

@@ -20,7 +20,11 @@ const UNTRUSTED_PREAMBLE =
 // controlled description (e.g. "student's resume", "interview answer") so the surrounding prompt
 // can refer to it without re-embedding the raw text a second time.
 function wrapUntrusted(label, text) {
-  const safe = String(text ?? "");
+  // The wrapper's boundary is only as strong as its closing tag: text containing a literal
+  // `</untrusted_input>` would end the data block early and let whatever follows read as developer
+  // instructions. Break any such tag (any case/spacing, opening or closing) so user content can never
+  // forge or terminate the boundary.
+  const safe = String(text ?? "").replace(/<(\s*\/?\s*)untrusted_input/gi, "<​$1untrusted_input");
   return `${label}:\n<untrusted_input>\n${safe}\n</untrusted_input>`;
 }
 
