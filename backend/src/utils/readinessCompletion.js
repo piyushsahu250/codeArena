@@ -34,15 +34,28 @@ async function gradePendingAnswers(assessment) {
       const order = shuffleQuestionOptions(question.options, null, `${assessment.id}:${question.id}`).order;
       selectedOptions = toOriginalSelection(selectedOptions, order);
     }
-    try {
-      const { score, isCorrect } = await gradeReadinessAnswer(question, {
-        answerText: a.answerText, code: a.code, language: a.language, selectedOptions, skipped: false,
-      });
-      await prisma.readinessAnswer.update({ where: { id: a.id }, data: { score, isCorrect } });
-    } catch (err) {
-      // One answer failing to grade (a judge hiccup) must not stop the student's whole assessment
-      // from being submitted -- it stays ungraded (scores 0 in the report) and is logged loudly.
-      logger.error("READINESS_ANSWER_GRADE_FAILED", { assessmentId: assessment.id, questionId: a.questionId, message: err?.message });
+    // A whole cohort finishing at the same deadline fills the judge's bounded queue, which rejects
+    // with err.queueBusy rather than waiting forever. Giving up on that first rejection would silently
+    // score a correct answer as 0 purely because of timing -- so a busy queue is retried with
+    // backoff (up to ~45s total) before an answer is allowed to stay ungraded.
+    let graded = false;
+    for (let attempt = 1; attempt <= 12 && !graded; attempt++) {
+      try {
+        const { score, isCorrect } = await gradeReadinessAnswer(question, {
+          answerText: a.answerText, code: a.code, language: a.language, selectedOptions, skipped: false,
+        });
+        await prisma.readinessAnswer.update({ where: { id: a.id }, data: { score, isCorrect } });
+        graded = true;
+      } catch (err) {
+        if (err?.queueBusy && attempt < 12) {
+          await new Promise((r) => setTimeout(r, Math.min(1000 * attempt, 5000)));
+          continue;
+        }
+        // One answer failing to grade must not stop the student's whole assessment from being
+        // submitted -- it stays ungraded (scores 0 in the report) and is logged loudly.
+        logger.error("READINESS_ANSWER_GRADE_FAILED", { assessmentId: assessment.id, questionId: a.questionId, queueBusy: !!err?.queueBusy, message: err?.message });
+        break;
+      }
     }
   }
 }
