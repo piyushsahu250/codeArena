@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
+import { downloadFromApi } from "../utils/downloadFile";
 
 const STATUS_STYLE = {
   SUBMITTED: { bg: "var(--success-bg)", color: "var(--mint)", label: "Submitted" },
@@ -143,31 +144,20 @@ export default function TestResults() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempts, test]);
 
-  function downloadCsv() {
-    const header = ["Rank", "Roll no.", "Student", "Registration No. (PRN)", "Email", "Score", "Max Score", "Attempted", "Total Questions", "Status", "Tab switches"];
-    const rows = filtered.map((a) => [
-      a.rank,
-      a.student.rollNumber || "",
-      a.student.name,
-      a.student.registrationNumber || "",
-      a.student.email,
-      a.totalScore,
-      maxScoreOf(a),
-      attemptedCountOf(a),
-      assignedIds(a).length,
-      a.status,
-      a.tabSwitchCount ?? 0,
-    ]);
-    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
-    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
-
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${(test?.title || "test-results").replace(/[^a-z0-9]+/gi, "-")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  // Real .xlsx built by the server (typed numbers, text roll/PRN, formula-injection guard). The roll
+  // filter is passed through so the file matches what's on screen; clear the filter to export everyone.
+  const [downloadingResults, setDownloadingResults] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+  async function downloadResults(format = "xlsx") {
+    setDownloadingResults(true);
+    setDownloadError("");
+    try {
+      await downloadFromApi(`/tests/${id}/results/export`, { params: { format, ...(rollFilter.trim() ? { roll: rollFilter.trim() } : {}) }, fallbackName: `test-results.${format}` });
+    } catch (err) {
+      setDownloadError(err.message);
+    } finally {
+      setDownloadingResults(false);
+    }
   }
 
   return (
@@ -183,11 +173,14 @@ export default function TestResults() {
             <button className="btn btn-ghost" onClick={toggleAnalytics}>
               📊 {showAnalytics ? "Hide" : "Question Analytics"}
             </button>
-            <button className="btn btn-primary" onClick={downloadCsv} disabled={filtered.length === 0}>
-              ⬇ Download results (Excel/CSV)
+            <button className="btn btn-primary" onClick={() => downloadResults("xlsx")} disabled={filtered.length === 0 || downloadingResults}>
+              {downloadingResults ? "Preparing…" : "⬇ Download results (Excel)"}
             </button>
+            <button className="btn btn-ghost" onClick={() => downloadResults("csv")} disabled={filtered.length === 0 || downloadingResults}>CSV</button>
           </div>
         </div>
+        {downloadError && <p style={{ color: "var(--rust)", marginTop: 10, fontSize: 13 }}>⚠ {downloadError}</p>}
+        {rollFilter.trim() && <p style={{ color: "var(--ink-dim)", marginTop: 6, fontSize: 12 }}>The download only includes rows matching the roll filter "{rollFilter.trim()}" — clear it to export everyone.</p>}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginTop: 20 }}>
           <StatCard label="Completed" value={`${completedCount} / ${attempts.length}`} />

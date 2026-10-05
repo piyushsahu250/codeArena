@@ -9,6 +9,7 @@ import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import Badge from "../components/Badge";
+import { downloadFromApi } from "../utils/downloadFile";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useToast } from "../context/ToastContext";
@@ -1831,12 +1832,11 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
   }
 
   async function exportCsv() {
-    const { data } = await api.get(`/module-coding/admin/tests/${testId}/export`, { responseType: "blob" });
-    const url = URL.createObjectURL(new Blob([data], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url; a.download = "coding-assessment-attempts.csv";
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    try {
+      await downloadFromApi(`/module-coding/admin/tests/${testId}/export`, { params: { format: "xlsx" }, fallbackName: "coding-assessment-attempts.xlsx" });
+    } catch (err) {
+      toast.error(err.message || "Export failed");
+    }
   }
 
   return (

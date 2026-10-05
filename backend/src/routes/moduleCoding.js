@@ -2,6 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const multer = require("multer");
 const XLSX = require("xlsx");
+const { sendTable } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judge");
@@ -1304,13 +1305,8 @@ router.get("/admin/tests/:id/export", authenticate, requireRole("ADMIN", "SUPER_
       Attempt: a.attemptNumber, Status: a.status, Score: a.score, Passed: a.passed ? "Yes" : "No",
       Violations: a.violationCount, StartedAt: a.startedAt.toISOString(), SubmittedAt: a.submittedAt ? a.submittedAt.toISOString() : "",
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Attempts");
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "csv" });
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", "attachment; filename=coding-assessment-attempts.csv");
-    res.send(buf);
+    // Formula-injection guard + UTF-8 BOM for CSV, typed numeric cells for XLSX (?format=xlsx).
+    return sendTable(res, XLSX, { rows, sheetName: "Attempts", filename: "coding-assessment-attempts", format: req.query.format === "xlsx" ? "xlsx" : "csv", colWidths: [24, 30, 14, 22, 8, 14, 8, 8, 10, 24, 24] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to export attempts" });

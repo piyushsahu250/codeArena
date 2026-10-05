@@ -1,4 +1,6 @@
 const express = require("express");
+const XLSX = require("xlsx");
+const { sendTable } = require("../utils/spreadsheetSafe");
 const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
@@ -1425,6 +1427,76 @@ router.get("/:id/results", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "IN
     orderBy: { totalScore: "desc" },
   });
   res.json(attempts);
+});
+
+// ADMIN/STAFF: results as a real spreadsheet. Built server-side (typed numeric cells, text roll/PRN so
+// leading zeros survive, formula-injection guard on every text cell) instead of the browser quoting
+// every value into a CSV string, which made Excel treat scores as text and mangle long roll/PRN
+// numbers. Rank is computed over the full score-ordered list so it matches the leaderboard even when
+// a roll-number filter is applied; `roll` narrows the rows exactly like the on-screen filter.
+router.get("/:id/results/export", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const test = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      select: {
+        title: true, passingMarks: true, instituteId: true, createdById: true, shares: { select: { staffId: true } },
+        questions: { select: { questionId: true, question: { select: { points: true } } } },
+      },
+    });
+    if (!test) return res.status(404).json({ error: "Test not found" });
+    if (req.requesterInstituteId && test.instituteId && test.instituteId !== req.requesterInstituteId) {
+      return res.status(403).json({ error: "You can only export results for tests under your own institute" });
+    }
+    if (!canStaffAccessTest(req, test)) {
+      return res.status(403).json({ error: "You can only export results for tests you created or that were shared with you" });
+    }
+    const attempts = await prisma.testAttempt.findMany({
+      where: { testId: req.params.id },
+      include: {
+        student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } },
+        submissions: { select: { questionId: true } },
+      },
+      orderBy: [{ totalScore: "desc" }, { startedAt: "asc" }],
+      take: 20000,
+    });
+    const points = new Map(test.questions.map((tq) => [tq.questionId, tq.question?.points || 0]));
+    const allIds = test.questions.map((tq) => tq.questionId);
+    const roll = String(req.query.roll || "").trim().toLowerCase();
+    const STATUS = { IN_PROGRESS: "In progress", SUBMITTED: "Submitted", AUTO_SUBMITTED: "Auto-submitted" };
+    const iso = (d) => (d ? new Date(d).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "");
+
+    const rows = attempts
+      .map((a, idx) => ({ a, rank: idx + 1 }))
+      .filter(({ a }) => !roll || (a.student.rollNumber || "").toLowerCase().includes(roll))
+      .map(({ a, rank }) => {
+        const assigned = Array.isArray(a.questionOrder) && a.questionOrder.length > 0 ? a.questionOrder : allIds;
+        const max = assigned.reduce((s, id) => s + (points.get(id) || 0), 0);
+        const completed = a.status !== "IN_PROGRESS";
+        return {
+          Rank: rank,
+          "Roll No.": a.student.rollNumber || "",
+          Student: a.student.name || "",
+          "Registration No. (PRN)": a.student.registrationNumber || "",
+          Email: a.student.email || "",
+          Score: a.totalScore ?? 0,
+          "Max Score": max,
+          "Percentage (%)": max > 0 ? Math.round(((a.totalScore ?? 0) / max) * 1000) / 10 : "",
+          Result: !completed || test.passingMarks == null ? "" : (a.totalScore ?? 0) >= test.passingMarks ? "Pass" : "Fail",
+          Attempted: new Set(a.submissions.map((s) => s.questionId)).size,
+          "Total Questions": assigned.length,
+          Status: STATUS[a.status] || a.status,
+          "Tab Switches / Violations": a.tabSwitchCount ?? 0,
+          "Started At": iso(a.startedAt),
+          "Submitted At": iso(a.submittedAt),
+        };
+      });
+    const format = req.query.format === "csv" ? "csv" : "xlsx";
+    const filename = (test.title || "test-results").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "test-results";
+    return sendTable(res, XLSX, { rows, sheetName: "Results", filename: `${filename}-results`, format, colWidths: [6, 14, 24, 22, 30, 8, 10, 14, 8, 10, 15, 14, 24, 24, 24] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to export results" });
+  }
 });
 
 // STAFF/ADMIN: per-question breakdown for one test — "Faculty Analytics" (platform-maturity spec
