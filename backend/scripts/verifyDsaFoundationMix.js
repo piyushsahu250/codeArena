@@ -10,7 +10,7 @@ const BASE = "http://localhost:4000/api";
     const l = await (await fetch(`${BASE}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) })).json();
     const h = { Authorization: `Bearer ${l.token}`, "Content-Type": "application/json" };
     for (const n of [10, 15]) {
-      const r = await fetch(`${BASE}/readiness/assessments`, { method: "POST", headers: h, body: JSON.stringify({ subjectId: subject.id, assessmentMode: "FOUNDATION", questionCount: n }) });
+      const r = await fetch(`${BASE}/readiness/assessments`, { method: "POST", headers: h, body: JSON.stringify({ subjectId: subject.id, assessmentMode: process.env.MODE || "FOUNDATION", questionCount: n }) });
       const b = await r.json();
       if (!r.ok) { console.log("FAIL start", n, JSON.stringify(b)); continue; }
       const types = {}, btl = {}, topics = {};
