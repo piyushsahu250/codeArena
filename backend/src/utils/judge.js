@@ -404,6 +404,12 @@ async function spawnWithTimeout(cmd, args, options, input, timeLimitMs, { enforc
     }, timeLimitMs);
 
     if (input !== undefined) {
+      // A submission that never reads stdin (a stub, a crash on startup, `print(1)`) exits before we
+      // finish writing its input, and the pipe then raises EPIPE on child.stdin. With no 'error'
+      // listener that surfaced as a process-level uncaughtException (seen 3x in production logs on
+      // 2026-10-05) instead of being a non-event. It is not a judge failure: the program simply
+      // didn't consume its input, and its real output/exit status below decides the verdict.
+      child.stdin.on("error", () => { /* EPIPE/ECONNRESET: program closed stdin early */ });
       child.stdin.write(input || "");
       child.stdin.end();
     }

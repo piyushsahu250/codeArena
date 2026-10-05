@@ -106,7 +106,9 @@ const allowedOrigins = [
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error("Not allowed by CORS"));
+    // Reject silently (no CORS headers -> the browser blocks it) instead of throwing: the throw turned
+    // every stray cross-origin request/scanner into a 500 plus an "unhandled route error" log line.
+    callback(null, false);
   },
   exposedHeaders: ["Content-Disposition"],
 }));
