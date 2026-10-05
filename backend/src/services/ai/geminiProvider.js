@@ -13,6 +13,7 @@ const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const REQUEST_TIMEOUT_MS = Number(process.env.GEMINI_TIMEOUT_MS) || 30000;
 const MAX_RETRIES = Number(process.env.GEMINI_MAX_RETRIES ?? 2);
 const RETRY_BASE_DELAY_MS = Number(process.env.GEMINI_RETRY_BASE_DELAY_MS) || 800;
+const MAX_RETRY_AFTER_MS = Number(process.env.GEMINI_MAX_RETRY_AFTER_MS) || 12000; // longest we will wait on a provider-requested retry delay
 // 3.x-generation Gemini models "think" by default (a hidden reasoning pass that consumes part of
 // maxOutputTokens before any visible text) — confirmed empirically against the live API: with no
 // thinkingConfig at all, a 20-50 token budget came back completely empty (finishReason MAX_TOKENS
@@ -69,6 +70,16 @@ async function callGeminiOnce({ model, system, prompt, maxTokens, temperature, j
       const err = new Error(`Gemini API request failed (${res.status}): ${body.slice(0, 500)}`);
       err.status = res.status;
       err.retryable = res.status === 429 || res.status >= 500;
+      // Gemini tells us exactly how long to back off on a 429: a Retry-After header and/or a
+      // RetryInfo detail ("retryDelay": "13s") in the body. Waiting 0.8s/1.6s (the generic backoff)
+      // can never clear a per-minute quota, so every retry was wasted. Capped so a request still
+      // finishes inside the client's own timeout.
+      if (res.status === 429) {
+        const header = Number(res.headers.get("retry-after"));
+        const m = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(body);
+        const seconds = Number.isFinite(header) && header > 0 ? header : m ? Number(m[1]) : null;
+        if (seconds) err.retryAfterMs = Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+      }
       throw err;
     }
 
@@ -132,7 +143,7 @@ async function generateContent({ model = DEFAULT_MODEL, system, prompt, maxToken
     } catch (err) {
       lastErr = err;
       if (!err.retryable || attempt === maxRetries) throw err;
-      await sleep(backoffDelay(attempt));
+      await sleep(Math.max(backoffDelay(attempt), err.retryAfterMs || 0));
     }
   }
   throw lastErr;
