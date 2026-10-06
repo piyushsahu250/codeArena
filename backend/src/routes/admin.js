@@ -236,7 +236,7 @@ router.get("/email-logs/batch/:batchId/summary", authenticate, requireRole("ADMI
 // aggregates — never echoes MAIL_PASSWORD or any secret, only presence/absence.
 router.get("/email-logs/status", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
-    const connected = !!(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD);
+    const connected = process.env.MAIL_PROVIDER === "ses" || !!(process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD);
     const [lastSent, failedCount, queuedCount] = await Promise.all([
       prisma.emailLog.findFirst({ where: { status: "SENT" }, orderBy: { sentAt: "desc" }, select: { sentAt: true } }),
       prisma.emailLog.count({ where: { status: "FAILED" } }),
@@ -444,7 +444,7 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
       });
       return {
         today: { sent: counts.SENT || 0, failed: counts.FAILED || 0, pending: counts.PENDING || 0, retrying: counts.RETRYING || 0 },
-        transportConfigured: !!(process.env.APPS_SCRIPT_WEB_APP_URL || process.env.MAIL_HOST),
+        transportConfigured: !!(process.env.APPS_SCRIPT_WEB_APP_URL || process.env.MAIL_HOST || process.env.MAIL_PROVIDER === "ses"),
         lastFailure,
       };
     });

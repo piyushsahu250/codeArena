@@ -165,7 +165,7 @@ app.get("/api/health/deep", async (req, res) => {
   checks.questionImageStorage = { ok: true, configured: questionImages.isConfigured() }; // not configured yet is a valid, non-broken state -- feature-gated, not a failure
 
   const emailConfigured = !!(
-    (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD) ||
+    process.env.MAIL_PROVIDER === "ses" || (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD) ||
     (process.env.APPS_SCRIPT_WEB_APP_URL && process.env.APPS_SCRIPT_SHARED_SECRET)
   );
   checks.email = { ok: true, configured: emailConfigured }; // same reasoning -- absence isn't this endpoint's failure to report on

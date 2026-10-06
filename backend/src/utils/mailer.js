@@ -38,7 +38,7 @@ const LOGO_URL = `${FRONTEND_URL}/branding/logo.png`;
 // long-lived, not recreated per request. `secure: true` (implicit TLS) is only correct for port
 // 465; every other port (587 STARTTLS, 25, etc.) needs `secure: false` and nodemailer negotiates
 // STARTTLS on its own.
-const transporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD)
+const smtpTransporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.env.MAIL_PASSWORD)
   ? nodemailer.createTransport({
       host: process.env.MAIL_HOST,
       port: Number(process.env.MAIL_PORT) || 587,
@@ -58,6 +58,29 @@ const transporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.e
       rateLimit: 1,
     })
   : null;
+
+// ---------------------------------------------------------------------------------------------
+// Amazon SES transport (MAIL_PROVIDER=ses). Replaces the personal-Gmail SMTP account for bulk
+// mail: Gmail caps a personal account at ~500 msgs/day and throttles logins, which left ~227
+// students with accounts but no delivered password after two bulk uploads (2026-10-06). SES is
+// called through the AWS SDK using the EC2 instance role (no mail password/keys stored anywhere);
+// the role's `SendEmailViaSES` policy allows only SES sends. Sending speed is capped by
+// MAIL_RATE_PER_SEC (default 1, the SES *sandbox* limit) -- raise it to match the account's
+// MaxSendRate once AWS grants production access (aws sesv2 get-account). In the sandbox SES only
+// delivers to verified addresses; production access removes that restriction.
+const MAIL_PROVIDER = String(process.env.MAIL_PROVIDER || "smtp").toLowerCase();
+const SES_CONFIG_SET = process.env.SES_CONFIGURATION_SET || "";
+function buildSesTransport() {
+  const { SESv2Client, SendEmailCommand } = require("@aws-sdk/client-sesv2");
+  return nodemailer.createTransport({
+    SES: { sesClient: new SESv2Client({ region: process.env.SES_REGION || process.env.AWS_REGION || "ap-south-1" }), SendEmailCommand },
+    sendingRate: Number(process.env.MAIL_RATE_PER_SEC) || 1,
+    maxConnections: 2,
+  });
+}
+const sesTransporter = MAIL_PROVIDER === "ses" ? buildSesTransport() : null;
+const transporter = sesTransporter || smtpTransporter;
+const usingSes = !!sesTransporter;
 
 // Wraps an email body with a consistent CodeArena-branded header/footer. The logo is referenced
 // by its deployed frontend URL (not embedded) since that's how email clients reliably load
@@ -182,7 +205,7 @@ async function sendMail({ to, subject, html }) {
   if (Date.now() < smtpBlockedUntil) return smtpThrottleError();
   console.log("[mailer] Connecting to SMTP server...");
   try {
-    const info = await transporter.sendMail({ from: FROM, to, subject, html });
+    const info = await transporter.sendMail({ from: FROM, to, subject, html, ...(usingSes && SES_CONFIG_SET ? { ses: { ConfigurationSetName: SES_CONFIG_SET } } : {}) });
     console.log(`[mailer] Email accepted by mail server. Message ID: ${info.messageId || "(none returned)"} — Status: SUCCESS`);
     return { ok: true, messageId: info.messageId || null };
   } catch (err) {
@@ -191,6 +214,12 @@ async function sendMail({ to, subject, html }) {
       smtpBlockedUntil = Date.now() + LOGIN_THROTTLE_COOLDOWN_MS;
       console.error(`[mailer] Gmail login throttle hit -- pausing all SMTP sends for ${Math.round(LOGIN_THROTTLE_COOLDOWN_MS / 60000)} minutes`);
       return smtpThrottleError();
+    }
+    if (usingSes && (err.name === "MessageRejected" || err.name === "MailFromDomainNotVerifiedException" || err.name === "AccountSuspendedException" || err.name === "SendingPausedException")) {
+      return { ok: false, error: `Amazon SES rejected the message (${err.name}): ${err.message}` };
+    }
+    if (usingSes && (err.name === "TooManyRequestsException" || err.name === "LimitExceededException" || /throttl|rate exceeded|quota/i.test(err.message || ""))) {
+      return { ok: false, error: `Amazon SES rate/quota limit reached: ${err.message}` };
     }
     if (err.code === "EAUTH") {
       return { ok: false, error: `Email provider authentication failed: ${err.message}` };
