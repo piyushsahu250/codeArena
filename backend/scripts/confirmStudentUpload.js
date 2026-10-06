@@ -39,7 +39,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       const failed = await prisma.emailLog.findMany({ where: { batchId: res.batchId, status: "FAILED" }, select: { recipientEmail: true, errorMessage: true }, take: 15 }).catch(() => []);
       if (failed.length) console.log("FAILED EMAILS:", JSON.stringify(failed));
     }
-    const groups = await prisma.academicGroup.findMany({ where: { institute: { name: "Sanjivani University" }, department: { name: "Artificial Intelligence and Machine Learning" }, batch: { in: ["2025-2028", "2024-2028"] } }, include: { _count: { select: { users: true } }, department: true } });
+    const groups = await prisma.academicGroup.findMany({ where: { institute: { name: "Sanjivani University" }, department: { name: { in: [...new Set(pr.rows.map((r) => r.department))] } }, batch: { in: [...new Set(pr.rows.map((r) => r.batchYear))] } }, include: { _count: { select: { users: true } }, department: true } });
     console.log("GROUPS", JSON.stringify(groups.map((g) => ({ batch: g.batch, section: g.section, dept: g.department.name, students: g._count.users }))));
     const total = await prisma.user.count({ where: { registrationNumber: { in: pr.rows.map((r) => r.registrationNumber) }, role: "STUDENT", mustChangePassword: true, isActive: true } });
     console.log("students now in DB (active, must change password on first login):", total);
