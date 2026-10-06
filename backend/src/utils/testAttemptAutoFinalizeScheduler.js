@@ -54,9 +54,22 @@ async function runOnce() {
     console.error("[testAttemptAutoFinalizeScheduler] readiness sweep failed:", err.message);
     return { closed: 0 };
   });
-  return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed };
+  const sessions = await expireStaleLoginSessions().catch((err) => { console.error("[testAttemptAutoFinalizeScheduler] session expiry failed:", err.message); return { expired: 0 }; });
+  return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed, sessionsExpired: sessions.expired };
 }
 
+
+// Login tokens live 12h (sessions.js TOKEN_TTL), after which the JWT itself is rejected -- but nothing
+// ever flipped the matching LoginSession row to inactive when a student simply closed the tab and never
+// logged out, so rows accumulated as isActive=true forever (5,052 of them were over 7 days old on
+// 2026-10-06). They could not authenticate anyone, but they inflated every "active sessions" count
+// (staff/clerk management, monitoring) and grew the table without bound. Closing rows older than the
+// token TTL plus a 1h margin is exactly what expiry already means.
+async function expireStaleLoginSessions() {
+  const cutoff = new Date(Date.now() - 13 * 60 * 60 * 1000);
+  const r = await prisma.loginSession.updateMany({ where: { isActive: true, loginAt: { lt: cutoff } }, data: { isActive: false, logoutAt: new Date() } });
+  return { expired: r.count };
+}
 // Readiness assessments have no outer test window, only a per-attempt startedAt+durationMin deadline,
 // and (like Formal Tests above) depend on the client to submit. A closed tab leaves them IN_PROGRESS
 // forever -- which also blocks the student from starting a fresh attempt on that subject/mode.
