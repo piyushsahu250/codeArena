@@ -50,12 +50,12 @@ const transporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.e
       // "454 4.7.0 Too many login attempts" after ~108 messages and the other 111 FAILED
       // (2026-10-06), and the platform's lifetime failed-email count is in the tens of thousands.
       // A small pool reuses authenticated connections instead, and the rate limit keeps the
-      // sending speed (2 msgs/sec) well under Gmail's thresholds.
+      // sending speed (1 msg/sec) well under Gmail's thresholds.
       pool: true,
-      maxConnections: 2,
+      maxConnections: 1,
       maxMessages: 100,
       rateDelta: 1000,
-      rateLimit: 2,
+      rateLimit: 1,
     })
   : null;
 
@@ -142,6 +142,18 @@ async function sendViaAppsScript({ to, subject, html }) {
   }
 }
 
+// Circuit breaker for Gmail's login throttle. "454 4.7.0 Too many login attempts" means Google is
+// counting our authentication attempts; every further send attempted while it is active is another
+// failed login that extends the lockout (a 219-student credentials batch plus its resend kept the
+// account locked on 2026-10-06). So once that error is seen, stop touching SMTP at all for a cooling-off
+// period and fail fast with a clear, retryable message instead.
+const LOGIN_THROTTLE_COOLDOWN_MS = Number(process.env.MAIL_LOGIN_THROTTLE_COOLDOWN_MS) || 30 * 60 * 1000;
+let smtpBlockedUntil = 0;
+function smtpThrottleError() {
+  const mins = Math.ceil((smtpBlockedUntil - Date.now()) / 60000);
+  return { ok: false, throttled: true, error: `Email provider is temporarily limiting logins ("Too many login attempts"). Sending is paused for about ${mins} more minute(s) so the limit can clear; this email was NOT sent -- retry afterwards.` };
+}
+
 // Returns { ok: boolean, error?: string, messageId?: string, simulated?: true }.
 // `ok: true` is only ever returned once the mail transport (Apps Script bridge or direct SMTP)
 // has actually confirmed the message was accepted for delivery — there is no path that reports
@@ -167,6 +179,7 @@ async function sendMail({ to, subject, html }) {
     return { ok: false, simulated: true, error: "Email service is not configured on the server — no email was actually sent." };
   }
 
+  if (Date.now() < smtpBlockedUntil) return smtpThrottleError();
   console.log("[mailer] Connecting to SMTP server...");
   try {
     const info = await transporter.sendMail({ from: FROM, to, subject, html });
@@ -174,6 +187,11 @@ async function sendMail({ to, subject, html }) {
     return { ok: true, messageId: info.messageId || null };
   } catch (err) {
     console.error("[mailer] SMTP send error:", err.code || "", err.message);
+    if (/too many login attempts/i.test(err.message || "") || err.responseCode === 454) {
+      smtpBlockedUntil = Date.now() + LOGIN_THROTTLE_COOLDOWN_MS;
+      console.error(`[mailer] Gmail login throttle hit -- pausing all SMTP sends for ${Math.round(LOGIN_THROTTLE_COOLDOWN_MS / 60000)} minutes`);
+      return smtpThrottleError();
+    }
     if (err.code === "EAUTH") {
       return { ok: false, error: `Email provider authentication failed: ${err.message}` };
     }
