@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./theme.css";
 import "katex/dist/katex.min.css";
-import "./utils/monacoSetup";
 import App from "./App.jsx";
 
 // A route's lazy-loaded chunk (React.lazy in App.jsx) is a content-hashed filename baked into the

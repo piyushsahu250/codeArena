@@ -16,22 +16,22 @@ import Sidebar from "./components/Sidebar";
 import ReportProblemWidget from "./components/ReportProblemWidget";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
-import About from "./pages/marketing/About";
-import Contact from "./pages/marketing/Contact";
-import Privacy from "./pages/marketing/Privacy";
-import Terms from "./pages/marketing/Terms";
-import ForInstitutions from "./pages/marketing/ForInstitutions";
-import Features from "./pages/marketing/Features";
-import CodingPlatform from "./pages/marketing/CodingPlatform";
-import OnlineAssessment from "./pages/marketing/OnlineAssessment";
-import Lms from "./pages/marketing/Lms";
-import EmployabilityReadinessMkt from "./pages/marketing/EmployabilityReadiness";
-import AiMockInterview from "./pages/marketing/AiMockInterview";
-import CodingChallengesMkt from "./pages/marketing/CodingChallenges";
+const About = lazy(() => import("./pages/marketing/About"));
+const Contact = lazy(() => import("./pages/marketing/Contact"));
+const Privacy = lazy(() => import("./pages/marketing/Privacy"));
+const Terms = lazy(() => import("./pages/marketing/Terms"));
+const ForInstitutions = lazy(() => import("./pages/marketing/ForInstitutions"));
+const Features = lazy(() => import("./pages/marketing/Features"));
+const CodingPlatform = lazy(() => import("./pages/marketing/CodingPlatform"));
+const OnlineAssessment = lazy(() => import("./pages/marketing/OnlineAssessment"));
+const Lms = lazy(() => import("./pages/marketing/Lms"));
+const EmployabilityReadinessMkt = lazy(() => import("./pages/marketing/EmployabilityReadiness"));
+const AiMockInterview = lazy(() => import("./pages/marketing/AiMockInterview"));
+const CodingChallengesMkt = lazy(() => import("./pages/marketing/CodingChallenges"));
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
-import StudentTestResult from "./pages/StudentTestResult";
+const StudentTestResult = lazy(() => import("./pages/StudentTestResult"));
 
 // Lazy-loaded: pulls in @tensorflow/tfjs + blazeface for face detection, which is only
 // needed once a student actually opens a test — bundling it eagerly would add that weight
@@ -55,86 +55,86 @@ const StudentPerformance = lazy(() => import("./pages/StudentPerformance"));
 const InterviewProgress = lazy(() => import("./pages/InterviewProgress"));
 const InterviewReports = lazy(() => import("./pages/InterviewReports"));
 const ReadinessAnalytics = lazy(() => import("./pages/ReadinessAnalytics"));
-import CreateQuestion from "./pages/CreateQuestion";
-import QuestionBank from "./pages/QuestionBank";
-import ReadinessSubjects from "./pages/ReadinessSubjects";
-import CreateTest from "./pages/CreateTest";
-import TestResults from "./pages/TestResults";
-import TestPreview from "./pages/TestPreview";
-import AccountSettings from "./pages/AccountSettings";
-import BulkUpload from "./pages/BulkUpload";
-import AcademicGroups from "./pages/AcademicGroups";
-import CourseAssignments from "./pages/CourseAssignments";
-import InstituteManagement from "./pages/InstituteManagement";
-import OnboardInstitute from "./pages/OnboardInstitute";
-import FeatureManagement from "./pages/FeatureManagement";
-import AttendanceStructure from "./pages/AttendanceStructure";
-import AttendanceHome from "./pages/AttendanceHome";
-import AttendanceAssignmentDetail from "./pages/AttendanceAssignmentDetail";
-import ExecuteAttendance from "./pages/ExecuteAttendance";
-import AttendanceReports from "./pages/AttendanceReports";
-import MyAttendance from "./pages/MyAttendance";
-import TalentPools from "./pages/TalentPools";
-import MyTalentPools from "./pages/MyTalentPools";
-import ResultManagement from "./pages/ResultManagement";
-import StaffClerkManagement from "./pages/StaffClerkManagement";
-import StaffClerkProfile from "./pages/StaffClerkProfile";
-import MyResults from "./pages/MyResults";
-import MarksheetView from "./pages/MarksheetView";
-import MarksheetVerify from "./pages/MarksheetVerify";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
-import ForceChangePassword from "./pages/ForceChangePassword";
-import StudentSearch from "./pages/StudentSearch";
-import RollNumberConflicts from "./pages/RollNumberConflicts";
-import LearningHub from "./pages/LearningHub";
-import MyNotes from "./pages/MyNotes";
-import CourseOverview from "./pages/CourseOverview";
-import CourseCertificate from "./pages/CourseCertificate";
-import CourseCertificateVerify from "./pages/CourseCertificateVerify";
-import LearningManagement from "./pages/LearningManagement";
-import Achievements from "./pages/Achievements";
-import GamificationManagement from "./pages/GamificationManagement";
-import ResumeBuilder from "./pages/ResumeBuilder";
-import MyPortfolio from "./pages/MyPortfolio";
-import SkillGraph from "./pages/SkillGraph";
-import ResumeAdmin from "./pages/ResumeAdmin";
-import InterviewHub from "./pages/InterviewHub";
-import AiInterviewSetup from "./pages/AiInterviewSetup";
-import AiInterviewReport from "./pages/AiInterviewReport";
-import ReadinessHub from "./pages/ReadinessHub";
-import ReadinessReport from "./pages/ReadinessReport";
-import InterviewReport from "./pages/InterviewReport";
-import InterviewHistory from "./pages/InterviewHistory";
-import InterviewLeaderboard from "./pages/InterviewLeaderboard";
-import InterviewCertificate from "./pages/InterviewCertificate";
-import InterviewVerify from "./pages/InterviewVerify";
-import InterviewAdmin from "./pages/InterviewAdmin";
-import InterviewDraftReview from "./pages/InterviewDraftReview";
-import InterviewCompanies from "./pages/InterviewCompanies";
-import ChallengeAdmin from "./pages/ChallengeAdmin";
-import DailyChallenge from "./pages/DailyChallenge";
-import WeeklyChallenge from "./pages/WeeklyChallenge";
-import CompanyTests from "./pages/CompanyTests";
-import InterviewReportDetail from "./pages/InterviewReportDetail";
-import EmailLogs from "./pages/EmailLogs";
-import QuestionAudit from "./pages/QuestionAudit";
-import PasswordResetHistory from "./pages/PasswordResetHistory";
-import SystemMonitoring from "./pages/SystemMonitoring";
-import AuditLogPage from "./pages/AuditLogPage";
-import MyCertificates from "./pages/MyCertificates";
-import CertificateVerify from "./pages/CertificateVerify";
-import CertificateAdmin from "./pages/CertificateAdmin";
-import Backups from "./pages/Backups";
-import ExportCenter from "./pages/ExportCenter";
-import StudentProfile from "./pages/StudentProfile";
-import ClerkDashboard from "./pages/ClerkDashboard";
-import CompanyMaster from "./pages/CompanyMaster";
-import IssueReports from "./pages/IssueReports";
-import PlatformHealth from "./pages/PlatformHealth";
-import SecurityDashboard from "./pages/SecurityDashboard";
-import Announcements from "./pages/Announcements";
+const CreateQuestion = lazy(() => import("./pages/CreateQuestion"));
+const QuestionBank = lazy(() => import("./pages/QuestionBank"));
+const ReadinessSubjects = lazy(() => import("./pages/ReadinessSubjects"));
+const CreateTest = lazy(() => import("./pages/CreateTest"));
+const TestResults = lazy(() => import("./pages/TestResults"));
+const TestPreview = lazy(() => import("./pages/TestPreview"));
+const AccountSettings = lazy(() => import("./pages/AccountSettings"));
+const BulkUpload = lazy(() => import("./pages/BulkUpload"));
+const AcademicGroups = lazy(() => import("./pages/AcademicGroups"));
+const CourseAssignments = lazy(() => import("./pages/CourseAssignments"));
+const InstituteManagement = lazy(() => import("./pages/InstituteManagement"));
+const OnboardInstitute = lazy(() => import("./pages/OnboardInstitute"));
+const FeatureManagement = lazy(() => import("./pages/FeatureManagement"));
+const AttendanceStructure = lazy(() => import("./pages/AttendanceStructure"));
+const AttendanceHome = lazy(() => import("./pages/AttendanceHome"));
+const AttendanceAssignmentDetail = lazy(() => import("./pages/AttendanceAssignmentDetail"));
+const ExecuteAttendance = lazy(() => import("./pages/ExecuteAttendance"));
+const AttendanceReports = lazy(() => import("./pages/AttendanceReports"));
+const MyAttendance = lazy(() => import("./pages/MyAttendance"));
+const TalentPools = lazy(() => import("./pages/TalentPools"));
+const MyTalentPools = lazy(() => import("./pages/MyTalentPools"));
+const ResultManagement = lazy(() => import("./pages/ResultManagement"));
+const StaffClerkManagement = lazy(() => import("./pages/StaffClerkManagement"));
+const StaffClerkProfile = lazy(() => import("./pages/StaffClerkProfile"));
+const MyResults = lazy(() => import("./pages/MyResults"));
+const MarksheetView = lazy(() => import("./pages/MarksheetView"));
+const MarksheetVerify = lazy(() => import("./pages/MarksheetVerify"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const ForceChangePassword = lazy(() => import("./pages/ForceChangePassword"));
+const StudentSearch = lazy(() => import("./pages/StudentSearch"));
+const RollNumberConflicts = lazy(() => import("./pages/RollNumberConflicts"));
+const LearningHub = lazy(() => import("./pages/LearningHub"));
+const MyNotes = lazy(() => import("./pages/MyNotes"));
+const CourseOverview = lazy(() => import("./pages/CourseOverview"));
+const CourseCertificate = lazy(() => import("./pages/CourseCertificate"));
+const CourseCertificateVerify = lazy(() => import("./pages/CourseCertificateVerify"));
+const LearningManagement = lazy(() => import("./pages/LearningManagement"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const GamificationManagement = lazy(() => import("./pages/GamificationManagement"));
+const ResumeBuilder = lazy(() => import("./pages/ResumeBuilder"));
+const MyPortfolio = lazy(() => import("./pages/MyPortfolio"));
+const SkillGraph = lazy(() => import("./pages/SkillGraph"));
+const ResumeAdmin = lazy(() => import("./pages/ResumeAdmin"));
+const InterviewHub = lazy(() => import("./pages/InterviewHub"));
+const AiInterviewSetup = lazy(() => import("./pages/AiInterviewSetup"));
+const AiInterviewReport = lazy(() => import("./pages/AiInterviewReport"));
+const ReadinessHub = lazy(() => import("./pages/ReadinessHub")); // pulls recharts -- lazy so it is not in every first load
+const ReadinessReport = lazy(() => import("./pages/ReadinessReport"));
+const InterviewReport = lazy(() => import("./pages/InterviewReport"));
+const InterviewHistory = lazy(() => import("./pages/InterviewHistory"));
+const InterviewLeaderboard = lazy(() => import("./pages/InterviewLeaderboard"));
+const InterviewCertificate = lazy(() => import("./pages/InterviewCertificate"));
+const InterviewVerify = lazy(() => import("./pages/InterviewVerify"));
+const InterviewAdmin = lazy(() => import("./pages/InterviewAdmin"));
+const InterviewDraftReview = lazy(() => import("./pages/InterviewDraftReview"));
+const InterviewCompanies = lazy(() => import("./pages/InterviewCompanies"));
+const ChallengeAdmin = lazy(() => import("./pages/ChallengeAdmin"));
+const DailyChallenge = lazy(() => import("./pages/DailyChallenge")); // pulls Monaco
+const WeeklyChallenge = lazy(() => import("./pages/WeeklyChallenge")); // pulls Monaco
+const CompanyTests = lazy(() => import("./pages/CompanyTests"));
+const InterviewReportDetail = lazy(() => import("./pages/InterviewReportDetail"));
+const EmailLogs = lazy(() => import("./pages/EmailLogs"));
+const QuestionAudit = lazy(() => import("./pages/QuestionAudit"));
+const PasswordResetHistory = lazy(() => import("./pages/PasswordResetHistory"));
+const SystemMonitoring = lazy(() => import("./pages/SystemMonitoring"));
+const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
+const MyCertificates = lazy(() => import("./pages/MyCertificates"));
+const CertificateVerify = lazy(() => import("./pages/CertificateVerify"));
+const CertificateAdmin = lazy(() => import("./pages/CertificateAdmin"));
+const Backups = lazy(() => import("./pages/Backups"));
+const ExportCenter = lazy(() => import("./pages/ExportCenter"));
+const StudentProfile = lazy(() => import("./pages/StudentProfile"));
+const ClerkDashboard = lazy(() => import("./pages/ClerkDashboard")); // pulls recharts
+const CompanyMaster = lazy(() => import("./pages/CompanyMaster"));
+const IssueReports = lazy(() => import("./pages/IssueReports"));
+const PlatformHealth = lazy(() => import("./pages/PlatformHealth"));
+const SecurityDashboard = lazy(() => import("./pages/SecurityDashboard"));
+const Announcements = lazy(() => import("./pages/Announcements"));
 
 const HOME_BY_ROLE = { STUDENT: "/dashboard", STAFF: "/staff", ADMIN: "/admin", CLERK: "/clerk", SUPER_ADMIN: "/admin", INSTITUTE_ADMIN: "/admin" };
 
@@ -246,6 +246,7 @@ export default function App() {
       <FeatureProvider>
       <GamificationProvider>
       <BrowserRouter>
+        <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Home />} />
           {/* Public marketing pages — signed-out content, no auth wrapper. See docs/SEO for why
@@ -305,12 +306,12 @@ export default function App() {
               but that doesn't rule out a stale cached bundle or a data shape not covered by
               today's testing; this boundary makes the actual symptom (a permanent blank screen)
               structurally impossible going forward regardless of what trips it. */}
-          <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Daily Challenge. Reloading usually fixes this."><DailyChallenge /></ErrorBoundary></FeatureProtected></Protected>} />
-          <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Weekly Challenge. Reloading usually fixes this."><WeeklyChallenge /></ErrorBoundary></FeatureProtected></Protected>} />
+          <Route path="/challenges/daily" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Daily Challenge. Reloading usually fixes this."><Suspense fallback={<LoadingScreen />}><DailyChallenge /></Suspense></ErrorBoundary></FeatureProtected></Protected>} />
+          <Route path="/challenges/weekly" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="coding_challenge"><ErrorBoundary title="We hit a temporary problem" message="Unable to load the Weekly Challenge. Reloading usually fixes this."><Suspense fallback={<LoadingScreen />}><WeeklyChallenge /></Suspense></ErrorBoundary></FeatureProtected></Protected>} />
           <Route path="/company-tests" element={<Protected roles={["STUDENT"]}><CompanyTests /></Protected>} />
           <Route path="/resume" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="resume_builder" featureLabel="Resume Builder"><ResumeBuilder /></FeatureProtected></Protected>} />
           <Route path="/portfolio" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="resume_builder" featureLabel="Resume Builder"><MyPortfolio /></FeatureProtected></Protected>} />
-          <Route path="/readiness" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="readiness_test"><ReadinessHub /></FeatureProtected></Protected>} />
+          <Route path="/readiness" element={<Protected roles={["STUDENT"]}><FeatureProtected featureKey="readiness_test"><Suspense fallback={<LoadingScreen />}><ReadinessHub /></Suspense></FeatureProtected></Protected>} />
           <Route
             path="/readiness/take/:assessmentId"
             element={
@@ -462,7 +463,7 @@ export default function App() {
 
           {/* Placement Clerk — always institute-scoped, Placement Cell operations only (no
               Learning/Test Management access — those routes above simply never list CLERK). */}
-          <Route path="/clerk" element={<Protected roles={["CLERK"]}><ClerkDashboard /></Protected>} />
+          <Route path="/clerk" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><ClerkDashboard /></Suspense></Protected>} />
           <Route path="/clerk/students" element={<Protected roles={["CLERK"]}><StudentSearch basePath="/clerk" /></Protected>} />
           <Route path="/clerk/students/:id" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/clerk" /></Suspense></Protected>} />
           <Route path="/clerk/companies" element={<Protected roles={["CLERK"]}><CompanyMaster /></Protected>} />
@@ -472,6 +473,7 @@ export default function App() {
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
       </GamificationProvider>
       </FeatureProvider>
