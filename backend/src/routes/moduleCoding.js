@@ -141,7 +141,9 @@ async function resolveAssessment(req) {
     const live = statusOf(test) === "PUBLISHED" && statusOf(test.chapter) === "PUBLISHED"
       && statusOf(mod) === "PUBLISHED" && mod.course.status === "PUBLISHED";
     const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);
-    const gateOpen = !lockMap.get(mod.id)?.locked;
+    // A Level that IS the module's own gating assessment (moduleId also set) keeps that module's rule:
+    // lessons must be finished first. A plain chapter Level only needs the module to be unlocked.
+    const gateOpen = test.moduleId ? !!lockMap.get(mod.id)?.lessonsComplete : !lockMap.get(mod.id)?.locked;
     return { test, mod, live, gateOpen, lessonsComplete: gateOpen };
   }
   const mod = await prisma.courseModule.findUnique({ where: { id: req.params.moduleId }, include: { codingTest: true, course: { select: { status: true } } } });
@@ -181,7 +183,7 @@ async function publishedLevelsForStudent(req, res, { chapterId, moduleId }) {
       const passed = mine.some((a) => a.passed);
       const open = mine.some((a) => a.status === "IN_PROGRESS");
       return {
-        id: l.id, title: l.title, order: l.order, chapterId: l.chapter.id, chapterTitle: l.chapter.title,
+        id: l.id, title: l.title, order: l.order, gatesModule: !!l.moduleId, chapterId: l.chapter.id, chapterTitle: l.chapter.title,
         questionCount: l._count.questions, passingPercent: l.passingPercent, timeLimitMin: l.timeLimitMin,
         status: passed ? "PASSED" : open ? "IN_PROGRESS" : mine.length ? "FAILED" : "NOT_STARTED",
         bestScore: mine.length ? Math.max(...mine.map((a) => a.score || 0)) : null,

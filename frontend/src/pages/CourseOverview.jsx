@@ -184,7 +184,7 @@ export default function CourseOverview() {
                             to={`/learning/${slug}/level/${lv.id}/coding-assessment`}
                             style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 12px", marginLeft: 16, borderRadius: 8, textDecoration: "none", color: "var(--ink)", border: `1px solid ${lv.status === "PASSED" ? "var(--mint)" : "var(--amber-dark)"}`, fontSize: 13 }}
                           >
-                            <span>{"</>"} {lv.title}<span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>Coding Level · {lv.questionCount} question{lv.questionCount === 1 ? "" : "s"} · pass {lv.passingPercent}%</span></span>
+                            <span>{"</>"} {lv.title}<span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>{lv.gatesModule ? "Required to unlock the next module" : "Coding Level"} · {lv.questionCount} question{lv.questionCount === 1 ? "" : "s"} · pass {lv.passingPercent}%</span></span>
                             <span className="mono" style={{ fontSize: 11 }}>{{ PASSED: "✓ Passed", IN_PROGRESS: "In progress — resume", FAILED: `Not passed${lv.bestScore != null ? ` (best ${lv.bestScore}%)` : ""} — retry`, NOT_STARTED: "Start →" }[lv.status]}</span>
                           </Link>
                         ))}
@@ -192,7 +192,7 @@ export default function CourseOverview() {
                       ))}
                     </div>
 
-                    {isStudent && m.codingTest?.required && (
+                    {isStudent && m.codingTest?.required && !(moduleLevels[m.id] || []).some((lv) => lv.gatesModule) && (
                       <div
                         style={{
                           marginTop: 12, padding: "10px 14px", borderRadius: 8, display: "flex",
