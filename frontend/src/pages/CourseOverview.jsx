@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { GraduationCap, Lock, CheckCircle2, Clock, ClipboardList, ChevronDown, ChevronRight, Hammer } from "lucide-react";
 import api from "../api";
@@ -114,6 +114,9 @@ export default function CourseOverview() {
             // ADMIN/STAFF get `lessons` inline on the initial response (unchanged); STUDENT gets
             // it lazily via moduleLessons once expanded (see toggleModule above).
             const lessons = Array.isArray(m.lessons) ? m.lessons : moduleLessons[m.id];
+            // Chapter grouping: lessons arrive ordered by chapter; a chapter's coding Levels render right after its last lesson.
+            const levelsOf = (chapterId) => (isStudent ? (moduleLevels[m.id] || []).filter((lv) => lv.chapterId === chapterId) : []);
+            const chaptersWithLessons = new Set((lessons || []).map((l) => l.chapterId).filter(Boolean));
             const isOpen = !isStudent || !!expanded[m.id];
             return (
               <div key={m.id} className="card" style={{ padding: 20, opacity: locked ? 0.6 : 1 }}>
@@ -153,9 +156,14 @@ export default function CourseOverview() {
                     <div style={{ display: "grid", gap: 6, marginTop: 12 }}>
                       {!lessons ? (
                         <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{loadingModule === m.id ? "Loading lessons…" : ""}</p>
-                      ) : lessons.map((l) => (
+                      ) : lessons.map((l, li) => (
+                        <Fragment key={l.id}>
+                        {l.chapterTitle && (li === 0 || lessons[li - 1].chapterId !== l.chapterId) && (
+                          <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginTop: li === 0 ? 0 : 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            Chapter: {l.chapterTitle}
+                          </div>
+                        )}
                         <Link
-                          key={l.id}
                           to={`/learning/${slug}/lesson/${l.id}`}
                           style={{
                             display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -170,6 +178,17 @@ export default function CourseOverview() {
                           </span>
                           <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>{l.estimatedMinutes} min</span>
                         </Link>
+                        {l.chapterId && (li === lessons.length - 1 || lessons[li + 1].chapterId !== l.chapterId) && levelsOf(l.chapterId).map((lv) => (
+                          <Link
+                            key={lv.id}
+                            to={`/learning/${slug}/level/${lv.id}/coding-assessment`}
+                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "8px 12px", marginLeft: 16, borderRadius: 8, textDecoration: "none", color: "var(--ink)", border: `1px solid ${lv.status === "PASSED" ? "var(--mint)" : "var(--amber-dark)"}`, fontSize: 13 }}
+                          >
+                            <span>{"</>"} {lv.title}<span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>Coding Level · {lv.questionCount} question{lv.questionCount === 1 ? "" : "s"} · pass {lv.passingPercent}%</span></span>
+                            <span className="mono" style={{ fontSize: 11 }}>{{ PASSED: "✓ Passed", IN_PROGRESS: "In progress — resume", FAILED: `Not passed${lv.bestScore != null ? ` (best ${lv.bestScore}%)` : ""} — retry`, NOT_STARTED: "Start →" }[lv.status]}</span>
+                          </Link>
+                        ))}
+                        </Fragment>
                       ))}
                     </div>
 
@@ -192,10 +211,10 @@ export default function CourseOverview() {
                       </div>
                     )}
 
-                    {isStudent && !m.locked && moduleLevels[m.id]?.length > 0 && (
+                    {isStudent && !m.locked && moduleLevels[m.id]?.some((lv) => !chaptersWithLessons.has(lv.chapterId)) && (
                       <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
                         <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Coding Levels</div>
-                        {moduleLevels[m.id].map((lv) => (
+                        {moduleLevels[m.id].filter((lv) => !chaptersWithLessons.has(lv.chapterId)).map((lv) => (
                           <Link
                             key={lv.id}
                             to={`/learning/${slug}/level/${lv.id}/coding-assessment`}

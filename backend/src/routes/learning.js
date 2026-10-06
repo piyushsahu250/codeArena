@@ -274,7 +274,9 @@ router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req,
     if (lockMap.get(module.id)?.locked) return res.status(403).json({ error: "This module is locked" });
   }
 
-  const lessons = await prisma.lesson.findMany({ where: { moduleId: module.id, ...(req.user.role === "STUDENT" ? liveLessonWhere : {}) }, orderBy: { order: "asc" } });
+  const lessons = await prisma.lesson.findMany({ where: { moduleId: module.id, ...(req.user.role === "STUDENT" ? liveLessonWhere : {}) }, orderBy: { order: "asc" }, include: { chapter: { select: { id: true, title: true, order: true } } } });
+  // Group by chapter (un-chaptered lessons first), keeping each chapter's lessons in their own order.
+  lessons.sort((a, b) => (a.chapter?.order ?? -1) - (b.chapter?.order ?? -1) || a.order - b.order);
   let progressByLesson = new Map();
   if (req.user.role === "STUDENT" && lessons.length) {
     const progress = await prisma.lessonProgress.findMany({
@@ -287,6 +289,7 @@ router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req,
     return {
       id: l.id, title: l.title, order: l.order, estimatedMinutes: l.estimatedMinutes,
       isModuleTest: l.isModuleTest,
+      chapterId: l.chapter?.id || null, chapterTitle: l.chapter?.title || null,
       status: p?.status || "NOT_STARTED", bookmarked: p?.bookmarked || false,
     };
   }));
