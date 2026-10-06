@@ -44,6 +44,18 @@ const transporter = (process.env.MAIL_HOST && process.env.MAIL_USER && process.e
       port: Number(process.env.MAIL_PORT) || 587,
       secure: Number(process.env.MAIL_PORT) === 465,
       auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASSWORD },
+      // Pooled, rate-limited connections. Without `pool`, nodemailer opens a brand-new SMTP
+      // connection AND performs a fresh AUTH login for every single message. Gmail treats that as a
+      // burst of login attempts: a 219-student credentials batch (5 concurrent sends) got
+      // "454 4.7.0 Too many login attempts" after ~108 messages and the other 111 FAILED
+      // (2026-10-06), and the platform's lifetime failed-email count is in the tens of thousands.
+      // A small pool reuses authenticated connections instead, and the rate limit keeps the
+      // sending speed (2 msgs/sec) well under Gmail's thresholds.
+      pool: true,
+      maxConnections: 2,
+      maxMessages: 100,
+      rateDelta: 1000,
+      rateLimit: 2,
     })
   : null;
 
