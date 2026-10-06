@@ -23,7 +23,14 @@ async function login(email, password) {
   return r.body.token;
 }
 
+async function cleanupLeftovers() {
+  await prisma.course.deleteMany({ where: { slug: { startsWith: "zz-verify-publish-" } } });
+  await prisma.user.deleteMany({ where: { email: { startsWith: "verify-pub-", endsWith: "@example.invalid" } } });
+  await prisma.academicGroup.deleteMany({ where: { batch: "ZZ-VERIFY" } });
+}
+
 async function main() {
+  await cleanupLeftovers(); // also removes anything a previously aborted run left behind
   const groups = await prisma.academicGroup.findMany({ where: { isActive: true } });
   const off = await prisma.featureSetting.findMany({ where: { featureKey: { in: ["lms", "compiler"] }, enabled: false } });
   const offIds = new Set(off.map((f) => f.instituteId));
@@ -39,7 +46,7 @@ async function main() {
   const admin = await prisma.user.create({ data: { name: "Verify Publish Admin", email: `verify-pub-admin-${ts}@example.invalid`, passwordHash: await bcrypt.hash(adminPw, 10), role: "INSTITUTE_ADMIN", instituteId, mustChangePassword: false } });
   const student = await prisma.user.create({ data: { name: "Verify Publish Student", email: `verify-pub-student-${ts}@example.invalid`, passwordHash: await bcrypt.hash(stuPw, 10), role: "STUDENT", instituteId, academicGroupId: group.id, mustChangePassword: false } });
   const course = await prisma.course.create({ data: { name: `ZZ Verify Publish ${ts}`, slug: `zz-verify-publish-${ts}`, status: "PUBLISHED", isActive: true, instituteId } });
-  await prisma.courseAcademicGroupAssignment.create({ data: { courseId: course.id, academicGroupId: group.id } });
+  await prisma.courseAcademicGroupAssignment.create({ data: { courseId: course.id, academicGroupId: group.id, assignedByUserId: admin.id, assignedByName: admin.name } });
 
   try {
     const A = await login(admin.email, adminPw);
@@ -134,4 +141,4 @@ async function main() {
   console.log(failures === 0 ? "\nPUBLISH HIERARCHY VERIFIED" : `\n${failures} CHECK(S) FAILED`);
   process.exit(failures ? 1 : 0);
 }
-main().catch((e) => { console.error(e); process.exit(2); });
+main().catch(async (e) => { console.error(e); await cleanupLeftovers().catch(() => {}); process.exit(2); });
