@@ -17,13 +17,17 @@
 // it still ALSO gates the CODING_ASSESSMENT certificate via the independent path in
 // gatingLevels.js/gradeModuleCodingAttempt.js, unchanged. Once one module is locked, everything
 // after it stays locked, regardless of that module's own state.
+const { LIVE, liveLessonWhere } = require("./publishState");
+
 async function getModuleLockMap(prisma, studentId, courseId) {
   const modules = await prisma.courseModule.findMany({
-    where: { courseId },
+    // Draft/Archived modules, lessons and coding tests are invisible to students, so they must never be
+    // required for unlocking the next module either (otherwise unpublishing something would lock students out).
+    where: { courseId, ...LIVE },
     orderBy: { order: "asc" },
     include: {
-      lessons: { select: { id: true } },
-      codingTest: { include: { _count: { select: { questions: true } } } },
+      lessons: { where: liveLessonWhere, select: { id: true } },
+      codingTest: { include: { _count: { select: { questions: { where: { questionStatus: "PUBLISHED" } } } } } },
     },
   });
   const allLessonIds = modules.flatMap((m) => m.lessons.map((l) => l.id));
@@ -56,7 +60,7 @@ async function getModuleLockMap(prisma, studentId, courseId) {
   // TODO: once a real student-facing "attempt a Level" flow ships, replace this exclusion with
   // the pool-size-only check that's still applied to the legacy codingTest path below.
   function gatingTestIds(m) {
-    return m.codingTest?.isActive && m.codingTest._count.questions > 0 ? [m.codingTest.id] : [];
+    return m.codingTest?.isActive && !m.codingTest.archivedAt && m.codingTest._count.questions > 0 ? [m.codingTest.id] : [];
   }
   const allGatingTestIds = modules.flatMap(gatingTestIds);
   const passedTestIds = allGatingTestIds.length

@@ -9,6 +9,7 @@ import TestCasesEditor from "../components/TestCasesEditor";
 import QuestionPreviewToggle from "../components/QuestionPreviewToggle";
 import EvaluationTypeFields, { EMPTY_SIGNATURE } from "../components/EvaluationTypeFields";
 import Badge from "../components/Badge";
+import PublishControls from "../components/PublishControls";
 import { downloadFromApi } from "../utils/downloadFile";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../context/ConfirmContext";
@@ -727,7 +728,8 @@ function ModulePanel({ course, modules, onSelect, onManageCoding, onManageChapte
               <div style={{ fontWeight: 600 }}>Module {i + 1}: {m.title}</div>
               <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)" }}>{m.totalCount} lesson{m.totalCount === 1 ? "" : "s"}</div>
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <PublishControls entity="module" id={m.id} status={m.publishStatus} canEdit={isAdmin} onChanged={onRefresh} />
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, -1)}>↑</button>}
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(m, 1)}>↓</button>}
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(m.id)}>{isAdmin ? "Manage →" : "View →"}</button>
@@ -854,7 +856,8 @@ function LessonPanel({ mod, onSelect, onRefresh }) {
         {mod.lessons.sort((a, b) => a.order - b.order).map((l) => (
           <div key={l.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ cursor: "pointer" }} onClick={() => onSelect(l.id)}>{l.title}</div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <PublishControls entity="lesson" id={l.id} status={l.publishStatus} canEdit={isAdmin} onChanged={onRefresh} compact />
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(l, -1)}>↑</button>}
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(l, 1)}>↓</button>}
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(l.id)}>{isAdmin ? "Edit →" : "View →"}</button>
@@ -1659,9 +1662,12 @@ function CodingQuestionsPanel({ testId, questions, onRefresh }) {
                   : "none (generic defaults used)"}
               </div>
             </div>
-            {isAdmin && (
-              <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
-            )}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <PublishControls entity="question" id={q.id} row={q} canEdit={isAdmin} onChanged={onRefresh} compact />
+              {isAdmin && (
+                <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => remove(q)}>Delete</button>
+              )}
+            </div>
           </div>
         ))}
         {questions.length === 0 && <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>No questions yet — students can't start this assessment until at least one is added.</p>}
@@ -2043,13 +2049,12 @@ function ChapterListPanel({ moduleId, onSelect }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <Badge tone={c.isActive ? "success" : "default"}>{c.isActive ? "Active" : "Inactive"}</Badge>
+              <PublishControls entity="chapter" id={c.id} row={c} canEdit={isAdmin} onChanged={load} />
               <span className="badge" style={{ background: c.countsTowardCertificate ? "var(--info-bg)" : "var(--card-bg)", color: c.countsTowardCertificate ? "var(--ink)" : "var(--ink-dim)" }}>
                 {c.countsTowardCertificate ? "Required" : "Optional"}
               </span>
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, -1)}>↑</button>}
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(c, 1)}>↓</button>}
-              {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => toggleActive(c)}>{c.isActive ? "Deactivate" : "Activate"}</button>}
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => onSelect(c)}>{isAdmin ? "Manage →" : "View →"}</button>
               {isAdmin && <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 13 }} onClick={() => remove(c)}>Delete</button>}
             </div>
@@ -2191,7 +2196,8 @@ function ChapterTopicsPanel({ chapterId }) {
         {topics.sort((a, b) => a.order - b.order).map((t) => (
           <div key={t.id} className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ cursor: "pointer" }} onClick={() => setTopicId(t.id)}>{t.title}</div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <PublishControls entity="lesson" id={t.id} row={t} canEdit={isAdmin} onChanged={load} />
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, -1)}>↑</button>}
               {isAdmin && <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={() => reorder(t, 1)}>↓</button>}
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setTopicId(t.id)}>{isAdmin ? "Edit →" : "View →"}</button>
@@ -2478,8 +2484,8 @@ function ChapterLevelsPanel({ chapterId }) {
           started enforcing coding-assessment prerequisites) — module-unlock and certificate logic
           now both explicitly exclude Levels from gating until this is actually wired up, so
           nothing is at risk of breaking from configuring one, but nothing is gained yet either. */}
-      <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--warning-bg)", color: "var(--amber-dark)", fontSize: 13, marginBottom: 14 }}>
-        ⚠ Levels aren't wired up to student assessments yet. Configuring or activating a Level here has no effect on any student right now — it will not gate module unlock or the course certificate, and there's currently no way for a student to attempt one. Use the module's own Coding Assessment (Settings tab) for a working gate.
+      <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--info-bg)", color: "var(--ink)", fontSize: 13, marginBottom: 14 }}>
+        Levels start as Draft and are invisible to students until you Publish them (their chapter, module and course must be Published too). Questions are published separately; a Level never auto-publishes. Unpublishing keeps every attempt and score.
       </div>
       {isAdmin && <button className="btn btn-primary" disabled={creating} onClick={addLevel}>{creating ? "Adding…" : "+ Add Level"}</button>}
       <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
@@ -2492,7 +2498,7 @@ function ChapterLevelsPanel({ chapterId }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <Badge tone={l.isActive ? "success" : "default"}>{l.isActive ? "Active" : "Inactive"}</Badge>
+              <PublishControls entity="level" id={l.id} row={l} canEdit={isAdmin} onChanged={load} />
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => setLevelId(l.id)}>Manage →</button>
             </div>
           </div>

@@ -9,6 +9,7 @@ const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateCertificatePdf } = require("../utils/certificatePdf");
 const { issueCertificate } = require("../utils/certificates");
 const { getModuleLockMap } = require("../utils/learningLock");
+const { LIVE, statusOf, liveLessonWhere, ACTIONS } = require("../utils/publishState");
 const { processGamification } = require("../utils/gamification");
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
@@ -37,7 +38,7 @@ const { computeCourseAnalytics } = require("../utils/lmsFacultyAnalytics");
 // student — used to fire the one-time MODULE_COMPLETE XP award at the exact moment the last
 // lesson in a module gets completed, from whichever route that happens on.
 async function isModuleNowComplete(studentId, moduleId) {
-  const lessons = await prisma.lesson.findMany({ where: { moduleId }, select: { id: true } });
+  const lessons = await prisma.lesson.findMany({ where: { moduleId, ...liveLessonWhere }, select: { id: true } });
   if (lessons.length === 0) return false;
   const completedCount = await prisma.lessonProgress.count({
     where: { studentId, status: "COMPLETED", lessonId: { in: lessons.map((l) => l.id) } },
@@ -146,7 +147,8 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
   // linearly with total course content as more courses/modules get authored.
   const course = await prisma.course.findFirst({
     where,
-    include: { modules: { orderBy: { order: "asc" } } },
+    // Students only ever see Published, non-archived modules; staff see everything (with status).
+    include: { modules: { where: req.user.role === "STUDENT" ? LIVE : undefined, orderBy: { order: "asc" } } },
   });
   if (!course) return res.status(404).json({ error: "Course not found" });
 
@@ -156,7 +158,7 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
   let lessonMeta = []; // { id, moduleId, order } — lightweight, all lessons in the course
   if (req.user.role === "STUDENT") {
     lessonMeta = await prisma.lesson.findMany({
-      where: { moduleId: { in: course.modules.map((m) => m.id) } },
+      where: { moduleId: { in: course.modules.map((m) => m.id) }, ...liveLessonWhere },
       select: { id: true, moduleId: true, order: true },
       orderBy: { order: "asc" },
     });
@@ -202,7 +204,7 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
     const lock = lockMap.get(m.id) || { locked: false, completed: false, lessonsComplete: false, codingTest: { required: false, passed: true } };
     const counts = countsByModule.get(m.id) || { total: 0, completed: 0 };
     return {
-      id: m.id, title: m.title, description: m.description, order: m.order,
+      id: m.id, title: m.title, description: m.description, order: m.order, publishStatus: statusOf(m),
       completedCount: counts.completed, totalCount: counts.total,
       locked: lock.locked, completed: lock.completed,
       lessonsComplete: lock.lessonsComplete, codingTest: lock.codingTest,
@@ -224,7 +226,7 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
       if (!lessonsByModule.has(l.moduleId)) lessonsByModule.set(l.moduleId, []);
       lessonsByModule.get(l.moduleId).push({
         id: l.id, title: l.title, order: l.order, estimatedMinutes: l.estimatedMinutes,
-        isModuleTest: l.isModuleTest, status: "NOT_STARTED", bookmarked: false,
+        isModuleTest: l.isModuleTest, status: "NOT_STARTED", bookmarked: false, publishStatus: statusOf(l), chapterId: l.chapterId,
       });
     }
     // `totalCount` above was computed from `lessonMeta`, which is only ever populated on the
@@ -264,7 +266,7 @@ router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req,
   const course = await prisma.course.findFirst({ where, select: { id: true } });
   if (!course) return res.status(404).json({ error: "Course not found" });
 
-  const module = await prisma.courseModule.findFirst({ where: { id: req.params.moduleId, courseId: course.id }, select: { id: true } });
+  const module = await prisma.courseModule.findFirst({ where: { id: req.params.moduleId, courseId: course.id, ...(req.user.role === "STUDENT" ? LIVE : {}) }, select: { id: true } });
   if (!module) return res.status(404).json({ error: "Module not found" });
 
   if (req.user.role === "STUDENT") {
@@ -272,7 +274,7 @@ router.get("/courses/:slug/modules/:moduleId/lessons", authenticate, async (req,
     if (lockMap.get(module.id)?.locked) return res.status(403).json({ error: "This module is locked" });
   }
 
-  const lessons = await prisma.lesson.findMany({ where: { moduleId: module.id }, orderBy: { order: "asc" } });
+  const lessons = await prisma.lesson.findMany({ where: { moduleId: module.id, ...(req.user.role === "STUDENT" ? liveLessonWhere : {}) }, orderBy: { order: "asc" } });
   let progressByLesson = new Map();
   if (req.user.role === "STUDENT" && lessons.length) {
     const progress = await prisma.lessonProgress.findMany({
@@ -307,12 +309,18 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
           lessons: { orderBy: { order: "asc" } },
         },
       },
+      chapter: { select: { isActive: true, archivedAt: true } },
       questions: { orderBy: { order: "asc" } },
     },
   });
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
 
   if (req.user.role === "STUDENT") {
+    // Whole ancestor chain must be Published: lesson, its module and (if any) its chapter. A Draft or
+    // Archived item 404s exactly like a nonexistent one. (Existing progress rows are untouched.)
+    const chainLive = statusOf(lesson) === "PUBLISHED" && statusOf(lesson.module) === "PUBLISHED"
+      && (!lesson.chapter || statusOf(lesson.chapter) === "PUBLISHED");
+    if (!chainLive) return res.status(404).json({ error: "Lesson not found" });
     // Same PUBLISHED + institute/group-assignment gate as GET /courses/:slug — otherwise a
     // student could reach a course's lesson content directly by id even though the course itself
     // was filtered out of their course list and blocked at /courses/:slug.
@@ -329,9 +337,9 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
   }
 
   const allModules = await prisma.courseModule.findMany({
-    where: { courseId: lesson.module.courseId },
+    where: { courseId: lesson.module.courseId, ...(req.user.role === "STUDENT" ? LIVE : {}) },
     orderBy: { order: "asc" },
-    include: { lessons: { orderBy: { order: "asc" } } },
+    include: { lessons: { where: req.user.role === "STUDENT" ? liveLessonWhere : undefined, orderBy: { order: "asc" } } },
   });
   const flat = allModules.flatMap((m) => m.lessons.map((l) => l.id));
   const idx = flat.indexOf(lesson.id);
@@ -357,6 +365,7 @@ router.get("/lessons/:id", authenticate, async (req, res) => {
       id: lesson.id, title: lesson.title, content: lesson.content,
       videoUrl: lesson.videoUrl, pdfUrl: lesson.pdfUrl, externalLinks: lesson.externalLinks,
       estimatedMinutes: lesson.estimatedMinutes, isModuleTest: lesson.isModuleTest,
+      status: statusOf(lesson),
     },
     module: { id: lesson.module.id, title: lesson.module.title },
     course: { id: lesson.module.course.id, slug: lesson.module.course.slug, name: lesson.module.course.name },
@@ -376,6 +385,7 @@ router.post("/lessons/:id/progress", authenticate, requireRole("STUDENT"), attac
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true } } } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    if (!(await prisma.lesson.findFirst({ where: { id: lesson.id, ...liveLessonWhere }, select: { id: true } }))) return res.status(404).json({ error: "Lesson not found" }); // Draft/Archived anywhere up the chain
 
     // Backend-authoritative lock check — GET /lessons/:id already refuses to even show the
     // content of a locked module's lesson (see below), but this write-side route had no
@@ -450,6 +460,7 @@ router.post("/lessons/:id/test-submit", authenticate, requireRole("STUDENT"), at
   try {
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.id }, include: { module: { select: { id: true, courseId: true } } } });
     if (!lesson) return res.status(404).json({ error: "Lesson not found" });
+    if (!(await prisma.lesson.findFirst({ where: { id: lesson.id, ...liveLessonWhere }, select: { id: true } }))) return res.status(404).json({ error: "Lesson not found" }); // Draft/Archived anywhere up the chain
     if (!lesson.isModuleTest) return res.status(400).json({ error: "This lesson is not a practice test" });
 
     // Same backend-authoritative lock check as /lessons/:id/progress just above — a locked
@@ -705,6 +716,8 @@ async function loadEligiblePracticeQuestion(req, questionId) {
   if (!eligible) return null;
   const lockMap = await getModuleLockMap(prisma, req.user.id, q.lesson.module.courseId);
   if (lockMap.get(q.lesson.moduleId)?.locked) return null;
+  // Draft/Archived lesson, chapter or module: its practice questions are not available to students.
+  if (!(await prisma.lesson.findFirst({ where: { id: q.lessonId, ...liveLessonWhere }, select: { id: true } }))) return null;
   return q;
 }
 
@@ -954,9 +967,11 @@ router.get("/practice/:id/draft", authenticate, requireRole("STUDENT"), async (r
 // checking every module's `completed` flag is equivalent to, and no more expensive than, checking
 // just the last one.
 async function checkCourseCompletion(studentId, course) {
-  const totalLessons = await prisma.lesson.count({ where: { module: { courseId: course.id } } });
+  // Only lessons students can actually see count toward completion (a Draft lesson can't block a certificate).
+  const liveInCourse = { AND: [{ module: { courseId: course.id } }, liveLessonWhere] };
+  const totalLessons = await prisma.lesson.count({ where: liveInCourse });
   const completedLessons = await prisma.lessonProgress.count({
-    where: { studentId, status: "COMPLETED", lesson: { module: { courseId: course.id } } },
+    where: { studentId, status: "COMPLETED", lesson: liveInCourse },
   });
   const lockMap = await getModuleLockMap(prisma, studentId, course.id);
   const allModulesSatisfied = lockMap.size > 0 && [...lockMap.values()].every((m) => m.completed);
@@ -1657,7 +1672,7 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_A
       data: {
         moduleId: req.params.id, title, description: description || null,
         order: Number(order) || 0,
-        isActive: isActive === undefined ? true : !!isActive,
+        isActive: isActive === undefined ? false : !!isActive, // new content starts as Draft
         countsTowardCertificate: countsTowardCertificate === undefined ? true : !!countsTowardCertificate,
       },
     });
@@ -1774,7 +1789,7 @@ router.post("/modules/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_AD
         content: content || null, blocks: blocks || undefined, videoUrl: videoUrl || null, pdfUrl: pdfUrl || null,
         externalLinks: externalLinks || undefined, order: Number(order) || 0,
         estimatedMinutes: Number(estimatedMinutes) || 10, isModuleTest: !!isModuleTest,
-        isActive: isActive === undefined ? true : !!isActive,
+        isActive: isActive === undefined ? false : !!isActive, // new content starts as Draft
       },
     });
     await logAudit({
@@ -1861,7 +1876,7 @@ router.post("/chapters/:id/lessons", authenticate, requireRole("ADMIN", "SUPER_A
         content: content || null, blocks: blocks || undefined, videoUrl: videoUrl || null, pdfUrl: pdfUrl || null,
         externalLinks: externalLinks || undefined, order: Number(order) || 0,
         estimatedMinutes: Number(estimatedMinutes) || 10, isModuleTest: !!isModuleTest,
-        isActive: isActive === undefined ? true : !!isActive,
+        isActive: isActive === undefined ? false : !!isActive, // new content starts as Draft
       },
     });
     await logAudit({
@@ -2585,7 +2600,7 @@ router.get("/courses/:slug/modules/:moduleId/projects", authenticate, requireRol
     if (course.status !== "PUBLISHED" || !(await studentCanAccessCourse(prisma, course.id, student?.instituteId, student?.academicGroupId))) {
       return res.status(404).json({ error: "Course not found" });
     }
-    const courseModule = await prisma.courseModule.findFirst({ where: { id: req.params.moduleId, courseId: course.id }, select: { id: true } });
+    const courseModule = await prisma.courseModule.findFirst({ where: { id: req.params.moduleId, courseId: course.id, ...LIVE }, select: { id: true } });
     if (!courseModule) return res.status(404).json({ error: "Module not found" });
     const lockMap = await getModuleLockMap(prisma, req.user.id, course.id);
     if (lockMap.get(courseModule.id)?.locked) return res.status(403).json({ error: "This module is locked" });
@@ -2826,6 +2841,94 @@ router.get("/tasks/:id/draft", authenticate, requireRole("STUDENT"), async (req,
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load draft" });
+  }
+});
+
+// =========================== Independent publishing ===========================
+//
+// ONE endpoint for Publish / Unpublish / Archive / Restore at every level of the hierarchy. It changes
+// ONLY the row it is called on -- publishing a parent never publishes (or unpublishes) a child; students
+// see an item only when its whole ancestor chain is Published (see utils/publishState.js). Nothing here
+// deletes anything: attempts, submissions, scores and progress are untouched, and an attempt that is
+// already IN_PROGRESS can still be finished (attempt routes are keyed by attemptId, not by publish state).
+const PUBLISH_ENTITIES = {
+  module: { label: "module", find: (id) => prisma.courseModule.findUnique({ where: { id } }), update: (id, data) => prisma.courseModule.update({ where: { id }, data }), institute: (id) => resolveModuleCourseInstituteId(id) },
+  chapter: { label: "chapter", find: (id) => prisma.chapter.findUnique({ where: { id } }), update: (id, data) => prisma.chapter.update({ where: { id }, data }), institute: (id) => resolveChapterCourseInstituteId(id) },
+  lesson: { label: "reference material", find: (id) => prisma.lesson.findUnique({ where: { id } }), update: (id, data) => prisma.lesson.update({ where: { id }, data }), institute: (id) => resolveLessonCourseInstituteId(id) },
+  level: {
+    label: "coding level",
+    find: (id) => prisma.moduleCodingTest.findUnique({ where: { id }, include: { _count: { select: { questions: true } } } }),
+    update: (id, data) => prisma.moduleCodingTest.update({ where: { id }, data }),
+    institute: async (id) => {
+      const t = await prisma.moduleCodingTest.findUnique({
+        where: { id },
+        select: { module: { select: { course: { select: { instituteId: true } } } }, chapter: { select: { module: { select: { course: { select: { instituteId: true } } } } } } },
+      });
+      if (!t) return undefined;
+      return (t.chapter?.module?.course ?? t.module?.course)?.instituteId ?? null;
+    },
+  },
+};
+const QUESTION_STATUS_FOR = { publish: "PUBLISHED", unpublish: "DRAFT", archive: "ARCHIVED", restore: "DRAFT" };
+
+router.post("/publish/:entity/:id/:action", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const { entity, id, action } = req.params;
+    if (!ACTIONS[action]) return res.status(400).json({ error: "action must be publish, unpublish, archive or restore" });
+
+    // Coding questions: status lives on Question.questionStatus, and only questions that belong to a level.
+    if (entity === "question") {
+      const q = await prisma.question.findUnique({ where: { id }, select: { id: true, moduleCodingTestId: true, questionStatus: true, title: true } });
+      if (!q || !q.moduleCodingTestId) return res.status(404).json({ error: "Coding question not found" });
+      const instituteId = await PUBLISH_ENTITIES.level.institute(q.moduleCodingTestId);
+      if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+      const updated = await prisma.question.update({ where: { id }, data: { questionStatus: QUESTION_STATUS_FOR[action] }, select: { id: true, questionStatus: true } });
+      await logAudit({
+        req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId,
+        details: { entity: "codingQuestion", operation: action, id, from: q.questionStatus, to: updated.questionStatus },
+      });
+      return res.json({ id, publishStatus: updated.questionStatus });
+    }
+
+    if (entity === "course") {
+      const c = await prisma.course.findUnique({ where: { id }, select: { id: true, status: true, instituteId: true } });
+      if (!c) return res.status(404).json({ error: "Course not found" });
+      if (!ownsLmsInstitute(req, c.instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+      const next = { publish: "PUBLISHED", unpublish: "DRAFT", archive: "ARCHIVED", restore: "DRAFT" }[action];
+      const updated = await prisma.course.update({ where: { id }, data: { status: next, isActive: next === "PUBLISHED" }, select: { id: true, status: true } });
+      await logAudit({
+        req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: c.instituteId,
+        details: { entity: "course", operation: action, id, from: c.status, to: updated.status },
+      });
+      return res.json({ id, publishStatus: updated.status });
+    }
+
+    const cfg = PUBLISH_ENTITIES[entity];
+    if (!cfg) return res.status(400).json({ error: "entity must be course, module, chapter, lesson, level or question" });
+    const row = await cfg.find(id);
+    if (!row) return res.status(404).json({ error: `${cfg.label} not found` });
+    const instituteId = await cfg.institute(id);
+    if (!ownsLmsInstitute(req, instituteId)) return res.status(403).json({ error: "You can only manage courses under your own institute" });
+
+    const from = statusOf(row);
+    const updated = await cfg.update(id, ACTIONS[action]());
+    const to = statusOf(updated);
+
+    const warnings = [];
+    if (entity === "level" && action === "publish" && row._count?.questions === 0) warnings.push("This level has no questions yet, so students cannot start it until you add and publish some.");
+    let inProgressAttempts = 0;
+    if (entity === "level" && (action === "unpublish" || action === "archive")) {
+      inProgressAttempts = await prisma.moduleCodingAttempt.count({ where: { moduleCodingTestId: id, status: "IN_PROGRESS" } });
+      if (inProgressAttempts) warnings.push(`${inProgressAttempts} attempt(s) already in progress can still be finished; no new attempts can start.`);
+    }
+    await logAudit({
+      req, action: AUDIT_ACTIONS.COURSE_MANAGEMENT_CHANGED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId,
+      details: { entity, operation: action, id, from, to, inProgressAttempts },
+    });
+    res.json({ id, publishStatus: to, isActive: updated.isActive, archivedAt: updated.archivedAt, warnings });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to change publish state" });
   }
 });
 

@@ -24,6 +24,7 @@ export default function CourseOverview() {
   // them — `moduleLessons[m.id] ?? m.lessons` below picks whichever is actually available.
   const [moduleLessons, setModuleLessons] = useState({});
   const [moduleProjects, setModuleProjects] = useState({});
+  const [moduleLevels, setModuleLevels] = useState({}); // Published coding Levels per module (student-only)
   const [expanded, setExpanded] = useState({});
   const [loadingModule, setLoadingModule] = useState(null);
 
@@ -31,6 +32,7 @@ export default function CourseOverview() {
     setData(null);
     setModuleLessons({});
     setModuleProjects({});
+    setModuleLevels({});
     setExpanded({});
     api.get(`/learning/courses/${slug}`)
       .then((res) => setData(res.data))
@@ -48,6 +50,11 @@ export default function CourseOverview() {
     }
     // Projects (Mini Project / Course Project / Capstone) — student-only, same lazy-on-expand
     // pattern as lessons; a locked module 403s so this simply never fires for one.
+    if (isStudent && !moduleLevels[m.id]) {
+      api.get(`/module-coding/module/${m.id}/levels`)
+        .then((res) => setModuleLevels((prev) => ({ ...prev, [m.id]: res.data })))
+        .catch(() => setModuleLevels((prev) => ({ ...prev, [m.id]: [] })));
+    }
     if (isStudent && !moduleProjects[m.id]) {
       api.get(`/learning/courses/${slug}/modules/${m.id}/projects`)
         .then((res) => setModuleProjects((prev) => ({ ...prev, [m.id]: res.data })))
@@ -182,6 +189,31 @@ export default function CourseOverview() {
                             {m.codingTest.passed ? "View" : "Start →"}
                           </Link>
                         )}
+                      </div>
+                    )}
+
+                    {isStudent && !m.locked && moduleLevels[m.id]?.length > 0 && (
+                      <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+                        <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Coding Levels</div>
+                        {moduleLevels[m.id].map((lv) => (
+                          <Link
+                            key={lv.id}
+                            to={`/learning/${slug}/level/${lv.id}/coding-assessment`}
+                            style={{
+                              display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+                              padding: "10px 14px", borderRadius: 8, textDecoration: "none", color: "var(--ink)",
+                              border: `1px solid ${lv.status === "PASSED" ? "var(--mint)" : "var(--line)"}`, fontSize: 13,
+                            }}
+                          >
+                            <span>
+                              <span style={{ fontWeight: 600 }}>{lv.title}</span>
+                              <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginLeft: 8 }}>{lv.chapterTitle} · {lv.questionCount} question{lv.questionCount === 1 ? "" : "s"} · pass {lv.passingPercent}%</span>
+                            </span>
+                            <span className="mono" style={{ fontSize: 11 }}>
+                              {{ PASSED: "✓ Passed", IN_PROGRESS: "In progress — resume", FAILED: `Not passed${lv.bestScore != null ? ` (best ${lv.bestScore}%)` : ""} — retry`, NOT_STARTED: "Start →" }[lv.status]}
+                            </span>
+                          </Link>
+                        ))}
                       </div>
                     )}
 

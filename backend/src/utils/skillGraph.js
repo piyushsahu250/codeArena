@@ -8,6 +8,7 @@
 // exactly the "fake or misleading analytics" the standing rules and spec section 43 warn against.
 // Using the course's own already-curated Module/Lesson structure as the map's branches/leaves is
 // the honest alternative: every node's status comes from real, already-persisted signals.
+const { LIVE, liveLessonWhere } = require("./publishState");
 const prisma = require("../prisma");
 const { getModuleLockMap } = require("./learningLock");
 const { computeConceptMastery } = require("./conceptMastery");
@@ -19,8 +20,8 @@ async function computeSkillGraph(studentId, courseId) {
   if (!course) return null;
 
   const modules = await prisma.courseModule.findMany({
-    where: { courseId }, orderBy: { order: "asc" },
-    include: { lessons: { orderBy: { order: "asc" }, include: { questions: { where: { type: "CODING" }, select: { tags: true } } } } },
+    where: { courseId, ...LIVE }, orderBy: { order: "asc" },
+    include: { lessons: { where: liveLessonWhere, orderBy: { order: "asc" }, include: { questions: { where: { type: "CODING" }, select: { tags: true } } } } },
   });
 
   const [lockMap, mastery] = await Promise.all([

@@ -12,6 +12,7 @@
 // state a second, possibly-diverging way, and courseEligibilityWhere/isCourseVisibleToStudent
 // (courseEligibility.js) so a recommendation can never point at a course this student isn't
 // actually assigned/eligible for.
+const { LIVE } = require("./publishState");
 const { getModuleLockMap } = require("./learningLock");
 const { courseEligibilityWhere, isEligibilityUnresolvable } = require("./courseEligibility");
 const { computeConceptMastery, weakestRatedConcept } = require("./conceptMastery");
@@ -35,7 +36,7 @@ async function computeLearningRecommendations(prisma, studentId) {
   // --- Priority 1: required incomplete content (first unlocked-but-incomplete module) ---
   for (const course of eligibleCourses) {
     const lockMap = await getModuleLockMap(prisma, studentId, course.id);
-    const modules = await prisma.courseModule.findMany({ where: { courseId: course.id }, orderBy: { order: "asc" }, select: { id: true, title: true } });
+    const modules = await prisma.courseModule.findMany({ where: { courseId: course.id, ...LIVE }, orderBy: { order: "asc" }, select: { id: true, title: true } });
     const next = modules.find((m) => {
       const state = lockMap.get(m.id);
       return state && !state.locked && !state.completed;

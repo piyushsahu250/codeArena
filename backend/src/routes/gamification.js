@@ -1,4 +1,5 @@
 const express = require("express");
+const { LIVE, liveLessonWhere } = require("../utils/publishState");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -103,7 +104,7 @@ async function computeStreakValues(ids) {
 async function computeLearningValues(ids) {
   const javaCourse = await prisma.course.findUnique({ where: { slug: "java" } });
   if (!javaCourse) return new Map();
-  const totalLessons = await prisma.lesson.count({ where: { module: { courseId: javaCourse.id } } });
+  const totalLessons = await prisma.lesson.count({ where: { AND: [{ module: { courseId: javaCourse.id } }, liveLessonWhere] } });
   if (totalLessons === 0) return new Map();
   const progress = await prisma.lessonProgress.findMany({
     where: { studentId: { in: ids }, status: "COMPLETED", lesson: { module: { courseId: javaCourse.id } } },

@@ -391,6 +391,16 @@ export default function App() {
             }
           />
           <Route
+            path="/learning/:slug/level/:levelId/coding-assessment"
+            element={
+              <Protected roles={["STUDENT"]} noChrome>
+                <Suspense fallback={<LoadingScreen />}>
+                  <ModuleCodingAssessment />
+                </Suspense>
+              </Protected>
+            }
+          />
+          <Route
             path="/learning/:slug/module/:moduleId/project/:projectId"
             element={
               <Protected roles={["STUDENT"]}>

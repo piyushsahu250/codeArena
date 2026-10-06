@@ -1,4 +1,5 @@
 const express = require("express");
+const { LIVE, liveLessonWhere } = require("../utils/publishState");
 const prisma = require("../prisma");
 const { authenticate } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -44,7 +45,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       // eligibility must not surface here either, for the same reason.
       const lessons = eligible
         ? await prisma.lesson.findMany({
-            where: { title: insensitive(q), module: { course: { status: "PUBLISHED", ...courseEligibilityWhere(student.instituteId, student.academicGroupId) } } },
+            where: { ...liveLessonWhere, title: insensitive(q), module: { ...LIVE, course: { status: "PUBLISHED", ...courseEligibilityWhere(student.instituteId, student.academicGroupId) } } },
             include: { module: { include: { course: true } } },
             take: LIMIT,
           })

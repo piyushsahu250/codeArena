@@ -38,7 +38,9 @@ const VIOLATION_LABEL = {
 };
 
 export default function ModuleCodingAssessment() {
-  const { slug, moduleId } = useParams();
+  const { slug, moduleId, levelId } = useParams();
+  // A chapter Level and the legacy module-direct assessment share every route below except this prefix.
+  const base = levelId ? `/module-coding/level/${levelId}` : `/module-coding/module/${moduleId}`;
   const { notify } = useGamification();
   const isMobile = useIsMobile();
 
@@ -128,11 +130,11 @@ export default function ModuleCodingAssessment() {
 
   function load() {
     setPhase("loading");
-    api.get(`/module-coding/module/${moduleId}`)
+    api.get(base)
       .then((res) => { setStatus(res.data); setPhase("preflight"); })
       .catch((err) => setError(err.response?.data?.error || "Failed to load coding assessment"));
   }
-  useEffect(() => { load(); }, [moduleId]);
+  useEffect(() => { load(); }, [moduleId, levelId]);
 
   // Every violation type is reported to the server, which classifies it into one of four
   // severities (see backend/src/utils/proctoringSeverity.js) and decides -- never trusted
@@ -193,7 +195,7 @@ export default function ModuleCodingAssessment() {
         // entry attempt, not just later re-entries.
         await proctor.requestFullscreen();
       }
-      const { data } = await api.post(`/module-coding/module/${moduleId}/start`);
+      const { data } = await api.post(`${base}/start`);
       setAttemptId(data.attemptId);
       attemptIdRef.current = data.attemptId;
       deadlineRef.current = data.deadline;

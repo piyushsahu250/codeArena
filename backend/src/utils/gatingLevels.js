@@ -11,12 +11,12 @@
 // for the full reasoning and the TODO to reinstate Level support once that flow ships.
 async function getCertificateGatingTestIds(prisma, courseId) {
   const modules = await prisma.courseModule.findMany({
-    where: { courseId },
+    where: { courseId, isActive: true, archivedAt: null },
     select: {
-      codingTest: { select: { id: true, isActive: true, _count: { select: { questions: true } } } },
+      codingTest: { select: { id: true, isActive: true, archivedAt: true, _count: { select: { questions: { where: { questionStatus: "PUBLISHED" } } } } } },
     },
   });
-  return modules.filter((m) => m.codingTest?.isActive && m.codingTest._count.questions > 0).map((m) => m.codingTest.id);
+  return modules.filter((m) => m.codingTest?.isActive && !m.codingTest.archivedAt && m.codingTest._count.questions > 0).map((m) => m.codingTest.id);
 }
 
 module.exports = { getCertificateGatingTestIds };

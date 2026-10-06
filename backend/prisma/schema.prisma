@@ -1451,7 +1451,9 @@ model CourseModule {
   title       String
   description String?
   order       Int      @default(0)
-  isActive    Boolean  @default(true)
+  isActive    Boolean  @default(false) // true = Published. New rows start Draft; existing rows keep their value.
+  archivedAt  DateTime?
+  publishedAt DateTime?
   createdAt   DateTime @default(now())
 
   lessons Lesson[]
@@ -1476,7 +1478,9 @@ model Chapter {
   title                   String
   description             String?
   order                   Int      @default(0)
-  isActive                Boolean  @default(true)
+  isActive                Boolean  @default(false) // Draft until explicitly published (existing rows untouched)
+  archivedAt              DateTime?
+  publishedAt             DateTime?
   // Whether this Chapter's Levels are required for the course-wide CODING_ASSESSMENT
   // certificate (see gradeModuleCodingAttempt.js / gatingLevels.js) — lets an admin mark a
   // Chapter as optional/bonus without it blocking certificate issuance. Does NOT affect module
@@ -1510,7 +1514,9 @@ model Lesson {
   pdfUrl           String?  // external link to a hosted PDF — no in-house file storage
   externalLinks    Json?    // [{ label, url }]
   estimatedMinutes Int      @default(10)
-  isActive         Boolean  @default(true)
+  isActive         Boolean  @default(false) // Reference Material: Draft until explicitly published
+  archivedAt       DateTime?
+  publishedAt      DateTime?
   // The gating practice test for its module — batch-submitted (not per-question), scored,
   // and required to pass before the next module unlocks. At most one per module in practice
   // (the last lesson), but not DB-enforced since nothing breaks if that changes.
@@ -1892,7 +1898,9 @@ model ModuleCodingTest {
   requireWebcam      Boolean  @default(false) // best-effort face presence check, see note above
   requireMicrophone  Boolean  @default(false) // mirrors requireWebcam — mic-drop is monitored/warned but never blocks final Submit
   allowResume        Boolean  @default(true) // resume an IN_PROGRESS attempt after a browser crash/refresh
-  isActive           Boolean  @default(true) // false = gate is skipped entirely, module ungated
+  isActive           Boolean  @default(false) // true = Published. false = Draft: students cannot see or start it (and a module-direct test no longer gates the module)
+  archivedAt         DateTime?
+  publishedAt        DateTime?
   createdAt          DateTime @default(now())
 
   questions Question[]

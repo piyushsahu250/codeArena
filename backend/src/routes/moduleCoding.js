@@ -9,6 +9,7 @@ const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("../utils/gradeModuleCodingAttempt");
 const { getModuleLockMap } = require("../utils/learningLock");
+const { statusOf } = require("../utils/publishState");
 const { processGamification } = require("../utils/gamification");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -123,24 +124,86 @@ function deadlineOf(attempt) {
 // Coding Tests).
 const PREMATURE_FINALIZE_GRACE_MS = 15000;
 
+// A coding assessment can be reached two ways: the legacy module-direct test (/module/:moduleId) or a
+// chapter-scoped Level (/level/:levelId). Both resolve to { test, mod, live, gateOpen }:
+//   live     = the WHOLE chain (course, module, [chapter], test) is Published -- required to START anything new
+//   gateOpen = may the student begin it (module-direct: lessons done; level: module not locked)
+// An attempt already IN_PROGRESS is deliberately still allowed to resume/finish when `live` is false, so
+// unpublishing mid-exam never strands a student; nothing is deleted either way.
+async function resolveAssessment(req) {
+  if (req.params.levelId) {
+    const test = await prisma.moduleCodingTest.findUnique({
+      where: { id: req.params.levelId },
+      include: { chapter: { include: { module: { include: { course: { select: { status: true } } } } } } },
+    });
+    if (!test || !test.chapter) return null;
+    const mod = test.chapter.module;
+    const live = statusOf(test) === "PUBLISHED" && statusOf(test.chapter) === "PUBLISHED"
+      && statusOf(mod) === "PUBLISHED" && mod.course.status === "PUBLISHED";
+    const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);
+    const gateOpen = !lockMap.get(mod.id)?.locked;
+    return { test, mod, live, gateOpen, lessonsComplete: gateOpen };
+  }
+  const mod = await prisma.courseModule.findUnique({ where: { id: req.params.moduleId }, include: { codingTest: true, course: { select: { status: true } } } });
+  if (!mod || !mod.codingTest) return null;
+  const test = mod.codingTest;
+  const live = statusOf(test) === "PUBLISHED" && statusOf(mod) === "PUBLISHED" && mod.course.status === "PUBLISHED";
+  const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);
+  const lessonsComplete = !!lockMap.get(mod.id)?.lessonsComplete;
+  return { test, mod, live, gateOpen: lessonsComplete, lessonsComplete };
+}
+
 // =========================== Student-facing ===========================
 
-// STUDENT: this module's coding-test config + the student's own attempt history/eligibility.
-router.get("/module/:moduleId", authenticate, requireRole("STUDENT"), async (req, res) => {
+// STUDENT: the Published Levels of one chapter, or of every Published chapter in a module. Nothing else
+// leaks: Draft/Archived levels, and levels under a Draft/Archived chapter, module or unpublished course,
+// are simply absent. Each level carries the student's own result (Not started / In progress / Passed /
+// Failed) so the UI can show it.
+async function publishedLevelsForStudent(req, res, { chapterId, moduleId }) {
   try {
-    const mod = await prisma.courseModule.findUnique({
-      where: { id: req.params.moduleId },
-      include: { codingTest: true },
+    const mod = chapterId
+      ? (await prisma.chapter.findUnique({ where: { id: chapterId }, include: { module: { include: { course: { select: { status: true } } } } } }))?.module
+      : await prisma.courseModule.findUnique({ where: { id: moduleId }, include: { course: { select: { status: true } } } });
+    if (!mod || statusOf(mod) !== "PUBLISHED" || mod.course.status !== "PUBLISHED") return res.json([]);
+    const levels = await prisma.moduleCodingTest.findMany({
+      where: {
+        isActive: true, archivedAt: null,
+        chapter: { ...(chapterId ? { id: chapterId } : { moduleId: mod.id }), isActive: true, archivedAt: null },
+      },
+      orderBy: [{ chapter: { order: "asc" } }, { order: "asc" }],
+      include: { chapter: { select: { id: true, title: true } }, _count: { select: { questions: { where: { questionStatus: "PUBLISHED" } } } } },
     });
-    if (!mod) return res.status(404).json({ error: "Module not found" });
-    if (!mod.codingTest || !mod.codingTest.isActive) {
-      return res.json({ exists: false });
-    }
-    const test = mod.codingTest;
+    const attempts = levels.length
+      ? await prisma.moduleCodingAttempt.findMany({ where: { studentId: req.user.id, moduleCodingTestId: { in: levels.map((l) => l.id) } }, select: { moduleCodingTestId: true, status: true, passed: true, score: true } })
+      : [];
+    res.json(levels.map((l) => {
+      const mine = attempts.filter((a) => a.moduleCodingTestId === l.id);
+      const passed = mine.some((a) => a.passed);
+      const open = mine.some((a) => a.status === "IN_PROGRESS");
+      return {
+        id: l.id, title: l.title, order: l.order, chapterId: l.chapter.id, chapterTitle: l.chapter.title,
+        questionCount: l._count.questions, passingPercent: l.passingPercent, timeLimitMin: l.timeLimitMin,
+        status: passed ? "PASSED" : open ? "IN_PROGRESS" : mine.length ? "FAILED" : "NOT_STARTED",
+        bestScore: mine.length ? Math.max(...mine.map((a) => a.score || 0)) : null,
+      };
+    }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load levels" });
+  }
+}
+router.get("/chapter/:chapterId/levels", authenticate, requireRole("STUDENT"), (req, res) => publishedLevelsForStudent(req, res, { chapterId: req.params.chapterId }));
+router.get("/module/:moduleId/levels", authenticate, requireRole("STUDENT"), (req, res) => publishedLevelsForStudent(req, res, { moduleId: req.params.moduleId }));
 
-    const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);
-    const gate = lockMap.get(mod.id);
-    const lessonsComplete = !!gate?.lessonsComplete;
+// STUDENT: a coding assessment (module-direct or chapter Level) config + the student's own attempt history/eligibility.
+router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("STUDENT"), async (req, res) => {
+  try {
+    const ctx = await resolveAssessment(req);
+    if (!ctx) return res.json({ exists: false });
+    const { test, mod, live, lessonsComplete } = ctx;
+    const hasOpenAttempt = await prisma.moduleCodingAttempt.count({ where: { moduleCodingTestId: test.id, studentId: req.user.id, status: "IN_PROGRESS" } });
+    // Draft/Archived anywhere up the chain: invisible, unless the student is mid-attempt (let them finish).
+    if (!live && !hasOpenAttempt) return res.json({ exists: false });
 
     const attempts = await prisma.moduleCodingAttempt.findMany({
       where: { moduleCodingTestId: test.id, studentId: req.user.id },
@@ -162,7 +225,7 @@ router.get("/module/:moduleId", authenticate, requireRole("STUDENT"), async (req
 
     const canStart =
       !!activeAttempt ||
-      (lessonsComplete &&
+      (live && lessonsComplete &&
         !alreadyPassed &&
         (attemptsRemaining === null || attemptsRemaining > 0) &&
         cooldownRemainingSec <= 0);
@@ -199,16 +262,15 @@ router.get("/module/:moduleId", authenticate, requireRole("STUDENT"), async (req
 // completed. This is what makes "disable for new sessions, existing sessions continue" true by
 // construction: an attempt that already exists was necessarily started before this gate could
 // apply to it again.
-router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), async (req, res) => {
+router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, requireRole("STUDENT"), attachRequesterInstitute, requireFeature("lms"), requireFeature("compiler"), async (req, res) => {
   try {
-    const mod = await prisma.courseModule.findUnique({ where: { id: req.params.moduleId }, include: { codingTest: true } });
-    if (!mod) return res.status(404).json({ error: "Module not found" });
-    const test = mod.codingTest;
-    if (!test || !test.isActive) return res.status(404).json({ error: "No coding assessment configured for this module" });
-
-    const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);
-    if (!lockMap.get(mod.id)?.lessonsComplete) {
-      return res.status(403).json({ error: "Complete this module's lessons and practice test before starting the coding assessment" });
+    const ctx = await resolveAssessment(req);
+    if (!ctx) return res.status(404).json({ error: "No coding assessment configured for this module" });
+    const { test, live } = ctx;
+    // Not-live (Draft/Archived anywhere up the chain): only an attempt ALREADY in progress may continue,
+    // handled by the resume block below; a brand-new attempt is refused after it.
+    if (live && !ctx.gateOpen) {
+      return res.status(403).json({ error: req.params.levelId ? "This module is locked" : "Complete this module's lessons and practice test before starting the coding assessment" });
     }
 
     const existing = await prisma.moduleCodingAttempt.findFirst({
@@ -261,6 +323,7 @@ router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), att
       }
     }
 
+    if (!live) return res.status(404).json({ error: "This assessment is not currently available" });
     const finalizedCount = await prisma.moduleCodingAttempt.count({
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: { not: "IN_PROGRESS" } },
     });
@@ -280,7 +343,7 @@ router.post("/module/:moduleId/start", authenticate, requireRole("STUDENT"), att
       }
     }
 
-    const pool = await prisma.question.findMany({ where: { moduleCodingTestId: test.id, questionType: "CODING" }, orderBy: { questionNumber: "asc" } });
+    const pool = await prisma.question.findMany({ where: { moduleCodingTestId: test.id, questionType: "CODING", questionStatus: "PUBLISHED" }, orderBy: { questionNumber: "asc" } });
     if (pool.length === 0) return res.status(400).json({ error: "This assessment has no questions configured yet" });
 
     let selected;
@@ -782,7 +845,7 @@ router.post("/admin/tests/:id/questions", authenticate, requireRole("ADMIN", "SU
         spaceComplexity: spaceComplexity || null,
         editorial: editorial ?? undefined,
         similarQuestions: similarQuestions ?? undefined,
-        moduleCodingTestId: req.params.id,
+        moduleCodingTestId: req.params.id, questionStatus: "DRAFT", // new coding questions start as Draft
         testCases: { create: cases.map((tc) => ({ input: tc.input || "", expected: tc.expected || "", isHidden: !!tc.isHidden, explanation: tc.explanation || null })) },
       },
       include: { testCases: true },
@@ -836,7 +899,7 @@ router.post("/admin/tests/:id/questions/link", authenticate, requireRole("ADMIN"
     const clone = await prisma.question.create({
       data: {
         ...rest,
-        moduleCodingTestId: test.id,
+        moduleCodingTestId: test.id, questionStatus: "DRAFT",
         testCases: {
           create: testCases.map((tc) => ({ input: tc.input, expected: tc.expected, isHidden: tc.isHidden, explanation: tc.explanation || null })),
         },
@@ -1052,7 +1115,7 @@ router.post("/admin/tests/:id/questions/bulk-import", authenticate, requireRole(
             constraints: field(row, "constraints") || null,
             inputFormat: field(row, "inputFormat") || null,
             outputFormat: field(row, "outputFormat") || null,
-            moduleCodingTestId: req.params.id,
+            moduleCodingTestId: req.params.id, questionStatus: "DRAFT",
             testCases: {
               create: [
                 { input: sample1In, expected: sample1Out, isHidden: false, explanation: field(row, "sampleExplanation1") || null },

@@ -1,4 +1,5 @@
 const express = require("express");
+const { LIVE, liveLessonWhere } = require("../utils/publishState");
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { computeStudentPerformance } = require("../utils/studentPerformance");
@@ -107,7 +108,7 @@ async function getNotifications(student, primaryCourse) {
   }
 
   if (primaryCourse) {
-    const modules = await prisma.courseModule.findMany({ where: { courseId: primaryCourse.id }, orderBy: { order: "asc" } });
+    const modules = await prisma.courseModule.findMany({ where: { courseId: primaryCourse.id, ...LIVE }, orderBy: { order: "asc" } });
     const lockMap = await getModuleLockMap(prisma, student.id, primaryCourse.id);
     const currentUnstarted = modules.find((m, i) => i > 0 && !lockMap.get(m.id)?.locked && !lockMap.get(m.id)?.completed);
     if (currentUnstarted) {
@@ -188,7 +189,7 @@ router.get("/student", authenticate, requireRole("STUDENT"), async (req, res) =>
 
     let learningProgressPercent = 0;
     if (primaryCourse) {
-      const totalLessons = await prisma.lesson.count({ where: { module: { courseId: primaryCourse.id } } });
+      const totalLessons = await prisma.lesson.count({ where: { AND: [{ module: { courseId: primaryCourse.id } }, liveLessonWhere] } });
       const completedLessons = await prisma.lessonProgress.count({
         where: { studentId: student.id, status: "COMPLETED", lesson: { module: { courseId: primaryCourse.id } } },
       });
