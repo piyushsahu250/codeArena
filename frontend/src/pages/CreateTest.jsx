@@ -953,13 +953,17 @@ function BulkUploadModal({ onImported, onClose }) {
 
   return (
     <div className="ca-modal-overlay" onClick={onClose}>
-      <div className="ca-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ margin: 0 }}>Bulk Upload Questions</h3>
-          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+      <div className="ca-modal" role="dialog" aria-modal="true" aria-labelledby="bulk-upload-title" style={{ maxWidth: 680, maxHeight: "90vh", display: "flex", flexDirection: "column", padding: 0 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px 10px", borderBottom: "1px solid var(--line)", flexShrink: 0 }}>
+          <div>
+            <h3 id="bulk-upload-title" style={{ margin: 0 }}>Bulk upload questions</h3>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "4px 0 0" }}>Questions are added to this test as soon as you confirm the import.</p>
+          </div>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Close bulk upload">✕ Close</button>
         </div>
-        <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>Uploaded questions are added to this test immediately once confirmed.</p>
-        <BulkQuestionImport allowCoding folders={folders || []} onCreateFolder={createFolder} onImported={onImported} />
+        <div style={{ overflowY: "auto", padding: "16px 24px 20px", flex: 1, minHeight: 0 }}>
+          <BulkQuestionImport allowCoding folders={folders || []} onCreateFolder={createFolder} onImported={onImported} />
+        </div>
       </div>
     </div>
   );

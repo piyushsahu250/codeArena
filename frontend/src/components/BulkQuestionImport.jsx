@@ -31,6 +31,7 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => setFolderId(defaultFolderId), [defaultFolderId]);
 
@@ -141,162 +142,203 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
     URL.revokeObjectURL(url);
   }
 
+  const accept = uploadFormat === "notepad" ? ".txt" : ".xlsx,.xls,.csv";
+  const kinds = [
+    { id: "quiz", label: "Quiz", hint: "MCQ, True/False, Multi-select" },
+    ...(allowCoding ? [{ id: "coding", label: "Coding", hint: "Problems with test cases" }, { id: "combined", label: "Combined", hint: "MCQ + Coding in one file" }] : []),
+  ];
+  const kindLabel = questionKind === "combined" ? "Combined" : questionKind === "coding" ? "Coding" : "MCQ";
+  const templateExt = uploadFormat === "notepad" && questionKind !== "combined" ? ".txt" : ".xlsx";
+  const kindHelp = questionKind === "combined"
+    ? 'One spreadsheet with an "MCQ" sheet and a "CODING" sheet. Both are read and imported together.'
+    : questionKind === "coding"
+    ? "Title, problem statement, difficulty, BTL level, 2 sample cases and at least 5 hidden test cases per question. A row can name its own Question Bank; otherwise the folder below is used."
+    : "Multiple Choice, True/False and Multiple Select questions, including BTL level.";
+  const busy = stage === "previewing" || stage === "confirming";
+
+  function chooseFile(f) {
+    setError("");
+    if (!f) { setFile(null); return; }
+    const ok = uploadFormat === "notepad" ? /\.txt$/i.test(f.name) : /\.(xlsx|xls|csv)$/i.test(f.name);
+    if (!ok) { setFile(null); setError(`That file type isn't supported here. Please choose ${uploadFormat === "notepad" ? "a .txt file" : "an .xlsx, .xls or .csv file"}.`); return; }
+    setFile(f);
+  }
+  const sizeLabel = (n) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`);
+
+  const stepHead = (n, title, aside) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+      <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--slate-900, #1c2b24)", color: "var(--chalk, #fff)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{n}</span>
+      <strong style={{ fontSize: 14 }}>{title}</strong>
+      {aside && <span style={{ fontSize: 12, color: "var(--ink-dim)" }}>{aside}</span>}
+    </div>
+  );
+  const segBtn = (active) => ({
+    flex: "1 1 120px", textAlign: "left", padding: "10px 12px", borderRadius: 10, cursor: "pointer", fontSize: 13,
+    border: `1.5px solid ${active ? "var(--amber-dark)" : "var(--line)"}`, background: active ? "var(--warning-bg)" : "transparent", color: "var(--ink)",
+  });
+  const tile = (value, label, color) => (
+    <div style={{ flex: "1 1 110px", border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", borderTop: `3px solid ${color || "var(--line)"}` }}>
+      <div className="mono" style={{ fontSize: 22, fontWeight: 700, color: color || "var(--ink)" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>{label}</div>
+    </div>
+  );
+  const footer = { position: "sticky", bottom: 0, background: "var(--card-bg, var(--paper, #fff))", paddingTop: 12, paddingBottom: 4, marginTop: 16, borderTop: "1px solid var(--line)", display: "flex", gap: 8, zIndex: 1 };
+
   return (
     <div>
-      {allowCoding && (
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="radio" name="bulkKind" checked={questionKind === "quiz"} onChange={() => { setQuestionKind("quiz"); reset(); }} />
-            Quiz (MCQ / True-False / Multi-select)
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="radio" name="bulkKind" checked={questionKind === "coding"} onChange={() => { setQuestionKind("coding"); reset(); }} />
-            Coding
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input
-              type="radio" name="bulkKind" checked={questionKind === "combined"}
-              onChange={() => { setQuestionKind("combined"); setUploadFormat("spreadsheet"); reset(); }}
-            />
-            Combined (MCQ + Coding, one file)
-          </label>
-        </div>
-      )}
-
-      <div style={{ display: "flex", gap: 16, marginTop: allowCoding ? 10 : 0 }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <input type="radio" name="bulkFormat" checked={uploadFormat === "spreadsheet"} onChange={() => { setUploadFormat("spreadsheet"); reset(); }} />
-          Spreadsheet (.xlsx / .csv)
-        </label>
-        {questionKind !== "combined" && (
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="radio" name="bulkFormat" checked={uploadFormat === "notepad"} onChange={() => { setUploadFormat("notepad"); reset(); }} />
-            Notepad (.txt)
-          </label>
-        )}
-      </div>
-
-      <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>
-        {questionKind === "combined"
-          ? 'One spreadsheet with both an "MCQ" and a "CODING" sheet — both are read and imported together in a single Preview → Confirm, exactly like the Combined Template below.'
-          : questionKind === "coding"
-          ? "Coding questions — title, problem statement, difficulty, BTL level, 2 sample cases, and at least 5 hidden test cases. Each row/block can name its own Question Bank, or leave it blank to use the picker below."
-          : "Multiple Choice, True/False, and Multiple Select questions, including BTL level."}
-        {" "}Nothing is saved until you review the preview and confirm.
-      </p>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate("quiz")}>
-          ⬇ Download MCQ Template
-        </button>
-        {allowCoding && (
-          <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate("coding")}>
-            ⬇ Download Coding Template
-          </button>
-        )}
-        {allowCoding && (
-          <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadTemplate("combined")}>
-            ⬇ Download Combined Template (MCQ + Coding, one file)
-          </button>
-        )}
-      </div>
-
       {stage === "pick" && (
-        <form onSubmit={handlePreview} style={{ marginTop: 14 }}>
-          <input type="file" accept={uploadFormat === "notepad" ? ".txt" : ".xlsx,.xls,.csv"} onChange={(e) => setFile(e.target.files?.[0] || null)} />
-
-          {uploadFormat === "spreadsheet" && (
-            <div style={{ marginTop: 14 }}>
-              <label style={{ display: "block", fontSize: 13 }} htmlFor="bulk-import-images-zip">
-                Images (ZIP) — optional, only needed if any row fills in "Image File Name"
-              </label>
-              <input
-                id="bulk-import-images-zip"
-                type="file"
-                accept=".zip"
-                style={{ marginTop: 6 }}
-                onChange={(e) => setImagesZip(e.target.files?.[0] || null)}
-              />
-              <p style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>
-                Each "Image File Name" cell must exactly match one file inside this ZIP (any folder structure inside it is fine — only the filename is matched). A row naming a file the ZIP doesn't contain is a row error, not a silently-imported question with no image.
-              </p>
-            </div>
-          )}
-
-          {folders !== undefined && (
-            <>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 14 }} htmlFor="bulk-import-folder-id">
-                Save to Question Bank
-                {questionKind === "coding" && <span style={{ color: "var(--ink-dim)" }}>(fallback for rows with no Question Bank named)</span>}
-              </label>
-              <div style={{ marginTop: 6, display: "flex", gap: 8 }}>
-                <select id="bulk-import-folder-id" style={{ ...inputStyle, flex: 1 }} value={folderId} onChange={(e) => { setFolderId(e.target.value); setNewFolderName(""); }}>
-                  <option value="">Uncategorized (no folder)</option>
-                  {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
-                {onCreateFolder && (
-                  <input
-                    style={{ ...inputStyle, flex: 1 }}
-                    placeholder="…or new folder name"
-                    value={newFolderName}
-                    onChange={(e) => { setNewFolderName(e.target.value); setFolderId(""); }}
-                  />
-                )}
+        <form onSubmit={handlePreview}>
+          <section aria-label="Step 1: what you are uploading" style={{ marginBottom: 18 }}>
+            {stepHead(1, allowCoding ? "What are you uploading?" : "Question type")}
+            {allowCoding ? (
+              <div role="radiogroup" aria-label="Question type" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {kinds.map((k) => (
+                  <button key={k.id} type="button" role="radio" aria-checked={questionKind === k.id} style={segBtn(questionKind === k.id)}
+                    onClick={() => { setQuestionKind(k.id); if (k.id === "combined") setUploadFormat("spreadsheet"); reset(); }}>
+                    <div style={{ fontWeight: 700 }}>{k.label}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 2 }}>{k.hint}</div>
+                  </button>
+                ))}
               </div>
-            </>
-          )}
+            ) : null}
+            <p style={{ fontSize: 12.5, color: "var(--ink-dim)", marginTop: 8 }}>{kindHelp} Nothing is saved until you review the preview and confirm.</p>
+          </section>
 
-          <label style={{ display: "block", fontSize: 13, marginTop: 14 }} htmlFor="bulk-import-duplicate-action">
-            If a question already exists (same text, same Subject/Unit):
-          </label>
-          <select id="bulk-import-duplicate-action" style={{ ...inputStyle, marginTop: 6 }} value={duplicateAction} onChange={(e) => setDuplicateAction(e.target.value)}>
-            <option value="skip">Skip duplicates</option>
-            <option value="import">Import anyway</option>
-          </select>
+          <section aria-label="Step 2: file format" style={{ marginBottom: 18 }}>
+            {stepHead(2, "File format")}
+            <div role="radiogroup" aria-label="File format" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" role="radio" aria-checked={uploadFormat === "spreadsheet"} style={segBtn(uploadFormat === "spreadsheet")} onClick={() => { setUploadFormat("spreadsheet"); reset(); }}>
+                <div style={{ fontWeight: 700 }}>Spreadsheet</div><div style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 2 }}>.xlsx, .xls or .csv</div>
+              </button>
+              {questionKind !== "combined" && (
+                <button type="button" role="radio" aria-checked={uploadFormat === "notepad"} style={segBtn(uploadFormat === "notepad")} onClick={() => { setUploadFormat("notepad"); reset(); }}>
+                  <div style={{ fontWeight: 700 }}>Notepad</div><div style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 2 }}>.txt, one question type per file</div>
+                </button>
+              )}
+            </div>
+          </section>
 
-          {error && <p style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{error}</p>}
-          <button className="btn btn-primary" style={{ marginTop: 16, width: "100%" }} disabled={!file || stage === "previewing"}>
-            {stage === "previewing" ? "Checking…" : "Preview"}
-          </button>
+          <section aria-label="Step 3: template" style={{ marginBottom: 18 }}>
+            {stepHead(3, "Start from a template", "(optional, but it avoids column mistakes)")}
+            <button type="button" className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => downloadTemplate(questionKind)}>
+              ⬇ Download {kindLabel} template ({templateExt})
+            </button>
+            {allowCoding && (
+              <span style={{ fontSize: 12, color: "var(--ink-dim)", marginLeft: 10 }}>
+                Other templates:{" "}
+                {kinds.filter((k) => k.id !== questionKind).map((k, i) => (
+                  <button key={k.id} type="button" onClick={() => downloadTemplate(k.id)} style={{ background: "none", border: "none", padding: 0, marginRight: 10, color: "var(--ink)", textDecoration: "underline", cursor: "pointer", fontSize: 12 }}>
+                    {i > 0 ? "" : ""}{k.label}
+                  </button>
+                ))}
+              </span>
+            )}
+          </section>
+
+          <section aria-label="Step 4: your file" style={{ marginBottom: 12 }}>
+            {stepHead(4, "Upload your file")}
+            <label
+              htmlFor="bulk-import-file"
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); chooseFile(e.dataTransfer.files?.[0] || null); }}
+              style={{ position: "relative", display: "block", border: `2px dashed ${dragOver ? "var(--amber-dark)" : file ? "var(--mint)" : "var(--line)"}`, borderRadius: 12, padding: "22px 16px", textAlign: "center", cursor: "pointer", background: dragOver ? "var(--warning-bg)" : "transparent" }}
+            >
+              {file ? (
+                <>
+                  <div style={{ fontWeight: 700, wordBreak: "break-all" }}>✓ {file.name}</div>
+                  <div className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{sizeLabel(file.size)} · click to choose a different file</div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 700 }}>Drag a file here, or click to browse</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>{uploadFormat === "notepad" ? ".txt" : ".xlsx, .xls, .csv"}</div>
+                </>
+              )}
+              <input id="bulk-import-file" type="file" accept={accept} style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} onChange={(e) => { chooseFile(e.target.files?.[0] || null); e.target.value = ""; }} />
+            </label>
+            {file && <button type="button" className="btn btn-ghost" style={{ fontSize: 12, marginTop: 6 }} onClick={() => setFile(null)}>Remove file</button>}
+          </section>
+
+          <details style={{ marginBottom: 8, border: "1px solid var(--line)", borderRadius: 10, padding: "8px 12px" }}>
+            <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+              More options <span style={{ fontWeight: 400, color: "var(--ink-dim)" }}>— Question Bank folder, duplicates{uploadFormat === "spreadsheet" ? ", images" : ""}</span>
+            </summary>
+            <div style={{ marginTop: 10 }}>
+              {folders !== undefined && (
+                <>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600 }} htmlFor="bulk-import-folder-id">
+                    Save to Question Bank
+                    {questionKind === "coding" && <span style={{ color: "var(--ink-dim)", fontWeight: 400 }}> (used when a row names no Question Bank)</span>}
+                  </label>
+                  <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <select id="bulk-import-folder-id" style={{ ...inputStyle, flex: "1 1 200px" }} value={folderId} onChange={(e) => { setFolderId(e.target.value); setNewFolderName(""); }}>
+                      <option value="">Uncategorized (no folder)</option>
+                      {folders?.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                    {onCreateFolder && (
+                      <input aria-label="New folder name" style={{ ...inputStyle, flex: "1 1 200px" }} placeholder="…or type a new folder name" value={newFolderName} onChange={(e) => { setNewFolderName(e.target.value); setFolderId(""); }} />
+                    )}
+                  </div>
+                </>
+              )}
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginTop: 14 }} htmlFor="bulk-import-duplicate-action">If a question already exists (same text, same Subject/Unit)</label>
+              <select id="bulk-import-duplicate-action" style={{ ...inputStyle, marginTop: 6 }} value={duplicateAction} onChange={(e) => setDuplicateAction(e.target.value)}>
+                <option value="skip">Skip duplicates</option>
+                <option value="import">Import anyway</option>
+              </select>
+              {uploadFormat === "spreadsheet" && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600 }} htmlFor="bulk-import-images-zip">Images (ZIP) <span style={{ fontWeight: 400, color: "var(--ink-dim)" }}>— only if a row fills in "Image File Name"</span></label>
+                  <input id="bulk-import-images-zip" type="file" accept=".zip" style={{ marginTop: 6 }} onChange={(e) => setImagesZip(e.target.files?.[0] || null)} />
+                  {imagesZip && <div className="mono" style={{ fontSize: 12, marginTop: 4 }}>✓ {imagesZip.name} ({sizeLabel(imagesZip.size)})</div>}
+                  <p style={{ fontSize: 11.5, color: "var(--ink-dim)", marginTop: 4 }}>
+                    Each "Image File Name" cell must exactly match a file inside the ZIP (folders inside are fine; only the file name is matched). A row naming a file the ZIP does not contain is reported as a row error, never silently imported without its image.
+                  </p>
+                </div>
+              )}
+            </div>
+          </details>
+
+          {error && <p role="alert" style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{error}</p>}
+          <div style={footer}>
+            <button className="btn btn-primary" style={{ flex: 1, padding: "12px 16px" }} disabled={!file || busy}>
+              {busy ? "Checking your file…" : file ? "Preview questions →" : "Choose a file to continue"}
+            </button>
+          </div>
         </form>
       )}
 
-      {stage === "previewed" && preview && (
-        <div style={{ marginTop: 14 }}>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>Preview</p>
-          {/* One clear, file-level diagnostic instead of burying the real problem in a pile of
-              near-identical per-row errors -- see runQuizBulkImport's structureHint comment for
-              the real upload this was built from. */}
+      {stage === "previewing" && <p role="status" className="mono" style={{ marginTop: 14 }}>Checking your file… this can take a few seconds for large files.</p>}
+
+      {(stage === "previewed" || stage === "confirming") && preview && (
+        <div aria-live="polite">
+          <h4 style={{ fontSize: 15, margin: "0 0 10px" }}>Review before importing</h4>
           {preview.structureHint && (
-            <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 8, background: "var(--warning-bg)", color: "var(--amber-dark)", fontSize: 13 }}>
-              ⚠ {preview.structureHint}
-            </div>
+            <div style={{ marginBottom: 10, padding: "10px 12px", borderRadius: 8, background: "var(--warning-bg)", color: "var(--amber-dark)", fontSize: 13 }}>⚠ {preview.structureHint}</div>
           )}
           {preview.unknownColumns?.length > 0 && (
-            <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 8, background: "var(--card-bg, #F7F7F5)", border: "1px solid var(--line)", color: "var(--ink-dim)", fontSize: 12.5 }}>
-              ⚠ Unknown column{preview.unknownColumns.length === 1 ? "" : "s"} ignored (not imported): <strong>{preview.unknownColumns.join(", ")}</strong>
+            <div style={{ marginBottom: 10, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)", color: "var(--ink-dim)", fontSize: 12.5 }}>
+              Unknown column{preview.unknownColumns.length === 1 ? "" : "s"} ignored (not imported): <strong>{preview.unknownColumns.join(", ")}</strong>
             </div>
           )}
-          <div style={{ fontSize: 13, marginTop: 4 }}>
-            <div>Total rows: <strong>{preview.total}</strong></div>
-            <div style={{ color: "var(--mint)" }}>
-              ✓ Ready to import: <strong>{preview.createdCount}</strong>
-              {questionKind === "combined" && (preview.mcqCount > 0 || preview.codingCount > 0) && (
-                <span style={{ color: "var(--ink-dim)", fontWeight: 400 }}> ({preview.mcqCount} MCQ, {preview.codingCount} Coding)</span>
-              )}
-            </div>
-            {preview.autoFixedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>🔧 Auto-fixed: <strong>{preview.autoFixedCount}</strong></div>}
-            {preview.imagesValidatedCount > 0 && <div style={{ color: "var(--mint)" }}>🖼 Images validated: <strong>{preview.imagesValidatedCount}</strong></div>}
-            {preview.skippedCount > 0 && <div style={{ color: "var(--amber-dark)" }}>⚠ Duplicates (will skip): <strong>{preview.skippedCount}</strong></div>}
-            {preview.errorCount > 0 && <div style={{ color: "var(--rust)" }}>✕ Invalid (will not import): <strong>{preview.errorCount}</strong></div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {tile(preview.total, "Rows in file")}
+            {tile(preview.createdCount, "Ready to import", "var(--mint)")}
+            {preview.autoFixedCount > 0 && tile(preview.autoFixedCount, "Auto-fixed", "var(--amber-dark)")}
+            {preview.skippedCount > 0 && tile(preview.skippedCount, "Duplicates (skipped)", "var(--amber-dark)")}
+            {preview.errorCount > 0 && tile(preview.errorCount, "Invalid (not imported)", "var(--rust)")}
+            {preview.imagesValidatedCount > 0 && tile(preview.imagesValidatedCount, "Images checked", "var(--mint)")}
           </div>
+          {questionKind === "combined" && (preview.mcqCount > 0 || preview.codingCount > 0) && (
+            <p className="mono" style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 8 }}>{preview.mcqCount} MCQ and {preview.codingCount} Coding questions</p>
+          )}
+          {preview.createdCount === 0 && <p style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>Nothing in this file can be imported yet. Fix the issues below and choose the file again.</p>}
 
-          {/* Every correction here was fully deterministic (a letter reference, a separator style,
-              surrounding whitespace) -- never a guess about what the question meant. Shown so a
-              staff member can see exactly what changed, per spec: never silently change content. */}
           {preview.autoFixed?.length > 0 && (
-            <details style={{ marginTop: 10 }}>
+            <details style={{ marginTop: 12 }}>
               <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 700, color: "var(--amber-dark)" }}>
-                🔧 {preview.autoFixed.length} correction{preview.autoFixed.length === 1 ? "" : "s"} automatically applied — review
+                {preview.autoFixed.length} correction{preview.autoFixed.length === 1 ? "" : "s"} applied automatically — review
               </summary>
               <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
                 {preview.autoFixed.map((f, i) => (
@@ -309,57 +351,46 @@ export default function BulkQuestionImport({ allowCoding = false, folders, onCre
           )}
 
           {(preview.errors?.length > 0 || preview.skipped?.length > 0) && (
-            <div style={{ marginTop: 8 }}>
-              <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadReport(preview)}>
-                ⬇ Download issue report
-              </button>
-              <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
-                {(preview.errors || []).map((e, i) => (
-                  <div key={`e${i}`} style={{ fontSize: 11, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
-                ))}
-                {(preview.skipped || []).map((e, i) => (
-                  <div key={`s${i}`} style={{ fontSize: 11, color: "var(--amber-dark)" }} className="mono">Row {e.row} (skipped): {e.reason}</div>
-                ))}
+            <details open={preview.errors?.length > 0} style={{ marginTop: 12 }}>
+              <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Issues ({(preview.errors?.length || 0) + (preview.skipped?.length || 0)})</summary>
+              <div style={{ marginTop: 6 }}>
+                <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => downloadReport(preview)}>⬇ Download issue report (CSV)</button>
+                <div style={{ marginTop: 6, maxHeight: 180, overflowY: "auto" }}>
+                  {(preview.errors || []).map((e, i) => <div key={`e${i}`} style={{ fontSize: 11.5, color: "var(--rust)" }} className="mono">✕ Row {e.row}: {e.reason}</div>)}
+                  {(preview.skipped || []).map((e, i) => <div key={`s${i}`} style={{ fontSize: 11.5, color: "var(--amber-dark)" }} className="mono">↷ Row {e.row} (skipped): {e.reason}</div>)}
+                </div>
               </div>
-            </div>
+            </details>
           )}
 
-          {error && <p style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{error}</p>}
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button type="button" className="btn btn-ghost" onClick={reset}>← Choose a different file</button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ flex: 1 }}
-              disabled={!preview.createdCount || stage === "confirming"}
-              onClick={handleConfirm}
-            >
-              {stage === "confirming" ? "Importing…" : `Confirm Import (${preview.createdCount})`}
+          {error && <p role="alert" style={{ fontSize: 13, color: "var(--rust)", marginTop: 10 }}>{error}</p>}
+          <div style={footer}>
+            <button type="button" className="btn btn-ghost" onClick={reset} disabled={stage === "confirming"}>← Choose a different file</button>
+            <button type="button" className="btn btn-primary" style={{ flex: 1, padding: "12px 16px" }} disabled={!preview.createdCount || stage === "confirming"} onClick={handleConfirm}>
+              {stage === "confirming" ? "Importing… please keep this window open" : `Import ${preview.createdCount} question${preview.createdCount === 1 ? "" : "s"}`}
             </button>
           </div>
         </div>
       )}
 
       {stage === "done" && result && (
-        <div style={{ marginTop: 14 }}>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>Import Complete</p>
-          <div style={{ fontSize: 13, marginTop: 4 }}>
-            <div>
+        <div role="status" aria-live="polite">
+          <div style={{ border: "1px solid var(--mint)", borderRadius: 12, padding: 16, background: "var(--success-bg)" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--mint)" }}>✓ Import complete</div>
+            <p style={{ fontSize: 14, marginTop: 6 }}>
               <strong>{result.createdCount}</strong> question{result.createdCount === 1 ? "" : "s"} created out of {result.total}.
-              {questionKind === "combined" && (result.mcqCount > 0 || result.codingCount > 0) && (
-                <span style={{ color: "var(--ink-dim)" }}> ({result.mcqCount} MCQ, {result.codingCount} Coding)</span>
-              )}
-            </div>
-            {result.errorCount > 0 && <div style={{ color: "var(--rust)" }}>{result.errorCount} failed at the last moment (state may have changed since preview).</div>}
+              {questionKind === "combined" && (result.mcqCount > 0 || result.codingCount > 0) && <span style={{ color: "var(--ink-dim)" }}> ({result.mcqCount} MCQ, {result.codingCount} Coding)</span>}
+            </p>
+            {result.errorCount > 0 && <p style={{ fontSize: 13, color: "var(--rust)", marginTop: 4 }}>{result.errorCount} failed at the last moment (the data may have changed since the preview).</p>}
           </div>
           {result.errors?.length > 0 && (
-            <div style={{ marginTop: 6, maxHeight: 160, overflowY: "auto" }}>
-              {result.errors.map((e, i) => (
-                <div key={i} style={{ fontSize: 11, color: "var(--rust)" }} className="mono">Row {e.row}: {e.reason}</div>
-              ))}
+            <div style={{ marginTop: 8, maxHeight: 160, overflowY: "auto" }}>
+              {result.errors.map((e, i) => <div key={i} style={{ fontSize: 11.5, color: "var(--rust)" }} className="mono">✕ Row {e.row}: {e.reason}</div>)}
             </div>
           )}
-          <button type="button" className="btn btn-ghost" style={{ marginTop: 12 }} onClick={reset}>Import more questions</button>
+          <div style={footer}>
+            <button type="button" className="btn btn-ghost" onClick={reset}>Import more questions</button>
+          </div>
         </div>
       )}
     </div>
