@@ -137,7 +137,7 @@ router.get("/tests/:testId/monitor", authenticate, requireRole(...STAFF), attach
         risk: risk.level, riskScore: risk.score, lastEvent: last ? { type: last.type, at: last.createdAt } : null,
         pendingReview: (extraBy.get(a.id) || []).filter((e) => e.reviewStatus === "PENDING" && e.severity !== "LOW").length,
         device: sessBy.get(a.id) ? { deviceId: sessBy.get(a.id).deviceId, label: devLabels.get(sessBy.get(a.id).examDeviceId) || null, kind: sessBy.get(a.id).clientKind } : null,
-        connection: a.status !== "IN_PROGRESS" ? "ENDED" : (sessBy.get(a.id) ? (sessBy.get(a.id).lockedAt && !sessBy.get(a.id).unlockedAt ? "LOCKED" : SecureExam.connectionState(sessBy.get(a.id), { heartbeatSec: 15, graceSec: pol.graceSec }, nowMs)) : (pol.secureBrowserRequired ? "NO_SECURE_SESSION" : "BROWSER")),
+        connection: a.status !== "IN_PROGRESS" ? "ENDED" : (sessBy.get(a.id) ? (sessBy.get(a.id).lockedAt && !sessBy.get(a.id).unlockedAt ? "LOCKED" : (SecureExam.connectionState(sessBy.get(a.id), { heartbeatSec: 15, graceSec: pol.graceSec }, nowMs) === "ENDED" ? "SESSION_ENDED" : SecureExam.connectionState(sessBy.get(a.id), { heartbeatSec: 15, graceSec: pol.graceSec }, nowMs))) : (pol.secureBrowserRequired ? "NO_SECURE_SESSION" : "BROWSER")),
         progress: { answered: (subBy.get(a.id) || {}).answered || 0, accepted: (subBy.get(a.id) || {}).accepted || 0 },
         secondsLeft: a.status === "IN_PROGRESS" ? Math.max(0, Math.round((new Date(a.startedAt).getTime() + ctx.test.timeLimitMin * 60000 - nowMs) / 1000)) : 0,
       };

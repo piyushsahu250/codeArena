@@ -231,7 +231,7 @@ async function cleanup() {
     check("students cannot read the live monitor (403)", (await call("GET", `/exam-security/tests/${level.id}/monitor`, T1)).status === 403);
     const mon = await call("GET", `/exam-security/tests/${level.id}/monitor`, TA);
     const mrow = mon.body.rows.find((r) => r.attemptId === attemptId);
-    check("monitor rows carry device, progress and server-computed time left", mrow && mrow.device?.label === "Verify Lab PC 1" && typeof mrow.secondsLeft === "number" && mrow.progress && ["CONNECTED", "TEMPORARILY_DISCONNECTED", "LOCKED"].includes(mrow.connection));
+    check("monitor rows carry device, progress and server-computed time left", mrow && mrow.device?.label === "Verify Lab PC 1" && typeof mrow.secondsLeft === "number" && mrow.progress && ["CONNECTED", "TEMPORARILY_DISCONNECTED", "LOCKED", "SESSION_ENDED"].includes(mrow.connection));
     check("monitor summary has all dashboard counters", ["totalStudents", "active", "completed", "disconnected", "securityWarnings", "highRisk", "critical", "deviceFailures", "networkFailures"].every((k) => typeof mon.body.summary[k] === "number"));
     const tl = await call("GET", `/exam-security/attempts/${attemptId}/timeline`, TA);
     check("the security timeline shows the lock, unlock and device events in order", tl.status === 200 && ["EXAM_LOCKED", "EXAM_UNLOCKED", "HEARTBEAT_LOST"].every((t) => tl.body.timeline.some((e) => e.type === t)) && tl.body.timeline.every((e, i, a) => i === 0 || new Date(a[i - 1].at) <= new Date(e.at)));

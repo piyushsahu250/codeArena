@@ -63,7 +63,7 @@ function Timeline({ attemptId, onClose }) {
 const CONN_LABEL = {
   CONNECTED: ["Connected", "success"], TEMPORARILY_DISCONNECTED: ["Reconnecting", "warning"], RECOVERING: ["Recovering", "warning"],
   SECURITY_SESSION_LOST: ["Session lost", "danger"], LOCKED: ["Locked", "danger"], ENDED: ["Finished", "default"],
-  NO_SECURE_SESSION: ["No secure client", "danger"], BROWSER: ["Browser", "default"],
+  NO_SECURE_SESSION: ["No secure client", "danger"], SESSION_ENDED: ["Session ended", "danger"], BROWSER: ["Browser", "default"],
 };
 const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
