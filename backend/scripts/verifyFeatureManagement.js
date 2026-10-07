@@ -47,7 +47,7 @@ async function cleanup() {
     const rows = await prisma.featureSetting.findMany({ where: { featureKey: "resume_builder", instituteId: { in: [A.id, B.id] } } });
     check("both institutes are now OFF in the database", rows.length === 2 && rows.every((r) => r.enabled === false));
     const audits = await prisma.auditLog.findMany({ where: { instituteId: { in: [A.id, B.id] }, action: "FEATURE_BULK_TOGGLED" } });
-    check("audit rows record the real actor role and previous value", audits.length === 2 && audits.every((a) => a.actorRole === "ADMIN" && a.details?.previous === true && a.details?.new === false), JSON.stringify(audits[0]?.actorRole));
+    check("audit rows record the real actor role and previous value", audits.length === 2 && audits.every((a) => a.adminRole === "ADMIN" && a.details?.previous === true && a.details?.new === false), JSON.stringify(audits[0]?.adminRole));
     check("bulk with an unknown feature is refused", (await call("POST", "/features/bulk", TA, { instituteIds: [A.id], featureKey: "nope", enabled: true })).status === 400);
     check("bulk with an empty list is refused", (await call("POST", "/features/bulk", TA, { instituteIds: [], featureKey: "resume_builder", enabled: true })).status === 400);
     const missing = await call("POST", "/features/bulk", TA, { instituteIds: [A.id, "00000000-0000-0000-0000-000000000000"], featureKey: "resume_builder", enabled: true });
@@ -61,7 +61,7 @@ async function cleanup() {
     const own = await call("PATCH", "/features", TI, { instituteId: A.id, featureKey: "resume_builder", enabled: true });
     check("institute admin can change their own institute", own.status === 200);
     const ownAudit = await prisma.auditLog.findFirst({ where: { instituteId: A.id, action: "FEATURE_TOGGLED" }, orderBy: { createdAt: "desc" } });
-    check("audit shows INSTITUTE_ADMIN (not a hard-coded ADMIN) for their change", ownAudit?.actorRole === "INSTITUTE_ADMIN", String(ownAudit?.actorRole));
+    check("audit shows INSTITUTE_ADMIN (not a hard-coded ADMIN) for their change", ownAudit?.adminRole === "INSTITUTE_ADMIN", String(ownAudit?.adminRole));
     const instList = await call("GET", "/institutes", TI);
     check("an institute admin's institute list contains only their own institute", instList.status === 200 && instList.body.length === 1 && instList.body[0].id === A.id);
 
