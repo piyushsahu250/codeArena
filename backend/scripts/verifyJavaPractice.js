@@ -88,7 +88,7 @@ async function cleanup() {
 
     // ---- instructions + config
     const cfg = await call("GET", `/module-coding/level/${lvl0.id}`, T1);
-    check("instructions screen data: instructions, duration, attempts", cfg.body.exists && /Attempt this test once/.test(cfg.body.test.instructions) && cfg.body.test.timeLimitMin === 90 && cfg.body.test.maxAttempts === 1);
+    check("instructions screen data: instructions, duration, attempts", cfg.body.exists && /up to 5 attempts/.test(cfg.body.test.instructions) && cfg.body.test.timeLimitMin === 90 && cfg.body.test.maxAttempts === 5);
     check("level response has practice context (back link)", cfg.body.practice?.chapterId === topic0.id);
     const staffStart = await call("POST", `/module-coding/level/${lvl0.id}/start`, TA);
     check("staff/admin cannot start a student attempt", staffStart.status === 403, String(staffStart.status));
@@ -157,8 +157,13 @@ int main(){std::cout<<"Hello, Java!"<<std::endl;return 0;}` }[lang];
     const s2start = await call("POST", `/module-coding/level/${lvl0.id}/start`, T2);
     const s2fin = await call("POST", `/module-coding/attempts/${s2start.body.attemptId}/finalize`, T2, { reason: "manual" });
     check("student two fails with no answers", s2fin.status === 200 && s2fin.body?.passed === false);
+    for (let n = 2; n <= 5; n++) {
+      const again2 = await call("POST", `/module-coding/level/${lvl0.id}/start`, T2);
+      if (again2.status !== 200) check(`attempt ${n} of 5 is allowed`, false, String(again2.status));
+      else await call("POST", `/module-coding/attempts/${again2.body.attemptId}/finalize`, T2, { reason: "manual" });
+    }
     const s2retry = await call("POST", `/module-coding/level/${lvl0.id}/start`, T2);
-    check("attempt limit (1) enforced server-side", s2retry.status === 403 && /attempts/i.test(s2retry.body?.error || ""), `${s2retry.status} ${s2retry.body?.error}`);
+    check("attempt limit (5) enforced server-side: 6th start refused", s2retry.status === 403 && /attempts/i.test(s2retry.body?.error || ""), `${s2retry.status} ${s2retry.body?.error}`);
     const reset = await call("DELETE", `/module-coding/admin/tests/${lvl0.id}/students/${s2.id}/attempts`, TA, { reason: "verification reset" });
     const audited = await prisma.auditLog.count({ where: { action: "REATTEMPT_GRANTED", studentId: s2.id } });
     check("staff reset restores the attempt and is audited", reset.status === 200 && audited >= 1, `${reset.status} audit=${audited}`);

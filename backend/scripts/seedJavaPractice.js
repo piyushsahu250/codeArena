@@ -39,7 +39,7 @@ const LEVELS = [
   ["Level 3", "Advanced", "Advanced problem solving: edge cases and efficiency matter."],
 ];
 const INSTRUCTIONS = [
-  "Attempt this test once. A second attempt is only granted for a genuine technical problem, and you will need to show evidence of it.",
+  "You have up to 5 attempts at each level. An extra attempt beyond that is only granted for a genuine technical problem, and you will need to show evidence of it.",
   "Work on your own. Do not ask for, or give, help to anyone else during the test.",
   "Do not take screenshots, record the screen or copy the questions or answers out of the test.",
   "Do not post requests for clarification of the questions anywhere.",
