@@ -80,7 +80,9 @@ export default function ModuleCodingAssessment() {
   const [codeVerdicts, setCodeVerdicts] = useState({});
   const [visited, setVisited] = useState({});
   const [submitResultMsg, setSubmitResultMsg] = useState(null); // { ok, text } — no alert(), which forces fullscreen exit
-  const [editorHeight, setEditorHeight] = useState(() => Number(localStorage.getItem("moduleCodingEditorHeight")) || 420);
+  // Height of the results panel under the editor. The editor itself flexes to fill what is left, so the results are
+  // always on screen instead of being pushed below the fold by a fixed-height editor.
+  const [resultsHeight, setResultsHeight] = useState(() => Number(localStorage.getItem("moduleCodingResultsHeight")) || 260);
   const resizingRef = useRef(false);
 
   const monacoEditorRef = useRef(null); // set on mount — lets the mobile Indent/Outdent buttons below drive the editor directly, since a touch keyboard has no physical Tab key at all
@@ -417,13 +419,13 @@ export default function ModuleCodingAssessment() {
   useEffect(() => {
     function onMove(e) {
       if (!resizingRef.current) return;
-      setEditorHeight((h) => Math.min(800, Math.max(200, h + e.movementY)));
+      setResultsHeight((h) => Math.min(520, Math.max(140, h - e.movementY)));
     }
     function onUp() {
       if (!resizingRef.current) return;
       resizingRef.current = false;
       document.body.style.cursor = "";
-      setEditorHeight((h) => { localStorage.setItem("moduleCodingEditorHeight", String(h)); return h; });
+      setResultsHeight((h) => { localStorage.setItem("moduleCodingResultsHeight", String(h)); return h; });
     }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -763,7 +765,7 @@ export default function ModuleCodingAssessment() {
               onClick={beginOrResume}
               disabled={phase === "starting" || !status.canStart || (!status.activeAttemptId && !readinessReady)}
             >
-              {phase === "starting" ? "Starting…" : status.activeAttemptId ? "Resume Assessment (Fullscreen)" : "Begin Assessment (Fullscreen)"}
+              {phase === "starting" ? "Starting…" : status.activeAttemptId ? `Resume ${t.requireFullscreen !== false ? "Assessment (Fullscreen)" : "Level"}` : (t.requireFullscreen !== false ? "Begin Assessment (Fullscreen)" : "Start Level")}
             </button>
           </div>
         </div>
@@ -991,7 +993,7 @@ export default function ModuleCodingAssessment() {
               alone, which collapses to 0 on some mobile browsers when the parent's own height is
               not definite. The outer column scrolls, so a taller editor just means less empty
               space, never a cut-off. */}
-          <div style={{ height: isMobile ? 420 : editorHeight, minHeight: 0, flexShrink: 0 }}>
+          <div style={isMobile ? { height: 420, minHeight: 0, flexShrink: 0 } : { flex: "1 1 0", minHeight: 200 }}>
             <Editor
               height={isMobile ? 420 : "100%"}
               language={ALL_LANGUAGES.find((l) => l.id === answer?.language)?.monaco}
@@ -1004,31 +1006,50 @@ export default function ModuleCodingAssessment() {
           </div>
           <div
             onMouseDown={isMobile ? undefined : startResize}
-            title="Drag to resize editor"
+            title="Drag to resize the results panel"
             style={{ height: 9, cursor: "row-resize", background: "var(--line)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <div style={{ width: 40, height: 3, borderRadius: 2, background: "var(--ink-dim)" }} />
           </div>
-          <div style={{ flex: 1, minHeight: 80, overflowY: "auto", padding: 16, background: "var(--paper)" }}>
-            {submitResultMsg && !running && (
-              <div
-                className="mono"
-                style={{
-                  padding: "10px 12px", borderRadius: 8, marginBottom: runResult ? 12 : 0, fontSize: 12.5, fontWeight: 600,
-                  background: submitResultMsg.ok ? "var(--success-bg)" : "var(--danger-bg)",
-                  color: submitResultMsg.ok ? "var(--mint)" : "var(--rust)",
-                  border: `1px solid ${submitResultMsg.ok ? "var(--mint)" : "var(--rust)"}`,
-                }}
-              >
-                {submitResultMsg.ok ? "✓ " : "✗ "}{submitResultMsg.text}
-              </div>
-            )}
-            {running && <p className="mono" style={{ fontSize: 12, color: "var(--amber-dark)", fontWeight: 600 }}>⏳ Compiling and running…</p>}
-            {!running && runResult && <CodeResultBlock title="Sample run result" result={runResult} />}
-          </div>
+          <ResultsPanel height={isMobile ? undefined : resultsHeight} running={running} runResult={runResult} submitResultMsg={submitResultMsg} submitVerdict={codeVerdicts[current?.id]} />
         </div>
       </div>
     </div>
+  );
+}
+
+// Always-visible test-result dashboard under the editor: what the last Run or Submit did, how many test cases passed,
+// and (for Run) every sample case with its input, expected and actual output. Hidden cases only ever show a count.
+function ResultsPanel({ height, running, runResult, submitResultMsg, submitVerdict }) {
+  const hasRun = runResult && !runResult.error;
+  const total = hasRun ? runResult.totalCases : submitVerdict?.totalCases;
+  const passed = hasRun ? runResult.passedCases : submitVerdict?.passedCases;
+  return (
+    <section aria-label="Test results" aria-live="polite" style={{ height, minHeight: height ? undefined : 220, flexShrink: 0, overflowY: "auto", padding: "12px 16px", background: "var(--paper)", borderTop: "1px solid var(--line)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+        <strong style={{ fontSize: 13 }}>Test results</strong>
+        {total != null && (
+          <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: passed === total ? "var(--mint)" : "var(--rust)" }}>
+            {passed}/{total} test cases passed
+          </span>
+        )}
+      </div>
+      {total != null && (
+        <div role="progressbar" aria-valuenow={passed} aria-valuemin={0} aria-valuemax={total} style={{ height: 6, borderRadius: 3, background: "var(--line)", overflow: "hidden", marginBottom: 10 }}>
+          <div style={{ width: `${total ? (passed / total) * 100 : 0}%`, height: "100%", background: passed === total ? "var(--mint)" : "var(--amber-dark)" }} />
+        </div>
+      )}
+      {running && <p className="mono" style={{ fontSize: 12, color: "var(--amber-dark)", fontWeight: 600 }}>⏳ Compiling and running…</p>}
+      {!running && submitResultMsg && (
+        <div className="mono" style={{ padding: "8px 12px", borderRadius: 8, marginBottom: 10, fontSize: 12.5, fontWeight: 600, background: submitResultMsg.ok ? "var(--success-bg)" : "var(--danger-bg)", color: submitResultMsg.ok ? "var(--mint)" : "var(--rust)", border: `1px solid ${submitResultMsg.ok ? "var(--mint)" : "var(--rust)"}` }}>
+          {submitResultMsg.ok ? "✓ " : "✗ "}{submitResultMsg.text}
+        </div>
+      )}
+      {!running && runResult && <CodeResultBlock title="Sample run result" result={runResult} />}
+      {!running && !runResult && !submitResultMsg && (
+        <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>Press <strong>Run</strong> to try your code on the sample cases, or <strong>Submit</strong> to check it against every test case. Results appear here.</p>
+      )}
+    </section>
   );
 }
 
