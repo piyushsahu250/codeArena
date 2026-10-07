@@ -26,6 +26,12 @@ function dependentsOf(featureKey) {
   return FEATURE_CATALOG.filter((f) => f.dependsOn === featureKey).map((f) => f.key);
 }
 
+// ADMIN: the feature catalog on its own (no institute needed) -- the bulk panel's feature picker must work before any institute is
+// selected. Same shape as the per-institute list, minus the institute-specific state.
+router.get("/catalog", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"), (req, res) => {
+  res.json({ features: FEATURE_CATALOG.map((f) => ({ key: f.key, label: f.label, category: f.category, description: f.description || null, dependsOn: f.dependsOn || null })) });
+});
+
 // ADMIN: full catalog + this institute's current state, for the Feature Management page.
 // requesterInstituteId is null only for a genuine platform-level admin (no institute of their
 // own) — an institute-scoped ADMIN must match the instituteId they're asking about, or every
@@ -98,7 +104,7 @@ router.patch("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_A
     invalidateFeatureCache(instituteId);
 
     await logAudit({
-      req, action: AUDIT_ACTIONS.FEATURE_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: "ADMIN",
+      req, action: AUDIT_ACTIONS.FEATURE_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId, details: { featureKey, previous, new: enabled },
     });
 
@@ -153,17 +159,19 @@ router.post("/bulk", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
     const validIds = found.map((i) => i.id);
     const missing = instituteIds.filter((id) => !validIds.includes(id));
 
+    // All-or-nothing: one transaction, so a failure part-way never leaves some institutes changed and others not.
+    const existingRows = await prisma.featureSetting.findMany({ where: { featureKey, instituteId: { in: validIds } } });
+    const previousBy = new Map(existingRows.map((r) => [r.instituteId, r.enabled]));
+    await prisma.$transaction(validIds.map((instituteId) => prisma.featureSetting.upsert({
+      where: { instituteId_featureKey: { instituteId, featureKey } },
+      update: { enabled, updatedBy: req.user.id },
+      create: { instituteId, featureKey, enabled, updatedBy: req.user.id },
+    })));
     for (const instituteId of validIds) {
-      const existing = await prisma.featureSetting.findUnique({ where: { instituteId_featureKey: { instituteId, featureKey } } });
-      const previous = existing ? existing.enabled : true;
-      await prisma.featureSetting.upsert({
-        where: { instituteId_featureKey: { instituteId, featureKey } },
-        update: { enabled, updatedBy: req.user.id },
-        create: { instituteId, featureKey, enabled, updatedBy: req.user.id },
-      });
+      const previous = previousBy.has(instituteId) ? previousBy.get(instituteId) : true;
       invalidateFeatureCache(instituteId);
       await logAudit({
-        req, action: AUDIT_ACTIONS.FEATURE_BULK_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: "ADMIN",
+        req, action: AUDIT_ACTIONS.FEATURE_BULK_TOGGLED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
         instituteId, details: { featureKey, previous, new: enabled, bulk: true, instituteCount: validIds.length },
       });
     }
@@ -220,21 +228,21 @@ router.post("/copy", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
     if (!source || !target) return res.status(404).json({ error: "Institute not found" });
 
     const fromMap = await getInstituteFeatureMap(fromInstituteId);
-    for (const featureKey of Object.keys(fromMap)) {
-      const enabled = fromMap[featureKey];
-      const existing = await prisma.featureSetting.findUnique({ where: { instituteId_featureKey: { instituteId: toInstituteId, featureKey } } });
-      const previous = existing ? existing.enabled : true;
-      if (previous === enabled) continue; // no-op, skip write+audit noise
-      await prisma.featureSetting.upsert({
+    // One transaction: the copy applies completely or not at all.
+    const targetRows = await prisma.featureSetting.findMany({ where: { instituteId: toInstituteId } });
+    const targetBy = new Map(targetRows.map((r) => [r.featureKey, r.enabled]));
+    const writes = Object.keys(fromMap)
+      .filter((featureKey) => (targetBy.has(featureKey) ? targetBy.get(featureKey) : true) !== fromMap[featureKey]) // skip no-ops
+      .map((featureKey) => prisma.featureSetting.upsert({
         where: { instituteId_featureKey: { instituteId: toInstituteId, featureKey } },
-        update: { enabled, updatedBy: req.user.id },
-        create: { instituteId: toInstituteId, featureKey, enabled, updatedBy: req.user.id },
-      });
-    }
+        update: { enabled: fromMap[featureKey], updatedBy: req.user.id },
+        create: { instituteId: toInstituteId, featureKey, enabled: fromMap[featureKey], updatedBy: req.user.id },
+      }));
+    if (writes.length) await prisma.$transaction(writes);
     invalidateFeatureCache(toInstituteId);
 
     await logAudit({
-      req, action: AUDIT_ACTIONS.FEATURE_CONFIG_COPIED, actorId: req.user.id, actorName: req.user.name, actorRole: "ADMIN",
+      req, action: AUDIT_ACTIONS.FEATURE_CONFIG_COPIED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role,
       instituteId: toInstituteId, details: { copiedFrom: fromInstituteId },
     });
 
