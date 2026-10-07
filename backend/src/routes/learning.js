@@ -241,7 +241,7 @@ router.get("/courses/:slug", authenticate, attachRequesterInstitute, async (req,
   }
 
   res.json({
-    course: { id: course.id, slug: course.slug, name: course.name, description: course.description, isActive: course.isActive },
+    course: { id: course.id, slug: course.slug, name: course.name, description: course.description, isActive: course.isActive, kind: course.kind },
     modules,
     overall: { totalLessons, completedLessons, percent: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0 },
     resumeLessonId,
@@ -1150,6 +1150,7 @@ router.post("/courses", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTI
     const course = await prisma.course.create({
       data: {
         slug, name, description: description || null, order: Number(order) || 0,
+        kind: req.body.kind === "PRACTICE" ? "PRACTICE" : "LEARNING",
         status: resolvedStatus, isActive: resolvedStatus === "PUBLISHED" || !!isActive, instituteId,
         ...extractCourseMetadata(req.body),
       },
@@ -1572,7 +1573,7 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
     if (!ownsLmsInstitute(req, moduleInstituteId)) {
       return res.status(403).json({ error: "You can only manage courses under your own institute" });
     }
-    const { title, description, order, isActive } = req.body;
+    const { title, description, order, isActive, unlockRule } = req.body;
     const mod = await prisma.courseModule.update({
       where: { id: req.params.id },
       data: {
@@ -1580,6 +1581,7 @@ router.patch("/modules/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
         ...(description !== undefined ? { description } : {}),
         ...(order !== undefined ? { order: Number(order) } : {}),
         ...(isActive !== undefined ? { isActive: !!isActive } : {}),
+        ...(["NONE", "SEQUENTIAL"].includes(unlockRule) ? { unlockRule } : {}),
       },
     });
     await logAudit({
@@ -1669,7 +1671,7 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_A
     if (!ownsLmsInstitute(req, moduleInstituteId)) {
       return res.status(403).json({ error: "You can only manage courses under your own institute" });
     }
-    const { title, description, order, isActive, countsTowardCertificate } = req.body;
+    const { title, description, order, isActive, countsTowardCertificate, durationLabel, outline, unlockRule } = req.body;
     if (!title) return res.status(400).json({ error: "title is required" });
     const chapter = await prisma.chapter.create({
       data: {
@@ -1677,6 +1679,7 @@ router.post("/modules/:id/chapters", authenticate, requireRole("ADMIN", "SUPER_A
         order: Number(order) || 0,
         isActive: isActive === undefined ? false : !!isActive, // new content starts as Draft
         countsTowardCertificate: countsTowardCertificate === undefined ? true : !!countsTowardCertificate,
+        durationLabel: durationLabel || null, outline: Array.isArray(outline) ? outline : undefined, unlockRule: ["NONE", "SEQUENTIAL"].includes(unlockRule) ? unlockRule : "NONE",
       },
     });
     await logAudit({
@@ -1720,7 +1723,7 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
     if (!ownsLmsInstitute(req, chapterInstituteId)) {
       return res.status(403).json({ error: "You can only manage courses under your own institute" });
     }
-    const { title, description, order, isActive, countsTowardCertificate } = req.body;
+    const { title, description, order, isActive, countsTowardCertificate, durationLabel, outline, unlockRule } = req.body;
     const chapter = await prisma.chapter.update({
       where: { id: req.params.id },
       data: {
@@ -1729,6 +1732,9 @@ router.patch("/chapters/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", 
         ...(order !== undefined ? { order: Number(order) } : {}),
         ...(isActive !== undefined ? { isActive: !!isActive } : {}),
         ...(countsTowardCertificate !== undefined ? { countsTowardCertificate: !!countsTowardCertificate } : {}),
+        ...(durationLabel !== undefined ? { durationLabel: durationLabel || null } : {}),
+        ...(outline !== undefined ? { outline: Array.isArray(outline) ? outline : undefined } : {}),
+        ...(["NONE", "SEQUENTIAL"].includes(unlockRule) ? { unlockRule } : {}),
       },
     });
     await logAudit({

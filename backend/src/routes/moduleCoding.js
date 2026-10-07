@@ -10,6 +10,7 @@ const { runQueued } = require("../utils/queue");
 const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("../utils/gradeModuleCodingAttempt");
 const { getModuleLockMap } = require("../utils/learningLock");
 const { statusOf } = require("../utils/publishState");
+const { levelUnlockState } = require("../utils/practiceProgress");
 const { processGamification } = require("../utils/gamification");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -134,12 +135,17 @@ async function resolveAssessment(req) {
   if (req.params.levelId) {
     const test = await prisma.moduleCodingTest.findUnique({
       where: { id: req.params.levelId },
-      include: { chapter: { include: { module: { include: { course: { select: { status: true } } } } } } },
+      include: { chapter: { include: { module: { include: { course: { select: { status: true, kind: true, slug: true } } } } } } },
     });
     if (!test || !test.chapter) return null;
     const mod = test.chapter.module;
     const live = statusOf(test) === "PUBLISHED" && statusOf(test.chapter) === "PUBLISHED"
       && statusOf(mod) === "PUBLISHED" && mod.course.status === "PUBLISHED";
+    // Practice tracks: unlocking follows the level/topic/section rules (utils/practiceProgress.js), not the lesson-based module lock.
+    if (mod.course.kind === "PRACTICE") {
+      const u = await levelUnlockState(prisma, req.user.id, mod.courseId, test.id);
+      return { test, mod, live, gateOpen: !u.locked, lessonsComplete: !u.locked, lockReason: u.reason, practice: { slug: mod.course.slug, chapterId: test.chapterId, title: test.chapter.title } };
+    }
     const lockMap = await getModuleLockMap(prisma, req.user.id, mod.courseId);
     // A Level that IS the module's own gating assessment (moduleId also set) keeps that module's rule:
     // lessons must be finished first. A plain chapter Level only needs the module to be unlocked.
@@ -234,8 +240,9 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
 
     res.json({
       exists: true,
+      practice: ctx.practice || null, lockReason: ctx.lockReason || null,
       test: {
-        id: test.id, title: test.title, instructions: test.instructions,
+        id: test.id, title: test.title, instructions: test.instructions, description: test.description, difficulty: test.difficulty,
         allowedLanguages: test.allowedLanguages, questionCount: test.questionCount,
         passingPercent: test.passingPercent, timeLimitMin: test.timeLimitMin,
         maxAttempts: test.maxAttempts, cooldownMinutes: test.cooldownMinutes,
@@ -272,7 +279,7 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
     // Not-live (Draft/Archived anywhere up the chain): only an attempt ALREADY in progress may continue,
     // handled by the resume block below; a brand-new attempt is refused after it.
     if (live && !ctx.gateOpen) {
-      return res.status(403).json({ error: req.params.levelId ? "This module is locked" : "Complete this module's lessons and practice test before starting the coding assessment" });
+      return res.status(403).json({ error: req.params.levelId ? (ctx.lockReason || "This module is locked") : "Complete this module's lessons and practice test before starting the coding assessment" });
     }
 
     const existing = await prisma.moduleCodingAttempt.findFirst({
@@ -740,6 +747,9 @@ router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN
         order: Number(order) || 0,
         title: title || "Coding Assessment Level",
         instructions: instructions || null,
+        description: req.body.description || null, difficulty: req.body.difficulty || null,
+        unlockRule: ["NONE", "PASS_PREVIOUS", "COMPLETE_PREVIOUS"].includes(req.body.unlockRule) ? req.body.unlockRule : "NONE",
+        unlockMinPercent: req.body.unlockMinPercent === undefined || req.body.unlockMinPercent === "" ? null : Number(req.body.unlockMinPercent),
         allowedLanguages: allowedLanguages ?? undefined,
         questionCount: Number(questionCount) || 3,
         randomizeQuestions: randomizeQuestions !== undefined ? !!randomizeQuestions : true,
@@ -770,7 +780,9 @@ router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN
     }
     const f = req.body;
     const data = {};
-    for (const key of ["title", "instructions"]) if (f[key] !== undefined) data[key] = f[key];
+    for (const key of ["title", "instructions", "description", "difficulty"]) if (f[key] !== undefined) data[key] = f[key];
+    if (f.unlockRule !== undefined && ["NONE", "PASS_PREVIOUS", "COMPLETE_PREVIOUS"].includes(f.unlockRule)) data.unlockRule = f.unlockRule;
+    if (f.unlockMinPercent !== undefined) data.unlockMinPercent = f.unlockMinPercent === "" || f.unlockMinPercent === null ? null : Number(f.unlockMinPercent);
     if (f.order !== undefined) data.order = Number(f.order);
     if (f.allowedLanguages !== undefined) data.allowedLanguages = f.allowedLanguages;
     if (f.questionCount !== undefined) data.questionCount = Number(f.questionCount);

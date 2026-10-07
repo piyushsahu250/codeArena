@@ -1347,6 +1347,7 @@ model Course {
   name        String
   description String?
   order       Int      @default(0)
+  kind        String   @default("LEARNING") // "LEARNING" (lesson course) | "PRACTICE" (level-based practice track, e.g. JAVA Practice)
   isActive    Boolean  @default(false) // false = shown as "Coming soon", not browsable — kept in
   // sync with `status === PUBLISHED` on every write, for backward compat with any read site that
   // still checks isActive directly rather than status.
@@ -1454,6 +1455,7 @@ model CourseModule {
   isActive    Boolean  @default(false) // true = Published. New rows start Draft; existing rows keep their value.
   archivedAt  DateTime?
   publishedAt DateTime?
+  unlockRule  String   @default("NONE") // practice tracks: "NONE" (independent) | "SEQUENTIAL" (previous section must be complete)
   createdAt   DateTime @default(now())
 
   lessons Lesson[]
@@ -1481,6 +1483,9 @@ model Chapter {
   isActive                Boolean  @default(false) // Draft until explicitly published (existing rows untouched)
   archivedAt              DateTime?
   publishedAt             DateTime?
+  durationLabel           String?  // display only, e.g. "13:48 hrs"
+  outline                 Json?    // practice topics: list of sub-topic strings shown on the topic page
+  unlockRule              String   @default("NONE") // practice tracks: "NONE" | "SEQUENTIAL" (previous topic's levels must be passed)
   // Whether this Chapter's Levels are required for the course-wide CODING_ASSESSMENT
   // certificate (see gradeModuleCodingAttempt.js / gatingLevels.js) — lets an admin mark a
   // Chapter as optional/bonus without it blocking certificate issuance. Does NOT affect module
@@ -1901,6 +1906,10 @@ model ModuleCodingTest {
   isActive           Boolean  @default(false) // true = Published. false = Draft: students cannot see or start it (and a module-direct test no longer gates the module)
   archivedAt         DateTime?
   publishedAt        DateTime?
+  description        String?
+  difficulty         String?  // free label, e.g. "Beginner" | "Application" | "Intermediate" | "Advanced"
+  unlockRule         String   @default("NONE") // "NONE" | "PASS_PREVIOUS" | "COMPLETE_PREVIOUS" (previous level of the same chapter)
+  unlockMinPercent   Int?     // optional score threshold applied with PASS_PREVIOUS
   createdAt          DateTime @default(now())
 
   questions Question[]

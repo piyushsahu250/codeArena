@@ -91,6 +91,7 @@ const RollNumberConflicts = lazy(() => import("./pages/RollNumberConflicts"));
 const LearningHub = lazy(() => import("./pages/LearningHub"));
 const MyNotes = lazy(() => import("./pages/MyNotes"));
 const CourseOverview = lazy(() => import("./pages/CourseOverview"));
+const PracticeCourse = lazy(() => import("./pages/PracticeCourse"));
 const CourseCertificate = lazy(() => import("./pages/CourseCertificate"));
 const CourseCertificateVerify = lazy(() => import("./pages/CourseCertificateVerify"));
 const LearningManagement = lazy(() => import("./pages/LearningManagement"));
@@ -364,6 +365,10 @@ export default function App() {
 
           {/* Learning module — browsable by Student, Admin, and Staff (admin/staff preview content they manage) */}
           <Route path="/learning" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><LearningHub /></FeatureProtected></Protected>} />
+          <Route path="/learning/:slug/practice" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><PracticeCourse view="course" /></FeatureProtected></Protected>} />
+          <Route path="/learning/:slug/practice/section/:sectionId" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><PracticeCourse view="section" /></FeatureProtected></Protected>} />
+          <Route path="/learning/:slug/practice/topic/:topicId" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><PracticeCourse view="topic" /></FeatureProtected></Protected>} />
+          <Route path="/learning/:slug/practice/analytics" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><PracticeCourse view="analytics" /></FeatureProtected></Protected>} />
           <Route path="/learning/:slug" element={<Protected roles={["STUDENT", "ADMIN", "STAFF"]}><FeatureProtected featureKey="lms"><CourseOverview /></FeatureProtected></Protected>} />
           <Route
             path="/learning/:slug/lesson/:lessonId"

@@ -574,6 +574,9 @@ export default function ModuleCodingAssessment() {
     setPhase("result");
   }
 
+  // Practice-track levels return to their topic (the next level is offered there); other assessments return to the course.
+  const backHref = status?.practice ? `/learning/${slug}/practice/topic/${status.practice.chapterId}?after=${levelId || ""}` : `/learning/${slug}`;
+
   if (error && phase !== "active") {
     return (
       <div>
@@ -685,8 +688,8 @@ export default function ModuleCodingAssessment() {
                 )}
               </>
             )}
-            <Link to={`/learning/${slug}`} className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
-              ← Back to course
+            <Link to={backHref} className="btn btn-primary" style={{ marginTop: 20, display: "inline-block" }}>
+              {status.practice ? "Continue →" : "← Back to course"}
             </Link>
           </div>
         </div>
@@ -714,7 +717,7 @@ export default function ModuleCodingAssessment() {
             <span className="badge" style={{ background: "var(--amber)" }}>Official Test — graded{t.maxAttempts != null ? `, ${t.maxAttempts} attempt${t.maxAttempts === 1 ? "" : "s"} allowed` : ""}</span>
             <h2 style={{ marginTop: 10 }}>{t.title}</h2>
             <ChalkUnderline />
-            {t.instructions && <p style={{ color: "var(--ink-dim)", marginTop: 10 }}>{t.instructions}</p>}
+            {t.instructions && <p style={{ color: "var(--ink-dim)", marginTop: 10, whiteSpace: "pre-line" }}>{t.instructions}</p>}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 20, fontSize: 13 }}>
               <InfoRow label="Questions" value={t.questionCount} />
@@ -733,7 +736,7 @@ export default function ModuleCodingAssessment() {
             </p>
 
             {!status.lessonsComplete ? (
-              <Banner color="var(--amber-dark)">Complete this module's lessons and practice test first.</Banner>
+              <Banner color="var(--amber-dark)">{status.lockReason || "Complete this module's lessons and practice test first."}</Banner>
             ) : status.alreadyPassed ? (
               <Banner color="var(--mint)">✓ You've already passed this assessment (best score {status.bestScore}%).</Banner>
             ) : !status.activeAttemptId && status.attemptsRemaining === 0 ? (

@@ -1383,6 +1383,24 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
       <input id="coding-test-config-title" style={inputStyle} disabled={readOnly} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
       <label style={labelStyle} htmlFor="coding-test-config-instructions">Instructions</label>
       <textarea id="coding-test-config-instructions" style={{ ...inputStyle, minHeight: 50 }} disabled={readOnly} value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} />
+      {form.unlockRule !== undefined && (
+        <>
+          <label style={labelStyle} htmlFor="coding-test-config-description">Description (shown on the topic page)</label>
+          <input id="coding-test-config-description" style={inputStyle} disabled={readOnly} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 4 }}>
+            <div><label style={labelStyle} htmlFor="coding-test-config-difficulty">Difficulty label</label><input id="coding-test-config-difficulty" style={inputStyle} placeholder="e.g. Beginner" disabled={readOnly} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} /></div>
+            <div>
+              <label style={labelStyle} htmlFor="coding-test-config-unlock">Unlock rule</label>
+              <select id="coding-test-config-unlock" style={inputStyle} disabled={readOnly} value={form.unlockRule} onChange={(e) => setForm({ ...form, unlockRule: e.target.value })}>
+                <option value="NONE">Open — no prerequisite</option>
+                <option value="PASS_PREVIOUS">Pass the previous level</option>
+                <option value="COMPLETE_PREVIOUS">Attempt the previous level</option>
+              </select>
+            </div>
+            <div><label style={labelStyle} htmlFor="coding-test-config-unlock-min">Min % on previous</label><input id="coding-test-config-unlock-min" style={inputStyle} type="number" min="0" max="100" disabled={readOnly || form.unlockRule !== "PASS_PREVIOUS"} value={form.unlockMinPercent} onChange={(e) => setForm({ ...form, unlockMinPercent: e.target.value })} /></div>
+          </div>
+        </>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
         <div><label style={labelStyle} htmlFor="coding-test-config-question-count">Questions per attempt</label><input id="coding-test-config-question-count" style={inputStyle} type="number" min="1" disabled={readOnly} value={form.questionCount} onChange={(e) => setForm({ ...form, questionCount: e.target.value })} /></div>
         <div><label style={labelStyle} htmlFor="coding-test-config-time-limit">Time limit (min)</label><input id="coding-test-config-time-limit" style={inputStyle} type="number" min="1" disabled={readOnly} value={form.timeLimitMin} onChange={(e) => setForm({ ...form, timeLimitMin: e.target.value })} /></div>
@@ -2072,7 +2090,9 @@ function ChapterDetailPanel({ chapter, onBack }) {
   const [tab, setTab] = useState("levels");
   const [form, setForm] = useState({
     title: chapter.title, description: chapter.description || "",
-    isActive: chapter.isActive, countsTowardCertificate: chapter.countsTowardCertificate,
+    countsTowardCertificate: chapter.countsTowardCertificate,
+    durationLabel: chapter.durationLabel || "", unlockRule: chapter.unlockRule || "NONE",
+    outlineText: Array.isArray(chapter.outline) ? chapter.outline.join("\n") : "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -2080,7 +2100,9 @@ function ChapterDetailPanel({ chapter, onBack }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.patch(`/learning/chapters/${chapter.id}`, form);
+      // Publish state is changed only through the Publish/Unpublish controls, never by saving this form.
+      const { outlineText, ...rest } = form;
+      await api.patch(`/learning/chapters/${chapter.id}`, { ...rest, outline: outlineText.split("\n").map((x) => x.trim()).filter(Boolean) });
       alert("Chapter saved.");
     } catch (err) {
       alert(err.response?.data?.error || "Failed to save chapter");
@@ -2107,10 +2129,15 @@ function ChapterDetailPanel({ chapter, onBack }) {
           <input id="chapter-detail-title" style={inputStyle} disabled={!isAdmin} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <label style={labelStyle} htmlFor="chapter-detail-description">Description</label>
           <textarea id="chapter-detail-description" style={{ ...inputStyle, minHeight: 60 }} disabled={!isAdmin} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13 }}>
-            <input type="checkbox" disabled={!isAdmin} checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
-            Active
-          </label>
+          <label style={labelStyle} htmlFor="chapter-detail-duration">Duration label (display only, e.g. 13:48 hrs)</label>
+          <input id="chapter-detail-duration" style={inputStyle} disabled={!isAdmin} value={form.durationLabel} onChange={(e) => setForm({ ...form, durationLabel: e.target.value })} />
+          <label style={labelStyle} htmlFor="chapter-detail-outline">Sub-topics shown on the topic page (one per line)</label>
+          <textarea id="chapter-detail-outline" style={{ ...inputStyle, minHeight: 70 }} disabled={!isAdmin} value={form.outlineText} onChange={(e) => setForm({ ...form, outlineText: e.target.value })} />
+          <label style={labelStyle} htmlFor="chapter-detail-unlock">Unlock rule (practice courses)</label>
+          <select id="chapter-detail-unlock" style={inputStyle} disabled={!isAdmin} value={form.unlockRule} onChange={(e) => setForm({ ...form, unlockRule: e.target.value })}>
+            <option value="NONE">Independent — always open</option>
+            <option value="SEQUENTIAL">Sequential — pass the previous topic first</option>
+          </select>
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
             <input type="checkbox" disabled={!isAdmin} checked={form.countsTowardCertificate} onChange={(e) => setForm({ ...form, countsTowardCertificate: e.target.checked })} />
             Required for the course-wide Coding Assessment certificate
@@ -2532,6 +2559,7 @@ function LevelPanel({ levelId, onBack }) {
           maxViolations: res.data.maxViolations, requireFullscreen: res.data.requireFullscreen,
           requireWebcam: res.data.requireWebcam, requireMicrophone: res.data.requireMicrophone, allowResume: res.data.allowResume,
           allowedLanguages: res.data.allowedLanguages, isActive: res.data.isActive,
+          description: res.data.description || "", difficulty: res.data.difficulty || "", unlockRule: res.data.unlockRule || "NONE", unlockMinPercent: res.data.unlockMinPercent ?? "",
         });
       }
     });
@@ -2542,7 +2570,9 @@ function LevelPanel({ levelId, onBack }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.patch(`/module-coding/admin/tests/${levelId}`, form);
+      // Publish state is changed only through the Publish/Unpublish controls, never by saving this form.
+      const { isActive, ...settings } = form;
+      await api.patch(`/module-coding/admin/tests/${levelId}`, settings);
       load();
       alert("Saved.");
     } catch (err) {

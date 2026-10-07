@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { GraduationCap, Lock, CheckCircle2, Clock, ClipboardList, ChevronDown, ChevronRight, Hammer } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
@@ -22,6 +22,7 @@ export default function CourseOverview() {
   // cached here so re-collapsing/re-expanding the same module doesn't re-fetch. ADMIN/STAFF
   // still get `lessons` inline on the initial response (unchanged), so this cache is unused for
   // them — `moduleLessons[m.id] ?? m.lessons` below picks whichever is actually available.
+  const navigate = useNavigate();
   const [moduleLessons, setModuleLessons] = useState({});
   const [moduleProjects, setModuleProjects] = useState({});
   const [moduleLevels, setModuleLevels] = useState({}); // Published coding Levels per module (student-only)
@@ -35,7 +36,11 @@ export default function CourseOverview() {
     setModuleLevels({});
     setExpanded({});
     api.get(`/learning/courses/${slug}`)
-      .then((res) => setData(res.data))
+      .then((res) => {
+        // Level-based practice tracks have their own Section > Topic > Level screens.
+        if (res.data.course?.kind === "PRACTICE") { navigate(`/learning/${slug}/practice`, { replace: true }); return; }
+        setData(res.data);
+      })
       .catch((err) => setError(err.response?.data?.error || "Failed to load course"));
   }, [slug]);
 
