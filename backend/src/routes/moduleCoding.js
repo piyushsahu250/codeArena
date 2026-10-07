@@ -11,6 +11,14 @@ const { gradeModuleCodingAttempt, gradeOneModuleCodingSubmission } = require("..
 const { getModuleLockMap } = require("../utils/learningLock");
 const { statusOf } = require("../utils/publishState");
 const { levelUnlockState } = require("../utils/practiceProgress");
+const { studentCanAccessCourse } = require("../utils/courseEligibility");
+
+// Chapter Levels are reachable by id, so the course's institute/group assignment must be enforced here (a student
+// from another institute must get the same "not found" as a nonexistent id). Module-direct tests keep their old rule.
+async function studentMayUseCourse(studentId, courseId) {
+  const s = await prisma.user.findUnique({ where: { id: studentId }, select: { instituteId: true, academicGroupId: true } });
+  return !!s && studentCanAccessCourse(prisma, courseId, s.instituteId, s.academicGroupId);
+}
 const { processGamification } = require("../utils/gamification");
 const { resolveCodingFields } = require("../utils/functionHarness");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -139,6 +147,7 @@ async function resolveAssessment(req) {
     });
     if (!test || !test.chapter) return null;
     const mod = test.chapter.module;
+    if (!(await studentMayUseCourse(req.user.id, mod.courseId))) return null;
     const live = statusOf(test) === "PUBLISHED" && statusOf(test.chapter) === "PUBLISHED"
       && statusOf(mod) === "PUBLISHED" && mod.course.status === "PUBLISHED";
     // Practice tracks: unlocking follows the level/topic/section rules (utils/practiceProgress.js), not the lesson-based module lock.
@@ -173,6 +182,7 @@ async function publishedLevelsForStudent(req, res, { chapterId, moduleId }) {
       ? (await prisma.chapter.findUnique({ where: { id: chapterId }, include: { module: { include: { course: { select: { status: true } } } } } }))?.module
       : await prisma.courseModule.findUnique({ where: { id: moduleId }, include: { course: { select: { status: true } } } });
     if (!mod || statusOf(mod) !== "PUBLISHED" || mod.course.status !== "PUBLISHED") return res.json([]);
+    if (!(await studentMayUseCourse(req.user.id, mod.courseId))) return res.json([]);
     const levels = await prisma.moduleCodingTest.findMany({
       where: {
         isActive: true, archivedAt: null,
