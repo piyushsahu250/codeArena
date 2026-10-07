@@ -56,8 +56,15 @@ async function cleanup() {
     if (!(r.status >= 200 && r.status < 300)) { errs[name] = (errs[name] || 0) + 1; const k = `${name}:${r.status}:${r.body?.code || r.body?.error || ""}`.slice(0, 80); codes[k] = (codes[k] || 0) + 1; }
     return r;
   }
+  // Each simulated student gets its own client address (X-Forwarded-For with trust-proxy 1), exactly as real students on different
+  // machines would; otherwise the per-IP rate limiters would see one client doing thousands of requests from localhost.
+  const ipOf = (i) => `10.${(i >> 16) & 255}.${(i >> 8) & 255}.${(i & 255) + 1}`;
+  const tokenIp = new Map();
   const call = async (method, path, token, body, headers = {}) => {
-    const res = await fetch(`${BASE}${path}`, { method, headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+    const ipHeader = {};
+    if (body?.email && /-(d+)@/.test(body.email) && body.email.startsWith("verify-lse-" + stamp)) ipHeader["X-Forwarded-For"] = ipOf(Number(body.email.match(/-(d+)@/)[1]));
+    else if (token && tokenIp.has(token)) ipHeader["X-Forwarded-For"] = tokenIp.get(token);
+    const res = await fetch(`${BASE}${path}`, { method, headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120", ...ipHeader, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
     let b = null; try { b = await res.json(); } catch { /* empty */ }
     return { status: res.status, body: b };
   };
@@ -67,7 +74,7 @@ async function cleanup() {
     // 1. login (waves)
     const jwt = new Array(N);
     for (let w = 0; w < N; w += LOGIN_WAVE) {
-      await Promise.all(students.slice(w, w + LOGIN_WAVE).map(async (s) => { const r = await timed("login", () => call("POST", "/auth/login", null, { email: s.email, password: pw })); jwt[s.i] = r.body?.token; }));
+      await Promise.all(students.slice(w, w + LOGIN_WAVE).map(async (s) => { const r = await timed("login", () => call("POST", "/auth/login", null, { email: s.email, password: pw })); jwt[s.i] = r.body?.token; if (jwt[s.i]) tokenIp.set(jwt[s.i], ipOf(s.i)); }));
     }
     const live = students.filter((s) => jwt[s.i]);
     // 2. secure session creation (all at once)

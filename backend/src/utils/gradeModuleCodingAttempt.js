@@ -11,12 +11,27 @@ const { getCertificateGatingTestIds } = require("./gatingLevels");
 async function gradeOneModuleCodingSubmission(sub, question) {
   const hiddenCases = question.testCases.filter((tc) => tc.isHidden);
   const gradingCases = hiddenCases.length > 0 ? hiddenCases : question.testCases;
-  const result = await runQueued(() =>
-    judgeSubmission({
-      language: sub.language, code: sub.code, testCases: gradingCases, timeLimitMs: question.timeLimitMs,
-      memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
-    })
-  );
+  // A whole class finishing together fills the judge's bounded queue, which rejects with err.queueBusy instead of
+  // waiting forever. Failing the student's final submit for that (HTTP 500, seen under a 200-student simultaneous finalize
+  // load test) is wrong: a busy queue is retried with jittered backoff (up to ~2 minutes) so every attempt is graded.
+  let result;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      result = await runQueued(() =>
+        judgeSubmission({
+          language: sub.language, code: sub.code, testCases: gradingCases, timeLimitMs: question.timeLimitMs,
+          memoryLimitKb: question.memoryLimitKb || undefined, evaluationType: question.evaluationType, functionSignature: question.functionSignature,
+        })
+      );
+      break;
+    } catch (err) {
+      if (err?.queueBusy && attempt < 40) {
+        await new Promise((r) => setTimeout(r, Math.min(500 * attempt, 4000) + Math.floor(Math.random() * 500)));
+        continue;
+      }
+      throw err;
+    }
+  }
   const score = result.totalCases > 0 ? Math.round((result.passedCases / result.totalCases) * 100) : 0;
   await prisma.moduleCodingSubmission.update({
     where: { id: sub.id },
