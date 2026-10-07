@@ -16,12 +16,12 @@ const PRESETS = {
     blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
     requireFullscreen: null, // null = follow the test's own requireFullscreen column
     multiSession: "FLAG", // FLAG | BLOCK
-    mobileAllowed: true, secureBrowserRequired: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
+    mobileAllowed: true, secureBrowserRequired: false, requireScreenShare: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
     insertionCharThreshold: 400, insertionLineThreshold: 25,
   },
   PROCTORED: {
     blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
-    requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: true, secureBrowserRequired: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
+    requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: true, secureBrowserRequired: false, requireScreenShare: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
     insertionCharThreshold: 250, insertionLineThreshold: 15,
   },
   // LOCKDOWN = a controlled execution environment. The attempt can only start, and only continue, inside an authenticated
@@ -30,13 +30,14 @@ const PRESETS = {
   LOCKDOWN: {
     blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
     requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: false, secureBrowserRequired: true,
+    requireScreenShare: false, // the secure client is the only window; screen share is for browser-based PROCTORED exams
     requiredCapabilities: ["kiosk", "appRestriction", "browserRestriction", "networkRestriction", "clipboard", "fullscreen", "devtoolsDisabled"],
     exitAction: "LOCK", graceSec: 120,
     insertionCharThreshold: 150, insertionLineThreshold: 10,
   },
 };
 const LEVELS = Object.keys(PRESETS);
-const BOOLEAN_KEYS = ["blockCopy", "blockPaste", "blockCut", "blockContextMenu", "blockDrag", "requireFullscreen", "mobileAllowed", "secureBrowserRequired"];
+const BOOLEAN_KEYS = ["blockCopy", "blockPaste", "blockCut", "blockContextMenu", "blockDrag", "requireFullscreen", "mobileAllowed", "secureBrowserRequired", "requireScreenShare"];
 const NUMBER_KEYS = ["insertionCharThreshold", "insertionLineThreshold"];
 const SecureExamCaps = require("./secureExam");
 const sanitizeCaps = (arr) => (Array.isArray(arr) ? arr.filter((k, i) => SecureExamCaps.CAPABILITIES.includes(k) && arr.indexOf(k) === i) : null);
@@ -144,6 +145,7 @@ function clientPolicy(policy) {
     level: policy.level, blockCopy: policy.blockCopy, blockPaste: policy.blockPaste, blockCut: policy.blockCut,
     blockContextMenu: policy.blockContextMenu, blockDrag: policy.blockDrag, requireFullscreen: policy.requireFullscreen,
     multiSession: policy.multiSession, mobileAllowed: policy.mobileAllowed, secureBrowserRequired: policy.secureBrowserRequired,
+    requireScreenShare: policy.requireScreenShare,
     requiredCapabilities: policy.requiredCapabilities, exitAction: policy.exitAction, graceSec: policy.graceSec,
     insertionCharThreshold: policy.insertionCharThreshold, insertionLineThreshold: policy.insertionLineThreshold,
   };

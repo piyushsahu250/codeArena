@@ -4,6 +4,7 @@ import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL } from "../api";
 import { useGamification } from "../context/GamificationContext";
 import { useProctoring } from "../hooks/useProctoring";
+import { useScreenShare } from "../hooks/useScreenShare";
 import useIsMobile from "../hooks/useIsMobile";
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
@@ -245,6 +246,9 @@ export default function ModuleCodingAssessment() {
     onViolation,
     blocks: { copy: policy?.blockCopy, paste: policy?.blockPaste, cut: policy?.blockCut, contextMenu: policy?.blockContextMenu, drag: policy?.blockDrag },
   });
+  // Optional whole-screen share for PROCTORED exams: evidence + on-screen hold, never a server lock (a page cannot enforce it).
+  const screenRequired = !!policy?.requireScreenShare && status?.test?.proctoring !== false;
+  const screen = useScreenShare({ required: screenRequired, active: phase === "active", onStopped: () => reporterRef.current?.report("SCREEN_SHARE_STOPPED") });
   const micBlocked = !!status?.test?.requireMicrophone && proctor.micStatus === "UNAVAILABLE";
   // Mirrors micBlocked -- previously had no equivalent at all, so a webcam-required assessment
   // showed no warning and never disabled Run/Submit if the camera disconnected or permission was
@@ -796,7 +800,7 @@ export default function ModuleCodingAssessment() {
     const t = status.test;
     // Mandatory server-evaluated requirements: Start stays disabled until they pass (the server re-checks on start).
     const sc = status.securityCheck;
-    const securityBlocked = !!sc && !status.activeAttemptId && (sc.mobileBlocked || (sc.secureBrowserRequired && !sc.secureBrowserOk));
+    const securityBlocked = (!!sc && !status.activeAttemptId && (sc.mobileBlocked || (sc.secureBrowserRequired && !sc.secureBrowserOk))) || (screenRequired && screen.state !== "sharing");
     return (
       <div>
         <Navbar />
@@ -828,6 +832,19 @@ export default function ModuleCodingAssessment() {
             )}
 
             <SecurityCheck policy={policy} check={status.securityCheck} />
+            {screenRequired && (
+              <section aria-label="Screen sharing" style={{ marginTop: 12, border: `1px solid ${screen.state === "sharing" ? "var(--mint)" : "var(--amber-dark)"}`, borderRadius: 10, padding: 14 }}>
+                <div className="mono" style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em" }}>SCREEN SHARING REQUIRED</div>
+                <p style={{ fontSize: 13, margin: "6px 0 10px" }}>
+                  {screen.state === "sharing" ? "✓ Your entire screen is being shared. Keep sharing until you submit; stopping the share is recorded and pauses the exam."
+                    : screen.state === "wrong-surface" ? "✗ You shared a window or a tab. Choose \"Entire screen\" and try again."
+                    : screen.state === "denied" ? "✗ Screen sharing was cancelled or blocked. Allow it in the browser prompt and try again."
+                    : screen.state === "unsupported" ? "✗ This browser cannot share the screen. Use a recent Chrome or Edge on a computer."
+                    : "This exam requires you to share your entire screen. Nothing is recorded by the page; your invigilator or institution decides whether it is recorded."}
+                </p>
+                {screen.state !== "sharing" && screen.supported && <button className="btn btn-primary" onClick={screen.request} disabled={screen.state === "requesting"}>{screen.state === "requesting" ? "Waiting for your choice…" : "Share my entire screen"}</button>}
+              </section>
+            )}
 
             {!status.lessonsComplete ? (
               <Banner color="var(--amber-dark)">{status.lockReason || "Complete this module's lessons and practice test first."}</Banner>
@@ -856,6 +873,20 @@ export default function ModuleCodingAssessment() {
               {phase === "starting" ? "Starting…" : status.activeAttemptId ? `Resume ${t.requireFullscreen !== false ? "Assessment (Fullscreen)" : "Level"}` : (t.requireFullscreen !== false ? "Begin Assessment (Fullscreen)" : "Start Level")}
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Required screen share stopped mid-exam: the exam is hidden until it is restored (the stop is already recorded as evidence).
+  if (screenRequired && phase === "active" && screen.state !== "sharing") {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
+        <div className="card" role="alert" style={{ padding: 32, maxWidth: 520, textAlign: "center" }}>
+          <h2>Screen sharing stopped</h2>
+          <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>This exam requires your entire screen to be shared. Share it again to continue. The timer keeps running and your answers are saved.</p>
+          {screen.state === "wrong-surface" && <p style={{ marginTop: 8, color: "var(--rust)", fontSize: 13 }}>Choose "Entire screen", not a window or tab.</p>}
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={screen.request} disabled={screen.state === "requesting"}>{screen.state === "requesting" ? "Waiting…" : "Share my entire screen again"}</button>
         </div>
       </div>
     );

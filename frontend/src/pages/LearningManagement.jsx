@@ -1410,6 +1410,12 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
               <input type="checkbox" disabled={readOnly} checked={(form.securityPolicy || {}).multiSession ? form.securityPolicy.multiSession === "BLOCK" : form.securityLevel !== "STANDARD"} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), multiSession: e.target.checked ? "BLOCK" : "FLAG" } })} />
               Allow only one open tab (a second tab is refused)
             </label>
+            {form.securityLevel !== "LOCKDOWN" && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontSize: 13 }}>
+                <input type="checkbox" disabled={readOnly} checked={!!(form.securityPolicy || {}).requireScreenShare} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), requireScreenShare: e.target.checked } })} />
+                Require students to share their entire screen (the exam pauses if they stop; evidence is recorded)
+              </label>
+            )}
             {form.securityLevel === "LOCKDOWN" && (
               <>
                 <label style={labelStyle} htmlFor="coding-test-config-exit-action">If the secure exam environment is lost or closed</label>
