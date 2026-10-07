@@ -172,7 +172,7 @@ export default function ModuleCodingAssessment() {
   }
 
   const proctor = useProctoring({
-    active: phase === "active",
+    active: phase === "active" && status?.test?.proctoring !== false,
     requireFullscreen: status?.test?.requireFullscreen !== false,
     requireWebcam: !!status?.test?.requireWebcam,
     requireMicrophone: !!status?.test?.requireMicrophone,
@@ -723,17 +723,21 @@ export default function ModuleCodingAssessment() {
               <InfoRow label="Questions" value={t.questionCount} />
               <InfoRow label="Time limit" value={`${t.timeLimitMin} min`} />
               <InfoRow label="Passing score" value={`${t.passingPercent}%`} />
-              <InfoRow label="Max violations" value={t.maxViolations} />
+              {t.proctoring !== false && <InfoRow label="Max violations" value={t.maxViolations} />}
               <InfoRow label="Attempts" value={t.maxAttempts == null ? "Unlimited" : `${status.attemptsUsed}/${t.maxAttempts} used`} />
               {status.bestScore != null && <InfoRow label="Best score across your attempts" value={`${status.bestScore}%`} />}
             </div>
 
+            {t.proctoring === false ? (
+              <p style={{ fontSize: 13, marginTop: 16, color: "var(--ink-dim)" }}>Practice level: switching tabs or windows is fine and nothing is monitored. Your code is auto-saved every 10 seconds, and the timer keeps running.</p>
+            ) : (
             <p style={{ fontSize: 13, marginTop: 16, color: "var(--ink-dim)" }}>
               This assessment runs in fullscreen. Switching tabs, exiting fullscreen, copy/paste, right-click, and
               devtools shortcuts are blocked or logged{t.requireWebcam ? ", your face must stay visible in the camera" : ""}
               {t.requireMicrophone ? ", and your microphone must stay enabled" : ""}.
               Exceeding {t.maxViolations} violations auto-submits your assessment.
             </p>
+            )}
 
             {!status.lessonsComplete ? (
               <Banner color="var(--amber-dark)">{status.lockReason || "Complete this module's lessons and practice test first."}</Banner>
@@ -773,9 +777,11 @@ export default function ModuleCodingAssessment() {
       <div style={{ background: "var(--slate-900)", color: "var(--chalk)", padding: isMobile ? "10px 12px" : "12px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <strong style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: isMobile ? "1 1 100%" : "0 1 auto" }}>{status.test.title}</strong>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          {status.test.proctoring !== false && (
           <span className="mono" style={{ fontSize: 12, color: violationCount > 0 ? "var(--rust)" : "var(--ink-dim)" }}>
             ⚠ Violations: {violationCount}/{status.test.maxViolations}
           </span>
+          )}
           {!isMobile && (
             <span className="mono" style={{ fontSize: 11, opacity: saveFailed ? 1 : 0.7, color: saveFailed ? "var(--rust)" : undefined }}>
               {saveFailed ? "⚠ Not saved — retrying…" : lastSavedAt ? `● Saved ${lastSavedAt.toLocaleTimeString()}` : "● Auto-save every 10s"}

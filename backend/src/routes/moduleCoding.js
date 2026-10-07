@@ -257,7 +257,7 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
         passingPercent: test.passingPercent, timeLimitMin: test.timeLimitMin,
         maxAttempts: test.maxAttempts, cooldownMinutes: test.cooldownMinutes,
         maxViolations: test.maxViolations, requireFullscreen: test.requireFullscreen,
-        requireWebcam: test.requireWebcam, requireMicrophone: test.requireMicrophone,
+        requireWebcam: test.requireWebcam, requireMicrophone: test.requireMicrophone, proctoring: test.proctoring,
       },
       lessonsComplete, attemptsUsed, attemptsRemaining, bestScore, alreadyPassed,
       cooldownRemainingSec, canStart,
@@ -542,6 +542,10 @@ router.post("/attempts/:attemptId/violation", authenticate, requireRole("STUDENT
     if (attempt.status !== "IN_PROGRESS") {
       return res.json({ violationCount: attempt.violationCount, maxViolations: attempt.moduleCodingTest.maxViolations, autoSubmitted: true });
     }
+    // Proctoring switched off for this test (practice levels): nothing is logged, counted or auto-submitted.
+    if (attempt.moduleCodingTest.proctoring === false) {
+      return res.json({ ignored: true, penalized: false, autoSubmitted: false, violationCount: attempt.violationCount, maxViolations: attempt.moduleCodingTest.maxViolations });
+    }
 
     const type = String(req.body.type || "UNKNOWN").toUpperCase().slice(0, 40);
     // Counted fresh from the log every time (not a running counter column) so the escalation
@@ -758,6 +762,7 @@ router.post("/admin/chapter/:chapterId/levels", authenticate, requireRole("ADMIN
         title: title || "Coding Assessment Level",
         instructions: instructions || null,
         description: req.body.description || null, difficulty: req.body.difficulty || null,
+        proctoring: req.body.proctoring === undefined ? true : !!req.body.proctoring,
         unlockRule: ["NONE", "PASS_PREVIOUS", "COMPLETE_PREVIOUS"].includes(req.body.unlockRule) ? req.body.unlockRule : "NONE",
         unlockMinPercent: req.body.unlockMinPercent === undefined || req.body.unlockMinPercent === "" ? null : Number(req.body.unlockMinPercent),
         allowedLanguages: allowedLanguages ?? undefined,
@@ -802,6 +807,7 @@ router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN
     if (f.maxAttempts !== undefined) data.maxAttempts = f.maxAttempts === "" || f.maxAttempts === null ? null : Number(f.maxAttempts);
     if (f.cooldownMinutes !== undefined) data.cooldownMinutes = Number(f.cooldownMinutes);
     if (f.maxViolations !== undefined) data.maxViolations = Number(f.maxViolations);
+    if (f.proctoring !== undefined) data.proctoring = !!f.proctoring;
     if (f.requireFullscreen !== undefined) data.requireFullscreen = !!f.requireFullscreen;
     if (f.requireWebcam !== undefined) data.requireWebcam = !!f.requireWebcam;
     if (f.requireMicrophone !== undefined) data.requireMicrophone = !!f.requireMicrophone;

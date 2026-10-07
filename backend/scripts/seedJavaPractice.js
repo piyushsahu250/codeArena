@@ -86,7 +86,7 @@ const LEVEL0_QUESTIONS = [
       const level = await take(await prisma.moduleCodingTest.findFirst({ where: { chapterId: chapter.id, title: levelTitle } }), () => prisma.moduleCodingTest.create({ data: {
         chapterId: chapter.id, title: levelTitle, order: li, description, difficulty, instructions: INSTRUCTIONS,
         allowedLanguages: ["c", "cpp", "java", "python"], questionCount: 3, randomizeQuestions: false, passingPercent: 60, timeLimitMin: 90, maxAttempts: 1,
-        cooldownMinutes: 0, maxViolations: 3, requireFullscreen: false, allowResume: true,
+        cooldownMinutes: 0, maxViolations: 3, requireFullscreen: false, proctoring: false, allowResume: true,
         unlockRule: li === 0 ? "NONE" : "PASS_PREVIOUS", isActive: ti === 0 && li === 0, publishedAt: ti === 0 && li === 0 ? new Date() : null, // Draft until an admin publishes (only the demo level ships live)
       } }));
       if (ti === 0 && li === 0) {

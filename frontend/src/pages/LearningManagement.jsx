@@ -1387,6 +1387,10 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
         <>
           <label style={labelStyle} htmlFor="coding-test-config-description">Description (shown on the topic page)</label>
           <input id="coding-test-config-description" style={inputStyle} disabled={readOnly} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
+            <input type="checkbox" disabled={readOnly} checked={form.proctoring !== false} onChange={(e) => setForm({ ...form, proctoring: e.target.checked })} />
+            Proctoring (count tab switches / fullscreen exits and auto-submit after the violation limit)
+          </label>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 4 }}>
             <div><label style={labelStyle} htmlFor="coding-test-config-difficulty">Difficulty label</label><input id="coding-test-config-difficulty" style={inputStyle} placeholder="e.g. Beginner" disabled={readOnly} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} /></div>
             <div>
@@ -2559,7 +2563,7 @@ function LevelPanel({ levelId, onBack }) {
           maxViolations: res.data.maxViolations, requireFullscreen: res.data.requireFullscreen,
           requireWebcam: res.data.requireWebcam, requireMicrophone: res.data.requireMicrophone, allowResume: res.data.allowResume,
           allowedLanguages: res.data.allowedLanguages, isActive: res.data.isActive,
-          description: res.data.description || "", difficulty: res.data.difficulty || "", unlockRule: res.data.unlockRule || "NONE", unlockMinPercent: res.data.unlockMinPercent ?? "",
+          description: res.data.description || "", difficulty: res.data.difficulty || "", proctoring: res.data.proctoring !== false, unlockRule: res.data.unlockRule || "NONE", unlockMinPercent: res.data.unlockMinPercent ?? "",
         });
       }
     });

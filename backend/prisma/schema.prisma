@@ -1910,6 +1910,7 @@ model ModuleCodingTest {
   difficulty         String?  // free label, e.g. "Beginner" | "Application" | "Intermediate" | "Advanced"
   unlockRule         String   @default("NONE") // "NONE" | "PASS_PREVIOUS" | "COMPLETE_PREVIOUS" (previous level of the same chapter)
   unlockMinPercent   Int?     // optional score threshold applied with PASS_PREVIOUS
+  proctoring         Boolean  @default(true) // false = no tab-switch/fullscreen/copy violation tracking and no auto-submit (practice levels)
   createdAt          DateTime @default(now())
 
   questions Question[]
