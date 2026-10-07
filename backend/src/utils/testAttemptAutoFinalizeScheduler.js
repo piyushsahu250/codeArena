@@ -55,6 +55,7 @@ async function runOnce() {
     return { closed: 0 };
   });
   await pruneExamSecurityEvents().catch((err) => console.error("[testAttemptAutoFinalizeScheduler] security-event retention failed:", err.message));
+  const secureSweep = await require("../routes/secureExam").sweepLostSecureSessions().catch((err) => { console.error("[testAttemptAutoFinalizeScheduler] secure-session sweep failed:", err.message); return { submitted: 0 }; });
   const sessions = await expireStaleLoginSessions().catch((err) => { console.error("[testAttemptAutoFinalizeScheduler] session expiry failed:", err.message); return { expired: 0 }; });
   return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed, sessionsExpired: sessions.expired };
 }
@@ -69,6 +70,7 @@ async function pruneExamSecurityEvents({ force = false } = {}) {
   const days = Math.max(30, Number(process.env.EXAM_SECURITY_RETENTION_DAYS) || 180);
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   await prisma.examSecurityEvent.deleteMany({ where: { createdAt: { lt: cutoff }, reviewStatus: { notIn: ["ESCALATED"] } } });
+  await prisma.secureExamSession.deleteMany({ where: { createdAt: { lt: cutoff } } });
 }
 
 // Login tokens live 12h (sessions.js TOKEN_TTL), after which the JWT itself is rejected -- but nothing

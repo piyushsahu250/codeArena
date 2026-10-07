@@ -39,18 +39,8 @@ async function cleanup() {
   check("unknown security level falls back to STANDARD", X.resolvePolicy({ securityLevel: "WEIRD" }).level === "STANDARD");
   check("risk bands: nothing = LOW, a few weak signals = LOW/MEDIUM, repeated strong evidence = HIGH+", X.computeRisk([]).level === "LOW" && X.computeRisk([{ type: "PAGE_HIDDEN" }]).level === "LOW" && X.computeRisk([{ type: "TAB_SWITCH" }, { type: "SUSPICIOUS_CODE_INSERTION" }]).level === "MEDIUM" && ["HIGH", "CRITICAL"].includes(X.computeRisk([{ type: "MULTIPLE_SESSION" }, { type: "TAB_SWITCH" }, { type: "TAB_SWITCH" }]).level));
   check("a reviewer's LEGITIMATE decision removes that event from the risk score", X.computeRisk([{ type: "MULTIPLE_SESSION", reviewStatus: "LEGITIMATE" }]).score === 0);
-  process.env.SECURE_BROWSER_SECRET = "unit-test-secret-" + rand();
-  const ts = Date.now();
-  const goodSig = X.signHandshake("dev-1", ts);
-  check("secure-browser handshake: valid signature accepted", X.verifyHandshake({ deviceId: "dev-1", ts, sig: goodSig }));
-  check("handshake: forged signature rejected", !X.verifyHandshake({ deviceId: "dev-1", ts, sig: "00".repeat(32) }));
-  check("handshake: replay older than 5 minutes rejected", !X.verifyHandshake({ deviceId: "dev-1", ts: ts - 6 * 60 * 1000, sig: X.signHandshake("dev-1", ts - 6 * 60 * 1000) }));
-  const tok = X.issueSecureToken("student-A");
-  check("secure token is bound to the student", X.verifySecureToken(tok, "student-A") && !X.verifySecureToken(tok, "student-B"));
-  check("tampered secure token rejected", !X.verifySecureToken(tok.slice(0, -3) + "AAA", "student-A"));
-  delete process.env.SECURE_BROWSER_SECRET;
-  check("with no server secret configured the secure browser requirement fails closed", !X.verifyHandshake({ deviceId: "dev-1", ts, sig: goodSig }) && !X.verifySecureToken(tok, "student-A"));
 
+  const ts = Date.now();
   // ---- live API
   const course = await prisma.course.findUnique({ where: { slug: "java-practice" } });
   const groups = await prisma.academicGroup.findMany({ where: { isActive: true } });
@@ -158,11 +148,10 @@ async function cleanup() {
     const mob = await call("POST", `/module-coding/level/${level.id}/start`, T2, null, { "User-Agent": MOBILE_UA });
     check("LOCKDOWN: a phone is refused at start (MOBILE_NOT_SUPPORTED)", mob.status === 403 && mob.body.code === "MOBILE_NOT_SUPPORTED");
     const nosb = await call("POST", `/module-coding/level/${level.id}/start`, T2);
-    check("LOCKDOWN: a normal browser without the secure handshake is refused (SECURE_BROWSER_REQUIRED)", nosb.status === 403 && nosb.body.code === "SECURE_BROWSER_REQUIRED");
+    check("LOCKDOWN: a normal browser without a secure session is refused (SECURE_CLIENT_REQUIRED or unavailable)", [403, 503].includes(nosb.status) && ["SECURE_CLIENT_REQUIRED", "SECURE_EXAM_UNAVAILABLE"].includes(nosb.body.code));
     check("LOCKDOWN: a made-up secure token is refused", (await call("POST", `/module-coding/level/${level.id}/start`, T2, null, { "X-Secure-Session": "AAAA.BBBB" })).status === 403);
     const chk = await call("GET", `/module-coding/level/${level.id}`, T2);
     check("LOCKDOWN: the pre-exam check reports the failure to the page", chk.body.securityCheck.secureBrowserRequired && !chk.body.securityCheck.secureBrowserOk);
-    check("LOCKDOWN: the handshake endpoint refuses a bad signature", (await call("POST", "/exam-security/secure-session", T2, { deviceId: "d", ts: Date.now(), sig: "00".repeat(32) })).status === 403);
     check("LOCKDOWN: no attempt was created by the refused starts", (await prisma.moduleCodingAttempt.count({ where: { studentId: s2.id } })) === 0);
     const sbm = await prisma.examSecurityEvent.count({ where: { studentId: s2.id, type: "SECURE_BROWSER_MISSING" } });
     check("LOCKDOWN: the missing secure browser was recorded", sbm >= 1);

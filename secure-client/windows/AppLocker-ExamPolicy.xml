@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AppLocker application ALLOW-LIST for exam labs (optional, in addition to or instead of Assigned Access).
+  Requires Windows Enterprise/Education for enforcement (AppLocker rules are not enforced on Pro; on Pro use Assigned Access or
+  Software Restriction Policies). The Application Identity service must be running.
+
+  Model: default DENY. Allowed to run for standard users: the Windows directory (minus shells/script hosts/editors listed as
+  exceptions), the CodeArena Secure Exam Client, and nothing else. Administrators keep full rights so labs can be maintained.
+  Everything in Program Files (Chrome, Edge, VS Code, ChatGPT/Claude/Copilot desktop apps, IDEs ...) is therefore blocked, and so are
+  executables run from user-writable locations (Downloads, AppData, USB drives).
+
+  Import:  Set-AppLockerPolicy -XmlPolicy .\AppLocker-ExamPolicy.xml
+  Audit first: change EnforcementMode to "AuditOnly" for a pilot, read Event Viewer > AppLocker, then switch to "Enabled".
+-->
+<AppLockerPolicy Version="1">
+  <RuleCollection Type="Exe" EnforcementMode="Enabled">
+    <FilePathRule Id="921cc481-6e17-4653-8f75-050b80acca20" Name="CodeArena Secure Exam Client" Description="The only application students may run" UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%PROGRAMFILES%\CodeArena Secure Exam\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="a61c8b2c-a319-4cd0-9690-d2177cad7b51" Name="Windows (system components) except shells and editors" Description="Required system components" UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%WINDIR%\*" /></Conditions>
+      <Exceptions>
+        <FilePathCondition Path="%SYSTEM32%\cmd.exe" />
+        <FilePathCondition Path="%SYSTEM32%\WindowsPowerShell\*" />
+        <FilePathCondition Path="%SYSTEM32%\wsl.exe" />
+        <FilePathCondition Path="%SYSTEM32%\bash.exe" />
+        <FilePathCondition Path="%SYSTEM32%\mshta.exe" />
+        <FilePathCondition Path="%SYSTEM32%\wscript.exe" />
+        <FilePathCondition Path="%SYSTEM32%\cscript.exe" />
+        <FilePathCondition Path="%SYSTEM32%\notepad.exe" />
+        <FilePathCondition Path="%SYSTEM32%\mspaint.exe" />
+        <FilePathCondition Path="%SYSTEM32%\SnippingTool.exe" />
+        <FilePathCondition Path="%SYSTEM32%\mstsc.exe" />
+        <FilePathCondition Path="%SYSTEM32%\quickassist.exe" />
+        <FilePathCondition Path="%WINDIR%\notepad.exe" />
+        <FilePathCondition Path="%WINDIR%\explorer.exe" />
+        <FilePathCondition Path="%WINDIR%\regedit.exe" />
+        <FilePathCondition Path="%WINDIR%\SysWOW64\cmd.exe" />
+        <FilePathCondition Path="%WINDIR%\SysWOW64\WindowsPowerShell\*" />
+        <FilePathCondition Path="%WINDIR%\Microsoft.NET\*" />
+      </Exceptions>
+    </FilePathRule>
+    <FilePathRule Id="fd686d83-a829-4351-8ff4-27c7de5755d2" Name="Administrators: everything" Description="Lab maintenance" UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+  <RuleCollection Type="Script" EnforcementMode="Enabled">
+    <FilePathRule Id="06dce67b-934c-454f-a263-2515c8796a5d" Name="Administrators: scripts" Description="" UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+  <RuleCollection Type="Msi" EnforcementMode="Enabled">
+    <FilePathRule Id="b7af7102-efde-4369-8a89-7a6a392d1473" Name="Administrators: installers" Description="" UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+  <RuleCollection Type="Appx" EnforcementMode="Enabled">
+    <!-- Packaged (Store) apps: Copilot, ChatGPT, Claude, etc. may be Appx. Default deny; administrators only. -->
+    <FilePublisherRule Id="a9e18c1d-5ca5-4eaf-9c1c-1f5a4c3c7d77" Name="Administrators: packaged apps" Description="" UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePublisherCondition PublisherName="*" ProductName="*" BinaryName="*"><BinaryVersionRange LowSection="*" HighSection="*" /></FilePublisherCondition></Conditions>
+    </FilePublisherRule>
+  </RuleCollection>
+</AppLockerPolicy>

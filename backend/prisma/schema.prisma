@@ -4173,10 +4173,69 @@ model ExamSecurityEvent {
   reviewNote   String?
   reviewedById String?
   reviewedAt   DateTime?
+  instituteId  String?  // set for events from a secure-client session
+  deviceId     String?  // ExamDevice.deviceId of the secure client that reported/was bound to the event
   createdAt    DateTime @default(now())
 
   @@index([attemptKind, attemptId, createdAt])
   @@index([testId, createdAt])
   @@index([studentId, createdAt])
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Secure exam environment (LOCKDOWN exams). See docs/SECURE_EXAM_ARCHITECTURE.md.
+//
+// ExamDevice: an institution-registered exam computer. The per-device secret is NOT stored: it is derived from the server
+// master secret + instituteId + deviceId (HMAC), shown once to the administrator at registration and placed in the lab
+// image / secure client config. Revoking the device row is what invalidates it.
+model ExamDevice {
+  id              String    @id @default(uuid())
+  instituteId     String
+  deviceId        String    // asset tag / generated id, unique within the institute
+  label           String
+  status          String    @default("ACTIVE") // ACTIVE | REVOKED
+  registeredById  String
+  clientVersion   String?
+  clientKind      String?   // ELECTRON | EDGE_KIOSK
+  capabilities    Json?     // last attested capabilities
+  lastHeartbeatAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([instituteId, deviceId])
+  @@index([instituteId, status])
+}
+
+// SecureExamSession: one authenticated secure-client session, created by a challenge/response handshake. tokenHash is the
+// SHA-256 of the opaque session token (the token itself is never stored). A session is bound to student + institute + device,
+// and to the attempt/test once the exam starts. State is derived from heartbeats (see utils/secureExam.js).
+model SecureExamSession {
+  id              String    @id @default(uuid())
+  tokenHash       String    @unique
+  nonceHash       String    @unique // a challenge can be redeemed once
+  studentId       String
+  instituteId     String
+  examDeviceId    String    // ExamDevice.id
+  deviceId        String
+  attemptId       String?
+  testId          String?
+  clientVersion   String
+  clientKind      String
+  capabilities    Json
+  state           String    @default("CONNECTED") // CONNECTED | TEMPORARILY_DISCONNECTED | RECOVERING | SECURITY_SESSION_LOST | ENDED
+  expiresAt       DateTime
+  lastHeartbeatAt DateTime  @default(now())
+  lockedAt        DateTime? // set when policy exitAction is LOCK/REQUIRE_INVIGILATOR and the session was lost
+  lockReason      String?
+  unlockedAt      DateTime?
+  unlockedById    String?
+  endedAt         DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([attemptId])
+  @@index([studentId, state])
+  @@index([examDeviceId])
+  @@index([testId, state])
+  @@index([state, lastHeartbeatAt])
 }

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows Assigned Access (single-app kiosk) for the CodeArena Secure Exam Client.
+  FREE: built into Windows 10/11 Pro, Enterprise and Education (not Home).
+
+  What it does: a dedicated local account ("ExamStudent") signs in and gets ONLY the secure exam client. There is no desktop,
+  Start menu, taskbar, Win+R, Task Manager entry point or any other application for that account. This single control removes
+  Chrome/Edge/Firefox, Copilot, ChatGPT/Claude/Gemini desktop apps, terminals, editors and everything else for that session.
+
+  Apply (elevated PowerShell on the exam PC):
+      Set-AssignedAccess  -- or --  use the MDM bridge:
+      $ns = "root\cimv2\mdm\dmmap"; $cls = "MDM_AssignedAccess"
+      $obj = Get-CimInstance -Namespace $ns -ClassName $cls
+      $obj.Configuration = [System.Net.WebUtility]::HtmlEncode((Get-Content -Raw .\AssignedAccess-ExamKiosk.xml))
+      Set-CimInstance -CimInstance $obj
+
+  The ClassicAppPath form needs Windows 10 20H2+ / Windows 11. Test on ONE pilot PC first (see docs/SECURE_EXAM_ARCHITECTURE.md).
+-->
+<AssignedAccessConfiguration
+    xmlns="http://schemas.microsoft.com/AssignedAccess/2017/config"
+    xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config"
+    xmlns:v4="http://schemas.microsoft.com/AssignedAccess/2021/config">
+  <Profiles>
+    <Profile Id="{7C8E2A41-3B8F-4F0B-9C5B-2A9E6F1D0A11}">
+      <KioskModeApp v4:ClassicAppPath="C:\Program Files\CodeArena Secure Exam\CodeArena Secure Exam.exe" />
+    </Profile>
+  </Profiles>
+  <Configs>
+    <Config>
+      <Account>ExamStudent</Account>
+      <DefaultProfile Id="{7C8E2A41-3B8F-4F0B-9C5B-2A9E6F1D0A11}" />
+    </Config>
+  </Configs>
+</AssignedAccessConfiguration>

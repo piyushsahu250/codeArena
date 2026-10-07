@@ -14,6 +14,10 @@ const { levelUnlockState } = require("../utils/practiceProgress");
 const { studentCanAccessCourse } = require("../utils/courseEligibility");
 const X = require("../utils/examSecurity");
 const { recordServerEvent } = require("./examSecurity");
+const { evaluateSecureSession, bindSessionToAttempt } = require("./secureExam");
+const SecureExam = require("../utils/secureExam");
+// Before any session exists every required capability shows as failing (so the page lists what the client must provide).
+const S_CHECKS_OFF = (pol) => SecureExam.capabilityChecks(pol, {});
 const crypto = require("crypto");
 
 // Chapter Levels are reachable by id, so the course's institute/group assignment must be enforced here (a student
@@ -129,10 +133,25 @@ function startRequirementFailure(req, policy) {
   if (!policy.mobileAllowed && X.isMobileUserAgent(req.get("user-agent"))) {
     return { code: "MOBILE_NOT_SUPPORTED", error: "This assessment cannot be taken on a phone or tablet. Please use a laptop or desktop computer." };
   }
-  if (policy.secureBrowserRequired && !X.verifySecureToken(req.get("x-secure-session"), req.user.id)) {
-    return { code: "SECURE_BROWSER_REQUIRED", error: "This assessment must be taken in the institution's managed secure browser. Open it from the secure exam launcher." };
-  }
   return null;
+}
+
+// LOCKDOWN: the attempt may only start (and continue) inside an authenticated secure-client session on a registered device that
+// attests the required capabilities. The policy is resolved server side; nothing the browser sends can lower it.
+async function secureClientFailure(req, policy) {
+  if (!policy.secureBrowserRequired) return null;
+  const ev = await evaluateSecureSession(req.get("x-secure-session"), { studentId: req.user.id, policy });
+  return ev.ok ? { session: ev.session } : { code: ev.code, status: ev.status, error: ev.message, checks: ev.checks };
+}
+
+// Every exam call on a LOCKDOWN attempt must carry a valid secure session bound to THIS attempt (heartbeat alive, not locked).
+async function enforceSecureSession(req, res, attempt) {
+  const policy = X.resolvePolicy(attempt.moduleCodingTest);
+  if (!policy.secureBrowserRequired) return true;
+  const ev = await evaluateSecureSession(req.get("x-secure-session"), { studentId: req.user.id, policy, attemptId: attempt.id });
+  if (ev.ok) return true;
+  res.status(ev.status).json({ error: ev.message, code: ev.code });
+  return false;
 }
 
 async function loadOwnedAttempt(req, res, { requireInProgress = true } = {}) {
@@ -149,6 +168,7 @@ async function loadOwnedAttempt(req, res, { requireInProgress = true } = {}) {
     return null;
   }
   if (attempt.status === "IN_PROGRESS" && !(await enforceSingleSession(req, res, attempt))) return null;
+  if (attempt.status === "IN_PROGRESS" && !(await enforceSecureSession(req, res, attempt))) return null;
   return attempt;
 }
 
@@ -280,6 +300,17 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
       cooldownRemainingSec = Math.max(0, Math.round((cooldownUntil - Date.now()) / 1000));
     }
 
+    // Device health check for the exam page: server-evaluated, never trusted from the browser.
+    const pol = X.resolvePolicy(test);
+    const secureStatus = { mobileBlocked: !pol.mobileAllowed && X.isMobileUserAgent(req.get("user-agent")), secureBrowserRequired: pol.secureBrowserRequired, secureBrowserOk: !pol.secureBrowserRequired, checks: null, code: null, message: null };
+    if (pol.secureBrowserRequired) {
+      const ev = await evaluateSecureSession(req.get("x-secure-session"), { studentId: req.user.id, policy: pol });
+      secureStatus.secureBrowserOk = ev.ok;
+      secureStatus.checks = ev.checks || (ev.ok ? [] : S_CHECKS_OFF(pol));
+      secureStatus.code = ev.ok ? null : ev.code;
+      secureStatus.message = ev.ok ? null : ev.message;
+    }
+
     const canStart =
       !!activeAttempt ||
       (live && lessonsComplete &&
@@ -291,7 +322,7 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
       exists: true,
       practice: ctx.practice || null, lockReason: ctx.lockReason || null,
       security: X.clientPolicy(X.resolvePolicy(test)),
-      securityCheck: (() => { const p = X.resolvePolicy(test); return { mobileBlocked: !p.mobileAllowed && X.isMobileUserAgent(req.get("user-agent")), secureBrowserRequired: p.secureBrowserRequired, secureBrowserOk: !p.secureBrowserRequired || X.verifySecureToken(req.get("x-secure-session"), req.user.id) }; })(),
+      securityCheck: secureStatus,
       test: {
         id: test.id, title: test.title, instructions: test.instructions, description: test.description, difficulty: test.difficulty,
         allowedLanguages: test.allowedLanguages, questionCount: test.questionCount,
@@ -335,12 +366,16 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
 
     const startPolicy = X.resolvePolicy(test);
     const reqFail = startRequirementFailure(req, startPolicy);
-    if (reqFail) {
-      if (reqFail.code === "SECURE_BROWSER_REQUIRED") {
+    if (reqFail) return res.status(403).json(reqFail);
+    const secureFail = await secureClientFailure(req, startPolicy);
+    let secureSession = null;
+    if (secureFail && secureFail.error) {
+      if (["SECURE_CLIENT_REQUIRED", "SECURE_SESSION_INVALID"].includes(secureFail.code)) {
         await prisma.examSecurityEvent.create({ data: { attemptKind: "MODULE_CODING", attemptId: "none", studentId: req.user.id, testId: test.id, type: "SECURE_BROWSER_MISSING", severity: "HIGH" } }).catch(() => {});
       }
-      return res.status(403).json(reqFail);
+      return res.status(secureFail.status || 403).json({ code: secureFail.code, error: secureFail.error, checks: secureFail.checks });
     }
+    if (secureFail) secureSession = secureFail.session;
 
     const existing = await prisma.moduleCodingAttempt.findFirst({
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: "IN_PROGRESS" },
@@ -362,6 +397,10 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
           await gradeModuleCodingAttempt(existing.id, { reason: "TIME_EXPIRED" });
         } else {
           // The resuming tab becomes the single active session; any older tab is refused from now on.
+          if (secureSession) {
+            const bound = await bindSessionToAttempt(secureSession, existing, startPolicy);
+            if (!bound.ok) return res.status(bound.status).json({ code: bound.code, error: bound.message });
+          }
           const resumedSession = crypto.randomBytes(16).toString("hex");
           await prisma.moduleCodingAttempt.update({ where: { id: existing.id }, data: { sessionId: resumedSession, sessionStartedAt: new Date() } });
           // Resuming (e.g. after a page refresh or a dropped connection) must restore whatever
@@ -439,6 +478,12 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
         questions: { create: selected.map((q, i) => ({ questionId: q.id, order: i })) },
       },
     });
+
+    // LOCKDOWN: tie the authenticated secure session to the attempt it now protects.
+    if (secureSession) {
+      const bound = await bindSessionToAttempt(secureSession, attempt, startPolicy);
+      if (!bound.ok) return res.status(bound.status).json({ code: bound.code, error: bound.message });
+    }
 
     const withCases = await prisma.question.findMany({ where: { id: { in: selected.map((q) => q.id) } }, include: { testCases: true } });
     const byId = new Map(withCases.map((q) => [q.id, q]));

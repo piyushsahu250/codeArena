@@ -1,0 +1,45 @@
+Windows Registry Editor Version 5.00
+
+; Managed-browser policy for a PROCTORED exam lab that uses Microsoft Edge in kiosk mode WITHOUT the secure client.
+; FREE: built into Edge/Chrome (ADMX policies). This is a lower tier than the secure client: it restricts the browser but cannot
+; attest anything to the CodeArena server, so it satisfies PROCTORED, not LOCKDOWN (LOCKDOWN needs the secure-client session).
+; Chrome uses the same keys under HKLM\SOFTWARE\Policies\Google\Chrome.
+; Replace codearena.site / api-aws.codearena.site with your deployment hosts.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+; no extensions can be installed or run
+"ExtensionInstallBlocklist"="*"
+"ExtensionInstallAllowlist"=-
+; developer tools unavailable (2 = disallowed)
+"DeveloperToolsAvailability"=dword:00000002
+; only the exam sites can be opened
+"URLBlocklist"="*"
+; downloads, printing, screenshots, password manager, sync, InPrivate, profile switching, AI sidebar
+"DownloadRestrictions"=dword:00000003
+"PrintingEnabled"=dword:00000000
+"AllowScreenshots"=dword:00000000
+"PasswordManagerEnabled"=dword:00000000
+"SyncDisabled"=dword:00000001
+"InPrivateModeAvailability"=dword:00000001
+"BrowserAddProfileEnabled"=dword:00000000
+"BrowserGuestModeEnabled"=dword:00000000
+"HubsSidebarEnabled"=dword:00000000
+"CopilotPageContext"=dword:00000000
+"EdgeEntraCopilotPageContext"=dword:00000000
+"Microsoft365CopilotChatIconEnabled"=dword:00000000
+"EdgeSidebarAppUrlHostBlockList"="*"
+"AutofillAddressEnabled"=dword:00000000
+"AutofillCreditCardEnabled"=dword:00000000
+"TranslateEnabled"=dword:00000000
+"SpellcheckEnabled"=dword:00000000
+"ClipboardAllowedForUrls"=-
+"DefaultClipboardSetting"=dword:00000002
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\URLAllowlist]
+"1"="codearena.site"
+"2"="api-aws.codearena.site"
+"3"="fonts.googleapis.com"
+"4"="fonts.gstatic.com"
+
+; Kiosk launch for the exam user (Assigned Access can also launch Edge in kiosk):
+;   msedge.exe --kiosk https://codearena.site --edge-kiosk-type=fullscreen --no-first-run

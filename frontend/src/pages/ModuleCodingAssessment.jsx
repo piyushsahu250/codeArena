@@ -164,7 +164,12 @@ export default function ModuleCodingAssessment() {
   // Another tab took over this attempt (policy BLOCK): stop this one cleanly instead of letting it fail silently.
   useEffect(() => {
     const id = api.interceptors.response.use((r) => r, (err) => {
-      if (err.response?.data?.code === "SESSION_REPLACED") setSessionLost(true);
+      const code = err.response?.data?.code;
+      if (code === "SESSION_REPLACED") setSessionLost(true);
+      // Secure-exam environment lost or locked: the attempt, answers and timer are preserved on the server; the exam is paused here.
+      if (["SECURE_SESSION_LOST", "SESSION_LOCKED", "SECURE_SESSION_INVALID", "SECURE_SESSION_EXPIRED", "SECURE_CAPABILITY_MISSING", "DEVICE_NOT_ALLOWED", "VERSION_MISMATCH", "SECURE_CLIENT_REQUIRED"].includes(code)) {
+        setSecurityHold({ code, message: err.response.data.error });
+      }
       return Promise.reject(err);
     });
     return () => api.interceptors.response.eject(id);
@@ -228,6 +233,7 @@ export default function ModuleCodingAssessment() {
   const sessionIdRef = useRef("");
   const insertionWatchRef = useRef(null);
   const [sessionLost, setSessionLost] = useState(false);
+  const [securityHold, setSecurityHold] = useState(null); // { code, message } while the secure environment is lost/locked
   const reporterRef = useRef(null);
   if (!reporterRef.current) reporterRef.current = createEventReporter({ getAttemptId: () => attemptIdRef.current, getSessionId: () => sessionIdRef.current });
 
@@ -855,6 +861,24 @@ export default function ModuleCodingAssessment() {
     );
   }
 
+  // The secure exam environment is lost or the exam is locked: nothing can be done from this screen except wait or call the invigilator.
+  if (securityHold && phase === "active") {
+    const locked = securityHold.code === "SESSION_LOCKED";
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
+        <div className="card" role="alert" style={{ padding: 32, maxWidth: 520, textAlign: "center" }}>
+          <h2>{locked ? "Exam locked" : "Secure exam paused"}</h2>
+          <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>{securityHold.message}</p>
+          <p style={{ marginTop: 10, fontSize: 13 }}>Your answers and the timer are safe on the server. The timer keeps running.</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
+            {!locked && <button className="btn btn-primary" onClick={() => setSecurityHold(null)}>I have reconnected — continue</button>}
+            <button className="btn btn-ghost" onClick={() => window.location.reload()}>Reload</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Another tab owns this attempt now (policy BLOCK).
   if (sessionLost) {
     return (
@@ -1304,31 +1328,43 @@ function codingDotStatus(question, verdicts, visitedMap) {
 }
 
 
-// Pre-exam security check for STRICT/LOCKDOWN assessments. Local capability checks run in the browser; the mobile and
-// secure-browser results come from the server, which enforces them again when the attempt starts.
+// Pre-exam device check for STRICT/LOCKDOWN assessments. Every row is evaluated by the SERVER (secure session, attested device
+// capabilities) or by simple browser capability probes; the server evaluates it again when the attempt starts, so this screen
+// can never be used to bypass a requirement.
 function SecurityCheck({ policy, check }) {
   if (!policy || policy.level === "STANDARD") return null;
+  const lockdown = policy.level === "LOCKDOWN";
   const fsOk = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
-  const items = [
-    { label: "Browser supported", ok: typeof fetch === "function" && typeof document.hidden !== "undefined" },
-    ...(policy.requireFullscreen ? [{ label: "Fullscreen available", ok: fsOk }] : []),
-    { label: "Network available", ok: navigator.onLine !== false },
-    { label: "Clipboard policy active (copy / paste / cut blocked)", ok: policy.blockCopy || policy.blockPaste || policy.blockCut, info: true },
-    { label: policy.multiSession === "BLOCK" ? "One-tab policy active (a second tab is refused)" : "Multiple-tab monitoring active", ok: true, info: true },
-    { label: "Tab and window visibility monitoring active", ok: true, info: true },
-    ...(!policy.mobileAllowed ? [{ label: "Computer required (phones and tablets are not supported for this test)", ok: !check?.mobileBlocked }] : []),
-    ...(policy.secureBrowserRequired ? [{ label: "Managed secure browser", ok: !!check?.secureBrowserOk }] : []),
-  ];
-  const failed = items.filter((i) => !i.ok);
+  const rows = [];
+  if (lockdown) {
+    rows.push({ label: "Secure Exam Environment", ok: !!check?.secureBrowserOk, hint: check?.message });
+    for (const c of check?.checks || []) if (c.required) rows.push({ label: c.label, ok: c.ok, hint: null });
+  } else {
+    rows.push({ label: "Browser supported", ok: typeof fetch === "function" && typeof document.hidden !== "undefined" });
+    if (policy.requireFullscreen) rows.push({ label: "Fullscreen available", ok: fsOk });
+    rows.push({ label: "Clipboard security (copy, paste and cut blocked)", ok: policy.blockCopy || policy.blockPaste || policy.blockCut });
+    rows.push({ label: policy.multiSession === "BLOCK" ? "One-tab policy active" : "Multiple-tab monitoring active", ok: true });
+  }
+  rows.push({ label: "Network available", ok: navigator.onLine !== false });
+  if (!policy.mobileAllowed) rows.push({ label: "Computer (phones and tablets are not supported for this exam)", ok: !check?.mobileBlocked });
+  const failed = rows.filter((r) => !r.ok);
+  const hint = failed.find((r) => r.hint)?.hint;
   return (
-    <section aria-label="Security check" style={{ marginTop: 16, border: "1px solid var(--line)", borderRadius: 8, padding: 12 }}>
-      <div className="mono" style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>SECURITY CHECK — {policy.level === "LOCKDOWN" ? "Lockdown" : "Strict"} mode</div>
-      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4, fontSize: 13 }}>
-        {items.map((i) => (
-          <li key={i.label} style={{ color: i.ok ? "var(--ink)" : "var(--rust)" }}>{i.ok ? "✓" : "✗"} {i.label}</li>
+    <section aria-label="Security check" style={{ marginTop: 16, border: `1px solid ${failed.length ? "var(--rust)" : "var(--mint)"}`, borderRadius: 10, padding: 14 }}>
+      <div className="mono" style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em" }}>CODEARENA SECURE EXAM — SECURITY CHECK</div>
+      <ul style={{ listStyle: "none", margin: "8px 0 0", padding: 0, display: "grid", gap: 4, fontSize: 13.5 }}>
+        {rows.map((r) => (
+          <li key={r.label} style={{ color: r.ok ? "var(--ink)" : "var(--rust)" }}>{r.ok ? "✓" : "✗"} {r.label}</li>
         ))}
       </ul>
-      {failed.length > 0 && <p style={{ marginTop: 8, fontSize: 12, color: "var(--rust)" }}>Fix the items marked ✗ before you can start. {policy.secureBrowserRequired && !check?.secureBrowserOk ? "Open this test from your institution's secure exam launcher." : ""}</p>}
+      {failed.length === 0 ? (
+        <p style={{ marginTop: 10, fontSize: 13, color: "var(--mint)", fontWeight: 600 }}>All checks passed. You can start the exam.</p>
+      ) : (
+        <p style={{ marginTop: 10, fontSize: 12.5, color: "var(--rust)" }}>
+          {hint || "This computer is not ready for the exam yet."} {lockdown ? "Strict examinations must be taken in the approved secure exam environment on an exam computer. Please ask your invigilator for help." : "Fix the items marked ✗ to continue."}
+        </p>
+      )}
+      {lockdown && <p style={{ marginTop: 8, fontSize: 11.5, color: "var(--ink-dim)" }}>Physical device rules (phones, notes, seating) are set and enforced by your institution.</p>}
     </section>
   );
 }

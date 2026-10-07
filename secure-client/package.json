@@ -1,0 +1,23 @@
+{
+  "name": "codearena-secure-exam",
+  "productName": "CodeArena Secure Exam",
+  "version": "1.0.0",
+  "description": "Kiosk exam client for CodeArena LOCKDOWN assessments",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/allowlist.test.js test/attest.test.js test/handshake.test.js",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "site.codearena.secureexam",
+    "productName": "CodeArena Secure Exam",
+    "win": { "target": "nsis" },
+    "nsis": { "perMachine": true, "oneClick": true, "allowToChangeInstallationDirectory": false }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

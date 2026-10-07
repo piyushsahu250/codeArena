@@ -1410,6 +1410,21 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
               <input type="checkbox" disabled={readOnly} checked={(form.securityPolicy || {}).multiSession ? form.securityPolicy.multiSession === "BLOCK" : form.securityLevel !== "STANDARD"} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), multiSession: e.target.checked ? "BLOCK" : "FLAG" } })} />
               Allow only one open tab (a second tab is refused)
             </label>
+            {form.securityLevel === "LOCKDOWN" && (
+              <>
+                <label style={labelStyle} htmlFor="coding-test-config-exit-action">If the secure exam environment is lost or closed</label>
+                <select id="coding-test-config-exit-action" style={inputStyle} disabled={readOnly} value={(form.securityPolicy || {}).exitAction || "LOCK"} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), exitAction: e.target.value } })}>
+                  <option value="WARNING">Warn only — record it and let the student continue</option>
+                  <option value="PAUSE">Pause — block the exam until the secure client reconnects</option>
+                  <option value="LOCK">Lock — block until an invigilator unlocks it</option>
+                  <option value="REQUIRE_INVIGILATOR">Require invigilator — lock and flag for the invigilator</option>
+                  <option value="AUTO_SUBMIT">Auto-submit after the grace period</option>
+                </select>
+                <label style={labelStyle} htmlFor="coding-test-config-grace">Grace period before the connection counts as lost (seconds, 30–900)</label>
+                <input id="coding-test-config-grace" style={inputStyle} type="number" min="30" max="900" disabled={readOnly} value={(form.securityPolicy || {}).graceSec || 120} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), graceSec: Number(e.target.value) } })} />
+                <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>A short network blip never submits the exam. Register lab computers under <a href="/staff/secure-devices">Secure exam devices</a>.</p>
+              </>
+            )}
           </fieldset>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 4 }}>
             <div><label style={labelStyle} htmlFor="coding-test-config-difficulty">Difficulty label</label><input id="coding-test-config-difficulty" style={inputStyle} placeholder="e.g. Beginner" disabled={readOnly} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} /></div>

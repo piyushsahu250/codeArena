@@ -16,23 +16,30 @@ const PRESETS = {
     blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
     requireFullscreen: null, // null = follow the test's own requireFullscreen column
     multiSession: "FLAG", // FLAG | BLOCK
-    mobileAllowed: true, secureBrowserRequired: false,
+    mobileAllowed: true, secureBrowserRequired: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
     insertionCharThreshold: 400, insertionLineThreshold: 25,
   },
   PROCTORED: {
     blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
-    requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: true, secureBrowserRequired: false,
+    requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: true, secureBrowserRequired: false, requiredCapabilities: [], exitAction: "WARNING", graceSec: 120,
     insertionCharThreshold: 250, insertionLineThreshold: 15,
   },
+  // LOCKDOWN = a controlled execution environment. The attempt can only start, and only continue, inside an authenticated
+  // secure-client session on an institution-registered device that attests the capabilities below (utils/secureExam.js).
+  // The policy always comes from the server; nothing the browser sends can lower it.
   LOCKDOWN: {
     blockCopy: true, blockPaste: true, blockCut: true, blockContextMenu: true, blockDrag: true,
     requireFullscreen: true, multiSession: "BLOCK", mobileAllowed: false, secureBrowserRequired: true,
+    requiredCapabilities: ["kiosk", "appRestriction", "browserRestriction", "networkRestriction", "clipboard", "fullscreen", "devtoolsDisabled"],
+    exitAction: "LOCK", graceSec: 120,
     insertionCharThreshold: 150, insertionLineThreshold: 10,
   },
 };
 const LEVELS = Object.keys(PRESETS);
 const BOOLEAN_KEYS = ["blockCopy", "blockPaste", "blockCut", "blockContextMenu", "blockDrag", "requireFullscreen", "mobileAllowed", "secureBrowserRequired"];
 const NUMBER_KEYS = ["insertionCharThreshold", "insertionLineThreshold"];
+const SecureExamCaps = require("./secureExam");
+const sanitizeCaps = (arr) => (Array.isArray(arr) ? arr.filter((k, i) => SecureExamCaps.CAPABILITIES.includes(k) && arr.indexOf(k) === i) : null);
 
 function resolvePolicy(test) {
   const level = LEVELS.includes(test?.securityLevel) ? test.securityLevel : "STANDARD";
@@ -41,6 +48,10 @@ function resolvePolicy(test) {
   for (const k of BOOLEAN_KEYS) if (typeof o[k] === "boolean") base[k] = o[k];
   for (const k of NUMBER_KEYS) if (Number.isFinite(o[k]) && o[k] > 0) base[k] = Math.min(100000, Math.floor(o[k]));
   if (["FLAG", "BLOCK"].includes(o.multiSession)) base.multiSession = o.multiSession;
+  const caps = sanitizeCaps(o.requiredCapabilities);
+  if (caps) base.requiredCapabilities = caps;
+  if (SecureExamCaps.EXIT_ACTIONS.includes(o.exitAction)) base.exitAction = o.exitAction;
+  if (Number.isFinite(o.graceSec)) base.graceSec = Math.min(900, Math.max(30, Math.floor(o.graceSec)));
   if (base.requireFullscreen === null) base.requireFullscreen = test?.requireFullscreen !== false;
   return { level, ...base };
 }
@@ -52,6 +63,10 @@ function sanitizePolicyOverrides(input) {
   for (const k of BOOLEAN_KEYS) if (typeof input[k] === "boolean") out[k] = input[k];
   for (const k of NUMBER_KEYS) if (Number.isFinite(Number(input[k])) && Number(input[k]) > 0) out[k] = Math.min(100000, Math.floor(Number(input[k])));
   if (["FLAG", "BLOCK"].includes(input.multiSession)) out.multiSession = input.multiSession;
+  const caps = sanitizeCaps(input.requiredCapabilities);
+  if (caps) out.requiredCapabilities = caps;
+  if (SecureExamCaps.EXIT_ACTIONS.includes(input.exitAction)) out.exitAction = input.exitAction;
+  if (Number.isFinite(Number(input.graceSec))) out.graceSec = Math.min(900, Math.max(30, Math.floor(Number(input.graceSec))));
   return out;
 }
 
@@ -61,8 +76,16 @@ const EVENT_SEVERITY = {
   CLIPBOARD_ATTEMPT: "MEDIUM", COPY_ATTEMPT: "MEDIUM", PASTE_ATTEMPT: "MEDIUM", EXTERNAL_NAVIGATION_ATTEMPT: "MEDIUM",
   SUSPICIOUS_CODE_INSERTION: "MEDIUM", MULTIPLE_SESSION: "HIGH", SCREEN_SHARE_STOPPED: "MEDIUM",
   SECURE_BROWSER_MISSING: "HIGH", SESSION_REPLACED: "MEDIUM",
+  // Secure-client (LOCKDOWN) events, reported by the client main process over its authenticated session or raised by the server.
+  SECURE_CLIENT_STARTED: "LOW", SECURE_CLIENT_STOPPED: "HIGH", KIOSK_EXIT: "HIGH", APPLICATION_POLICY_FAILURE: "HIGH", BROWSER_POLICY_FAILURE: "HIGH",
+  NETWORK_POLICY_FAILURE: "HIGH", EXTERNAL_NAVIGATION: "MEDIUM", TAB_ATTEMPT: "MEDIUM", WINDOW_ATTEMPT: "MEDIUM", DEVTOOLS_ATTEMPT: "MEDIUM",
+  SCREEN_CAPTURE_ATTEMPT: "MEDIUM", FOCUS_LOSS: "LOW", CAMERA_FAILURE: "MEDIUM", MIC_FAILURE: "MEDIUM", SCREEN_SHARE_FAILURE: "MEDIUM",
+  HEARTBEAT_LOST: "MEDIUM", HEARTBEAT_RESTORED: "LOW", SESSION_TAMPERING: "CRITICAL", DEVICE_MISMATCH: "CRITICAL", VERSION_MISMATCH: "HIGH",
+  MULTIPLE_PERSON: "HIGH", PHONE_DETECTED: "HIGH", FACE_MISSING: "MEDIUM", EXAM_LOCKED: "HIGH", EXAM_UNLOCKED: "LOW",
 };
-const CLIENT_REPORTABLE = new Set(["PAGE_HIDDEN", "NETWORK_DISCONNECT", "NETWORK_RECONNECT", "UNUSUAL_ACTIVITY", "SUSPICIOUS_CODE_INSERTION", "EXTERNAL_NAVIGATION_ATTEMPT", "SCREEN_SHARE_STOPPED"]);
+const CLIENT_REPORTABLE = new Set(["PAGE_HIDDEN", "NETWORK_DISCONNECT", "NETWORK_RECONNECT", "UNUSUAL_ACTIVITY", "SUSPICIOUS_CODE_INSERTION", "EXTERNAL_NAVIGATION_ATTEMPT", "SCREEN_SHARE_STOPPED", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE", "MULTIPLE_PERSON", "PHONE_DETECTED", "FACE_MISSING"]);
+// Reportable ONLY by an authenticated secure-client session (never from a plain browser page).
+const SECURE_CLIENT_REPORTABLE = new Set(["CLIPBOARD_ATTEMPT", "SECURE_CLIENT_STARTED", "SECURE_CLIENT_STOPPED", "KIOSK_EXIT", "APPLICATION_POLICY_FAILURE", "BROWSER_POLICY_FAILURE", "NETWORK_POLICY_FAILURE", "EXTERNAL_NAVIGATION", "TAB_ATTEMPT", "WINDOW_ATTEMPT", "DEVTOOLS_ATTEMPT", "SCREEN_CAPTURE_ATTEMPT", "FOCUS_LOSS", "CAMERA_FAILURE", "MIC_FAILURE", "SCREEN_SHARE_FAILURE"]);
 // Server-originated only (a client must not be able to forge evidence of a different kind).
 const SERVER_ONLY = new Set(["MULTIPLE_SESSION", "SECURE_BROWSER_MISSING", "SESSION_REPLACED", "CLIPBOARD_ATTEMPT", "COPY_ATTEMPT", "PASTE_ATTEMPT"]);
 
@@ -86,6 +109,10 @@ const WEIGHTS = {
   PAGE_HIDDEN: 1, NETWORK_DISCONNECT: 0, NETWORK_RECONNECT: 0, UNUSUAL_ACTIVITY: 2, EXTERNAL_NAVIGATION_ATTEMPT: 4,
   CLIPBOARD_ATTEMPT: 3, COPY_ATTEMPT: 3, PASTE_ATTEMPT: 3, SUSPICIOUS_CODE_INSERTION: 6, MULTIPLE_SESSION: 10, SESSION_REPLACED: 4,
   SCREEN_SHARE_STOPPED: 5, SECURE_BROWSER_MISSING: 10,
+  SECURE_CLIENT_STARTED: 0, SECURE_CLIENT_STOPPED: 8, KIOSK_EXIT: 8, APPLICATION_POLICY_FAILURE: 8, BROWSER_POLICY_FAILURE: 8, NETWORK_POLICY_FAILURE: 6,
+  EXTERNAL_NAVIGATION: 4, TAB_ATTEMPT: 3, WINDOW_ATTEMPT: 3, DEVTOOLS_ATTEMPT: 4, SCREEN_CAPTURE_ATTEMPT: 5, FOCUS_LOSS: 1, CAMERA_FAILURE: 4, MIC_FAILURE: 3,
+  SCREEN_SHARE_FAILURE: 4, HEARTBEAT_LOST: 4, HEARTBEAT_RESTORED: 0, SESSION_TAMPERING: 20, DEVICE_MISMATCH: 20, VERSION_MISMATCH: 8,
+  MULTIPLE_PERSON: 8, PHONE_DETECTED: 10, FACE_MISSING: 3, EXAM_LOCKED: 0, EXAM_UNLOCKED: 0,
   TAB_SWITCH: 6, TAB_SWITCH_BRIEF: 1, FULLSCREEN_EXIT: 5, CAMERA_DROPPED: 5, MIC_DROPPED: 4, DEVTOOLS: 4, COPY: 2, PASTE: 3, CUT: 2,
   RIGHT_CLICK: 1, DRAG_ATTEMPT: 2, PRINT_SCREEN_ATTEMPT: 3, MULTI_MONITOR: 4, REFRESH_ATTEMPT: 1, BROWSER_SHORTCUT: 1,
 };
@@ -108,37 +135,6 @@ function computeRisk(events) {
   return { score, level: riskLevel(score), byType };
 }
 
-// --- secure browser / managed-device handshake ----------------------------------------------------------------
-// A managed/kiosk client (or an institution's launcher) proves itself by HMAC-signing a nonce with a secret that is
-// provisioned out of band (env SECURE_BROWSER_SECRET). The server verifies the signature and issues a short-lived
-// token bound to the student. User-Agent, localStorage and query strings are never trusted for this.
-const SECURE_TTL_MS = 6 * 60 * 60 * 1000;
-function secureSecret() { return process.env.SECURE_BROWSER_SECRET || ""; }
-function signHandshake(deviceId, ts) { return crypto.createHmac("sha256", secureSecret()).update(`${deviceId}.${ts}`).digest("hex"); }
-function verifyHandshake({ deviceId, ts, sig }) {
-  const secret = secureSecret();
-  if (!secret || !deviceId || !ts || !sig) return false;
-  const age = Math.abs(Date.now() - Number(ts));
-  if (!Number.isFinite(age) || age > 5 * 60 * 1000) return false; // replay window
-  const expected = Buffer.from(signHandshake(String(deviceId), String(ts)), "hex");
-  let given; try { given = Buffer.from(String(sig), "hex"); } catch { return false; }
-  return given.length === expected.length && crypto.timingSafeEqual(given, expected);
-}
-function issueSecureToken(studentId) {
-  const exp = Date.now() + SECURE_TTL_MS;
-  const body = `${studentId}.${exp}`;
-  const mac = crypto.createHmac("sha256", secureSecret() || "unset").update(body).digest("hex");
-  return Buffer.from(`${body}.${mac}`).toString("base64url");
-}
-function verifySecureToken(token, studentId) {
-  if (!secureSecret() || !token) return false;
-  let raw; try { raw = Buffer.from(String(token), "base64url").toString(); } catch { return false; }
-  const [sid, exp, mac] = raw.split(".");
-  if (!sid || !exp || !mac || sid !== studentId || Number(exp) < Date.now()) return false;
-  const expected = crypto.createHmac("sha256", secureSecret()).update(`${sid}.${exp}`).digest("hex");
-  return mac.length === expected.length && crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected));
-}
-
 const MOBILE_UA = /Android|iPhone|iPad|iPod|Mobile/i;
 const isMobileUserAgent = (ua) => MOBILE_UA.test(String(ua || ""));
 
@@ -148,13 +144,14 @@ function clientPolicy(policy) {
     level: policy.level, blockCopy: policy.blockCopy, blockPaste: policy.blockPaste, blockCut: policy.blockCut,
     blockContextMenu: policy.blockContextMenu, blockDrag: policy.blockDrag, requireFullscreen: policy.requireFullscreen,
     multiSession: policy.multiSession, mobileAllowed: policy.mobileAllowed, secureBrowserRequired: policy.secureBrowserRequired,
+    requiredCapabilities: policy.requiredCapabilities, exitAction: policy.exitAction, graceSec: policy.graceSec,
     insertionCharThreshold: policy.insertionCharThreshold, insertionLineThreshold: policy.insertionLineThreshold,
   };
 }
 
 module.exports = {
   PRESETS, LEVELS, resolvePolicy, sanitizePolicyOverrides, clientPolicy,
-  EVENT_SEVERITY, CLIENT_REPORTABLE, SERVER_ONLY, cleanMetadata,
+  EVENT_SEVERITY, CLIENT_REPORTABLE, SECURE_CLIENT_REPORTABLE, SERVER_ONLY, cleanMetadata,
   WEIGHTS, riskLevel, computeRisk,
-  verifyHandshake, signHandshake, issueSecureToken, verifySecureToken, isMobileUserAgent,
+  isMobileUserAgent,
 };

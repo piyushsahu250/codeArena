@@ -1,0 +1,11 @@
+{
+  "appUrl": "https://codearena.site",
+  "apiUrl": "https://api-aws.codearena.site/api",
+  "deviceId": "LAB3-PC14",
+  "deviceSecret": "<shown once when the device is registered in CodeArena>",
+  "allowedHosts": ["codearena.site", "api-aws.codearena.site", "fonts.googleapis.com", "fonts.gstatic.com", "storage.googleapis.com", "tfhub.dev", "www.kaggle.com"],
+  "networkAttest": "client",
+  "networkCanaryUrls": ["https://www.google.com", "https://chat.openai.com"],
+  "killBlockedProcesses": false,
+  "invigilatorPinHash": "<salt-hex>:<scrypt-hex>  (generate with: node tools/make-pin.js 1234)"
+}

@@ -8,6 +8,7 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { ownsLmsInstitute, resolveModuleCodingTestCourseInstituteId } = require("../utils/lmsOwnership");
 const X = require("../utils/examSecurity");
+const SecureExam = require("../utils/secureExam");
 
 const router = express.Router();
 const STAFF = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"];
@@ -56,8 +57,41 @@ async function loadTestScoped(req, res) {
   const instituteId = await resolveModuleCodingTestCourseInstituteId(req.params.testId);
   if (instituteId === undefined) { res.status(404).json({ error: "Assessment not found" }); return null; }
   if (!ownsLmsInstitute(req, instituteId)) { res.status(403).json({ error: "You can only view assessments under your own institute" }); return null; }
-  const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.testId }, select: { id: true, title: true, securityLevel: true, securityPolicy: true, requireFullscreen: true, requireWebcam: true, requireMicrophone: true, maxViolations: true, proctoring: true } });
+  const test = await prisma.moduleCodingTest.findUnique({ where: { id: req.params.testId }, select: { id: true, title: true, securityLevel: true, securityPolicy: true, requireFullscreen: true, requireWebcam: true, requireMicrophone: true, maxViolations: true, proctoring: true, timeLimitMin: true } });
   return { test, instituteId };
+}
+
+
+// Dashboard totals for a whole test (not just the visible page). Cached for a few seconds per test so a monitor open on many
+// staff screens does not turn into one heavy query per refresh; counts come from narrow selects, not the full event bodies.
+const summaryCache = new Map();
+async function monitorSummary(test, studentScope, pol) {
+  const hit = summaryCache.get(test.id);
+  if (hit && Date.now() - hit.at < 5000 && hit.scope === JSON.stringify(studentScope)) return hit.value;
+  const attempts = await prisma.moduleCodingAttempt.findMany({ where: { moduleCodingTestId: test.id, student: studentScope }, select: { id: true, status: true }, take: 5000 });
+  const ids = attempts.map((a) => a.id);
+  const active = attempts.filter((a) => a.status === "IN_PROGRESS");
+  const [classic, extra, sessions] = ids.length ? await Promise.all([
+    prisma.proctoringViolation.findMany({ where: { attemptId: { in: ids } }, select: { attemptId: true, type: true } }),
+    prisma.examSecurityEvent.findMany({ where: { attemptKind: "MODULE_CODING", attemptId: { in: ids } }, select: { attemptId: true, type: true, reviewStatus: true } }),
+    prisma.secureExamSession.findMany({ where: { attemptId: { in: active.map((a) => a.id) }, endedAt: null }, select: { attemptId: true, lastHeartbeatAt: true, lockedAt: true, unlockedAt: true, state: true, endedAt: true } }),
+  ]) : [[], [], []];
+  const evBy = new Map();
+  for (const e of [...classic, ...extra]) { if (!evBy.has(e.attemptId)) evBy.set(e.attemptId, []); evBy.get(e.attemptId).push(e); }
+  const bands = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+  for (const a of attempts) bands[X.computeRisk(evBy.get(a.id) || []).level]++;
+  const nowMs = Date.now();
+  const disconnected = sessions.filter((s) => (s.lockedAt && !s.unlockedAt) || SecureExam.connectionState(s, { heartbeatSec: 15, graceSec: pol.graceSec }, nowMs) !== "CONNECTED").length;
+  const countType = (types) => extra.filter((e) => types.includes(e.type)).length;
+  const value = {
+    totalStudents: attempts.length, active: active.length, completed: attempts.length - active.length, disconnected,
+    securityWarnings: bands.MEDIUM, highRisk: bands.HIGH, critical: bands.CRITICAL,
+    deviceFailures: countType(["APPLICATION_POLICY_FAILURE", "BROWSER_POLICY_FAILURE", "SECURE_CLIENT_STOPPED", "DEVICE_MISMATCH", "VERSION_MISMATCH"]),
+    networkFailures: countType(["NETWORK_POLICY_FAILURE", "NETWORK_DISCONNECT", "HEARTBEAT_LOST"]),
+  };
+  summaryCache.set(test.id, { at: Date.now(), scope: JSON.stringify(studentScope), value });
+  if (summaryCache.size > 500) summaryCache.clear();
+  return value;
 }
 
 // STAFF: one row per student attempt with a risk band, counts and last event. Paginated; aggregation is in SQL-sized
@@ -83,6 +117,16 @@ router.get("/tests/:testId/monitor", authenticate, requireRole(...STAFF), attach
     ]) : [[], []];
     const by = (arr) => { const m = new Map(); for (const e of arr) { if (!m.has(e.attemptId)) m.set(e.attemptId, []); m.get(e.attemptId).push(e); } return m; };
     const classicBy = by(classic), extraBy = by(extra);
+    // Live fields: latest secure session per attempt (device + connection state), answered/accepted counts, server-side time left.
+    const [sessions, subs] = ids.length ? await Promise.all([
+      prisma.secureExamSession.findMany({ where: { attemptId: { in: ids } }, orderBy: { createdAt: "desc" }, select: { attemptId: true, deviceId: true, examDeviceId: true, state: true, lastHeartbeatAt: true, endedAt: true, lockedAt: true, unlockedAt: true, clientKind: true } }),
+      prisma.moduleCodingSubmission.findMany({ where: { attemptId: { in: ids } }, select: { attemptId: true, verdict: true } }),
+    ]) : [[], []];
+    const sessBy = new Map(); for (const s of sessions) if (!sessBy.has(s.attemptId)) sessBy.set(s.attemptId, s);
+    const subBy = new Map(); for (const s of subs) { const c = subBy.get(s.attemptId) || { answered: 0, accepted: 0 }; if (s.verdict && s.verdict !== "PENDING") c.answered++; if (s.verdict === "ACCEPTED") c.accepted++; subBy.set(s.attemptId, c); }
+    const devLabels = new Map((await prisma.examDevice.findMany({ where: { id: { in: [...new Set(sessions.map((s) => s.examDeviceId))] } }, select: { id: true, label: true } })).map((d) => [d.id, d.label]));
+    const pol = X.resolvePolicy(ctx.test);
+    const nowMs = Date.now();
     const rows = attempts.map((a) => {
       const evs = [...(classicBy.get(a.id) || []), ...(extraBy.get(a.id) || [])];
       const risk = X.computeRisk(evs);
@@ -92,12 +136,16 @@ router.get("/tests/:testId/monitor", authenticate, requireRole(...STAFF), attach
         autoSubmitReason: a.autoSubmitReason, violationCount: a.violationCount, eventCount: evs.length,
         risk: risk.level, riskScore: risk.score, lastEvent: last ? { type: last.type, at: last.createdAt } : null,
         pendingReview: (extraBy.get(a.id) || []).filter((e) => e.reviewStatus === "PENDING" && e.severity !== "LOW").length,
+        device: sessBy.get(a.id) ? { deviceId: sessBy.get(a.id).deviceId, label: devLabels.get(sessBy.get(a.id).examDeviceId) || null, kind: sessBy.get(a.id).clientKind } : null,
+        connection: a.status !== "IN_PROGRESS" ? "ENDED" : (sessBy.get(a.id) ? (sessBy.get(a.id).lockedAt && !sessBy.get(a.id).unlockedAt ? "LOCKED" : SecureExam.connectionState(sessBy.get(a.id), { heartbeatSec: 15, graceSec: pol.graceSec }, nowMs)) : (pol.secureBrowserRequired ? "NO_SECURE_SESSION" : "BROWSER")),
+        progress: { answered: (subBy.get(a.id) || {}).answered || 0, accepted: (subBy.get(a.id) || {}).accepted || 0 },
+        secondsLeft: a.status === "IN_PROGRESS" ? Math.max(0, Math.round((new Date(a.startedAt).getTime() + ctx.test.timeLimitMin * 60000 - nowMs) / 1000)) : 0,
       };
     });
     res.json({
       test: { id: ctx.test.id, title: ctx.test.title }, policy: X.clientPolicy(X.resolvePolicy(ctx.test)),
       proctoring: { enabled: ctx.test.proctoring, camera: ctx.test.requireWebcam, microphone: ctx.test.requireMicrophone, maxViolations: ctx.test.maxViolations },
-      total, page, pageSize, rows,
+      total, page, pageSize, rows, summary: await monitorSummary(ctx.test, studentScope, pol),
     });
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load monitor" }); }
 });
@@ -142,13 +190,7 @@ router.patch("/events/:id/review", authenticate, requireRole(...STAFF), attachRe
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to save review" }); }
 });
 
-// MANAGED BROWSER: exchange a signed handshake for a short-lived, student-bound secure-session token. The signing secret
-// (SECURE_BROWSER_SECRET) is provisioned to institution-managed browsers/kiosk launchers out of band.
-router.post("/secure-session", authenticate, requireRole("STUDENT"), rateLimit({ windowMs: 60 * 1000, max: 10, keyGenerator: (req) => req.user?.id || req.ip }), (req, res) => {
-  const { deviceId, ts, sig } = req.body || {};
-  if (!X.verifyHandshake({ deviceId, ts, sig })) return res.status(403).json({ error: "Secure browser handshake failed" });
-  res.json({ token: X.issueSecureToken(req.user.id), expiresInMs: 6 * 60 * 60 * 1000 });
-});
+// (The managed-browser handshake now lives in routes/secureExam.js: device-bound challenge/response sessions.)
 
 module.exports = router;
 module.exports.recordServerEvent = recordServerEvent;
