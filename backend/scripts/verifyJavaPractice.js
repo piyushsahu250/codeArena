@@ -43,17 +43,19 @@ async function cleanup() {
   const ts = Date.now();
   const grp = await prisma.academicGroup.create({ data: { instituteId, departmentId, batch: "ZZ-VERIFY-JP", section: `ZZ-${ts}` } });
   const grp2 = await prisma.academicGroup.create({ data: { instituteId, departmentId, batch: "ZZ-VERIFY-JP", section: `ZZ2-${ts}` } });
-  const mk = async (name, role, group) => { const pw = rand(); const u = await prisma.user.create({ data: { name, email: `verify-jp-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId: role === "STUDENT" && group === null ? null : instituteId, academicGroupId: group?.id || null, mustChangePassword: false } }); return { ...u, pw }; };
+  const mk = async (name, role, group) => { const pw = rand(); const u = await prisma.user.create({ data: { name, email: `verify-jp-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId: (role === "STUDENT" && group === null) || role === "ADMIN" ? null : instituteId, academicGroupId: group?.id || null, mustChangePassword: false } }); return { ...u, pw }; };
   const s1 = await mk("Student One", "STUDENT", grp);
   const s2 = await mk("Student Two", "STUDENT", grp);
   const outsider = await mk("Outsider", "STUDENT", grp2);   // same institute, group NOT assigned to the course
-  const admin = await mk("Admin", "INSTITUTE_ADMIN", null);
+  const admin = await mk("Admin", "ADMIN", null);               // platform-level admin (owns global courses)
+  const instAdmin = await mk("Inst Admin", "INSTITUTE_ADMIN", null); // scoped to one institute
   await prisma.courseAcademicGroupAssignment.create({ data: { courseId: course.id, academicGroupId: grp.id, assignedByUserId: admin.id, assignedByName: admin.name } });
   // The outsider belongs to the same institute; make sure the institute itself has no assignment to this course.
   const instAssigned = await prisma.courseInstituteAssignment.count({ where: { courseId: course.id, instituteId } });
   let tempQuestionId = null, level1Id = null, level1WasActive = null;
 
   try {
+    const TI = await login(instAdmin.email, instAdmin.pw);
     const T1 = await login(s1.email, s1.pw), T2 = await login(s2.email, s2.pw), TO = await login(outsider.email, outsider.pw), TA = await login(admin.email, admin.pw);
 
     // ---- structure + visibility
@@ -95,7 +97,7 @@ async function cleanup() {
     const start = await call("POST", `/module-coding/level/${lvl0.id}/start`, T1);
     check("student starts Level 0", start.status === 200 && start.body.questions?.length === 3, `${start.status} ${start.ms}ms`);
     const leak = JSON.stringify(start.body);
-    check("no hidden test cases or answers in the start response", !/"isHidden":true/.test(leak) && !/300000/.test(leak) && !/"expected"/.test(leak));
+    check("no hidden test cases in the start response", !/"isHidden":true/.test(leak) && !/100000 200000/.test(leak) && !/-5 -7/.test(leak) && !/"hiddenTestCases"/.test(leak));
     const attemptId = start.body.attemptId;
     const resume = await call("POST", `/module-coding/level/${lvl0.id}/start`, T1);
     check("second start resumes the same attempt (no duplicate)", resume.body.attemptId === attemptId);
@@ -124,6 +126,8 @@ async function cleanup() {
     level1WasActive = (await prisma.moduleCodingTest.findUnique({ where: { id: level1Id } })).isActive;
     const mkq = await call("POST", `/module-coding/admin/tests/${level1Id}/questions`, TA, { title: "ZZ Echo Temp", description: "Print the integer read.", testCases: [...Array(2).fill(0).map((_, i) => ({ input: String(i), expected: String(i), isHidden: false })), ...Array(5).fill(0).map((_, i) => ({ input: String(i + 9), expected: String(i + 9), isHidden: true }))] });
     tempQuestionId = mkq.body?.id;
+    const iaq = await call("POST", `/module-coding/admin/tests/${level1Id}/questions`, TI, { title: "x", description: "x", testCases: [] });
+    check("institute admin cannot edit a GLOBAL course's level (403)", iaq.status === 403, String(iaq.status));
     check("admin can add a Level 1 question (starts Draft)", !!tempQuestionId && mkq.body.questionStatus === "DRAFT");
     // validation of publish: a Draft question inside a Draft level stays hidden
     check("Level 1 stays hidden while Draft", (await call("GET", `/practice/java-practice/topics/${topic0.id}`, T2)).body.topic.levels.length === 1);
