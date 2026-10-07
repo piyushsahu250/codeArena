@@ -118,7 +118,9 @@ async function cleanup() {
     const monitors = [];
     for (let k = 0; k < 5; k++) monitors.push(await timed("staff monitor (page+summary)", () => call("GET", `/exam-security/tests/${level.id}/monitor?pageSize=100`, TA)));
     // 7. finalize (all at once)
-    const fins = await Promise.all(running.map((s) => timed("finalize + grade", () => call("POST", `/module-coding/attempts/${attempt[s.i].id}/finalize`, jwt[s.i], { reason: "manual" }, { "X-Secure-Session": sess[s.i], "X-Exam-Session": attempt[s.i].exam }))));
+    // FINALIZE_SAMPLE limits how many students submit at the very end (grading is bounded by the judge, measured separately).
+    const finalizers = process.env.FINALIZE_SAMPLE ? running.slice(0, Number(process.env.FINALIZE_SAMPLE)) : running;
+    const fins = await Promise.all(finalizers.map((s) => timed("finalize + grade", () => call("POST", `/module-coding/attempts/${attempt[s.i].id}/finalize`, jwt[s.i], { reason: "manual" }, { "X-Secure-Session": sess[s.i], "X-Exam-Session": attempt[s.i].exam }))));
     const wall = (Date.now() - wall0) / 1000;
     const dbDone = await prisma.moduleCodingAttempt.count({ where: { studentId: { in: students.map((s) => s.id) }, status: { not: "IN_PROGRESS" } } });
     const dbEvents = await prisma.examSecurityEvent.count({ where: { studentId: { in: students.map((s) => s.id) } } });
