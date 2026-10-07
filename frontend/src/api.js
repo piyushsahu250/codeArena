@@ -25,6 +25,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Managed/secure-browser launchers store the signed-handshake token here (see docs/EXAM_SECURITY.md); the server verifies it.
+  try { const secure = sessionStorage.getItem("ca_secure_session"); if (secure) config.headers["X-Secure-Session"] = secure; } catch { /* storage blocked */ }
   return config;
 });
 

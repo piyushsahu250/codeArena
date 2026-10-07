@@ -1391,6 +1391,26 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
             <input type="checkbox" disabled={readOnly} checked={form.proctoring !== false} onChange={(e) => setForm({ ...form, proctoring: e.target.checked })} />
             Proctoring (count tab switches / fullscreen exits and auto-submit after the violation limit)
           </label>
+          <fieldset style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, marginTop: 12 }}>
+            <legend style={{ fontSize: 12, fontWeight: 700, padding: "0 6px" }}>Exam security</legend>
+            <label style={labelStyle} htmlFor="coding-test-config-security-level">Security level</label>
+            <select id="coding-test-config-security-level" style={inputStyle} disabled={readOnly} value={form.securityLevel} onChange={(e) => setForm({ ...form, securityLevel: e.target.value })}>
+              <option value="STANDARD">Standard — copy/paste/right-click blocked, events logged</option>
+              <option value="PROCTORED">Proctored — adds fullscreen, one tab only, tighter paste-insertion flags</option>
+              <option value="LOCKDOWN">Lockdown — also requires the managed secure browser and a computer</option>
+            </select>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
+              The browser cannot see AI tools or extensions. Use Lockdown with a managed device and secure browser for high-stakes exams, and use the camera and microphone settings below for proctoring. Proctoring (above) must be on for these controls to apply.
+            </p>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 13 }}>
+              <input type="checkbox" disabled={readOnly} checked={(form.securityPolicy || {}).mobileAllowed !== false && form.securityLevel !== "LOCKDOWN"} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), mobileAllowed: e.target.checked } })} />
+              Allow phones and tablets
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontSize: 13 }}>
+              <input type="checkbox" disabled={readOnly} checked={(form.securityPolicy || {}).multiSession ? form.securityPolicy.multiSession === "BLOCK" : form.securityLevel !== "STANDARD"} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), multiSession: e.target.checked ? "BLOCK" : "FLAG" } })} />
+              Allow only one open tab (a second tab is refused)
+            </label>
+          </fieldset>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 4 }}>
             <div><label style={labelStyle} htmlFor="coding-test-config-difficulty">Difficulty label</label><input id="coding-test-config-difficulty" style={inputStyle} placeholder="e.g. Beginner" disabled={readOnly} value={form.difficulty} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} /></div>
             <div>
@@ -1874,9 +1894,12 @@ function CodingAttemptsPanel({ testId, testTitle, maxAttempts }) {
           <h3 style={{ fontSize: 15 }}>Student attempts</h3>
           {testTitle && <div style={{ fontSize: 12, color: "var(--ink-dim)" }}>Assessment: {testTitle} · Max attempts: {maxAttempts ?? "Unlimited"}</div>}
         </div>
-        {isAdmin && (
-          <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={exportCsv}>⬇ Export CSV</button>
-        )}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <a className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} href={`/staff/exam-security/${testId}`}>Security monitor</a>
+          {isAdmin && (
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px" }} onClick={exportCsv}>⬇ Export CSV</button>
+          )}
+        </div>
       </div>
 
       <input style={{ ...inputStyle, marginTop: 12 }} placeholder="Search by name, roll number, or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -2563,7 +2586,7 @@ function LevelPanel({ levelId, onBack }) {
           maxViolations: res.data.maxViolations, requireFullscreen: res.data.requireFullscreen,
           requireWebcam: res.data.requireWebcam, requireMicrophone: res.data.requireMicrophone, allowResume: res.data.allowResume,
           allowedLanguages: res.data.allowedLanguages, isActive: res.data.isActive,
-          description: res.data.description || "", difficulty: res.data.difficulty || "", proctoring: res.data.proctoring !== false, unlockRule: res.data.unlockRule || "NONE", unlockMinPercent: res.data.unlockMinPercent ?? "",
+          description: res.data.description || "", difficulty: res.data.difficulty || "", proctoring: res.data.proctoring !== false, securityLevel: res.data.securityLevel || "STANDARD", securityPolicy: res.data.securityPolicy || {}, unlockRule: res.data.unlockRule || "NONE", unlockMinPercent: res.data.unlockMinPercent ?? "",
         });
       }
     });

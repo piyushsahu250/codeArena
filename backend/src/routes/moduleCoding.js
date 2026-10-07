@@ -12,6 +12,9 @@ const { getModuleLockMap } = require("../utils/learningLock");
 const { statusOf } = require("../utils/publishState");
 const { levelUnlockState } = require("../utils/practiceProgress");
 const { studentCanAccessCourse } = require("../utils/courseEligibility");
+const X = require("../utils/examSecurity");
+const { recordServerEvent } = require("./examSecurity");
+const crypto = require("crypto");
 
 // Chapter Levels are reachable by id, so the course's institute/group assignment must be enforced here (a student
 // from another institute must get the same "not found" as a nonexistent id). Module-direct tests keep their old rule.
@@ -97,6 +100,41 @@ function sanitizeQuestion(q) {
   };
 }
 
+// One-active-session control (multi-tab). The newest start/resume owns attempt.sessionId; every later request carries it
+// in X-Exam-Session. Policy BLOCK: a stale tab is refused (409 SESSION_REPLACED) and the event is recorded. Policy FLAG:
+// the request goes through but the duplicate is recorded as evidence. An attempt with no sessionId (started before this
+// existed) is not enforced. Evidence writes are throttled so a retrying stale tab cannot flood the table.
+const lastSessionEvent = new Map();
+async function enforceSingleSession(req, res, attempt) {
+  if (!attempt.sessionId) return true;
+  const given = req.get("x-exam-session");
+  if (given === attempt.sessionId) return true;
+  const policy = X.resolvePolicy(attempt.moduleCodingTest);
+  const key = attempt.id;
+  const now = Date.now();
+  if (now - (lastSessionEvent.get(key) || 0) > 60000) {
+    lastSessionEvent.set(key, now);
+    if (lastSessionEvent.size > 5000) lastSessionEvent.clear();
+    await recordServerEvent({ attempt, type: policy.multiSession === "BLOCK" ? "SESSION_REPLACED" : "MULTIPLE_SESSION", metadata: { hadHeader: !!given } });
+  }
+  if (policy.multiSession === "BLOCK") {
+    res.status(409).json({ error: "This assessment is open in another tab or window. Close this one and continue there.", code: "SESSION_REPLACED" });
+    return false;
+  }
+  return true;
+}
+
+// Start-time requirements the SERVER enforces (never the page alone): mobile support and the managed-browser handshake.
+function startRequirementFailure(req, policy) {
+  if (!policy.mobileAllowed && X.isMobileUserAgent(req.get("user-agent"))) {
+    return { code: "MOBILE_NOT_SUPPORTED", error: "This assessment cannot be taken on a phone or tablet. Please use a laptop or desktop computer." };
+  }
+  if (policy.secureBrowserRequired && !X.verifySecureToken(req.get("x-secure-session"), req.user.id)) {
+    return { code: "SECURE_BROWSER_REQUIRED", error: "This assessment must be taken in the institution's managed secure browser. Open it from the secure exam launcher." };
+  }
+  return null;
+}
+
 async function loadOwnedAttempt(req, res, { requireInProgress = true } = {}) {
   const attempt = await prisma.moduleCodingAttempt.findUnique({
     where: { id: req.params.attemptId },
@@ -110,6 +148,7 @@ async function loadOwnedAttempt(req, res, { requireInProgress = true } = {}) {
     res.status(403).json({ error: "This assessment attempt is already finalized" });
     return null;
   }
+  if (attempt.status === "IN_PROGRESS" && !(await enforceSingleSession(req, res, attempt))) return null;
   return attempt;
 }
 
@@ -251,13 +290,15 @@ router.get(["/module/:moduleId", "/level/:levelId"], authenticate, requireRole("
     res.json({
       exists: true,
       practice: ctx.practice || null, lockReason: ctx.lockReason || null,
+      security: X.clientPolicy(X.resolvePolicy(test)),
+      securityCheck: (() => { const p = X.resolvePolicy(test); return { mobileBlocked: !p.mobileAllowed && X.isMobileUserAgent(req.get("user-agent")), secureBrowserRequired: p.secureBrowserRequired, secureBrowserOk: !p.secureBrowserRequired || X.verifySecureToken(req.get("x-secure-session"), req.user.id) }; })(),
       test: {
         id: test.id, title: test.title, instructions: test.instructions, description: test.description, difficulty: test.difficulty,
         allowedLanguages: test.allowedLanguages, questionCount: test.questionCount,
         passingPercent: test.passingPercent, timeLimitMin: test.timeLimitMin,
         maxAttempts: test.maxAttempts, cooldownMinutes: test.cooldownMinutes,
         maxViolations: test.maxViolations, requireFullscreen: test.requireFullscreen,
-        requireWebcam: test.requireWebcam, requireMicrophone: test.requireMicrophone, proctoring: test.proctoring,
+        requireWebcam: test.requireWebcam, requireMicrophone: test.requireMicrophone, proctoring: test.proctoring, securityLevel: test.securityLevel,
       },
       lessonsComplete, attemptsUsed, attemptsRemaining, bestScore, alreadyPassed,
       cooldownRemainingSec, canStart,
@@ -292,6 +333,15 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
       return res.status(403).json({ error: req.params.levelId ? (ctx.lockReason || "This module is locked") : "Complete this module's lessons and practice test before starting the coding assessment" });
     }
 
+    const startPolicy = X.resolvePolicy(test);
+    const reqFail = startRequirementFailure(req, startPolicy);
+    if (reqFail) {
+      if (reqFail.code === "SECURE_BROWSER_REQUIRED") {
+        await prisma.examSecurityEvent.create({ data: { attemptKind: "MODULE_CODING", attemptId: "none", studentId: req.user.id, testId: test.id, type: "SECURE_BROWSER_MISSING", severity: "HIGH" } }).catch(() => {});
+      }
+      return res.status(403).json(reqFail);
+    }
+
     const existing = await prisma.moduleCodingAttempt.findFirst({
       where: { moduleCodingTestId: test.id, studentId: req.user.id, status: "IN_PROGRESS" },
       include: { questions: { orderBy: { order: "asc" }, include: { question: { include: { testCases: true } } } } },
@@ -311,6 +361,9 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
         if (Date.now() > deadlineOf(existing)) {
           await gradeModuleCodingAttempt(existing.id, { reason: "TIME_EXPIRED" });
         } else {
+          // The resuming tab becomes the single active session; any older tab is refused from now on.
+          const resumedSession = crypto.randomBytes(16).toString("hex");
+          await prisma.moduleCodingAttempt.update({ where: { id: existing.id }, data: { sessionId: resumedSession, sessionStartedAt: new Date() } });
           // Resuming (e.g. after a page refresh or a dropped connection) must restore whatever
           // was last autosaved per question — otherwise a student's real progress, safely sitting
           // in ModuleCodingSubmission, would appear to vanish from the editor and get silently
@@ -320,6 +373,7 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
           const subByQuestion = new Map(submissions.map((s) => [s.questionId, s]));
           return res.json({
             attemptId: existing.id,
+            sessionId: resumedSession, security: X.clientPolicy(startPolicy),
             deadline: deadlineOf(existing),
             serverTime: Date.now(),
             questions: existing.questions.map((q) => sanitizeQuestion(q.question)),
@@ -377,9 +431,11 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
       selected = pool.slice(0, test.questionCount);
     }
 
+    const newSession = crypto.randomBytes(16).toString("hex");
     const attempt = await prisma.moduleCodingAttempt.create({
       data: {
         moduleCodingTestId: test.id, studentId: req.user.id, attemptNumber: finalizedCount + 1,
+        sessionId: newSession, sessionStartedAt: new Date(),
         questions: { create: selected.map((q, i) => ({ questionId: q.id, order: i })) },
       },
     });
@@ -390,6 +446,7 @@ router.post(["/module/:moduleId/start", "/level/:levelId/start"], authenticate, 
     res.json({
       attemptId: attempt.id,
       deadline: deadlineOf({ ...attempt, moduleCodingTest: test }),
+      sessionId: newSession, security: X.clientPolicy(startPolicy),
       serverTime: Date.now(),
       questions: selected.map((q) => sanitizeQuestion(byId.get(q.id))),
       allowedLanguages: test.allowedLanguages,
@@ -808,6 +865,11 @@ router.patch("/admin/tests/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN
     if (f.cooldownMinutes !== undefined) data.cooldownMinutes = Number(f.cooldownMinutes);
     if (f.maxViolations !== undefined) data.maxViolations = Number(f.maxViolations);
     if (f.proctoring !== undefined) data.proctoring = !!f.proctoring;
+    if (f.securityLevel !== undefined) {
+      if (!X.LEVELS.includes(f.securityLevel)) return res.status(400).json({ error: `securityLevel must be one of ${X.LEVELS.join(", ")}` });
+      data.securityLevel = f.securityLevel;
+    }
+    if (f.securityPolicy !== undefined) data.securityPolicy = X.sanitizePolicyOverrides(f.securityPolicy);
     if (f.requireFullscreen !== undefined) data.requireFullscreen = !!f.requireFullscreen;
     if (f.requireWebcam !== undefined) data.requireWebcam = !!f.requireWebcam;
     if (f.requireMicrophone !== undefined) data.requireMicrophone = !!f.requireMicrophone;

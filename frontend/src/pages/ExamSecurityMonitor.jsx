@@ -1,0 +1,131 @@
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import api from "../api";
+import Navbar from "../components/Navbar";
+import Badge from "../components/Badge";
+
+// Staff view of the exam-security evidence for one coding assessment: a risk-banded row per student attempt, and a
+// chronological timeline per attempt where a person reviews each piece of evidence. Risk bands are guidance, never a verdict.
+const RISK_TONE = { LOW: "default", MEDIUM: "warning", HIGH: "danger", CRITICAL: "danger" };
+const REVIEW_LABEL = { PENDING: "Needs review", REVIEWED: "Reviewed", LEGITIMATE: "Legitimate", SUSPICIOUS: "Suspicious", ESCALATED: "Escalated" };
+const fmt = (d) => new Date(d).toLocaleTimeString();
+
+function Timeline({ attemptId, onClose }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const load = useCallback(() => {
+    api.get(`/exam-security/attempts/${attemptId}/timeline`).then((r) => setData(r.data)).catch((e) => setError(e.response?.data?.error || "Could not load the timeline"));
+  }, [attemptId]);
+  useEffect(() => { load(); }, [load]);
+
+  async function review(id, reviewStatus) {
+    const note = reviewStatus === "SUSPICIOUS" || reviewStatus === "ESCALATED" ? prompt("Add a note for this decision (optional)") : null;
+    try { await api.patch(`/exam-security/events/${id}/review`, { reviewStatus, note }); load(); }
+    catch (e) { alert(e.response?.data?.error || "Could not save the review"); }
+  }
+
+  return (
+    <div className="card" style={{ padding: 16, marginTop: 16 }} aria-live="polite">
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <strong>{data ? `${data.student.name}${data.student.registrationNumber ? ` (${data.student.registrationNumber})` : ""}` : "Timeline"}</strong>
+        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {data && <Badge tone={RISK_TONE[data.risk]}>Risk: {data.risk} ({data.riskScore})</Badge>}
+          <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={onClose}>Close</button>
+        </span>
+      </div>
+      {error && <p style={{ color: "var(--rust)" }}>{error}</p>}
+      {!data && !error && <p className="mono">Loading…</p>}
+      {data && (
+        <ol style={{ listStyle: "none", padding: 0, margin: "12px 0 0", display: "grid", gap: 6 }}>
+          {data.timeline.map((e, i) => (
+            <li key={e.id || i} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "baseline", fontSize: 13, borderBottom: "1px solid var(--line)", paddingBottom: 6 }}>
+              <span className="mono" style={{ color: "var(--ink-dim)", minWidth: 78 }}>{fmt(e.at)}</span>
+              <span style={{ fontWeight: 600 }}>{e.type.replace(/_/g, " ")}</span>
+              {e.severity && <Badge tone={e.severity === "HIGH" || e.severity === "CONFIRMED_VIOLATION" ? "danger" : e.severity === "MEDIUM" || e.severity === "SUSPICIOUS" ? "warning" : "default"}>{e.severity.replace("_", " ")}</Badge>}
+              {e.penalized && <Badge tone="danger">counted as a strike</Badge>}
+              {e.metadata && <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }}>{Object.entries(e.metadata).map(([k, v]) => `${k}=${v}`).join(" · ")}</span>}
+              {e.reviewable && (
+                <span style={{ marginLeft: "auto", display: "inline-flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <span className="mono" style={{ fontSize: 11 }}>{REVIEW_LABEL[e.reviewStatus]}{e.reviewNote ? ` — ${e.reviewNote}` : ""}</span>
+                  {["LEGITIMATE", "REVIEWED", "SUSPICIOUS", "ESCALATED"].map((s) => (
+                    <button key={s} className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} disabled={e.reviewStatus === s} onClick={() => review(e.id, s)}>{REVIEW_LABEL[s]}</button>
+                  ))}
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+export default function ExamSecurityMonitor() {
+  const { testId } = useParams();
+  const [page, setPage] = useState(1);
+  const [state, setState] = useState({ loading: true, error: "", data: null });
+  const [open, setOpen] = useState(null);
+  const load = useCallback(() => {
+    setState((s) => ({ ...s, loading: true, error: "" }));
+    api.get(`/exam-security/tests/${testId}/monitor?page=${page}&pageSize=25`)
+      .then((r) => setState({ loading: false, error: "", data: r.data }))
+      .catch((e) => setState({ loading: false, error: e.response?.data?.error || (e.response ? "Could not load the monitor" : "You appear to be offline"), data: null }));
+  }, [testId, page]);
+  useEffect(() => { load(); }, [load]);
+  const d = state.data;
+  return (
+    <div>
+      <Navbar />
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 64px" }}>
+        <h1 style={{ fontSize: 24 }}>Exam security monitor</h1>
+        {d && (
+          <p className="mono" style={{ color: "var(--ink-dim)", margin: "6px 0 14px", fontSize: 12.5 }}>
+            {d.test.title} · mode {d.policy.level} · {d.policy.multiSession === "BLOCK" ? "one tab only" : "tab monitoring"} · fullscreen {d.policy.requireFullscreen ? "required" : "not required"} · camera {d.proctoring.camera ? "required" : "off"} · microphone {d.proctoring.microphone ? "required" : "off"}
+            {!d.proctoring.enabled && " · proctoring OFF for this test"}
+          </p>
+        )}
+        {state.error && (
+          <div role="alert" className="card" style={{ padding: 16 }}><p style={{ color: "var(--rust)" }}>{state.error}</p><button className="btn btn-primary" onClick={load}>Retry</button></div>
+        )}
+        {state.loading && !d && <p className="mono">Loading…</p>}
+        {d && (
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 760 }}>
+                <thead><tr style={{ textAlign: "left", borderBottom: "1px solid var(--line)" }}>
+                  {["Student", "Roll / PRN", "Status", "Risk", "Strikes", "Events", "Last event", "Needs review", ""].map((h) => <th key={h} style={{ padding: "8px 10px" }}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {d.rows.map((r) => (
+                    <tr key={r.attemptId} style={{ borderBottom: "1px solid var(--line)" }}>
+                      <td style={{ padding: "8px 10px" }}>{r.student.name}</td>
+                      <td style={{ padding: "8px 10px" }} className="mono">{r.student.registrationNumber || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>{r.status.replace("_", " ")}{r.autoSubmitReason ? ` (${r.autoSubmitReason})` : ""}</td>
+                      <td style={{ padding: "8px 10px" }}><Badge tone={RISK_TONE[r.risk]}>{r.risk}</Badge></td>
+                      <td style={{ padding: "8px 10px" }}>{r.violationCount}</td>
+                      <td style={{ padding: "8px 10px" }}>{r.eventCount}</td>
+                      <td style={{ padding: "8px 10px" }} className="mono">{r.lastEvent ? `${r.lastEvent.type.replace(/_/g, " ")} · ${fmt(r.lastEvent.at)}` : "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>{r.pendingReview || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}><button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setOpen(r.attemptId)}>Timeline</button></td>
+                    </tr>
+                  ))}
+                  {d.rows.length === 0 && <tr><td colSpan={9} style={{ padding: 16 }}>No attempts yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+              <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Previous</button>
+              <span className="mono" style={{ fontSize: 12 }}>Page {d.page} of {Math.max(1, Math.ceil(d.total / d.pageSize))} · {d.total} attempts</span>
+              <button className="btn btn-ghost" disabled={page * d.pageSize >= d.total} onClick={() => setPage((p) => p + 1)}>Next →</button>
+            </div>
+            {open && <Timeline attemptId={open} onClose={() => setOpen(null)} />}
+          </>
+        )}
+        <p style={{ marginTop: 24, fontSize: 12, color: "var(--ink-dim)", maxWidth: 720 }}>
+          Risk is a guide for a human reviewer, built from weak browser signals (focus loss, large code insertions, a second session).
+          It never proves misconduct on its own. <Link to="/staff/learning">Back to Learning Management</Link>
+        </p>
+      </main>
+    </div>
+  );
+}

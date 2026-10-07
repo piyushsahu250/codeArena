@@ -95,6 +95,7 @@ const PracticeCourse = lazy(() => import("./pages/PracticeCourse"));
 const CourseCertificate = lazy(() => import("./pages/CourseCertificate"));
 const CourseCertificateVerify = lazy(() => import("./pages/CourseCertificateVerify"));
 const LearningManagement = lazy(() => import("./pages/LearningManagement"));
+const ExamSecurityMonitor = lazy(() => import("./pages/ExamSecurityMonitor"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const GamificationManagement = lazy(() => import("./pages/GamificationManagement"));
 const ResumeBuilder = lazy(() => import("./pages/ResumeBuilder"));
@@ -419,6 +420,7 @@ export default function App() {
           {/* Staff (and Admin, who can also manage tests/questions) */}
           <Route path="/staff" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffDashboard /></Suspense></Protected>} />
           <Route path="/staff/learning" element={<Protected roles={["ADMIN", "STAFF"]}><LearningManagement /></Protected>} />
+          <Route path="/staff/exam-security/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><ExamSecurityMonitor /></Protected>} />
           <Route path="/staff/gamification" element={<Protected roles={["ADMIN", "STAFF"]}><GamificationManagement /></Protected>} />
           <Route path="/staff/resumes" element={<Protected roles={["ADMIN", "STAFF"]}><ResumeAdmin /></Protected>} />
           <Route path="/staff/interviews" element={<Protected roles={["ADMIN", "STAFF"]}><InterviewAdmin /></Protected>} />

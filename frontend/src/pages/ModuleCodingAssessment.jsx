@@ -14,6 +14,7 @@ import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
+import { createEventReporter, watchCodeInsertion } from "../utils/examSecurityClient";
 
 const AUTOSAVE_INTERVAL_MS = 10000; // spec: auto-save every 10 seconds
 
@@ -101,6 +102,14 @@ export default function ModuleCodingAssessment() {
     monacoEditorRef.current = editor;
     applyPlainTextInputHints(editor);
     watchForNonAsciiInput(editor, () => setImeWarning(true));
+    // Evidence only: a large insertion that did not come from typing is logged for human review, never punished automatically.
+    insertionWatchRef.current?.();
+    if (policyRef.current && statusRef.current?.test?.proctoring !== false) {
+      insertionWatchRef.current = watchCodeInsertion(editor, {
+        charThreshold: policyRef.current.insertionCharThreshold, lineThreshold: policyRef.current.insertionLineThreshold,
+        onInsertion: (m) => reporterRef.current?.report("SUSPICIOUS_CODE_INSERTION", m, activeQuestionIdRef.current),
+      });
+    }
   }
 
   const deadlineRef = useRef(null);
@@ -138,6 +147,30 @@ export default function ModuleCodingAssessment() {
   }
   useEffect(() => { load(); }, [moduleId, levelId]);
 
+  // Another tab took over this attempt (policy BLOCK): stop this one cleanly instead of letting it fail silently.
+  useEffect(() => {
+    const id = api.interceptors.response.use((r) => r, (err) => {
+      if (err.response?.data?.code === "SESSION_REPLACED") setSessionLost(true);
+      return Promise.reject(err);
+    });
+    return () => api.interceptors.response.eject(id);
+  }, []);
+
+  // Connectivity evidence (not a violation): lets a reviewer tell a dropped connection from other activity.
+  useEffect(() => {
+    const off = () => reporterRef.current?.report("NETWORK_DISCONNECT");
+    const on = () => reporterRef.current?.report("NETWORK_RECONNECT");
+    window.addEventListener("offline", off);
+    window.addEventListener("online", on);
+    return () => {
+      window.removeEventListener("offline", off);
+      window.removeEventListener("online", on);
+      insertionWatchRef.current?.();
+      reporterRef.current?.stop();
+      delete api.defaults.headers.common["X-Exam-Session"];
+    };
+  }, []);
+
   // Every violation type is reported to the server, which classifies it into one of four
   // severities (see backend/src/utils/proctoringSeverity.js) and decides -- never trusted
   // client-side -- whether THIS occurrence counts toward the maxViolations auto-submit limit:
@@ -173,12 +206,24 @@ export default function ModuleCodingAssessment() {
     }
   }
 
+  const policy = status?.security || null;
+  const policyRef = useRef(null);
+  const statusRef = useRef(null);
+  policyRef.current = policy;
+  statusRef.current = status;
+  const sessionIdRef = useRef("");
+  const insertionWatchRef = useRef(null);
+  const [sessionLost, setSessionLost] = useState(false);
+  const reporterRef = useRef(null);
+  if (!reporterRef.current) reporterRef.current = createEventReporter({ getAttemptId: () => attemptIdRef.current, getSessionId: () => sessionIdRef.current });
+
   const proctor = useProctoring({
     active: phase === "active" && status?.test?.proctoring !== false,
     requireFullscreen: status?.test?.requireFullscreen !== false,
     requireWebcam: !!status?.test?.requireWebcam,
     requireMicrophone: !!status?.test?.requireMicrophone,
     onViolation,
+    blocks: { copy: policy?.blockCopy, paste: policy?.blockPaste, cut: policy?.blockCut, contextMenu: policy?.blockContextMenu, drag: policy?.blockDrag },
   });
   const micBlocked = !!status?.test?.requireMicrophone && proctor.micStatus === "UNAVAILABLE";
   // Mirrors micBlocked -- previously had no equivalent at all, so a webcam-required assessment
@@ -200,6 +245,10 @@ export default function ModuleCodingAssessment() {
       const { data } = await api.post(`${base}/start`);
       setAttemptId(data.attemptId);
       attemptIdRef.current = data.attemptId;
+      // This tab now owns the attempt's single active session (the server rejects older tabs when the policy says BLOCK).
+      sessionIdRef.current = data.sessionId || "";
+      if (data.sessionId) api.defaults.headers.common["X-Exam-Session"] = data.sessionId;
+      reporterRef.current.start();
       deadlineRef.current = data.deadline;
       // A device clock that's fast/slow relative to the server would otherwise make the countdown
       // hit zero (and auto-submit) too early or too late in real time — every remaining-time
@@ -711,6 +760,9 @@ export default function ModuleCodingAssessment() {
 
   if (phase === "preflight" || phase === "starting") {
     const t = status.test;
+    // Mandatory server-evaluated requirements: Start stays disabled until they pass (the server re-checks on start).
+    const sc = status.securityCheck;
+    const securityBlocked = !!sc && !status.activeAttemptId && (sc.mobileBlocked || (sc.secureBrowserRequired && !sc.secureBrowserOk));
     return (
       <div>
         <Navbar />
@@ -741,6 +793,8 @@ export default function ModuleCodingAssessment() {
             </p>
             )}
 
+            <SecurityCheck policy={policy} check={status.securityCheck} />
+
             {!status.lessonsComplete ? (
               <Banner color="var(--amber-dark)">{status.lockReason || "Complete this module's lessons and practice test first."}</Banner>
             ) : status.alreadyPassed ? (
@@ -761,9 +815,9 @@ export default function ModuleCodingAssessment() {
 
             <button
               className="btn btn-primary"
-              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: status.canStart && (status.activeAttemptId || readinessReady) ? 1 : 0.4 }}
+              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: status.canStart && !securityBlocked && (status.activeAttemptId || readinessReady) ? 1 : 0.4 }}
               onClick={beginOrResume}
-              disabled={phase === "starting" || !status.canStart || (!status.activeAttemptId && !readinessReady)}
+              disabled={phase === "starting" || !status.canStart || securityBlocked || (!status.activeAttemptId && !readinessReady)}
             >
               {phase === "starting" ? "Starting…" : status.activeAttemptId ? `Resume ${t.requireFullscreen !== false ? "Assessment (Fullscreen)" : "Level"}` : (t.requireFullscreen !== false ? "Begin Assessment (Fullscreen)" : "Start Level")}
             </button>
@@ -773,9 +827,27 @@ export default function ModuleCodingAssessment() {
     );
   }
 
+  // Another tab owns this attempt now (policy BLOCK).
+  if (sessionLost) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
+        <div className="card" role="alert" style={{ padding: 32, maxWidth: 480, textAlign: "center" }}>
+          <h2>Open in another tab</h2>
+          <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>This assessment was opened in another tab or window, so this one has been stopped to keep your attempt safe. Your saved code and the timer are unchanged. Close this tab and continue in the other one, or reload this page to take the attempt over here.</p>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => window.location.reload()}>Reload and continue here</button>
+        </div>
+      </div>
+    );
+  }
+
   // phase === "active"
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {policy && policy.level !== "STANDARD" && status.test.proctoring !== false && (
+        <div role="note" className="mono" style={{ background: "var(--slate-900)", color: "var(--amber)", padding: "6px 24px", fontSize: 11.5, textAlign: "center" }}>
+          {policy.level === "LOCKDOWN" ? "LOCKDOWN EXAM MODE" : "STRICT EXAM MODE"} — unauthorized AI tools, browser extensions, external assistance and copy/paste are not permitted. Security events may be logged and reviewed under your institution's exam policy.
+        </div>
+      )}
       <div style={{ background: "var(--slate-900)", color: "var(--chalk)", padding: isMobile ? "10px 12px" : "12px 24px", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <strong style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: isMobile ? "1 1 100%" : "0 1 auto" }}>{status.test.title}</strong>
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -1102,3 +1174,32 @@ function codingDotStatus(question, verdicts, visitedMap) {
   return { color: "var(--ink-dim)", label: "Not Visited" };
 }
 
+
+// Pre-exam security check for STRICT/LOCKDOWN assessments. Local capability checks run in the browser; the mobile and
+// secure-browser results come from the server, which enforces them again when the attempt starts.
+function SecurityCheck({ policy, check }) {
+  if (!policy || policy.level === "STANDARD") return null;
+  const fsOk = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  const items = [
+    { label: "Browser supported", ok: typeof fetch === "function" && typeof document.hidden !== "undefined" },
+    ...(policy.requireFullscreen ? [{ label: "Fullscreen available", ok: fsOk }] : []),
+    { label: "Network available", ok: navigator.onLine !== false },
+    { label: "Clipboard policy active (copy / paste / cut blocked)", ok: policy.blockCopy || policy.blockPaste || policy.blockCut, info: true },
+    { label: policy.multiSession === "BLOCK" ? "One-tab policy active (a second tab is refused)" : "Multiple-tab monitoring active", ok: true, info: true },
+    { label: "Tab and window visibility monitoring active", ok: true, info: true },
+    ...(!policy.mobileAllowed ? [{ label: "Computer required (phones and tablets are not supported for this test)", ok: !check?.mobileBlocked }] : []),
+    ...(policy.secureBrowserRequired ? [{ label: "Managed secure browser", ok: !!check?.secureBrowserOk }] : []),
+  ];
+  const failed = items.filter((i) => !i.ok);
+  return (
+    <section aria-label="Security check" style={{ marginTop: 16, border: "1px solid var(--line)", borderRadius: 8, padding: 12 }}>
+      <div className="mono" style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>SECURITY CHECK — {policy.level === "LOCKDOWN" ? "Lockdown" : "Strict"} mode</div>
+      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4, fontSize: 13 }}>
+        {items.map((i) => (
+          <li key={i.label} style={{ color: i.ok ? "var(--ink)" : "var(--rust)" }}>{i.ok ? "✓" : "✗"} {i.label}</li>
+        ))}
+      </ul>
+      {failed.length > 0 && <p style={{ marginTop: 8, fontSize: 12, color: "var(--rust)" }}>Fix the items marked ✗ before you can start. {policy.secureBrowserRequired && !check?.secureBrowserOk ? "Open this test from your institution's secure exam launcher." : ""}</p>}
+    </section>
+  );
+}

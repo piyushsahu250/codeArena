@@ -1911,6 +1911,8 @@ model ModuleCodingTest {
   unlockRule         String   @default("NONE") // "NONE" | "PASS_PREVIOUS" | "COMPLETE_PREVIOUS" (previous level of the same chapter)
   unlockMinPercent   Int?     // optional score threshold applied with PASS_PREVIOUS
   proctoring         Boolean  @default(true) // false = no tab-switch/fullscreen/copy violation tracking and no auto-submit (practice levels)
+  securityLevel      String   @default("STANDARD") // "STANDARD" | "PROCTORED" | "LOCKDOWN" -- preset resolved by utils/examSecurity.js
+  securityPolicy     Json?    // per-test overrides of the preset (booleans/numbers), see utils/examSecurity.js
   createdAt          DateTime @default(now())
 
   questions Question[]
@@ -1930,6 +1932,8 @@ model ModuleCodingAttempt {
   score              Int      @default(0) // 0-100 percent across the attempt's questions
   passed             Boolean  @default(false)
   violationCount     Int      @default(0)
+  sessionId          String?  // server-issued exam-session token; the newest start/resume owns it (multi-tab control)
+  sessionStartedAt   DateTime?
   autoSubmitReason   String?  // e.g. "MAX_VIOLATIONS", "TIME_EXPIRED"
   startedAt          DateTime @default(now())
   submittedAt        DateTime?
@@ -4147,5 +4151,32 @@ model UserReportedIssue {
   @@index([reportedByUserId])
   @@index([instituteId])
   @@index([status])
+  @@index([createdAt])
+}
+
+// Standardized, reviewable exam-security events (see utils/examSecurity.js and docs/EXAM_SECURITY.md). The older
+// per-engine tables (ProctoringViolation, TestViolation, InterviewViolation) keep recording the classic proctoring
+// strikes; this table holds the newer evidence types (code-insertion, multiple-session, network, ...) plus the human
+// review state, and the monitor timeline merges both. attemptId is a plain string (no FK) because it can point at
+// more than one attempt table; events are removed by the retention job, not by cascade.
+model ExamSecurityEvent {
+  id           String   @id @default(uuid())
+  attemptKind  String   @default("MODULE_CODING") // MODULE_CODING | TEST
+  attemptId    String
+  studentId    String
+  testId       String?
+  questionId   String?
+  type         String
+  severity     String   @default("LOW") // LOW | MEDIUM | HIGH | CRITICAL (evidence weight, never an automatic verdict)
+  metadata     Json?
+  reviewStatus String   @default("PENDING") // PENDING | REVIEWED | LEGITIMATE | SUSPICIOUS | ESCALATED
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([attemptKind, attemptId, createdAt])
+  @@index([testId, createdAt])
+  @@index([studentId, createdAt])
   @@index([createdAt])
 }

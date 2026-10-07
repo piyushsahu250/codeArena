@@ -34,7 +34,11 @@ const ACTIVATION_GRACE_MS = 3000;
 // side already uses — extended here to also flag MULTIPLE faces, not just a missing one. No
 // image is ever captured or stored (this platform has no object storage) — face checks only
 // ever produce a logged violation event.
-export function useProctoring({ active, requireFullscreen = true, requireWebcam = false, requireMicrophone = false, onViolation }) {
+// `blocks` comes from the assessment's exam-security policy (utils/examSecurity.js on the server). Every flag defaults to
+// true, so callers that pass nothing behave exactly as before.
+export function useProctoring({ active, requireFullscreen = true, requireWebcam = false, requireMicrophone = false, onViolation, blocks = {} }) {
+  const blockCopy = blocks.copy !== false, blockPaste = blocks.paste !== false, blockCut = blocks.cut !== false;
+  const blockContextMenu = blocks.contextMenu !== false, blockDrag = blocks.drag !== false;
   const onViolationRef = useRef(onViolation);
   onViolationRef.current = onViolation;
 
@@ -173,15 +177,15 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     const onCopy = block("COPY");
     const onPaste = block("PASTE");
     const onCut = block("CUT");
-    document.addEventListener("copy", onCopy);
-    document.addEventListener("paste", onPaste);
-    document.addEventListener("cut", onCut);
+    if (blockCopy) document.addEventListener("copy", onCopy);
+    if (blockPaste) document.addEventListener("paste", onPaste);
+    if (blockCut) document.addEventListener("cut", onCut);
     return () => {
       document.removeEventListener("copy", onCopy);
       document.removeEventListener("paste", onPaste);
       document.removeEventListener("cut", onCut);
     };
-  }, [active, report]);
+  }, [active, report, blockCopy, blockPaste, blockCut]);
 
   // Right-click.
   useEffect(() => {
@@ -190,9 +194,9 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
       e.preventDefault();
       report("RIGHT_CLICK");
     }
-    document.addEventListener("contextmenu", onContextMenu);
+    if (blockContextMenu) document.addEventListener("contextmenu", onContextMenu);
     return () => document.removeEventListener("contextmenu", onContextMenu);
-  }, [active, report]);
+  }, [active, report, blockContextMenu]);
 
   // Drag-and-drop text into the page (e.g. dragging a selection from another window/tab into
   // the code editor) — same intent as the copy/paste block above, via a different browser API.
@@ -210,15 +214,17 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     function onDragOver(e) {
       e.preventDefault(); // required for onDrop's preventDefault to actually block the drop
     }
-    document.addEventListener("dragstart", onDragStart);
-    document.addEventListener("drop", onDrop);
-    document.addEventListener("dragover", onDragOver);
+    if (blockDrag) {
+      document.addEventListener("dragstart", onDragStart);
+      document.addEventListener("drop", onDrop);
+      document.addEventListener("dragover", onDragOver);
+    }
     return () => {
       document.removeEventListener("dragstart", onDragStart);
       document.removeEventListener("drop", onDrop);
       document.removeEventListener("dragover", onDragOver);
     };
-  }, [active, report]);
+  }, [active, report, blockDrag]);
 
   // F12 / devtools shortcuts / view-source / browser-chrome shortcuts — blocked where
   // preventDefault actually works. PrintScreen can be logged but never blocked (the OS captures

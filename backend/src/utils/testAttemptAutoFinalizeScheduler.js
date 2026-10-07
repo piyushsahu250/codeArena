@@ -54,10 +54,22 @@ async function runOnce() {
     console.error("[testAttemptAutoFinalizeScheduler] readiness sweep failed:", err.message);
     return { closed: 0 };
   });
+  await pruneExamSecurityEvents().catch((err) => console.error("[testAttemptAutoFinalizeScheduler] security-event retention failed:", err.message));
   const sessions = await expireStaleLoginSessions().catch((err) => { console.error("[testAttemptAutoFinalizeScheduler] session expiry failed:", err.message); return { expired: 0 }; });
   return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed, sessionsExpired: sessions.expired };
 }
 
+
+// Retention for exam-security evidence (docs/EXAM_SECURITY.md): rows older than EXAM_SECURITY_RETENTION_DAYS (default 180)
+// are deleted, at most once an hour, in bounded batches, so the table cannot grow without limit.
+let lastSecurityPrune = 0;
+async function pruneExamSecurityEvents({ force = false } = {}) {
+  if (!force && Date.now() - lastSecurityPrune < 60 * 60 * 1000) return;
+  lastSecurityPrune = Date.now();
+  const days = Math.max(30, Number(process.env.EXAM_SECURITY_RETENTION_DAYS) || 180);
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  await prisma.examSecurityEvent.deleteMany({ where: { createdAt: { lt: cutoff }, reviewStatus: { notIn: ["ESCALATED"] } } });
+}
 
 // Login tokens live 12h (sessions.js TOKEN_TTL), after which the JWT itself is rejected -- but nothing
 // ever flipped the matching LoginSession row to inactive when a student simply closed the tab and never
@@ -110,4 +122,4 @@ function startTestAttemptAutoFinalizeScheduler() {
   }, intervalMs);
 }
 
-module.exports = { startTestAttemptAutoFinalizeScheduler, runOnce };
+module.exports = { startTestAttemptAutoFinalizeScheduler, runOnce, pruneExamSecurityEvents };
