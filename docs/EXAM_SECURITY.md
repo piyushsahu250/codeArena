@@ -1,3 +1,5 @@
+> **Scope of this document:** it describes what a normal web page can and cannot do, i.e. the STANDARD and PROCTORED profiles. For high-stakes exams use the LOCKDOWN profile (secure exam client, managed device, exam network, server-side enforcement) described in [SECURE_EXAM_ARCHITECTURE.md](SECURE_EXAM_ARCHITECTURE.md); the "cannot" statements below do not apply to LOCKDOWN where the managed environment enforces them. Test evidence: [SECURE_EXAM_TEST_REPORT.md](SECURE_EXAM_TEST_REPORT.md).
+
 # Exam security (anti-malpractice) — what it does and what it cannot do
 
 This is a **defense-in-depth** design, not a "block everything" switch. A web page cannot see which browser

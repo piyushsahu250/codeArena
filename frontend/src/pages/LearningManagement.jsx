@@ -1400,7 +1400,7 @@ function ConfigFields({ form, setForm, toggleLanguage, readOnly }) {
               <option value="LOCKDOWN">Lockdown — also requires the managed secure browser and a computer</option>
             </select>
             <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
-              The browser cannot see AI tools or extensions. Use Lockdown with a managed device and secure browser for high-stakes exams, and use the camera and microphone settings below for proctoring. Proctoring (above) must be on for these controls to apply.
+              Lockdown runs the exam inside the CodeArena Secure Exam Client on a registered device: applications, extensions, websites and developer tools are restricted by the device and network policy, and the server checks the secure session continuously. Standard and Proctored run in a normal browser and record evidence only. Proctoring (above) must be on for these controls to apply. See the Secure Exam Architecture guide for lab setup.
             </p>
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 13 }}>
               <input type="checkbox" disabled={readOnly} checked={(form.securityPolicy || {}).mobileAllowed !== false && form.securityLevel !== "LOCKDOWN"} onChange={(e) => setForm({ ...form, securityPolicy: { ...(form.securityPolicy || {}), mobileAllowed: e.target.checked } })} />
