@@ -1,0 +1,131 @@
+/* ===================================================================
+   Student Dashboard design system.
+   Every value is a --sd-* token mapped onto the platform tokens in theme.css, so the dashboard
+   follows the app's light/dark switch automatically. Dark mode gets its own surface/tint
+   overrides below (not an inversion). No component hardcodes a colour — only these tokens.
+=================================================================== */
+.sd {
+  /* type scale */
+  --sd-fs-xs: 12px; --sd-fs-sm: 13px; --sd-fs-md: 14px; --sd-fs-lg: 16px; --sd-fs-xl: 20px; --sd-fs-2xl: 26px; --sd-fs-3xl: 34px;
+  --sd-font-display: var(--font-display); --sd-font-body: var(--font-body); --sd-font-mono: var(--font-mono);
+  /* spacing (4px base) */
+  --sd-s1: 4px; --sd-s2: 8px; --sd-s3: 12px; --sd-s4: 16px; --sd-s5: 24px; --sd-s6: 32px;
+  /* shape */
+  --sd-radius: 12px; --sd-radius-sm: 8px; --sd-radius-pill: 999px; --sd-border: 1px solid var(--line);
+  --sd-shadow: 0 1px 2px rgba(28, 27, 24, 0.05);
+  --sd-shadow-hover: 0 6px 18px rgba(11, 42, 30, 0.10);
+  /* surfaces + text */
+  --sd-bg: var(--paper);
+  --sd-surface: var(--card-bg);
+  --sd-surface-2: color-mix(in srgb, var(--line) 35%, var(--card-bg));
+  --sd-text: var(--ink);
+  --sd-muted: var(--ink-dim);
+  --sd-track: color-mix(in srgb, var(--line) 80%, transparent);
+  /* semantic */
+  --sd-accent: var(--slate-800);
+  --sd-accent-contrast: var(--chalk);
+  --sd-focus: var(--amber-dark);
+  --sd-good: var(--success-text); --sd-good-bg: var(--success-bg);
+  --sd-warn: var(--warning-text); --sd-warn-bg: var(--warning-bg);
+  --sd-bad: var(--danger-text); --sd-bad-bg: var(--danger-bg);
+  --sd-info: var(--info-text); --sd-info-bg: var(--info-bg);
+  --sd-chart-line: var(--mint);
+  --sd-chart-fill: color-mix(in srgb, var(--mint) 18%, transparent);
+  --sd-chart-grid: var(--line);
+  --sd-touch: 44px;
+
+  color: var(--sd-text);
+  font-family: var(--sd-font-body);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--sd-s5) var(--sd-s4) 64px;
+}
+:root[data-theme="dark"] .sd {
+  --sd-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --sd-shadow-hover: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --sd-surface-2: color-mix(in srgb, var(--slate-700) 28%, var(--card-bg));
+  --sd-accent: var(--amber);
+  --sd-accent-contrast: var(--amber-ink);
+  --sd-chart-fill: color-mix(in srgb, var(--mint) 24%, transparent);
+  --sd-track: color-mix(in srgb, var(--slate-700) 60%, transparent);
+}
+
+.sd *:focus-visible { outline: 2px solid var(--sd-focus); outline-offset: 2px; border-radius: 4px; }
+
+/* layout — mobile-first: one column, widening at real breakpoints */
+.sd-grid { display: grid; gap: var(--sd-s4); grid-template-columns: minmax(0, 1fr); }
+.sd-kpis { display: grid; gap: var(--sd-s3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sd-actions { display: grid; gap: var(--sd-s2); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 640px) { .sd-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .sd-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 900px) {
+  .sd { padding-left: var(--sd-s5); padding-right: var(--sd-s5); }
+  .sd-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sd-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sd-grid.main-side { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .sd-kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .sd-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.sd-stack { display: flex; flex-direction: column; gap: var(--sd-s4); min-width: 0; }
+.sd.compact { --sd-s4: 12px; --sd-s5: 16px; }
+
+/* surfaces */
+.sd-card { background: var(--sd-surface); border: var(--sd-border); border-radius: var(--sd-radius); box-shadow: var(--sd-shadow); padding: var(--sd-s4); min-width: 0; }
+.sd-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sd-s3); margin-bottom: var(--sd-s3); }
+.sd-title { margin: 0; font-size: var(--sd-fs-lg); font-weight: 600; font-family: var(--sd-font-body); letter-spacing: -0.005em; }
+.sd-link { color: var(--sd-info); font-size: var(--sd-fs-sm); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; min-height: 32px; }
+.sd-link:hover { text-decoration: underline; }
+.sd-muted { color: var(--sd-muted); font-size: var(--sd-fs-sm); }
+.sd-num { font-variant-numeric: tabular-nums; }
+
+/* hero */
+.sd-hero { display: grid; gap: var(--sd-s4); background: var(--sd-surface); border: var(--sd-border); border-radius: var(--sd-radius); padding: var(--sd-s5); box-shadow: var(--sd-shadow); }
+.sd-hero h1 { margin: 0; font-family: var(--sd-font-display); font-size: var(--sd-fs-2xl); line-height: 1.2; text-wrap: balance; }
+@media (min-width: 900px) { .sd-hero { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; } }
+
+/* buttons / links styled as controls — min 44px touch target */
+.sd-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--sd-touch); padding: 0 var(--sd-s4); border-radius: var(--sd-radius-sm); border: 1px solid transparent; background: var(--sd-accent); color: var(--sd-accent-contrast); font: 600 var(--sd-fs-md)/1 var(--sd-font-body); text-decoration: none; cursor: pointer; }
+.sd-btn:hover { filter: brightness(1.08); }
+.sd-btn.ghost { background: transparent; color: var(--sd-text); border-color: var(--line); }
+.sd-btn.ghost:hover { background: var(--sd-surface-2); filter: none; }
+.sd-btn.sm { min-height: 36px; padding: 0 var(--sd-s3); font-size: var(--sd-fs-sm); }
+
+.sd-action { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sd-s2); min-height: 84px; padding: var(--sd-s3); border-radius: var(--sd-radius); border: var(--sd-border); background: var(--sd-surface); color: var(--sd-text); text-decoration: none; font-size: var(--sd-fs-sm); font-weight: 600; transition: box-shadow 0.15s, transform 0.15s; }
+.sd-action:hover { box-shadow: var(--sd-shadow-hover); transform: translateY(-1px); }
+.sd-action svg { color: var(--sd-accent); }
+:root[data-theme="dark"] .sd-action svg { color: var(--amber); }
+
+/* KPI */
+.sd-kpi { background: var(--sd-surface); border: var(--sd-border); border-radius: var(--sd-radius); padding: var(--sd-s3) var(--sd-s4); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sd-kpi-label { font-size: var(--sd-fs-xs); color: var(--sd-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.sd-kpi-value { font-size: var(--sd-fs-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sd-kpi-value.na { font-size: var(--sd-fs-sm); font-weight: 500; color: var(--sd-muted); padding: 4px 0; }
+.sd-kpi-sub { font-size: var(--sd-fs-xs); color: var(--sd-muted); }
+
+/* progress */
+.sd-bar { height: 8px; border-radius: var(--sd-radius-pill); background: var(--sd-track); overflow: hidden; }
+.sd-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--mint); transition: width 0.4s ease; }
+.sd-bar.warn > i { background: var(--amber-dark); } .sd-bar.bad > i { background: var(--rust); }
+
+/* chips / rows */
+.sd-chip { display: inline-flex; align-items: center; gap: 4px; font-size: var(--sd-fs-xs); font-weight: 600; padding: 2px 8px; border-radius: var(--sd-radius-pill); background: var(--sd-info-bg); color: var(--sd-info); white-space: nowrap; }
+.sd-chip.good { background: var(--sd-good-bg); color: var(--sd-good); } .sd-chip.warn { background: var(--sd-warn-bg); color: var(--sd-warn); } .sd-chip.bad { background: var(--sd-bad-bg); color: var(--sd-bad); }
+.sd-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sd-s3); padding: var(--sd-s3) 0; border-top: var(--sd-border); min-width: 0; }
+.sd-row:first-child { border-top: 0; padding-top: 0; }
+.sd-row-main { min-width: 0; flex: 1; }
+.sd-row-title { font-size: var(--sd-fs-md); font-weight: 500; overflow-wrap: anywhere; }
+.sd-list { list-style: none; margin: 0; padding: 0; }
+
+/* states */
+.sd-skel { background: linear-gradient(90deg, var(--sd-track) 25%, var(--sd-surface-2) 37%, var(--sd-track) 63%); background-size: 400% 100%; animation: sd-shimmer 1.4s ease infinite; border-radius: var(--sd-radius-sm); }
+@keyframes sd-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+.sd-empty { color: var(--sd-muted); font-size: var(--sd-fs-sm); padding: var(--sd-s3) 0; line-height: 1.5; }
+.sd-error { display: flex; align-items: center; justify-content: space-between; gap: var(--sd-s3); flex-wrap: wrap; color: var(--sd-bad); font-size: var(--sd-fs-sm); }
+.sd-bell-dot { min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--sd-radius-pill); background: var(--rust); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+
+/* chart */
+.sd-chart svg { width: 100%; height: auto; display: block; }
+.sd-chart text { fill: var(--sd-muted); font-size: 11px; font-family: var(--sd-font-body); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sd *, .sd *::before, .sd *::after { animation: none !important; transition: none !important; }
+}

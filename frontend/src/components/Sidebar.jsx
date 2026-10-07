@@ -17,28 +17,34 @@ import { useFeatures } from "../context/FeatureContext";
 // exists as a feature in this codebase yet; see the redesign's scope notes.
 const MENU = {
   STUDENT: [
-    { group: "Main", items: [
-      { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-      { label: "Profile", to: "/profile", icon: UserCircle },
+    { group: "", items: [{ label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }] },
+    { group: "Academy", items: [
       { label: "Learning", to: "/learning", icon: BookOpen, featureKey: "lms" },
       { label: "My Notes", to: "/learning/notes", icon: StickyNote, featureKey: "lms" },
-      { label: "My Performance", to: "/dashboard/performance", icon: BarChart3 },
       { label: "My Attendance", to: "/attendance", icon: CalendarCheck, featureKey: "attendance" },
     ] },
-    { group: "Placement Prep", items: [
+    { group: "Assessments", items: [
+      { label: "Company Tests", to: "/company-tests", icon: Briefcase },
       { label: "Readiness Assessment", to: "/readiness", icon: Target, featureKey: "readiness_test" },
-      { label: "My Talent Pools", to: "/talent-pools", icon: Star, featureKey: "talent_pool" },
+      { label: "My Results", to: "/results", icon: ClipboardList },
+    ] },
+    { group: "Coding", items: [
       { label: "Daily Challenge", to: "/challenges/daily", icon: CalendarDays, featureKey: "coding_challenge" },
       { label: "Weekly Challenge", to: "/challenges/weekly", icon: CalendarRange, featureKey: "coding_challenge" },
-      { label: "Company Tests", to: "/company-tests", icon: Briefcase },
-      { label: "My Results", to: "/results", icon: ClipboardList },
+    ] },
+    { group: "Career", items: [
       { label: "Mock Interview", to: "/interview", icon: Mic, featureKey: "ai_mock_interview" },
       { label: "AI Voice Interview", to: "/ai-interview", icon: Headphones, featureKey: "ai_voice_interview" },
-      { label: "Resume Builder", to: "/resume", icon: FileText, featureKey: "resume_builder" },
       { label: "Interview History", to: "/interview/history", icon: History, featureKey: "interview_history" },
+      { label: "Resume Builder", to: "/resume", icon: FileText, featureKey: "resume_builder" },
+      { label: "My Talent Pools", to: "/talent-pools", icon: Star, featureKey: "talent_pool" },
+    ] },
+    { group: "Performance", items: [
+      { label: "My Performance", to: "/dashboard/performance", icon: BarChart3 },
       { label: "Certificates", to: "/certificates", icon: Award, featureKey: "certificates" },
       { label: "Achievements", to: "/achievements", icon: Trophy },
     ] },
+    { group: "Profile", items: [{ label: "Profile", to: "/profile", icon: UserCircle }] },
     { group: "", items: [{ label: "Settings", to: "/account", icon: Settings }] },
   ],
   CLERK: [
