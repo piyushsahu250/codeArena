@@ -6,7 +6,7 @@
 //     7 sections; "Basic Java" has the 11 topics, each with 4 levels (Level 0..3).
 //     Levels start as DRAFT (hidden) so students never receive an empty assessment; the one exception is
 //     Basic I/P & O/P - Level 0, which ships with 3 real Java problems so the whole flow can be exercised end to end.
-//     Defaults: 1 attempt, 90 minutes, pass mark 60%, each level unlocks after passing the previous one, topics are sequential.
+//     Defaults: 5 attempts, 90 minutes, pass mark 60%, each level unlocks after passing the previous one, topics are sequential.
 const prisma = require("../src/prisma");
 
 const SLUG = "java-practice";
@@ -85,7 +85,7 @@ const LEVEL0_QUESTIONS = [
       const levelTitle = `${title} - ${lname}`;
       const level = await take(await prisma.moduleCodingTest.findFirst({ where: { chapterId: chapter.id, title: levelTitle } }), () => prisma.moduleCodingTest.create({ data: {
         chapterId: chapter.id, title: levelTitle, order: li, description, difficulty, instructions: INSTRUCTIONS,
-        allowedLanguages: ["c", "cpp", "java", "python"], questionCount: 3, randomizeQuestions: false, passingPercent: 60, timeLimitMin: 90, maxAttempts: 1,
+        allowedLanguages: ["c", "cpp", "java", "python"], questionCount: 3, randomizeQuestions: false, passingPercent: 60, timeLimitMin: 90, maxAttempts: 5,
         cooldownMinutes: 0, maxViolations: 3, requireFullscreen: false, proctoring: false, allowResume: true,
         unlockRule: li === 0 ? "NONE" : "PASS_PREVIOUS", isActive: ti === 0 && li === 0, publishedAt: ti === 0 && li === 0 ? new Date() : null, // Draft until an admin publishes (only the demo level ships live)
       } }));
