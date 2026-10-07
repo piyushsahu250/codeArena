@@ -101,6 +101,13 @@ async function cleanup() {
     const attemptId = start.body.attemptId;
     const resume = await call("POST", `/module-coding/level/${lvl0.id}/start`, T1);
     check("second start resumes the same attempt (no duplicate)", resume.body.attemptId === attemptId);
+    for (const lang of ["java", "python", "c", "cpp"]) {
+      const code = { java: SOLUTIONS["Hello, Java"], python: "print('Hello, Java!')", c: `#include <stdio.h>
+int main(){puts("Hello, Java!");return 0;}`, cpp: `#include <iostream>
+int main(){std::cout<<"Hello, Java!"<<std::endl;return 0;}` }[lang];
+      const rr = await call("POST", `/module-coding/attempts/${attemptId}/run`, T1, { questionId: start.body.questions.find((q) => q.title === "Hello, Java").id, language: lang, code });
+      check(`Run executes sample cases in ${lang}`, rr.status === 200 && rr.body?.verdict === "ACCEPTED", `${rr.status} ${rr.body?.verdict || rr.body?.error} ${rr.ms}ms`);
+    }
     check("Continue now says IN_PROGRESS", (await call("GET", "/practice/java-practice", T1)).body.resume.reason === "IN_PROGRESS");
     check("another student cannot touch this attempt", (await call("POST", `/module-coding/attempts/${attemptId}/autosave`, T2, { questionId: start.body.questions[0].id, language: "java", code: "x" })).status >= 400);
     for (const q of start.body.questions) {
