@@ -12,6 +12,11 @@ const S = require("../src/utils/secureExam");
 const BASE = "http://localhost:4000/api";
 const N = Number(process.env.N || 200);
 const LOGIN_WAVE = Number(process.env.LOGIN_WAVE || 200);
+// Above LOGIN_REAL_MAX simulated students, real logins from ONE machine would only measure the platform's per-IP rate limiters (a real class logs in
+// from many machines), so tokens are minted directly (same payload shape as utils/sessions.js, no session row) and login latency is reported
+// from the smaller real-login run.
+const LOGIN_REAL_MAX = Number(process.env.LOGIN_REAL_MAX || 200);
+const jsonwebtoken = require("jsonwebtoken");
 const FULL = { kiosk: true, appRestriction: true, browserRestriction: true, networkRestriction: true, clipboard: true, fullscreen: true, devtoolsDisabled: true, screenCaptureProtection: false };
 const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))] : 0; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -73,7 +78,11 @@ async function cleanup() {
     const wall0 = Date.now();
     // 1. login (waves)
     const jwt = new Array(N);
-    for (let w = 0; w < N; w += LOGIN_WAVE) {
+    if (N > LOGIN_REAL_MAX) {
+      for (const s of students) { jwt[s.i] = jsonwebtoken.sign({ id: s.id, role: "STUDENT", email: s.email, name: `LSE ${s.i}` }, process.env.JWT_SECRET, { expiresIn: "2h" }); tokenIp.set(jwt[s.i], ipOf(s.i)); }
+      console.log(`  (login step skipped: N > ${LOGIN_REAL_MAX}, tokens minted directly)`);
+    }
+    for (let w = 0; N <= LOGIN_REAL_MAX && w < N; w += LOGIN_WAVE) {
       await Promise.all(students.slice(w, w + LOGIN_WAVE).map(async (s) => { const r = await timed("login", () => call("POST", "/auth/login", null, { email: s.email, password: pw })); jwt[s.i] = r.body?.token; if (jwt[s.i]) tokenIp.set(jwt[s.i], ipOf(s.i)); }));
     }
     const live = students.filter((s) => jwt[s.i]);
@@ -105,7 +114,7 @@ async function cleanup() {
       await Promise.all(running.map((s) => timed("autosave", () => call("POST", `/module-coding/attempts/${attempt[s.i].id}/autosave`, jwt[s.i], { questionId: attempt[s.i].q, language: "java", code: `class Main { /* ${round} */ }`, seq: round + 1 }, { "X-Secure-Session": sess[s.i], "X-Exam-Session": attempt[s.i].exam }))));
     }
     // 6. staff monitor while everyone is active
-    const TA = (await call("POST", "/auth/login", null, { email: admin.email, password: pw })).body?.token;
+    const TA = jsonwebtoken.sign({ id: admin.id, role: "ADMIN", email: admin.email, name: admin.name }, process.env.JWT_SECRET, { expiresIn: "2h" });
     const monitors = [];
     for (let k = 0; k < 5; k++) monitors.push(await timed("staff monitor (page+summary)", () => call("GET", `/exam-security/tests/${level.id}/monitor?pageSize=100`, TA)));
     // 7. finalize (all at once)
