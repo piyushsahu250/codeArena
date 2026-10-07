@@ -4,7 +4,7 @@
   "lastUpdated": "2026-10-07",
   "lastCodeReview": "2026-08-08",
   "platformRevision": {
-    "backend": "4fcd1cf",
+    "backend": "9af5eca",
     "frontend": "994c5b5"
   },
   "techStack": {
@@ -112,12 +112,12 @@
   },
   "businessRulesCount": 11,
   "databaseEntities": {
-    "modelCount": 114,
+    "modelCount": 115,
     "enumCount": 30,
     "migrationStrategy": "prisma db push --accept-data-loss on every deploy (no formal Migrate history)",
     "source": "backend/prisma/schema.prisma"
   },
-  "apiCount": 578,
+  "apiCount": 583,
   "apiSource": "backend/src/routes/*.js (31 files), mounted in backend/src/index.js",
   "knownIssues": [
     {
