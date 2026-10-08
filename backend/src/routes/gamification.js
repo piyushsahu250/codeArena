@@ -59,19 +59,23 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
 
 // "class" kept as a deprecated alias for "group" for one release, so a stale cached frontend
 // request doesn't 400 — both resolve identically, off academicGroupId.
+// Tenant scoping: an institute-bound caller (every student, and institute-bound staff/admins) can only ever see students of their OWN
+// institute through the group / department / institute scopes -- whatever ids or names the query string carries. Only a platform-level
+// caller (no instituteId) may name another institute. The "overall" scope is a platform-wide product feature and is unchanged here.
 async function resolveScopeStudentIds(scope, req, requester) {
+  const own = requester.instituteId || null;
   if (scope === "group" || scope === "class") {
     const academicGroupId = req.user.role === "STUDENT" ? requester.academicGroupId : (req.query.academicGroupId || req.query.classId);
     if (!academicGroupId) return { error: "academicGroupId is required for this scope" };
-    return { ids: (await prisma.user.findMany({ where: { academicGroupId, role: "STUDENT" }, select: { id: true } })).map((u) => u.id) };
+    return { ids: (await prisma.user.findMany({ where: { academicGroupId, role: "STUDENT", ...(own ? { instituteId: own } : {}) }, select: { id: true } })).map((u) => u.id) };
   }
   if (scope === "department") {
     const department = req.user.role === "STUDENT" ? requester.department : req.query.department;
     if (!department) return { error: "department is required for this scope" };
-    return { ids: (await prisma.user.findMany({ where: { department, role: "STUDENT" }, select: { id: true } })).map((u) => u.id) };
+    return { ids: (await prisma.user.findMany({ where: { department, role: "STUDENT", ...(own ? { instituteId: own } : {}) }, select: { id: true } })).map((u) => u.id) };
   }
   if (scope === "institute") {
-    const instituteId = req.user.role === "STUDENT" ? requester.instituteId : req.query.instituteId || requester.instituteId;
+    const instituteId = own || req.query.instituteId; // institute-bound callers cannot ask for another institute
     if (!instituteId) return { error: "instituteId is required for this scope" };
     return { ids: (await prisma.user.findMany({ where: { instituteId, role: "STUDENT" }, select: { id: true } })).map((u) => u.id) };
   }
@@ -161,7 +165,10 @@ router.get("/leaderboard", authenticate, async (req, res) => {
     // Short TTL — a leaderboard doesn't need to reflect a submission from 30 seconds ago, and
     // this is the single most expensive read on the platform to recompute from scratch (multiple
     // groupBy passes even after the top-100 restructuring above).
-    const cacheKey = `leaderboard:${scope}:${metric}:${req.query.academicGroupId || req.query.classId || ""}:${req.query.department || ""}:${req.query.instituteId || requester.instituteId || ""}`;
+    // Key from the RESOLVED scope inputs (a student's own group/department/institute), not just the query string: students send no
+    // academicGroupId/department, so the old key was identical for every student and two groups shared one cached leaderboard.
+    const isStudent = req.user.role === "STUDENT";
+    const cacheKey = `leaderboard:${scope}:${metric}:${isStudent ? requester.academicGroupId || "" : req.query.academicGroupId || req.query.classId || ""}:${isStudent ? requester.department || "" : req.query.department || ""}:${requester.instituteId || req.query.instituteId || ""}`;
     const rows = await cached(cacheKey, 30 * 1000, async () => {
       const topIds = await resolveTopIdsForMetric(metric, ids);
       if (topIds.length === 0) return [];

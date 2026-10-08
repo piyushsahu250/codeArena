@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const XLSX = require("xlsx");
 const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
+const { verifyLimiter } = require("../middleware/publicLimiters");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
@@ -1366,7 +1367,7 @@ router.get("/certificate/pdf", authenticate, requireRole("STUDENT"), async (req,
 });
 
 // PUBLIC (no auth) — scanned via the certificate's QR code to confirm authenticity.
-router.get("/certificate/verify/:code", async (req, res) => {
+router.get("/certificate/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const cert = await prisma.interviewCertificate.findUnique({
       where: { certificateCode: req.params.code },

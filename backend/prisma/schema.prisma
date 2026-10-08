@@ -1395,6 +1395,7 @@ model Course {
 
   @@index([status])
   @@index([category])
+  @@index([instituteId])
 }
 
 // Explicit join table (not an implicit Prisma m2m self-relation — this schema has no precedent
@@ -1995,6 +1996,7 @@ model ModuleCodingSubmission {
   @@unique([attemptId, questionId])
   @@index([attemptId])
   @@index([questionId])
+  @@index([studentId])
 }
 
 // Event-level proctoring log (unlike the exam side's single tabSwitchCount integer) — an admin
@@ -4198,6 +4200,7 @@ model ExamSecurityEvent {
   @@index([testId, createdAt])
   @@index([studentId, createdAt])
   @@index([createdAt])
+  @@index([instituteId, createdAt])
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -4255,4 +4258,5 @@ model SecureExamSession {
   @@index([examDeviceId])
   @@index([testId, state])
   @@index([state, lastHeartbeatAt])
+  @@index([instituteId])
 }

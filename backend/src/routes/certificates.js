@@ -1,5 +1,6 @@
 const express = require("express");
 const prisma = require("../prisma");
+const { verifyLimiter } = require("../middleware/publicLimiters");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
@@ -99,7 +100,7 @@ router.get("/:id/download", authenticate, requireRole("STUDENT"), attachRequeste
 // Deliberately exposes only what the spec asks for: status, ID, student name, institute, program
 // name, completion date, issuer, and this request's timestamp — never anything else about the
 // student's account.
-router.get("/verify/:code", async (req, res) => {
+router.get("/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const cert = await prisma.certificate.findUnique({
       where: { certificateCode: req.params.code },

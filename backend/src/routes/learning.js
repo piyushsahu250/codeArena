@@ -1,6 +1,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
+const { verifyLimiter } = require("../middleware/publicLimiters");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
@@ -1024,7 +1025,7 @@ router.get("/courses/:slug/certificate", authenticate, requireRole("STUDENT"), a
 // PUBLIC (no auth) — kept for back-compat with existing Learning Module certificate links;
 // GET /api/certificates/verify/:code (routes/certificates.js) is the unified verify endpoint
 // going forward and covers this same Certificate model plus CODING_ASSESSMENT/MANUAL types.
-router.get("/certificate/verify/:code", async (req, res) => {
+router.get("/certificate/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const cert = await prisma.certificate.findUnique({
       where: { certificateCode: req.params.code },
