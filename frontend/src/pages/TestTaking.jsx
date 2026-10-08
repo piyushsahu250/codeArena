@@ -15,6 +15,7 @@ import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, on
 import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
+import { useExamSession } from "../hooks/useExamSession";
 import { createFocusLossSignal, createSplitScreenWatch, runSecurityCheck } from "../utils/secureAssessment";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
@@ -126,7 +127,7 @@ export default function TestTaking() {
   const [submitResultMsg, setSubmitResultMsg] = useState(null); // { ok, text } — replaces alert(), which forces fullscreen exit
   const [secondsLeft, setSecondsLeft] = useState(null);
   const [tabWarning, setTabWarning] = useState(null);
-  const [sessionReplaced, setSessionReplaced] = useState(false);
+  const { replaced: sessionReplaced, setSession: setExamSession } = useExamSession();
   const [secCheck, setSecCheck] = useState(null);
   // Distinct from tabWarning above: shown for a SUSPICIOUS-severity event that did NOT get
   // penalized this time -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y"
@@ -567,7 +568,7 @@ export default function TestTaking() {
     }
     try {
       const startRes = await api.post(`/tests/${testId}/start`);
-      if (startRes.data.sessionId) api.defaults.headers.common["X-Exam-Session"] = startRes.data.sessionId;
+      setExamSession(startRes.data.sessionId);
       setAttemptId(startRes.data.id);
       attemptIdRef.current = startRes.data.id;
       const testRes = await api.get(`/tests/${testId}`);
@@ -964,14 +965,6 @@ export default function TestTaking() {
   // --- Secure-assessment signals (detection only; the server holds the authority, see utils/secureAssessment.js) ---
   // 1) X-Exam-Session: the newest start/resume owns the attempt; a second tab/device that kept the old id gets 409 and lands
   //    on the blocking screen below instead of silently racing the first one.
-  useEffect(() => {
-    const id = api.interceptors.response.use((r) => r, (err) => {
-      if (err?.response?.status === 409 && err.response.data?.code === "SESSION_REPLACED") setSessionReplaced(true);
-      return Promise.reject(err);
-    });
-    return () => { api.interceptors.response.eject(id); delete api.defaults.headers.common["X-Exam-Session"]; };
-  }, []);
-
   // 2) Focus lost while the page stays visible: the footprint of a split-screen window, a floating assistant, or an app on a
   //    second monitor taking focus. Reported as a POSSIBLE signal (never as a named application).
   useEffect(() => {

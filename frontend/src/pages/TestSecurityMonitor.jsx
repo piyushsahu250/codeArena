@@ -20,7 +20,15 @@ function Tile({ label, value, tone }) {
   );
 }
 
-export default function TestSecurityMonitor() {
+const KINDS = {
+  test: { path: (id) => `/exam-security/exams/${id}/monitor`, query: "", title: "Assessment security monitor", back: (id) => ({ to: `/staff/tests/${id}/results`, label: "Test results" }) },
+  readiness: { path: (id) => `/exam-security/readiness/${id}/monitor`, query: "?kind=READINESS", title: "Readiness test security monitor", back: () => ({ to: "/staff/readiness-subjects", label: "Readiness tests" }) },
+  interviews: { path: () => "/exam-security/interviews/monitor", query: "?kind=INTERVIEW", title: "Mock interview security monitor", back: () => ({ to: "/staff/interviews", label: "Mock interviews" }) },
+};
+
+export default function TestSecurityMonitor({ kind = "test" }) {
+  const K = KINDS[kind];
+  const [itype, setItype] = useState("");
   const { testId } = useParams();
   const [page, setPage] = useState(1);
   const [risk, setRisk] = useState("");
@@ -29,10 +37,10 @@ export default function TestSecurityMonitor() {
   const [open, setOpen] = useState(null);
   const load = useCallback((quiet) => {
     if (!quiet) setState((s) => ({ ...s, loading: true, error: "" }));
-    api.get(`/exam-security/exams/${testId}/monitor`, { params: { page, pageSize: 25, risk: risk || undefined } })
+    api.get(K.path(testId), { params: { page, pageSize: 25, risk: risk || undefined, type: kind === "interviews" ? (itype || undefined) : undefined } })
       .then((r) => setState({ loading: false, error: "", data: r.data }))
       .catch((e) => setState((s) => ({ loading: false, error: e.response?.data?.error || (e.response ? "Could not load the monitor" : "You appear to be offline"), data: quiet ? s.data : null })));
-  }, [testId, page, risk]);
+  }, [testId, page, risk, itype, kind]);
   useEffect(() => { load(false); }, [load]);
   useEffect(() => {
     if (!live) return undefined;
@@ -48,8 +56,15 @@ export default function TestSecurityMonitor() {
       <Navbar />
       <main style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 16px 64px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "baseline" }}>
-          <h1 style={{ fontSize: 24 }}>Assessment security monitor</h1>
+          <h1 style={{ fontSize: 24 }}>{K.title}</h1>
           <span style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            {kind === "interviews" && (
+              <label style={{ fontSize: 12.5 }}>Type{" "}
+                <select value={itype} onChange={(e) => { setItype(e.target.value); setPage(1); }}>
+                  <option value="">All</option><option value="MOCK">Mock</option><option value="COMPANY_ROUND">Company round</option><option value="TALENT_POOL">Talent pool</option><option value="RESUME_BASED">Resume based</option><option value="CATEGORY">Practice</option>
+                </select>
+              </label>
+            )}
             <label style={{ fontSize: 12.5 }}>Risk{" "}
               <select value={risk} onChange={(e) => { setRisk(e.target.value); setPage(1); }}>
                 <option value="">All</option><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
@@ -109,12 +124,12 @@ export default function TestSecurityMonitor() {
               <span className="mono" style={{ fontSize: 12 }}>Page {d.page} of {Math.max(1, Math.ceil(d.total / d.pageSize))} · {d.total} attempts</span>
               <button className="btn btn-ghost" disabled={page * d.pageSize >= d.total} onClick={() => setPage((p) => p + 1)}>Next →</button>
             </div>
-            {open && <Timeline attemptId={open} base="/exam-security/exam-attempts" onClose={() => setOpen(null)} />}
+            {open && <Timeline attemptId={open} base="/exam-security/exam-attempts" query={K.query} onClose={() => setOpen(null)} />}
           </>
         )}
         <p style={{ marginTop: 24, fontSize: 12, color: "var(--ink-dim)", maxWidth: 760 }}>
           Signals such as "focus lost" or "split screen" mean the assessment window may have been shared with another window or overlay; they do not identify any application and do not prove misconduct. Review the timeline before acting.{" "}
-          <Link to={`/staff/tests/${testId}/results`}>Test results</Link>
+          <Link to={K.back(testId).to}>{K.back(testId).label}</Link>
         </p>
       </main>
     </div>

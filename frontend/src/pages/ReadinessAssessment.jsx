@@ -8,6 +8,8 @@ import ReadinessChecklist from "../components/ReadinessChecklist";
 import { useToast } from "../context/ToastContext";
 import { useConfirm } from "../context/ConfirmContext";
 import { useProctoring } from "../hooks/useProctoring";
+import { useExamSession, recallExamSession } from "../hooks/useExamSession";
+import { runSecurityCheck } from "../utils/secureAssessment";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
@@ -75,6 +77,9 @@ export default function ReadinessAssessment() {
   const [remainingSec, setRemainingSec] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [phase, setPhase] = useState("loading"); // loading | preflight | starting | active | finalize-failed | terminated
+  const { replaced: sessionReplaced, setSession: setExamSession } = useExamSession();
+  const [security, setSecurity] = useState(null);
+  const [secCheck, setSecCheck] = useState(null);
   const [readinessReady, setReadinessReady] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [violationWarning, setViolationWarning] = useState(null);
@@ -154,6 +159,8 @@ export default function ReadinessAssessment() {
       if (serverTime) clockOffsetRef.current = new Date(serverTime).getTime() - Date.now();
       deadlineRef.current = new Date(a.startedAt).getTime() + a.durationMin * 60 * 1000;
       setAssessment(a);
+      setSecurity(res.data.security || null);
+      setExamSession(recallExamSession(a.id));
       setSubjectName(a.subject?.name || "");
       setQuestions(qs);
       setViolationCount(a.violationCount || 0);
@@ -405,6 +412,17 @@ export default function ReadinessAssessment() {
     );
   }
 
+  if (sessionReplaced) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
+        <div className="card" style={{ padding: 32, maxWidth: 480, textAlign: "center" }}>
+          <h2>Assessment open elsewhere</h2>
+          <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>This assessment was opened in another tab, window or device, which now holds your session. Close this one and continue there. Your saved answers are safe.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!assessment || !current || phase === "loading") {
     return (
       <div>
@@ -482,11 +500,24 @@ export default function ReadinessAssessment() {
               requireFullscreen
               onReadyChange={setReadinessReady}
             />
+            {security?.level === "PROCTORED" && (
+              <div style={{ marginTop: 16, padding: 12, border: "1px solid var(--line)", borderRadius: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 6 }}>SECURE ASSESSMENT</div>
+                <p style={{ fontSize: 13, margin: "0 0 6px" }}>Stay on this page, keep the window full-size, and do not use other applications, copy/paste, screen sharing or outside assistance. Security events are recorded and reviewed.</p>
+                {secCheck && (
+                  <ul style={{ listStyle: "none", margin: "6px 0 0", padding: 0, fontSize: 13, lineHeight: 1.8 }}>
+                    {secCheck.items.map((i) => <li key={i.key} style={{ color: i.ok ? "var(--success-text)" : (i.required ? "var(--danger-text)" : "var(--warning-text)") }}>{i.ok ? "✓" : i.required ? "✕" : "!"} {i.label}</li>)}
+                  </ul>
+                )}
+                {secCheck && !secCheck.ready && <p style={{ fontSize: 13, color: "var(--danger-text)", fontWeight: 600, margin: "6px 0 0" }}>This device or window cannot provide the required security controls. Use a laptop or desktop computer with a full-size window, then run the check again.</p>}
+                <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 12, padding: "5px 10px" }} onClick={() => setSecCheck(runSecurityCheck(security))}>{secCheck ? "Run security check again" : "Run security check"}</button>
+              </div>
+            )}
             <button
               className="btn btn-primary"
-              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: readinessReady ? 1 : 0.4 }}
+              style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: readinessReady && !(security?.level === "PROCTORED" && !secCheck?.ready) ? 1 : 0.4 }}
               onClick={beginAssessment}
-              disabled={phase === "starting" || !readinessReady}
+              disabled={phase === "starting" || !readinessReady || (security?.level === "PROCTORED" && !secCheck?.ready)}
             >
               {phase === "starting" ? "Starting…" : "Begin Assessment (Fullscreen)"}
             </button>

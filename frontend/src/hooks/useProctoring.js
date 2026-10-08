@@ -5,6 +5,7 @@ import { requestFullscreenCompat, getFullscreenElement, onFullscreenChange } fro
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
+import { createFocusLossSignal, createSplitScreenWatch } from "../utils/secureAssessment";
 import { classifyKeyEvent } from "../utils/keyboardShortcuts";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
@@ -312,6 +313,19 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
       },
     });
     return () => signal.destroy();
+  }, [active, report]);
+
+  // Observable-only secure-assessment signals, shared by every surface that uses this hook (readiness tests, mock interviews,
+  // coding assessments). Reported as POSSIBLE signals; the server classifies them (SUSPICIOUS: 3rd on an attempt is a strike).
+  useEffect(() => {
+    if (!active) return;
+    const signal = createFocusLossSignal({ onLoss: () => report("POSSIBLE_EXTERNAL_ASSISTANT") });
+    return () => signal.destroy();
+  }, [active, report]);
+  useEffect(() => {
+    if (!active || !isTouchDevice()) return;
+    const watch = createSplitScreenWatch({ onSuspected: () => report("SPLIT_SCREEN_SUSPECTED") });
+    return () => watch.destroy();
   }, [active, report]);
 
   // ---- Webcam: face presence (missing / multiple) ----

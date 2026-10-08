@@ -2912,6 +2912,8 @@ model InterviewSession {
   status         String   @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, TERMINATED (proctoring violations exceeded)
   violationCount Int      @default(0)
   terminationReason String? // e.g. "MAX_VIOLATIONS", set only when status = TERMINATED
+  sessionId      String? // one-active-session control, see utils/testExamSecurity.js
+  securityLevel  String   @default("STANDARD") // set by the server from the session type, never by the client
   config         Json?    // {difficulty, subject, language, aptitudeCategory, negativeMarking, durationMin, topic, mix, company, jobRole, experienceLevel}
   startedAt      DateTime @default(now())
   submittedAt    DateTime?
@@ -3898,6 +3900,10 @@ model ReadinessSubject {
   requireWebcam      Boolean @default(false)
   requireMicrophone  Boolean @default(false)
   maxViolations      Int     @default(3)
+  // Exam-security level for this readiness test (same presets/overrides as formal tests, see utils/testExamSecurity.js).
+  // Snapshotted onto ReadinessAssessment.config.security at attempt start. PROCTORED forces proctoring on.
+  securityLevel      String  @default("STANDARD")
+  securityPolicy     Json?
 
   // Certificate-on-completion policy (spec CRITICAL RULE: never auto-issue employment-readiness
   // certificates unless policy supports it — both fields default to "off"/unset so issuance stays
@@ -3993,6 +3999,7 @@ model ReadinessAssessment {
   // exactly what was assessed, independent of whatever the subject's defaults are later changed to.
   blueprint Json
 
+  sessionId   String? // one-active-session control, see utils/testExamSecurity.js
   status      String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED | TERMINATED | EXPIRED
   startedAt   DateTime @default(now())
   submittedAt DateTime?

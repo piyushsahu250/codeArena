@@ -4,6 +4,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import { useToast } from "../context/ToastContext";
+import { rememberExamSession } from "../hooks/useExamSession";
 import api from "../api";
 
 const LEVEL_COLORS = {
@@ -39,6 +40,7 @@ export default function ReadinessHub() {
     setStarting(key);
     try {
       const res = await api.post("/readiness/assessments", { subjectId, assessmentMode: mode.key });
+      rememberExamSession(res.data.assessment.id, res.data.sessionId);
       navigate(`/readiness/take/${res.data.assessment.id}`);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to start assessment");

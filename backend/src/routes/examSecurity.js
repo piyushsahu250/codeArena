@@ -11,7 +11,8 @@ const { ownsLmsInstitute, resolveModuleCodingTestCourseInstituteId } = require("
 const X = require("../utils/examSecurity");
 const SecureExam = require("../utils/secureExam");
 const { canStaffAccessTest } = require("../utils/testOwnership");
-const { policyOf } = require("../utils/testExamSecurity");
+const SecurityTypes = require("../utils/testExamSecurity");
+const { policyOf } = SecurityTypes;
 
 const router = express.Router();
 const STAFF = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"];
@@ -188,17 +189,56 @@ async function loadFormalTestScoped(req, res) {
   return test;
 }
 
+// Shared scoring for the three attempt kinds. `attempts`: [{ attemptId, student, status, startedAt, submittedAt, strikes, deadlineAt|null }].
+// `classic`/`extra`: evidence rows carrying attemptId/type/severity/createdAt (+ reviewStatus for `extra`).
+function buildMonitorRows(attempts, classic, extra) {
+  const by = (arr) => { const m = new Map(); for (const e of arr) { if (!m.has(e.attemptId)) m.set(e.attemptId, []); m.get(e.attemptId).push(e); } return m; };
+  const classicBy = by(classic), extraBy = by(extra);
+  const nowMs = Date.now();
+  return attempts.map((a) => {
+    const evs = [...(classicBy.get(a.attemptId) || []), ...(extraBy.get(a.attemptId) || [])];
+    const risk = X.computeRisk(evs);
+    const count = (...types) => evs.filter((e) => types.includes(e.type)).length;
+    const last = evs.slice().sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt))[0];
+    return {
+      attemptId: a.attemptId, student: a.student, status: a.status, startedAt: a.startedAt, submittedAt: a.submittedAt, strikes: a.strikes, eventCount: evs.length,
+      risk: risk.level, riskScore: risk.score, lastEvent: last ? { type: last.type, at: last.createdAt } : null,
+      label: a.label || null,
+      counts: {
+        fullscreenExits: count("FULLSCREEN_EXIT"), tabSwitches: count("TAB_SWITCH", "TAB_SWITCH_BRIEF", "PAGE_HIDDEN"), focusLoss: count("POSSIBLE_EXTERNAL_ASSISTANT"),
+        splitScreen: count("SPLIT_SCREEN_SUSPECTED", "SCREEN_OVERLAY_DETECTED"), copy: count("COPY", "COPY_ATTEMPT"), paste: count("PASTE", "PASTE_ATTEMPT"),
+        sessionConflicts: count("MULTIPLE_SESSION", "SESSION_REPLACED"),
+      },
+      secondsLeft: a.status === "IN_PROGRESS" && a.deadlineAt ? Math.max(0, Math.round((a.deadlineAt - nowMs) / 1000)) : 0,
+      pendingReview: (extraBy.get(a.attemptId) || []).filter((e) => e.reviewStatus === "PENDING" && e.severity !== "LOW").length,
+    };
+  });
+}
+
+function monitorResponse({ req, title, policy, scored }) {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(100, Math.max(5, Number(req.query.pageSize) || 25));
+  const riskFilter = ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(req.query.risk) ? req.query.risk : null;
+  const bands = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
+  for (const r of scored) bands[r.risk]++;
+  const filtered = riskFilter ? scored.filter((r) => r.risk === riskFilter) : scored;
+  const sum = (f) => scored.reduce((s, r) => s + f(r), 0);
+  return {
+    test: title, policy, total: filtered.length, page, pageSize, rows: filtered.slice((page - 1) * pageSize, page * pageSize),
+    summary: {
+      attempts: scored.length, active: scored.filter((r) => r.status === "IN_PROGRESS").length, bands,
+      fullscreenExits: sum((r) => r.counts.fullscreenExits), tabSwitches: sum((r) => r.counts.tabSwitches),
+      possibleExternalActivity: sum((r) => r.counts.focusLoss + r.counts.splitScreen), sessionConflicts: sum((r) => r.counts.sessionConflicts),
+    },
+  };
+}
+
 router.get("/exams/:testId/monitor", authenticate, requireRole(...STAFF), attachRequesterInstitute, async (req, res) => {
   try {
     const test = await loadFormalTestScoped(req, res); if (!test) return;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const pageSize = Math.min(100, Math.max(5, Number(req.query.pageSize) || 25));
-    const riskFilter = ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(req.query.risk) ? req.query.risk : null;
     const studentScope = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
-    const where = { testId: test.id, student: studentScope };
-    // Risk is derived from evidence, so filter after scoring a bounded set (most-recent 3000 attempts of one test).
     const all = await prisma.testAttempt.findMany({
-      where, orderBy: { startedAt: "desc" }, take: 3000,
+      where: { testId: test.id, student: studentScope }, orderBy: { startedAt: "desc" }, take: 3000,
       select: { id: true, status: true, startedAt: true, submittedAt: true, tabSwitchCount: true, student: { select: { id: true, name: true, registrationNumber: true, rollNumber: true, department: true } } },
     });
     const ids = all.map((a) => a.id);
@@ -206,60 +246,93 @@ router.get("/exams/:testId/monitor", authenticate, requireRole(...STAFF), attach
       prisma.testViolation.findMany({ where: { attemptId: { in: ids } }, select: { attemptId: true, type: true, severity: true, penalized: true, createdAt: true } }),
       prisma.examSecurityEvent.findMany({ where: { attemptKind: "TEST", attemptId: { in: ids } }, select: { attemptId: true, type: true, severity: true, reviewStatus: true, createdAt: true } }),
     ]) : [[], []];
-    const by = (arr) => { const m = new Map(); for (const e of arr) { if (!m.has(e.attemptId)) m.set(e.attemptId, []); m.get(e.attemptId).push(e); } return m; };
-    const classicBy = by(classic), extraBy = by(extra);
-    const nowMs = Date.now();
-    const scored = all.map((a) => {
-      const evs = [...(classicBy.get(a.id) || []), ...(extraBy.get(a.id) || [])];
-      const risk = X.computeRisk(evs);
-      const count = (...types) => evs.filter((e) => types.includes(e.type)).length;
-      const last = evs.slice().sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt))[0];
-      return {
-        attemptId: a.id, student: a.student, status: a.status, startedAt: a.startedAt, submittedAt: a.submittedAt, strikes: a.tabSwitchCount, eventCount: evs.length,
-        risk: risk.level, riskScore: risk.score, lastEvent: last ? { type: last.type, at: last.createdAt } : null,
-        counts: {
-          fullscreenExits: count("FULLSCREEN_EXIT"), tabSwitches: count("TAB_SWITCH", "TAB_SWITCH_BRIEF", "PAGE_HIDDEN"), focusLoss: count("POSSIBLE_EXTERNAL_ASSISTANT"),
-          splitScreen: count("SPLIT_SCREEN_SUSPECTED", "SCREEN_OVERLAY_DETECTED"), copy: count("COPY", "COPY_ATTEMPT"), paste: count("PASTE", "PASTE_ATTEMPT"),
-          sessionConflicts: count("MULTIPLE_SESSION", "SESSION_REPLACED"),
-        },
-        secondsLeft: a.status === "IN_PROGRESS" ? Math.max(0, Math.round((new Date(a.startedAt).getTime() + test.durationMin * 60000 - nowMs) / 1000)) : 0,
-        pendingReview: (extraBy.get(a.id) || []).filter((e) => e.reviewStatus === "PENDING" && e.severity !== "LOW").length,
-      };
-    });
-    const bands = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
-    for (const r of scored) bands[r.risk]++;
-    const filtered = riskFilter ? scored.filter((r) => r.risk === riskFilter) : scored;
-    const policy = X.clientPolicy(policyOf(test));
-    res.json({
-      test: { id: test.id, title: test.title }, policy, total: filtered.length, page, pageSize,
-      rows: filtered.slice((page - 1) * pageSize, page * pageSize),
-      summary: {
-        attempts: scored.length, active: scored.filter((r) => r.status === "IN_PROGRESS").length, bands,
-        fullscreenExits: scored.reduce((s, r) => s + r.counts.fullscreenExits, 0), tabSwitches: scored.reduce((s, r) => s + r.counts.tabSwitches, 0),
-        possibleExternalActivity: scored.reduce((s, r) => s + r.counts.focusLoss + r.counts.splitScreen, 0), sessionConflicts: scored.reduce((s, r) => s + r.counts.sessionConflicts, 0),
-      },
-    });
+    const attempts = all.map((a) => ({ attemptId: a.id, student: a.student, status: a.status, startedAt: a.startedAt, submittedAt: a.submittedAt, strikes: a.tabSwitchCount, deadlineAt: new Date(a.startedAt).getTime() + test.durationMin * 60000 }));
+    res.json(monitorResponse({ req, title: { id: test.id, title: test.title }, policy: X.clientPolicy(policyOf(test)), scored: buildMonitorRows(attempts, classic, extra) }));
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load monitor" }); }
 });
 
+// READINESS: one row per assessment attempt of a subject (policy = the subject's current level; each attempt keeps its own snapshot).
+router.get("/readiness/:subjectId/monitor", authenticate, requireRole(...STAFF), attachRequesterInstitute, async (req, res) => {
+  try {
+    const subject = await prisma.readinessSubject.findUnique({ where: { id: req.params.subjectId }, select: { id: true, name: true, instituteId: true, createdById: true, securityLevel: true, securityPolicy: true } });
+    if (!subject) return res.status(404).json({ error: "Readiness test not found" });
+    if (req.requesterInstituteId && subject.instituteId && subject.instituteId !== req.requesterInstituteId) return res.status(404).json({ error: "Readiness test not found" });
+    if (req.user.role === "STAFF" && subject.createdById && subject.createdById !== req.user.id) return res.status(403).json({ error: "You can only view readiness tests you created" });
+    const studentScope = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+    const all = await prisma.readinessAssessment.findMany({
+      where: { subjectId: subject.id, student: studentScope }, orderBy: { startedAt: "desc" }, take: 3000,
+      select: { id: true, status: true, startedAt: true, submittedAt: true, violationCount: true, durationMin: true, assessmentMode: true, student: { select: { id: true, name: true, registrationNumber: true, rollNumber: true, department: true } } },
+    });
+    const ids = all.map((a) => a.id);
+    const [classic, extra] = ids.length ? await Promise.all([
+      prisma.readinessViolation.findMany({ where: { assessmentId: { in: ids } }, select: { assessmentId: true, type: true, severity: true, penalized: true, createdAt: true } }),
+      prisma.examSecurityEvent.findMany({ where: { attemptKind: "READINESS", attemptId: { in: ids } }, select: { attemptId: true, type: true, severity: true, reviewStatus: true, createdAt: true } }),
+    ]) : [[], []];
+    const attempts = all.map((a) => ({ attemptId: a.id, student: a.student, status: a.status, startedAt: a.startedAt, submittedAt: a.submittedAt, strikes: a.violationCount, label: a.assessmentMode, deadlineAt: new Date(a.startedAt).getTime() + (a.durationMin || 0) * 60000 }));
+    res.json(monitorResponse({ req, title: { id: subject.id, title: `${subject.name} (readiness)` }, policy: X.clientPolicy(policyOf(subject)), scored: buildMonitorRows(attempts, classic.map((c) => ({ ...c, attemptId: c.assessmentId })), extra) }));
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load monitor" }); }
+});
+
+// INTERVIEW: one row per mock-interview session in the caller's institute scope. Optional ?type=MOCK|COMPANY_ROUND|TALENT_POOL|RESUME_BASED|CATEGORY.
+router.get("/interviews/monitor", authenticate, requireRole(...STAFF), attachRequesterInstitute, async (req, res) => {
+  try {
+    const studentScope = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+    const typeWhere = {
+      MOCK: { isMock: true }, COMPANY_ROUND: { isCompanyRound: true }, RESUME_BASED: { isResumeBased: true }, TALENT_POOL: { talentPoolConfigId: { not: null } },
+      CATEGORY: { isMock: false, isCompanyRound: false, isResumeBased: false, talentPoolConfigId: null },
+    }[req.query.type] || {};
+    const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 14));
+    const all = await prisma.interviewSession.findMany({
+      where: { student: studentScope, startedAt: { gte: new Date(Date.now() - days * 86400000) }, ...typeWhere }, orderBy: { startedAt: "desc" }, take: 3000,
+      select: { id: true, status: true, startedAt: true, submittedAt: true, violationCount: true, config: true, isMock: true, isCompanyRound: true, isResumeBased: true, talentPoolConfigId: true, category: true, student: { select: { id: true, name: true, registrationNumber: true, rollNumber: true, department: true } } },
+    });
+    const ids = all.map((a) => a.id);
+    const [classic, extra] = ids.length ? await Promise.all([
+      prisma.interviewViolation.findMany({ where: { sessionId: { in: ids } }, select: { sessionId: true, type: true, severity: true, penalized: true, createdAt: true } }),
+      prisma.examSecurityEvent.findMany({ where: { attemptKind: "INTERVIEW", attemptId: { in: ids } }, select: { attemptId: true, type: true, severity: true, reviewStatus: true, createdAt: true } }),
+    ]) : [[], []];
+    const attempts = all.map((a) => ({
+      attemptId: a.id, student: a.student, status: a.status, startedAt: a.startedAt, submittedAt: a.submittedAt, strikes: a.violationCount,
+      label: SecurityTypes.interviewTypeOf(a), deadlineAt: a.config?.durationMin ? new Date(a.startedAt).getTime() + a.config.durationMin * 60000 : null,
+    }));
+    res.json(monitorResponse({ req, title: { id: "interviews", title: `Mock interviews (last ${days} days)` }, policy: X.clientPolicy(policyOf({ securityLevel: "PROCTORED" })), scored: buildMonitorRows(attempts, classic.map((c) => ({ ...c, attemptId: c.sessionId })), extra) }));
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load monitor" }); }
+});
+
+// Timeline for one attempt of any kind: ?kind=TEST (default) | READINESS | INTERVIEW. Scope checks are per kind and all institute-bound.
 router.get("/exam-attempts/:attemptId/timeline", authenticate, requireRole(...STAFF), attachRequesterInstitute, async (req, res) => {
   try {
-    const attempt = await prisma.testAttempt.findUnique({ where: { id: req.params.attemptId }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } }, test: { select: { id: true, instituteId: true, createdById: true, shares: { select: { staffId: true } } } } } });
-    if (!attempt) return res.status(404).json({ error: "Attempt not found" });
-    if (req.requesterInstituteId && (attempt.student.instituteId !== req.requesterInstituteId || (attempt.test.instituteId && attempt.test.instituteId !== req.requesterInstituteId))) return res.status(403).json({ error: "Not allowed" });
-    if (!canStaffAccessTest(req, attempt.test)) return res.status(403).json({ error: "Not allowed" });
-    const [classic, extra] = await Promise.all([
-      prisma.testViolation.findMany({ where: { attemptId: attempt.id }, orderBy: { createdAt: "asc" }, take: 500 }),
-      prisma.examSecurityEvent.findMany({ where: { attemptKind: "TEST", attemptId: attempt.id }, orderBy: { createdAt: "asc" }, take: 500 }),
-    ]);
+    const kind = ["READINESS", "INTERVIEW"].includes(req.query.kind) ? req.query.kind : "TEST";
+    const id = req.params.attemptId;
+    let head, classic;
+    const inst = req.requesterInstituteId;
+    if (kind === "TEST") {
+      const a = await prisma.testAttempt.findUnique({ where: { id }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } }, test: { select: { id: true, instituteId: true, createdById: true, shares: { select: { staffId: true } } } } } });
+      if (!a) return res.status(404).json({ error: "Attempt not found" });
+      if (inst && (a.student.instituteId !== inst || (a.test.instituteId && a.test.instituteId !== inst))) return res.status(403).json({ error: "Not allowed" });
+      if (!canStaffAccessTest(req, a.test)) return res.status(403).json({ error: "Not allowed" });
+      head = a; classic = await prisma.testViolation.findMany({ where: { attemptId: id }, orderBy: { createdAt: "asc" }, take: 500 });
+    } else if (kind === "READINESS") {
+      const a = await prisma.readinessAssessment.findUnique({ where: { id }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } }, subject: { select: { instituteId: true, createdById: true } } } });
+      if (!a) return res.status(404).json({ error: "Attempt not found" });
+      if (inst && (a.student.instituteId !== inst || (a.subject.instituteId && a.subject.instituteId !== inst))) return res.status(403).json({ error: "Not allowed" });
+      if (req.user.role === "STAFF" && a.subject.createdById && a.subject.createdById !== req.user.id) return res.status(403).json({ error: "Not allowed" });
+      head = a; classic = await prisma.readinessViolation.findMany({ where: { assessmentId: id }, orderBy: { createdAt: "asc" }, take: 500 });
+    } else {
+      const a = await prisma.interviewSession.findUnique({ where: { id }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } } } });
+      if (!a) return res.status(404).json({ error: "Attempt not found" });
+      if (inst && a.student.instituteId !== inst) return res.status(403).json({ error: "Not allowed" });
+      head = a; classic = await prisma.interviewViolation.findMany({ where: { sessionId: id }, orderBy: { createdAt: "asc" }, take: 500 });
+    }
+    const extra = await prisma.examSecurityEvent.findMany({ where: { attemptKind: kind, attemptId: id }, orderBy: { createdAt: "asc" }, take: 500 });
     const timeline = [
-      { at: attempt.startedAt, type: "EXAM_STARTED", source: "system" },
+      { at: head.startedAt, type: "EXAM_STARTED", source: "system" },
       ...classic.map((c) => ({ id: c.id, at: c.createdAt, type: c.type, severity: c.severity, penalized: c.penalized, source: "proctoring" })),
       ...extra.map((e) => ({ id: e.id, at: e.createdAt, type: e.type, severity: e.severity, metadata: e.metadata, reviewable: true, reviewStatus: e.reviewStatus, reviewNote: e.reviewNote, source: "security" })),
-      ...(attempt.submittedAt ? [{ at: attempt.submittedAt, type: attempt.status === "AUTO_SUBMITTED" ? "AUTO_SUBMITTED" : "SUBMITTED", source: "system" }] : []),
+      ...(head.submittedAt ? [{ at: head.submittedAt, type: ["AUTO_SUBMITTED", "TERMINATED"].includes(head.status) ? head.status : "SUBMITTED", source: "system" }] : []),
     ].sort((a, b) => new Date(a.at) - new Date(b.at));
     const risk = X.computeRisk([...classic, ...extra]);
-    res.json({ attemptId: attempt.id, student: attempt.student, status: attempt.status, risk: risk.level, riskScore: risk.score, byType: risk.byType, timeline });
+    res.json({ attemptId: head.id, student: head.student, status: head.status, risk: risk.level, riskScore: risk.score, byType: risk.byType, timeline });
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load timeline" }); }
 });
 
@@ -272,20 +345,24 @@ router.get("/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTI
     const since = new Date(Date.now() - hours * 3600 * 1000);
     const scope = inst ? { instituteId: inst } : {};
     const instSql = inst ? Prisma.sql`AND u."instituteId" = ${inst}` : Prisma.empty;
-    const [activeTests, activeCoding, newer, classic, penalizedAttempts, byInstitute] = await Promise.all([
+    const [activeTests, activeCoding, newer, classic, penalizedAttempts, byInstitute, activeReadiness, activeInterviews, classicR, classicI] = await Promise.all([
       prisma.testAttempt.count({ where: { status: "IN_PROGRESS", student: scope } }),
       prisma.moduleCodingAttempt.count({ where: { status: "IN_PROGRESS", student: scope } }),
       prisma.$queryRaw`SELECT e.type, COUNT(*)::int AS n FROM "ExamSecurityEvent" e JOIN "User" u ON u.id = e."studentId" WHERE e."createdAt" >= ${since} ${instSql} GROUP BY e.type`,
       prisma.$queryRaw`SELECT v.type, COUNT(*)::int AS n FROM "TestViolation" v JOIN "TestAttempt" a ON a.id = v."attemptId" JOIN "User" u ON u.id = a."studentId" WHERE v."createdAt" >= ${since} ${instSql} GROUP BY v.type`,
       prisma.$queryRaw`SELECT COUNT(DISTINCT v."attemptId")::int AS n FROM "TestViolation" v JOIN "TestAttempt" a ON a.id = v."attemptId" JOIN "User" u ON u.id = a."studentId" WHERE v."createdAt" >= ${since} AND v.penalized = true ${instSql}`,
       inst ? [] : prisma.$queryRaw`SELECT i.id, i.name, COUNT(*)::int AS n FROM "TestViolation" v JOIN "TestAttempt" a ON a.id = v."attemptId" JOIN "User" u ON u.id = a."studentId" JOIN "Institute" i ON i.id = u."instituteId" WHERE v."createdAt" >= ${since} GROUP BY i.id, i.name ORDER BY n DESC LIMIT 5`,
+      prisma.readinessAssessment.count({ where: { status: "IN_PROGRESS", student: scope } }),
+      prisma.interviewSession.count({ where: { status: "IN_PROGRESS", student: scope } }),
+      prisma.$queryRaw`SELECT v.type, COUNT(*)::int AS n FROM "ReadinessViolation" v JOIN "ReadinessAssessment" a ON a.id = v."assessmentId" JOIN "User" u ON u.id = a."studentId" WHERE v."createdAt" >= ${since} ${instSql} GROUP BY v.type`,
+      prisma.$queryRaw`SELECT v.type, COUNT(*)::int AS n FROM "InterviewViolation" v JOIN "InterviewSession" a ON a.id = v."sessionId" JOIN "User" u ON u.id = a."studentId" WHERE v."createdAt" >= ${since} ${instSql} GROUP BY v.type`,
     ]);
     const totals = {};
-    for (const r of [...newer, ...classic]) totals[r.type] = (totals[r.type] || 0) + Number(r.n);
+    for (const r of [...newer, ...classic, ...classicR, ...classicI]) totals[r.type] = (totals[r.type] || 0) + Number(r.n);
     const sum = (...t) => t.reduce((s, k) => s + (totals[k] || 0), 0);
     res.json({
       hours, scope: inst ? "INSTITUTE" : "PLATFORM",
-      live: { testAttempts: activeTests, codingAttempts: activeCoding, studentsTesting: activeTests + activeCoding },
+      live: { testAttempts: activeTests, codingAttempts: activeCoding, readinessAttempts: activeReadiness, interviewSessions: activeInterviews, studentsTesting: activeTests + activeCoding + activeReadiness + activeInterviews },
       last: {
         attemptsWithStrikes: Number(penalizedAttempts[0]?.n || 0),
         fullscreenExits: sum("FULLSCREEN_EXIT"), tabSwitches: sum("TAB_SWITCH", "TAB_SWITCH_BRIEF", "PAGE_HIDDEN"),
@@ -312,7 +389,7 @@ router.patch("/events/:id/review", authenticate, requireRole(...STAFF), attachRe
     if (!ev) return res.status(404).json({ error: "Event not found" });
     const student = await prisma.user.findUnique({ where: { id: ev.studentId }, select: { instituteId: true } });
     const instituteId = ev.testId
-      ? (ev.attemptKind === "TEST" ? ((await prisma.test.findUnique({ where: { id: ev.testId }, select: { instituteId: true } }))?.instituteId ?? null) : await resolveModuleCodingTestCourseInstituteId(ev.testId))
+      ? (ev.attemptKind === "TEST" ? ((await prisma.test.findUnique({ where: { id: ev.testId }, select: { instituteId: true } }))?.instituteId ?? null) : ev.attemptKind === "READINESS" ? ((await prisma.readinessSubject.findUnique({ where: { id: ev.testId }, select: { instituteId: true } }))?.instituteId ?? null) : await resolveModuleCodingTestCourseInstituteId(ev.testId))
       : null;
     if (!ownsLmsInstitute(req, instituteId) || (req.requesterInstituteId && student?.instituteId !== req.requesterInstituteId)) return res.status(403).json({ error: "Not allowed" });
     const updated = await prisma.examSecurityEvent.update({ where: { id: ev.id }, data: { reviewStatus, reviewNote: note ? String(note).slice(0, 500) : null, reviewedById: req.user.id, reviewedAt: new Date() } });

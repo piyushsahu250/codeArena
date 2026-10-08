@@ -20,6 +20,9 @@ const { notifyReadinessTestAssigned } = require("../utils/notifications");
 const { shuffleQuestionOptions, toOriginalSelection } = require("../utils/optionShuffle");
 const { completeReadinessAssessment, readinessDeadlineOf } = require("../utils/readinessCompletion");
 const { classifyViolation } = require("../utils/proctoringSeverity");
+const SecX = require("../utils/testExamSecurity");
+const XS = require("../utils/examSecurity");
+const { parseSecurityInput } = SecX;
 
 const router = express.Router();
 
@@ -112,9 +115,9 @@ function sanitizeQuestionForStudent(q, seed) {
 // subject mid-attempt can't loosen or tighten the rules for a student already sitting the test.
 function proctoringSnapshotOf(subject) {
   return {
-    enabled: !!subject.proctoringEnabled,
-    requireWebcam: !!subject.proctoringEnabled && !!subject.requireWebcam,
-    requireMicrophone: !!subject.proctoringEnabled && !!subject.requireMicrophone,
+    enabled: !!subject.proctoringEnabled || subject.securityLevel === "PROCTORED",
+    requireWebcam: (!!subject.proctoringEnabled || subject.securityLevel === "PROCTORED") && !!subject.requireWebcam,
+    requireMicrophone: (!!subject.proctoringEnabled || subject.securityLevel === "PROCTORED") && !!subject.requireMicrophone,
     maxViolations: subject.maxViolations || 3,
   };
 }
@@ -231,6 +234,10 @@ router.post("/admin/subjects", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
     const data = {};
     for (const f of SUBJECT_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f];
     coerceProctoringFields(data);
+    const sec = parseSecurityInput(req.body);
+    if (sec.error) return res.status(400).json({ error: sec.error });
+    Object.assign(data, sec.data);
+    if (data.securityLevel === "PROCTORED") data.proctoringEnabled = true;
     data.instituteId = req.requesterInstituteId || req.body.instituteId || null;
     data.createdById = req.user.id;
 
@@ -275,6 +282,10 @@ router.patch("/admin/subjects/:id", authenticate, requireRole("ADMIN", "SUPER_AD
     const data = {};
     for (const f of SUBJECT_FIELDS) if (req.body[f] !== undefined) data[f] = req.body[f];
     coerceProctoringFields(data);
+    const sec = parseSecurityInput(req.body);
+    if (sec.error) return res.status(400).json({ error: sec.error });
+    Object.assign(data, sec.data);
+    if (data.securityLevel === "PROCTORED") data.proctoringEnabled = true;
 
     // Same duplicate-name guard as POST above, only when the name is actually being changed —
     // instituteId can't move via PATCH (not in SUBJECT_FIELDS), so `existing.instituteId` is
@@ -471,6 +482,13 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
     if (!subject || !subject.isActive) return res.status(404).json({ error: "This subject is not available" });
     const eligible = await studentCanAccessReadinessSubject(prisma, subjectId, student?.academicGroupId, student?.program, student?.instituteId);
     if (!eligible) return res.status(403).json({ error: "This subject is not assigned to your academic group" });
+    // Server-side start requirement (the page cannot override it): a PROCTORED readiness test refuses phone/tablet browsers
+    // unless the admin explicitly allowed them. Applies to resume as well as a first start.
+    const startPolicy = SecX.policyOf(subject);
+    const startFailure = SecX.startRequirementFailure(req, startPolicy);
+    if (startFailure) return res.status(403).json(startFailure);
+    // One-active-session control: the newest start/resume owns assessment.sessionId (answers/finalize must carry it in X-Exam-Session).
+    const sessionId = SecX.newSessionId();
 
     let existing = await prisma.readinessAssessment.findFirst({
       where: { studentId: req.user.id, subjectId, assessmentMode, status: "IN_PROGRESS" },
@@ -489,8 +507,9 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
       logger.info("READINESS_ASSESSMENT_RESUMED", { assessmentId: existing.id, studentId: req.user.id, subjectId, questionCount: ordered.length });
       // `answers` goes out with feedback stripped so a resumed attempt can restore the student's
       // picks/drafts without revealing correctness or score.
-      const safeExisting = { ...existing, answers: existing.answers.map(stripAnswerFeedback) };
-      return res.json({ assessment: safeExisting, questions: ordered.map((q) => sanitizeQuestionForStudent(q, `${existing.id}:${q.id}`)), resumed: true, serverTime: new Date().toISOString() });
+      await prisma.readinessAssessment.update({ where: { id: existing.id }, data: { sessionId } });
+      const safeExisting = { ...existing, sessionId: undefined, answers: existing.answers.map(stripAnswerFeedback) };
+      return res.json({ assessment: safeExisting, questions: ordered.map((q) => sanitizeQuestionForStudent(q, `${existing.id}:${q.id}`)), resumed: true, sessionId, security: XS.clientPolicy(SecX.policyOf(SecX.readinessPolicySource(existing))), serverTime: new Date().toISOString() });
     }
 
     // Server-side attempt cap — a resumed in-progress attempt (handled above) never counts against
@@ -536,10 +555,11 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
       }
       return tx.readinessAssessment.create({
         data: {
-          studentId: req.user.id, subjectId, assessmentMode, blueprint, durationMin: subject.defaultDurationMin,
+          studentId: req.user.id, subjectId, assessmentMode, blueprint, durationMin: subject.defaultDurationMin, sessionId,
           config: {
             usedFallback, shortfallLevels,
             proctoring: proctoringSnapshotOf(subject),
+            security: SecX.readinessSecuritySnapshot(subject),
             // Snapshotted at attempt-start so an admin editing readinessThresholds/
             // employabilityIndicators WHILE a student is mid-attempt can't retroactively change
             // which policy their in-flight attempt gets graded against at finalize (Phase 39: "must
@@ -574,7 +594,7 @@ router.post("/assessments", authenticate, requireRole("STUDENT"), attachRequeste
 
     logger.info("READINESS_ASSESSMENT_CREATED", { assessmentId: assessment.id, studentId: req.user.id, subjectId, assessmentMode, questionCount: items.length, usedFallback });
 
-    res.json({ assessment, questions: items.map((q) => sanitizeQuestionForStudent(q, `${assessment.id}:${q.id}`)), resumed: false, usedFallback, shortfallLevels, serverTime: new Date().toISOString() });
+    res.json({ assessment, questions: items.map((q) => sanitizeQuestionForStudent(q, `${assessment.id}:${q.id}`)), resumed: false, sessionId, security: XS.clientPolicy(startPolicy), usedFallback, shortfallLevels, serverTime: new Date().toISOString() });
   } catch (err) {
     if (err.status === 400) return res.status(400).json({ error: err.message });
     console.error(err);
@@ -602,7 +622,8 @@ router.get("/assessments/:id", authenticate, requireRole("STUDENT"), async (req,
     const inProgress = assessment.status === "IN_PROGRESS";
     const ordered = assessment.answers.map((a) => ({ ...sanitizeQuestionForStudent(questions.find((q) => q.id === a.questionId) || {}, `${assessment.id}:${a.questionId}`), answer: inProgress ? stripAnswerFeedback(a) : a }));
     res.json({
-      assessment: { ...assessment, answers: inProgress ? assessment.answers.map(stripAnswerFeedback) : assessment.answers, academicContext: formatAcademicContext(assessment.student), coverage: computeAssessmentCoverage(assessment.blueprint) },
+      security: XS.clientPolicy(SecX.policyOf(SecX.readinessPolicySource(assessment))),
+      assessment: { ...assessment, sessionId: undefined, answers: inProgress ? assessment.answers.map(stripAnswerFeedback) : assessment.answers, academicContext: formatAcademicContext(assessment.student), coverage: computeAssessmentCoverage(assessment.blueprint) },
       questions: ordered,
       serverTime: new Date().toISOString(),
     });
@@ -617,6 +638,7 @@ router.post("/assessments/:id/answer", authenticate, requireRole("STUDENT"), asy
     const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id } });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
     if (assessment.status !== "IN_PROGRESS") return res.status(400).json({ error: "This assessment is already finalized" });
+    if (!(await SecX.enforceReadinessSession(req, res, assessment))) return;
     // Server-side deadline enforcement -- rejects a save attempted after time is up rather than
     // silently accepting it. A small grace covers the in-flight autosave of the final seconds.
     if (Date.now() > readinessDeadlineOf(assessment) + 5000) return res.status(403).json({ error: "Time is up for this assessment" });
@@ -712,8 +734,9 @@ router.post("/assessments/:id/violation", authenticate, requireRole("STUDENT"), 
 // and the background sweep behave identically. Idempotent.
 router.post("/assessments/:id/finalize", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id }, select: { id: true, studentId: true } });
+    const assessment = await prisma.readinessAssessment.findUnique({ where: { id: req.params.id }, select: { id: true, studentId: true, subjectId: true, sessionId: true, config: true, status: true } });
     if (!assessment || assessment.studentId !== req.user.id) return res.status(403).json({ error: "Invalid assessment" });
+    if (assessment.status === "IN_PROGRESS" && !(await SecX.enforceReadinessSession(req, res, assessment))) return;
     const result = await completeReadinessAssessment(assessment.id);
     res.json({ assessment: result.assessment, report: result.report });
   } catch (err) {

@@ -161,6 +161,7 @@ export default function InterviewAdmin() {
           <div>
             <h1>AI Mock Interview — Admin</h1>
             <ChalkUnderline />
+            <p style={{ fontSize: 13, margin: "8px 0 0" }}><Link to="/staff/exam-security/interviews">Security monitor</Link></p>
           </div>
           <Link to="/staff/interview-drafts" className="btn btn-ghost">
             🤖 AI Draft Review{pendingDraftCount > 0 ? ` (${pendingDraftCount} pending)` : ""}

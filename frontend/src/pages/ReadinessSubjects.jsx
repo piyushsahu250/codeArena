@@ -47,6 +47,7 @@ function emptyForm() {
     employabilityIndicators: "",
     defaultDurationMin: 45, passingPercent: 50, maxAttempts: "",
     proctoringEnabled: false, requireWebcam: false, requireMicrophone: false, maxViolations: 3,
+    securityLevel: "STANDARD", securityPolicy: {},
     readinessThresholds: DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
     isActive: true,
     certificateEnabled: false, certificateMinLevel: "JOB_READY",
@@ -192,6 +193,7 @@ export default function ReadinessSubjects() {
       employabilityIndicators: Array.isArray(s.employabilityIndicators) ? s.employabilityIndicators.join(", ") : "",
       defaultDurationMin: s.defaultDurationMin, passingPercent: s.passingPercent, maxAttempts: s.maxAttempts ?? "",
       proctoringEnabled: !!s.proctoringEnabled, requireWebcam: !!s.requireWebcam, requireMicrophone: !!s.requireMicrophone, maxViolations: s.maxViolations ?? 3,
+      securityLevel: s.securityLevel === "PROCTORED" ? "PROCTORED" : "STANDARD", securityPolicy: s.securityPolicy && typeof s.securityPolicy === "object" ? s.securityPolicy : {},
       readinessThresholds: s.readinessThresholds?.length ? s.readinessThresholds : DEFAULT_THRESHOLDS.map((t) => ({ ...t })),
       isActive: s.isActive,
       certificateEnabled: !!s.certificateEnabled, certificateMinLevel: s.certificateMinLevel || "JOB_READY",
@@ -370,6 +372,7 @@ export default function ReadinessSubjects() {
         proctoringEnabled: form.proctoringEnabled, requireWebcam: form.proctoringEnabled && form.requireWebcam,
         requireMicrophone: form.proctoringEnabled && form.requireMicrophone,
         maxViolations: Math.min(20, Math.max(1, Number(form.maxViolations) || 3)),
+        securityLevel: form.securityLevel, securityPolicy: form.securityPolicy,
         readinessThresholds: form.readinessThresholds.filter((t) => t.label.trim()).map((t) => ({ label: t.label.trim(), min: Number(t.min) })),
         isActive: form.isActive,
         certificateEnabled: form.certificateEnabled, certificateMinLevel: form.certificateEnabled ? form.certificateMinLevel : null,
@@ -536,6 +539,7 @@ export default function ReadinessSubjects() {
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <button className="btn btn-ghost" style={smallBtn} onClick={() => navigate(`/staff/exam-security/readiness/${s.id}`)}>Security monitor</button>
                         <button className="btn btn-ghost" style={smallBtn} onClick={() => checkCoverage(s)} disabled={checkingCoverage === s.id}>
                           {checkingCoverage === s.id ? "Checking…" : "Check Coverage"}
                         </button>
@@ -792,6 +796,24 @@ export default function ReadinessSubjects() {
                 </div>
               )}
               <p style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 8 }}>Applies to attempts started after saving; in-progress attempts keep the rules they started with.</p>
+            </div>
+            <div style={{ marginTop: 12, padding: 12, border: "1px solid var(--line)", borderRadius: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Assessment security</div>
+              <p style={{ fontSize: 11, color: "var(--ink-dim)", margin: "2px 0 8px" }}>Same model as formal tests: server-enforced, evidence recorded for human review. It cannot see other apps or block OS-level overlays.</p>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
+                <label>Level{" "}
+                  <select value={form.securityLevel} onChange={(e) => setForm({ ...form, securityLevel: e.target.value, ...(e.target.value === "PROCTORED" ? { proctoringEnabled: true } : {}) })}>
+                    <option value="STANDARD">Standard</option>
+                    <option value="PROCTORED">Proctored — one session, security check, phones refused, proctoring on</option>
+                  </select>
+                </label>
+                {form.securityLevel === "PROCTORED" && (
+                  <>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={form.securityPolicy?.mobileAllowed === true} onChange={(e) => setForm({ ...form, securityPolicy: { ...form.securityPolicy, mobileAllowed: e.target.checked } })} /> Allow phones and tablets</label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}><input type="checkbox" checked={form.securityPolicy?.multiSession !== "FLAG"} onChange={(e) => setForm({ ...form, securityPolicy: { ...form.securityPolicy, multiSession: e.target.checked ? "BLOCK" : "FLAG" } })} /> Refuse a second tab/device</label>
+                  </>
+                )}
+              </div>
             </div>
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 13 }}>

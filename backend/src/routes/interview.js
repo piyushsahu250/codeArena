@@ -30,6 +30,8 @@ const { spreadsheetFileFilter } = require("../utils/uploadFilters");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const logger = require("../utils/logger");
+const SecX = require("../utils/testExamSecurity");
+const XS = require("../utils/examSecurity");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: spreadsheetFileFilter });
@@ -314,6 +316,14 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
     if (isCompanyRound && !config?.company) {
       return res.status(400).json({ error: "A company must be selected for a Company Round interview" });
     }
+    // Security policy is decided from the SESSION TYPE on the server (never from the client): graded/placement-style sessions are
+    // PROCTORED (phones refused, one active session, evidence for review); free practice stays STANDARD. See utils/testExamSecurity.js.
+    const secType = { talentPoolConfigId, isCompanyRound, isMock, isResumeBased };
+    const sLevel = SecX.interviewLevelFor(secType);
+    const startPolicy = SecX.policyOf({ securityLevel: sLevel });
+    const startFailure = SecX.startRequirementFailure(req, startPolicy);
+    if (startFailure) return res.status(403).json(startFailure);
+    const sessionId = SecX.newSessionId();
 
     // Talent Pool exclusivity gate: this is the ONE thing that differs from every other branch
     // below — everything else here just picks a question mix, this one first has to confirm the
@@ -387,12 +397,13 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
           req, action: AUDIT_ACTIONS.INTERVIEW_SESSION_RESUMED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
           details: { sessionId: existing.id },
         });
-        return res.json({ session: existing, questions: ordered.map((q) => sanitizeQuestion(q, `${existing.id}:${q.id}`)), resumed: true, serverTime: Date.now() });
+        await prisma.interviewSession.update({ where: { id: existing.id }, data: { sessionId } });
+        return res.json({ session: { ...existing, sessionId: undefined }, questions: ordered.map((q) => sanitizeQuestion(q, `${existing.id}:${q.id}`)), resumed: true, sessionId, security: XS.clientPolicy(SecX.policyOf({ securityLevel: existing.securityLevel })), serverTime: Date.now() });
       }
     }
 
     let questions = [];
-    let sessionData = { studentId: req.user.id, config: config || {} };
+    let sessionData = { studentId: req.user.id, config: config || {}, securityLevel: sLevel, sessionId };
 
     if (isResumeBased) {
       const resume = await prisma.resume.findUnique({ where: { studentId: req.user.id } });
@@ -521,7 +532,7 @@ router.post("/sessions", authenticate, requireRole("STUDENT"), attachRequesterIn
       req, action: AUDIT_ACTIONS.INTERVIEW_SESSION_STARTED, actorId: req.user.id, actorRole: "STUDENT", studentId: req.user.id,
       details: { sessionId: session.id, type: session.isMock ? "MOCK" : session.isResumeBased ? "RESUME_BASED" : session.isCompanyRound ? "COMPANY_ROUND" : session.talentPoolConfigId ? "TALENT_POOL" : session.category, company: session.config?.company || null },
     });
-    res.json({ session, questions: questions.map((q) => sanitizeQuestion(q, `${session.id}:${q.id}`)), resumed: false, serverTime: Date.now() });
+    res.json({ session: { ...session, sessionId: undefined }, questions: questions.map((q) => sanitizeQuestion(q, `${session.id}:${q.id}`)), resumed: false, sessionId, security: XS.clientPolicy(startPolicy), serverTime: Date.now() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to start interview session" });
@@ -568,7 +579,7 @@ router.get("/sessions/:id", authenticate, requireRole("STUDENT"), async (req, re
     // the student actually submits that question, so this is "the first question not yet visited"
     // without needing a separately-persisted "current question" field.
     const resumeIndexRaw = ordered.findIndex((q) => q.answer.skipped);
-    res.json({ session, questions: ordered, recommendedLearning, serverTime: Date.now(), resumeIndex: resumeIndexRaw === -1 ? 0 : resumeIndexRaw });
+    res.json({ session: { ...session, sessionId: undefined }, security: XS.clientPolicy(SecX.policyOf({ securityLevel: session.securityLevel })), questions: ordered, recommendedLearning, serverTime: Date.now(), resumeIndex: resumeIndexRaw === -1 ? 0 : resumeIndexRaw });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to load session" });
@@ -716,6 +727,7 @@ router.post("/sessions/:id/run-code", authenticate, requireRole("STUDENT"), exec
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
     if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    if (!(await SecX.enforceInterviewSession(req, res, session))) return;
     if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
 
     const { questionId, code, language } = req.body;
@@ -795,6 +807,7 @@ router.post("/sessions/:id/answer", authenticate, requireRole("STUDENT"), execLi
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
     if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    if (!(await SecX.enforceInterviewSession(req, res, session))) return;
     if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
 
     const { questionId, answerText, code, language, skipped, timeTakenSec } = req.body;
@@ -915,6 +928,7 @@ router.post("/sessions/:id/rounds/advance", authenticate, requireRole("STUDENT")
     const session = await prisma.interviewSession.findUnique({ where: { id: req.params.id } });
     if (!session || session.studentId !== req.user.id) return res.status(403).json({ error: "Invalid session" });
     if (session.status !== "IN_PROGRESS") return res.status(400).json({ error: "This session is already finalized" });
+    if (!(await SecX.enforceInterviewSession(req, res, session))) return;
     if (Date.now() > deadlineOf(session)) return res.status(403).json({ error: "Time is up for this interview" });
     const roundPlan = Array.isArray(session.roundPlanSnapshot) ? session.roundPlanSnapshot : null;
     if (!roundPlan) return res.status(400).json({ error: "This session has no round structure" });
@@ -1043,6 +1057,7 @@ router.post("/sessions/:id/finalize", authenticate, requireRole("STUDENT"), asyn
       return res.json({ session, report: session.report });
     }
 
+    if (!(await SecX.enforceInterviewSession(req, res, session))) return;
     // A client-triggered "time's up" auto-finalize is only trusted once the server's own clock
     // agrees the deadline has actually passed, within a grace window — identical rationale to
     // submissions.js/moduleCoding.js's premature-finalize guard (protects against a fast client

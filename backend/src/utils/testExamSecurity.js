@@ -6,6 +6,7 @@
 //   - phones/tablets can be refused at start (server reads the User-Agent; the page cannot override it),
 //   - one active session per attempt (the newest start/resume owns attempt.sessionId; stale tabs get 409 when BLOCK),
 //   - questions are never sent before the student has started the attempt (see tests.js GET /:id).
+const crypto = require("crypto");
 const prisma = require("../prisma");
 const X = require("./examSecurity");
 
@@ -45,28 +46,30 @@ function startRequirementFailure(req, policy) {
   return null;
 }
 
-async function recordTestEvent({ attempt, type, metadata, questionId }) {
+// ---- generic evidence + session control, shared by every attempt kind (TEST, READINESS, INTERVIEW) -------------------------
+// One implementation, three attempt models. `kind` is stored in ExamSecurityEvent.attemptKind so the monitor can tell them apart.
+async function recordEvent({ kind, attemptId, studentId, testId, type, metadata, questionId }) {
   try {
     await prisma.examSecurityEvent.create({ data: {
-      attemptKind: "TEST", attemptId: attempt.id, studentId: attempt.studentId, testId: attempt.testId,
+      attemptKind: kind, attemptId, studentId, testId: testId || null,
       questionId: questionId || null, type, severity: X.EVENT_SEVERITY[type] || "MEDIUM", metadata: X.cleanMetadata(metadata),
     } });
-  } catch (e) { console.error("[testExamSecurity] could not record", type, e.message); }
+  } catch (e) { console.error("[examSecurity] could not record", type, e.message); }
 }
 
-// attempt must carry its test's securityLevel/securityPolicy (include/select them). An attempt without a sessionId
-// (started before this existed) is not enforced. Evidence writes are throttled so a retrying stale tab cannot flood.
+// An attempt without a sessionId (started before this existed) is not enforced. Evidence writes are throttled so a retrying
+// stale tab cannot flood the table.
 const lastSessionEvent = new Map();
-async function enforceTestSession(req, res, attempt, test) {
-  if (!attempt.sessionId) return true;
+async function enforceSession(req, res, { kind, attemptId, studentId, testId, sessionId, policySource }) {
+  if (!sessionId) return true;
   const given = req.get("x-exam-session");
-  if (given === attempt.sessionId) return true;
-  const policy = policyOf(test || attempt.test);
+  if (given === sessionId) return true;
+  const policy = policyOf(policySource);
   const now = Date.now();
-  if (now - (lastSessionEvent.get(attempt.id) || 0) > 60000) {
-    lastSessionEvent.set(attempt.id, now);
+  if (now - (lastSessionEvent.get(attemptId) || 0) > 60000) {
+    lastSessionEvent.set(attemptId, now);
     if (lastSessionEvent.size > 5000) lastSessionEvent.clear();
-    await recordTestEvent({ attempt, type: policy.multiSession === "BLOCK" ? "SESSION_REPLACED" : "MULTIPLE_SESSION", metadata: { hadHeader: !!given } });
+    await recordEvent({ kind, attemptId, studentId, testId, type: policy.multiSession === "BLOCK" ? "SESSION_REPLACED" : "MULTIPLE_SESSION", metadata: { hadHeader: !!given } });
   }
   if (policy.multiSession === "BLOCK") {
     res.status(409).json({ error: "This assessment is open in another tab, window or device. Close this one and continue there.", code: "SESSION_REPLACED" });
@@ -75,4 +78,29 @@ async function enforceTestSession(req, res, attempt, test) {
   return true;
 }
 
-module.exports = { TEST_LEVELS, parseSecurityInput, policyOf, startRequirementFailure, recordTestEvent, enforceTestSession };
+const newSessionId = () => crypto.randomBytes(16).toString("hex");
+
+// -- formal tests: attempt must carry its test's securityLevel/securityPolicy (include/select them)
+const recordTestEvent = ({ attempt, type, metadata, questionId }) => recordEvent({ kind: "TEST", attemptId: attempt.id, studentId: attempt.studentId, testId: attempt.testId, type, metadata, questionId });
+const enforceTestSession = (req, res, attempt, test) => enforceSession(req, res, { kind: "TEST", attemptId: attempt.id, studentId: attempt.studentId, testId: attempt.testId, sessionId: attempt.sessionId, policySource: test || attempt.test });
+
+// -- readiness: the policy is the SNAPSHOT taken at attempt start (config.security), so editing the subject mid-attempt changes nothing
+const readinessPolicySource = (assessment) => ({ securityLevel: assessment?.config?.security?.level, securityPolicy: assessment?.config?.security?.policy });
+const enforceReadinessSession = (req, res, a) => enforceSession(req, res, { kind: "READINESS", attemptId: a.id, studentId: a.studentId, testId: a.subjectId, sessionId: a.sessionId, policySource: readinessPolicySource(a) });
+const readinessSecuritySnapshot = (subject) => ({ level: TEST_LEVELS.includes(subject.securityLevel) ? subject.securityLevel : "STANDARD", policy: subject.securityPolicy && typeof subject.securityPolicy === "object" ? subject.securityPolicy : {} });
+
+// -- mock interviews: the level comes from the SESSION TYPE (decided by the server, never the client). Graded/placement-style
+// sessions are PROCTORED (phones refused, one session, evidence + monitor); free practice by category and resume-based stays STANDARD.
+// Flip an entry here to change the policy for a session type.
+const INTERVIEW_LEVEL_BY_TYPE = { TALENT_POOL: "PROCTORED", COMPANY_ROUND: "PROCTORED", MOCK: "PROCTORED", RESUME_BASED: "STANDARD", CATEGORY: "STANDARD" };
+const interviewTypeOf = (s) => (s.talentPoolConfigId ? "TALENT_POOL" : s.isCompanyRound ? "COMPANY_ROUND" : s.isMock ? "MOCK" : s.isResumeBased ? "RESUME_BASED" : "CATEGORY");
+const interviewLevelFor = (s) => INTERVIEW_LEVEL_BY_TYPE[interviewTypeOf(s)] || "STANDARD";
+const enforceInterviewSession = (req, res, s) => enforceSession(req, res, { kind: "INTERVIEW", attemptId: s.id, studentId: s.studentId, testId: null, sessionId: s.sessionId, policySource: { securityLevel: s.securityLevel } });
+
+module.exports = {
+  TEST_LEVELS, parseSecurityInput, policyOf, startRequirementFailure, newSessionId,
+  recordEvent, enforceSession,
+  recordTestEvent, enforceTestSession,
+  enforceReadinessSession, readinessSecuritySnapshot, readinessPolicySource,
+  INTERVIEW_LEVEL_BY_TYPE, interviewTypeOf, interviewLevelFor, enforceInterviewSession,
+};

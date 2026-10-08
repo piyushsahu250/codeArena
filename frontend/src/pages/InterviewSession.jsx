@@ -4,6 +4,8 @@ import Editor from "@monaco-editor/react";
 import api, { API_BASE_URL, performExpiredRedirect } from "../api";
 import { Mic, Square, Move, Camera } from "lucide-react";
 import { useProctoring } from "../hooks/useProctoring";
+import { useExamSession, recallExamSession } from "../hooks/useExamSession";
+import { runSecurityCheck } from "../utils/secureAssessment";
 import useIsMobile from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 import Navbar from "../components/Navbar";
@@ -63,6 +65,8 @@ export default function InterviewSession() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [phase, setPhase] = useState("preflight"); // preflight | active | terminated
+  const { replaced: sessionReplaced, setSession: setExamSession } = useExamSession();
+  const [secCheck, setSecCheck] = useState(null);
   const [readinessReady, setReadinessReady] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [drafts, setDrafts] = useState({}); // questionId -> {answerText, code, language, selected}
@@ -121,6 +125,7 @@ export default function InterviewSession() {
   useEffect(() => {
     api.get(`/interview/sessions/${id}`).then(async (res) => {
       setData(res.data);
+      setExamSession(recallExamSession(id));
       setViolationCount(res.data.session.violationCount || 0);
       if (typeof res.data.serverTime === "number") clockOffsetRef.current = res.data.serverTime - Date.now();
       // Deliberately does NOT assign every CODING question a language/code upfront — only ones
@@ -354,6 +359,7 @@ export default function InterviewSession() {
     );
   }
 
+  if (sessionReplaced) return <div className={`interview-prep ${dark ? "dark" : ""}`}><Navbar /><div style={{ maxWidth: 560, margin: "48px auto", padding: 24, textAlign: "center" }}><h2>Interview open elsewhere</h2><p style={{ marginTop: 10, opacity: 0.8 }}>This interview was opened in another tab, window or device, which now holds your session. Close this one and continue there. Your saved answers are safe.</p></div></div>;
   if (error) return <div className={`interview-prep ${dark ? "dark" : ""}`}><Navbar /><div style={{ maxWidth: 800, margin: "0 auto", padding: 48 }}><p style={{ color: "var(--rust)" }}>{error}</p><Link to="/interview" className="btn btn-ghost">← AI Mock Interview</Link></div></div>;
   if (!data) return <div className={`interview-prep ${dark ? "dark" : ""}`}><Navbar /><div style={{ maxWidth: 800, margin: "0 auto", padding: 48 }} className="mono">Loading…</div></div>;
 
@@ -431,7 +437,21 @@ export default function InterviewSession() {
               onReadyChange={setReadinessReady}
             />
 
-            <button className="btn btn-primary" style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: readinessReady ? 1 : 0.4 }} onClick={begin} disabled={!readinessReady}>
+            {data.security?.level === "PROCTORED" && (
+              <div style={{ marginTop: 16, padding: 12, border: "1px solid var(--line)", borderRadius: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.7, marginBottom: 6 }}>SECURE ASSESSMENT</div>
+                <p style={{ fontSize: 13, margin: "0 0 6px" }}>Stay on this page, keep the window full-size, and do not use other applications, copy/paste, screen sharing or outside assistance. Security events are recorded and reviewed.</p>
+                {secCheck && (
+                  <ul style={{ listStyle: "none", margin: "6px 0 0", padding: 0, fontSize: 13, lineHeight: 1.8 }}>
+                    {secCheck.items.map((i) => <li key={i.key} style={{ color: i.ok ? "var(--success-text)" : (i.required ? "var(--danger-text)" : "var(--warning-text)") }}>{i.ok ? "✓" : i.required ? "✕" : "!"} {i.label}</li>)}
+                  </ul>
+                )}
+                {secCheck && !secCheck.ready && <p style={{ fontSize: 13, color: "var(--danger-text)", fontWeight: 600, margin: "6px 0 0" }}>This device or window cannot provide the required security controls. Use a laptop or desktop computer with a full-size window, then run the check again.</p>}
+                <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 12, padding: "5px 10px" }} onClick={() => setSecCheck(runSecurityCheck(data.security))}>{secCheck ? "Run security check again" : "Run security check"}</button>
+              </div>
+            )}
+
+            <button className="btn btn-primary" style={{ marginTop: 20, width: "100%", padding: "12px 24px", opacity: readinessReady && !(data.security?.level === "PROCTORED" && !secCheck?.ready) ? 1 : 0.4 }} onClick={begin} disabled={!readinessReady || (data.security?.level === "PROCTORED" && !secCheck?.ready)}>
               Begin Interview (Fullscreen)
             </button>
           </div>

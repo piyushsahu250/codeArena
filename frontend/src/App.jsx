@@ -429,6 +429,8 @@ export default function App() {
           <Route path="/staff/learning" element={<Protected roles={["ADMIN", "STAFF"]}><LearningManagement /></Protected>} />
           <Route path="/staff/exam-security/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><ExamSecurityMonitor /></Protected>} />
           <Route path="/staff/exam-security/test/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><TestSecurityMonitor /></Suspense></Protected>} />
+          <Route path="/staff/exam-security/readiness/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><TestSecurityMonitor kind="readiness" /></Suspense></Protected>} />
+          <Route path="/staff/exam-security/interviews" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><TestSecurityMonitor kind="interviews" /></Suspense></Protected>} />
           <Route path="/staff/secure-devices" element={<Protected roles={["ADMIN", "STAFF"]}><SecureDevices /></Protected>} />
           <Route path="/staff/gamification" element={<Protected roles={["ADMIN", "STAFF"]}><GamificationManagement /></Protected>} />
           <Route path="/staff/resumes" element={<Protected roles={["ADMIN", "STAFF"]}><ResumeAdmin /></Protected>} />

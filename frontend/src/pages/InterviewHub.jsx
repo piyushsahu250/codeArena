@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   MessagesSquare, Lightbulb, Code2, Building2, Compass, Briefcase, Calculator, Target, FileText, Award, GraduationCap,
 } from "lucide-react";
+import { rememberExamSession } from "../hooks/useExamSession";
 import api from "../api";
 import { useTheme } from "../context/ThemeContext";
 import { useFeatures } from "../context/FeatureContext";
@@ -90,9 +91,11 @@ export default function InterviewHub() {
         // than letting the student think they're starting fresh, per a brief pause before
         // navigating into InterviewSession.jsx's own richer "Resume Interview" screen.
         setResuming(true);
+        rememberExamSession(data.session.id, data.sessionId);
         setTimeout(() => navigate(`/interview/session/${data.session.id}`), 700);
         return;
       }
+      rememberExamSession(data.session.id, data.sessionId);
       navigate(`/interview/session/${data.session.id}`);
     } catch (err) {
       const serverMessage = err.response?.data?.error;
