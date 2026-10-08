@@ -73,6 +73,41 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
         const idSuffix = s.registrationNumber || s.email;
         return { type: "Student", label: `${rollPrefix}${s.name} (${idSuffix})`, url: `/clerk/students/${s.id}` };
       }));
+    } else if (["SUPER_ADMIN", "ADMIN", "INSTITUTE_ADMIN"].includes(req.user.role)) {
+      // Admin-tier search, grouped by type. Scope is the requester's own institute when they have one
+      // (never a client value); a platform-level account searches every institute. Each group is
+      // capped, and only fields needed to identify the record are returned.
+      const inst = req.requesterInstituteId;
+      const instituteFilter = inst ? { instituteId: inst } : {};
+      const N = 5;
+      const person = (role) => prisma.user.findMany({
+        where: { role, ...instituteFilter, OR: [{ name: insensitive(q) }, { email: insensitive(q) }, { rollNumber: insensitive(q) }, { registrationNumber: insensitive(q) }, { employeeId: insensitive(q) }] },
+        select: { id: true, name: true, email: true, rollNumber: true, institute: { select: { name: true } } }, orderBy: { name: "asc" }, take: N,
+      });
+      const [institutes, students, staff, clerks, instAdmins, courses, tests, certs] = await Promise.all([
+        prisma.institute.findMany({ where: { name: insensitive(q), ...(inst ? { id: inst } : {}) }, select: { id: true, name: true }, take: N }),
+        person("STUDENT"), person("STAFF"), person("CLERK"), person("INSTITUTE_ADMIN"),
+        prisma.course.findMany({
+          where: { name: insensitive(q), ...(inst ? { OR: [{ instituteId: inst }, { instituteAssignments: { some: { instituteId: inst } } }] } : {}) },
+          select: { slug: true, name: true }, take: N,
+        }),
+        prisma.test.findMany({ where: { title: insensitive(q), ...instituteFilter }, select: { id: true, title: true }, take: N }),
+        prisma.certificate.findMany({
+          where: { OR: [{ certificateCode: insensitive(q) }, { title: insensitive(q) }, { student: { name: insensitive(q) } }], ...(inst ? { student: { instituteId: inst } } : {}) },
+          select: { id: true, certificateCode: true, title: true, student: { select: { name: true } } }, take: N,
+        }),
+      ]);
+      const where = (u) => (u.institute?.name && !inst ? ` · ${u.institute.name}` : "");
+      results.push(
+        ...institutes.map((i) => ({ type: "Institute", label: i.name, url: inst ? "/admin" : `/admin/institutes/${i.id}/overview` })),
+        ...students.map((s) => ({ type: "Student", label: `${s.rollNumber ? `${s.rollNumber} — ` : ""}${s.name}${where(s)}`, url: `/admin/students/${s.id}` })),
+        ...staff.map((s) => ({ type: "Staff", label: `${s.name} (${s.email})${where(s)}`, url: `/admin/staff-clerk/${s.id}` })),
+        ...clerks.map((s) => ({ type: "Clerk", label: `${s.name} (${s.email})${where(s)}`, url: `/admin/staff-clerk/${s.id}` })),
+        ...instAdmins.map((s) => ({ type: "Institute admin", label: `${s.name} (${s.email})${where(s)}`, url: "/admin/users" })),
+        ...courses.map((c) => ({ type: "Course", label: c.name, url: `/learning/${c.slug}` })),
+        ...tests.map((t) => ({ type: "Assessment", label: t.title, url: `/staff/tests/${t.id}/results` })),
+        ...certs.map((c) => ({ type: "Certificate", label: `${c.title} — ${c.student.name} (${c.certificateCode})`, url: "/admin/certificates" })),
+      );
     } else {
       const instituteFilter = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
 
@@ -154,7 +189,7 @@ router.get("/", authenticate, attachRequesterInstitute, async (req, res) => {
       }
     }
 
-    res.json({ results: results.slice(0, 20) });
+    res.json({ results: results.slice(0, 40) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Search failed" });

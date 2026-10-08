@@ -16,6 +16,8 @@ const { attachRequesterInstitute } = require("../middleware/institute");
 const { cached } = require("../utils/cache");
 const { getQueueStatus } = require("../utils/queue");
 const { getSnapshot } = require("../utils/metrics");
+const { sendExport } = require("../utils/exportFile");
+const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 
 const router = express.Router();
 const DAY = 24 * 3600 * 1000;
@@ -63,17 +65,43 @@ function platformLevel(req, res, next) {
 }
 
 // ---------------------------------------------------------------- SUPER ADMIN
-router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRequesterInstitute, platformLevel, async (req, res) => {
-  try {
-    const days = rangeDays(req.query.days);
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const pageSize = Math.min(100, Math.max(5, parseInt(req.query.pageSize, 10) || 20));
-    const q = String(req.query.q || "").trim().toLowerCase();
-    const statusFilter = String(req.query.health || "");
-    const sortKey = ["name", "students", "activeUsers", "staff", "courses", "attendancePercent", "lastActivity", "health"].includes(req.query.sort) ? req.query.sort : "name";
-    const dir = req.query.dir === "desc" ? -1 : 1;
+// Course completion = completed lessons / lessons the students are entitled to. A student is entitled
+// to every PUBLISHED course assigned to their institute OR their academic group (same rule as
+// utils/courseEligibility.js), counting only live (published, non-archived) modules/chapters/lessons.
+// Returns one row per (institute, academic group): { iid, gid, entitled, done }.
+async function courseCompletionRows(instituteId) {
+  const filter = instituteId ? Prisma.sql`AND u."instituteId" = ${instituteId}` : Prisma.empty;
+  const rows = await prisma.$queryRaw`
+    WITH lc AS (
+      SELECT c.id AS course_id, l.id AS lesson_id
+      FROM "Course" c
+      JOIN "CourseModule" m ON m."courseId" = c.id AND m."isActive" = true AND m."archivedAt" IS NULL
+      JOIN "Lesson" l ON l."moduleId" = m.id AND l."isActive" = true AND l."archivedAt" IS NULL
+        AND (l."chapterId" IS NULL OR EXISTS (SELECT 1 FROM "Chapter" ch WHERE ch.id = l."chapterId" AND ch."isActive" = true AND ch."archivedAt" IS NULL))
+      WHERE c.status::text = 'PUBLISHED'
+    ), cnt AS (SELECT course_id, COUNT(*)::int AS n FROM lc GROUP BY course_id),
+    sc AS (
+      SELECT DISTINCT u.id AS sid, u."instituteId" AS iid, u."academicGroupId" AS gid, x.cid
+      FROM "User" u
+      JOIN (
+        SELECT "courseId" AS cid, "instituteId" AS ii, NULL::text AS gg FROM "CourseInstituteAssignment"
+        UNION ALL SELECT "courseId", NULL::text, "academicGroupId" FROM "CourseAcademicGroupAssignment"
+      ) x ON x.ii = u."instituteId" OR x.gg = u."academicGroupId"
+      WHERE u.role = 'STUDENT' AND u."isActive" = true AND u."instituteId" IS NOT NULL ${filter}
+    ), ent AS (SELECT sc.iid, sc.gid, SUM(cnt.n)::int AS entitled FROM sc JOIN cnt ON cnt.course_id = sc.cid GROUP BY sc.iid, sc.gid),
+    dn AS (
+      SELECT sc.iid, sc.gid, COUNT(*)::int AS done
+      FROM sc JOIN lc ON lc.course_id = sc.cid
+      JOIN "LessonProgress" lp ON lp."lessonId" = lc.lesson_id AND lp."studentId" = sc.sid AND lp.status = 'COMPLETED'
+      GROUP BY sc.iid, sc.gid
+    )
+    SELECT ent.iid, ent.gid, ent.entitled, COALESCE(dn.done, 0)::int AS done
+    FROM ent LEFT JOIN dn ON dn.iid = ent.iid AND dn.gid IS NOT DISTINCT FROM ent.gid`;
+  return rows;
+}
+const completionPct = (done, entitled) => (entitled > 0 ? Math.min(100, Math.round((done / entitled) * 100)) : null);
 
-    const core = await cached(`cmd:super:${days}`, 45 * 1000, async () => {
+const loadSuperCore = (days) => cached(`cmd:super:${days}`, 45 * 1000, async () => {
       const since = new Date(Date.now() - days * DAY);
       const prevSince = new Date(Date.now() - 2 * days * DAY);
       const [
@@ -103,6 +131,9 @@ router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRe
         prisma.$queryRaw`SELECT COUNT(DISTINCT "studentId")::int AS n FROM "LessonProgress" WHERE "status" = 'COMPLETED' AND "completedAt" >= ${since}`,
       ]);
 
+      const ccRows = await courseCompletionRows(null);
+      const ccBy = new Map();
+      for (const r of ccRows) { const c = ccBy.get(r.iid) || { done: 0, entitled: 0 }; c.done += num(r.done); c.entitled += num(r.entitled); ccBy.set(r.iid, c); }
       const idx = (rows, key = "id") => new Map(rows.map((r) => [r[key], r]));
       const active = idx(activeRows), att = idx(attRows), cod = idx(codingRows), rdy = idx(readyRows), cert = idx(certRows);
       const tests = new Map(testRows.map((r) => [r.instituteId, r._count._all]));
@@ -132,6 +163,7 @@ router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRe
           students, staff: roleCount.get(`${i.id}:STAFF`) || 0, clerks: roleCount.get(`${i.id}:CLERK`) || 0, instituteAdmins: roleCount.get(`${i.id}:INSTITUTE_ADMIN`) || 0,
           activeUsers: num(act?.users), activeStudents: num(act?.students),
           courses: courses.get(i.id) || 0, assessments: tests.get(i.id) || 0,
+          courseCompletionPercent: completionPct(ccBy.get(i.id)?.done, ccBy.get(i.id)?.entitled),
           attendancePercent: attPct, codingActivity: num(cod.get(i.id)?.n), readinessAvg: rdy.get(i.id) ? num(rdy.get(i.id).avg) : null,
           certificates: num(cert.get(i.id)?.n), emailFailed: em.failed, emailTotal: em.total,
           lastActivity: last.get(i.id) || null, health: h.status, healthReasons: h.reasons,
@@ -145,6 +177,7 @@ router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRe
         activeUsers: sum("activeUsers"), certificatesInPeriod: sum("certificates"), codingInPeriod: sum("codingActivity"),
         talentPoolStudents: talentStudents,
         learningStudentsInPeriod: num(learners[0]?.n),
+        courseCompletionPercent: completionPct(ccRows.reduce((s, r) => s + num(r.done), 0), ccRows.reduce((s, r) => s + num(r.entitled), 0)),
       };
       const trends = {
         testsCompleted: { value: completedNow, previous: completedPrev, changePercent: change(completedNow, completedPrev) },
@@ -152,7 +185,90 @@ router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRe
         newStudents: { value: newStudentsNow, previous: newStudentsPrev, changePercent: change(newStudentsNow, newStudentsPrev) },
       };
       return { rows, totals, trends };
-    });
+});
+
+const loadInstituteCore = (inst, days) => cached(`cmd:inst:${inst.id}:${days}`, 45 * 1000, async () => {
+  const instituteId = inst.id;
+      const since = new Date(Date.now() - days * DAY);
+      const now = new Date();
+      const [roleGroups, lastLogin, activeRow, groups, studentsByGroup, attByGroup, readyByGroup, activeByGroup, profileByGroup, tests, activeTests, upcoming, courses, certs, talent, coding, resultsPending, docsPending, offersPending, emailAgg, att, activity] = await Promise.all([
+        prisma.user.groupBy({ by: ["role"], where: { instituteId, isActive: true }, _count: { _all: true } }),
+        prisma.user.aggregate({ where: { instituteId }, _max: { lastLoginAt: true } }),
+        prisma.$queryRaw`SELECT COUNT(DISTINCT s."userId")::int AS users, COUNT(DISTINCT s."userId") FILTER (WHERE u.role = 'STUDENT')::int AS students FROM "LoginSession" s JOIN "User" u ON u.id = s."userId" WHERE s."loginAt" >= ${since} AND u."instituteId" = ${instituteId}`,
+        prisma.academicGroup.findMany({ where: { instituteId }, select: { id: true, batch: true, section: true, isActive: true, department: { select: { id: true, name: true } } } }),
+        prisma.user.groupBy({ by: ["academicGroupId"], where: { instituteId, role: "STUDENT", isActive: true }, _count: { _all: true } }),
+        prisma.$queryRaw`SELECT u."academicGroupId" AS id, COUNT(*) FILTER (WHERE r.status IN ('PRESENT','LATE'))::int AS present, COUNT(*) FILTER (WHERE r.status IN ('PRESENT','ABSENT','LATE'))::int AS total FROM "AttendanceRecord" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId} GROUP BY u."academicGroupId"`,
+        prisma.$queryRaw`SELECT u."academicGroupId" AS id, ROUND(AVG(r."overallScore"))::int AS avg, COUNT(DISTINCT u.id)::int AS students FROM "ReadinessReport" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId} GROUP BY u."academicGroupId"`,
+        prisma.$queryRaw`SELECT u."academicGroupId" AS id, COUNT(DISTINCT s."userId")::int AS n FROM "LoginSession" s JOIN "User" u ON u.id = s."userId" WHERE s."loginAt" >= ${since} AND u."instituteId" = ${instituteId} AND u.role = 'STUDENT' GROUP BY u."academicGroupId"`,
+        prisma.$queryRaw`SELECT u."academicGroupId" AS id, COUNT(*) FILTER (WHERE p."mandatoryStatus" = 'COMPLETED')::int AS done FROM "StudentProfile" p JOIN "User" u ON u.id = p."studentId" WHERE u."instituteId" = ${instituteId} AND u.role = 'STUDENT' AND u."isActive" = true GROUP BY u."academicGroupId"`,
+        prisma.test.count({ where: { instituteId } }),
+        prisma.test.count({ where: { instituteId, isPublished: true, startTime: { lte: now }, endTime: { gte: now } } }),
+        prisma.test.count({ where: { instituteId, isPublished: true, startTime: { gt: now } } }),
+        prisma.courseInstituteAssignment.count({ where: { instituteId } }),
+        prisma.certificate.count({ where: { student: { instituteId } } }),
+        prisma.talentPoolMember.groupBy({ by: ["studentId"], where: { student: { instituteId } } }).then((r) => r.length),
+        prisma.$queryRaw`SELECT COUNT(*)::int AS n FROM "PracticeRunLog" p JOIN "User" u ON u.id = p."studentId" WHERE p."createdAt" >= ${since} AND u."instituteId" = ${instituteId}`,
+        prisma.resultExamination.count({ where: { instituteId, status: { in: ["DRAFT", "IN_REVIEW", "READY_TO_PUBLISH"] } } }),
+        prisma.studentDocument.count({ where: { verificationStatus: "PENDING", student: { instituteId } } }),
+        prisma.placementOffer.count({ where: { verificationStatus: "PENDING", student: { instituteId } } }),
+        prisma.emailLog.groupBy({ by: ["status"], where: { instituteId, createdAt: { gte: since } }, _count: { _all: true } }),
+        prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE r.status IN ('PRESENT','LATE'))::int AS present, COUNT(*) FILTER (WHERE r.status IN ('PRESENT','ABSENT','LATE'))::int AS total FROM "AttendanceRecord" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId}`,
+        prisma.auditLog.findMany({ where: { instituteId, action: { notIn: ["LOGIN", "LOGOUT"] } }, orderBy: { createdAt: "desc" }, take: 10, select: { id: true, action: true, adminName: true, adminRole: true, createdAt: true } }),
+      ]);
+      const role = Object.fromEntries(roleGroups.map((g) => [g.role, g._count._all]));
+      const students = role.STUDENT || 0;
+      const attAll = att[0] ? { present: num(att[0].present), total: num(att[0].total) } : { present: 0, total: 0 };
+      const attPct = pct(attAll.present, attAll.total);
+      const em = Object.fromEntries(emailAgg.map((e) => [e.status, e._count._all]));
+      const emailTotal = Object.values(em).reduce((s, n) => s + n, 0);
+      const health = healthOf({ isActive: inst.isActive, students, activeStudents: num(activeRow[0]?.students), lastActivity: lastLogin._max.lastLoginAt, emailTotal, emailFailed: em.FAILED || 0, attPct, attRecords: attAll.total, days });
+
+      const m = (rows) => new Map(rows.map((r) => [r.id, r]));
+      const cnt = new Map(studentsByGroup.map((g) => [g.academicGroupId, g._count._all]));
+      const attM = m(attByGroup), rdM = m(readyByGroup), actM = m(activeByGroup), prM = m(profileByGroup);
+      const ccRows = await courseCompletionRows(instituteId);
+      const ccG = new Map(ccRows.map((r) => [r.gid, r]));
+      const roll = (keyFn, labelFn) => {
+        const acc = new Map();
+        for (const g of groups) {
+          const k = keyFn(g); const cur = acc.get(k) || { key: k, label: labelFn(g), ccDone: 0, ccEnt: 0, students: 0, present: 0, attTotal: 0, rdSum: 0, rdN: 0, active: 0, profileDone: 0 };
+          cur.students += cnt.get(g.id) || 0;
+          const a = attM.get(g.id); if (a) { cur.present += num(a.present); cur.attTotal += num(a.total); }
+          const r = rdM.get(g.id); if (r) { cur.rdSum += num(r.avg) * num(r.students); cur.rdN += num(r.students); }
+          const cg = ccG.get(g.id); if (cg) { cur.ccDone += num(cg.done); cur.ccEnt += num(cg.entitled); }
+          cur.active += num(actM.get(g.id)?.n); cur.profileDone += num(prM.get(g.id)?.done);
+          acc.set(k, cur);
+        }
+        return [...acc.values()].map((c) => ({
+          key: c.key, label: c.label, students: c.students,
+          courseCompletionPercent: completionPct(c.ccDone, c.ccEnt),
+          attendancePercent: pct(c.present, c.attTotal), readinessAvg: c.rdN ? Math.round(c.rdSum / c.rdN) : null,
+          activeStudents: c.active, activePercent: pct(c.active, c.students), profileCompletionPercent: pct(c.profileDone, c.students),
+        })).sort((a, b) => b.students - a.students);
+      };
+      return {
+        counts: { students, staff: role.STAFF || 0, clerks: role.CLERK || 0, instituteAdmins: role.INSTITUTE_ADMIN || 0, departments: new Set(groups.map((g) => g.department.id)).size, sections: groups.length, courses, assessments: tests, liveAssessments: activeTests, upcomingAssessments: upcoming, certificates: certs, talentPoolStudents: talent },
+        activity: { activeUsers: num(activeRow[0]?.users), activeStudents: num(activeRow[0]?.students), activeStudentPercent: pct(num(activeRow[0]?.students), students), codingActivity: num(coding[0]?.n), lastLogin: lastLogin._max.lastLoginAt },
+        attendancePercent: attPct, health,
+        courseCompletionPercent: completionPct(ccRows.reduce((s, r) => s + num(r.done), 0), ccRows.reduce((s, r) => s + num(r.entitled), 0)),
+        pending: { resultExaminations: resultsPending, documentsToVerify: docsPending, offersToVerify: offersPending, failedEmails: em.FAILED || 0 },
+        departments: roll((g) => g.department.id, (g) => g.department.name),
+        batches: roll((g) => g.batch, (g) => g.batch),
+        recentActivity: activity,
+      };
+});
+
+router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRequesterInstitute, platformLevel, async (req, res) => {
+  try {
+    const days = rangeDays(req.query.days);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(100, Math.max(5, parseInt(req.query.pageSize, 10) || 20));
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const statusFilter = String(req.query.health || "");
+    const sortKey = ["name", "students", "activeUsers", "staff", "courses", "courseCompletionPercent", "attendancePercent", "lastActivity", "health"].includes(req.query.sort) ? req.query.sort : "name";
+    const dir = req.query.dir === "desc" ? -1 : 1;
+
+    const core = await loadSuperCore(days);
 
     const filtered = core.rows
       .filter((r) => (!q || r.name.toLowerCase().includes(q) || (r.code || "").toLowerCase().includes(q)) && (!statusFilter || r.health === statusFilter))
@@ -246,70 +362,7 @@ router.get("/institute", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INST
     if (!inst) return res.status(404).json({ error: "Institute not found" });
     const days = rangeDays(req.query.days);
 
-    const data = await cached(`cmd:inst:${instituteId}:${days}`, 45 * 1000, async () => {
-      const since = new Date(Date.now() - days * DAY);
-      const now = new Date();
-      const [roleGroups, lastLogin, activeRow, groups, studentsByGroup, attByGroup, readyByGroup, activeByGroup, profileByGroup, tests, activeTests, upcoming, courses, certs, talent, coding, resultsPending, docsPending, offersPending, emailAgg, att, activity] = await Promise.all([
-        prisma.user.groupBy({ by: ["role"], where: { instituteId, isActive: true }, _count: { _all: true } }),
-        prisma.user.aggregate({ where: { instituteId }, _max: { lastLoginAt: true } }),
-        prisma.$queryRaw`SELECT COUNT(DISTINCT s."userId")::int AS users, COUNT(DISTINCT s."userId") FILTER (WHERE u.role = 'STUDENT')::int AS students FROM "LoginSession" s JOIN "User" u ON u.id = s."userId" WHERE s."loginAt" >= ${since} AND u."instituteId" = ${instituteId}`,
-        prisma.academicGroup.findMany({ where: { instituteId }, select: { id: true, batch: true, section: true, isActive: true, department: { select: { id: true, name: true } } } }),
-        prisma.user.groupBy({ by: ["academicGroupId"], where: { instituteId, role: "STUDENT", isActive: true }, _count: { _all: true } }),
-        prisma.$queryRaw`SELECT u."academicGroupId" AS id, COUNT(*) FILTER (WHERE r.status IN ('PRESENT','LATE'))::int AS present, COUNT(*) FILTER (WHERE r.status IN ('PRESENT','ABSENT','LATE'))::int AS total FROM "AttendanceRecord" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId} GROUP BY u."academicGroupId"`,
-        prisma.$queryRaw`SELECT u."academicGroupId" AS id, ROUND(AVG(r."overallScore"))::int AS avg, COUNT(DISTINCT u.id)::int AS students FROM "ReadinessReport" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId} GROUP BY u."academicGroupId"`,
-        prisma.$queryRaw`SELECT u."academicGroupId" AS id, COUNT(DISTINCT s."userId")::int AS n FROM "LoginSession" s JOIN "User" u ON u.id = s."userId" WHERE s."loginAt" >= ${since} AND u."instituteId" = ${instituteId} AND u.role = 'STUDENT' GROUP BY u."academicGroupId"`,
-        prisma.$queryRaw`SELECT u."academicGroupId" AS id, COUNT(*) FILTER (WHERE p."mandatoryStatus" = 'COMPLETED')::int AS done FROM "StudentProfile" p JOIN "User" u ON u.id = p."studentId" WHERE u."instituteId" = ${instituteId} AND u.role = 'STUDENT' AND u."isActive" = true GROUP BY u."academicGroupId"`,
-        prisma.test.count({ where: { instituteId } }),
-        prisma.test.count({ where: { instituteId, isPublished: true, startTime: { lte: now }, endTime: { gte: now } } }),
-        prisma.test.count({ where: { instituteId, isPublished: true, startTime: { gt: now } } }),
-        prisma.courseInstituteAssignment.count({ where: { instituteId } }),
-        prisma.certificate.count({ where: { student: { instituteId } } }),
-        prisma.talentPoolMember.groupBy({ by: ["studentId"], where: { student: { instituteId } } }).then((r) => r.length),
-        prisma.$queryRaw`SELECT COUNT(*)::int AS n FROM "PracticeRunLog" p JOIN "User" u ON u.id = p."studentId" WHERE p."createdAt" >= ${since} AND u."instituteId" = ${instituteId}`,
-        prisma.resultExamination.count({ where: { instituteId, status: { in: ["DRAFT", "IN_REVIEW", "READY_TO_PUBLISH"] } } }),
-        prisma.studentDocument.count({ where: { verificationStatus: "PENDING", student: { instituteId } } }),
-        prisma.placementOffer.count({ where: { verificationStatus: "PENDING", student: { instituteId } } }),
-        prisma.emailLog.groupBy({ by: ["status"], where: { instituteId, createdAt: { gte: since } }, _count: { _all: true } }),
-        prisma.$queryRaw`SELECT COUNT(*) FILTER (WHERE r.status IN ('PRESENT','LATE'))::int AS present, COUNT(*) FILTER (WHERE r.status IN ('PRESENT','ABSENT','LATE'))::int AS total FROM "AttendanceRecord" r JOIN "User" u ON u.id = r."studentId" WHERE u."instituteId" = ${instituteId}`,
-        prisma.auditLog.findMany({ where: { instituteId, action: { notIn: ["LOGIN", "LOGOUT"] } }, orderBy: { createdAt: "desc" }, take: 10, select: { id: true, action: true, adminName: true, adminRole: true, createdAt: true } }),
-      ]);
-      const role = Object.fromEntries(roleGroups.map((g) => [g.role, g._count._all]));
-      const students = role.STUDENT || 0;
-      const attAll = att[0] ? { present: num(att[0].present), total: num(att[0].total) } : { present: 0, total: 0 };
-      const attPct = pct(attAll.present, attAll.total);
-      const em = Object.fromEntries(emailAgg.map((e) => [e.status, e._count._all]));
-      const emailTotal = Object.values(em).reduce((s, n) => s + n, 0);
-      const health = healthOf({ isActive: inst.isActive, students, activeStudents: num(activeRow[0]?.students), lastActivity: lastLogin._max.lastLoginAt, emailTotal, emailFailed: em.FAILED || 0, attPct, attRecords: attAll.total, days });
-
-      const m = (rows) => new Map(rows.map((r) => [r.id, r]));
-      const cnt = new Map(studentsByGroup.map((g) => [g.academicGroupId, g._count._all]));
-      const attM = m(attByGroup), rdM = m(readyByGroup), actM = m(activeByGroup), prM = m(profileByGroup);
-      const roll = (keyFn, labelFn) => {
-        const acc = new Map();
-        for (const g of groups) {
-          const k = keyFn(g); const cur = acc.get(k) || { key: k, label: labelFn(g), students: 0, present: 0, attTotal: 0, rdSum: 0, rdN: 0, active: 0, profileDone: 0 };
-          cur.students += cnt.get(g.id) || 0;
-          const a = attM.get(g.id); if (a) { cur.present += num(a.present); cur.attTotal += num(a.total); }
-          const r = rdM.get(g.id); if (r) { cur.rdSum += num(r.avg) * num(r.students); cur.rdN += num(r.students); }
-          cur.active += num(actM.get(g.id)?.n); cur.profileDone += num(prM.get(g.id)?.done);
-          acc.set(k, cur);
-        }
-        return [...acc.values()].map((c) => ({
-          key: c.key, label: c.label, students: c.students,
-          attendancePercent: pct(c.present, c.attTotal), readinessAvg: c.rdN ? Math.round(c.rdSum / c.rdN) : null,
-          activeStudents: c.active, activePercent: pct(c.active, c.students), profileCompletionPercent: pct(c.profileDone, c.students),
-        })).sort((a, b) => b.students - a.students);
-      };
-      return {
-        counts: { students, staff: role.STAFF || 0, clerks: role.CLERK || 0, instituteAdmins: role.INSTITUTE_ADMIN || 0, departments: new Set(groups.map((g) => g.department.id)).size, sections: groups.length, courses, assessments: tests, liveAssessments: activeTests, upcomingAssessments: upcoming, certificates: certs, talentPoolStudents: talent },
-        activity: { activeUsers: num(activeRow[0]?.users), activeStudents: num(activeRow[0]?.students), activeStudentPercent: pct(num(activeRow[0]?.students), students), codingActivity: num(coding[0]?.n), lastLogin: lastLogin._max.lastLoginAt },
-        attendancePercent: attPct, health,
-        pending: { resultExaminations: resultsPending, documentsToVerify: docsPending, offersToVerify: offersPending, failedEmails: em.FAILED || 0 },
-        departments: roll((g) => g.department.id, (g) => g.department.name),
-        batches: roll((g) => g.batch, (g) => g.batch),
-        recentActivity: activity,
-      };
-    });
+    const data = await loadInstituteCore(inst, days);
 
     res.json({
       generatedAt: new Date().toISOString(), days, healthRules: HEALTH_RULES,
@@ -445,6 +498,73 @@ router.get("/clerk", authenticate, requireRole("CLERK"), attachRequesterInstitut
   } catch (err) {
     console.error("[command/clerk] failed", err);
     res.status(500).json({ error: "Failed to load the clerk dashboard" });
+  }
+});
+
+// ---------------------------------------------------------------- EXPORTS
+// Server-side CSV/XLSX of exactly what the dashboard tables show (same scope, filters and
+// numbers). Spreadsheet-injection safe (sendExport -> safeRow). Every export is audit-logged.
+// Bounded: tables are aggregates (one row per institute / department / batch); the student list is
+// capped so a single request can never load an unbounded result set.
+const STUDENT_EXPORT_CAP = 20000;
+
+router.get("/super/export", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRequesterInstitute, platformLevel, async (req, res) => {
+  try {
+    const days = rangeDays(req.query.days);
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const statusFilter = String(req.query.health || "");
+    const core = await loadSuperCore(days);
+    const rows = core.rows
+      .filter((r) => (!q || r.name.toLowerCase().includes(q) || (r.code || "").toLowerCase().includes(q)) && (!statusFilter || r.health === statusFilter))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((r) => ({
+        Institute: r.name, Code: r.code || "", Status: r.isActive ? "Active" : "Inactive", Health: r.health.replace(/_/g, " "), "Health reasons": r.healthReasons.join("; "),
+        Students: r.students, Staff: r.staff, Clerks: r.clerks, "Institute admins": r.instituteAdmins, [`Active users (${days}d)`]: r.activeUsers,
+        "Courses assigned": r.courses, Assessments: r.assessments, "Attendance %": r.attendancePercent ?? "", "Course completion %": r.courseCompletionPercent ?? "",
+        [`Coding runs (${days}d)`]: r.codingActivity, "Readiness avg %": r.readinessAvg ?? "", [`Certificates (${days}d)`]: r.certificates,
+        "Last login": r.lastActivity ? new Date(r.lastActivity).toISOString() : "",
+      }));
+    await logAudit({ req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId: null, details: { entity: "command-institute-overview", format: req.query.format || "csv", days, rowCount: rows.length } });
+    if (rows.length === 0) return res.status(204).end();
+    sendExport(res, { rows, filenameBase: `codearena-institute-overview-${new Date().toISOString().slice(0, 10)}`, format: req.query.format });
+  } catch (err) {
+    console.error("[command/super/export] failed", err);
+    res.status(500).json({ error: "Export failed" });
+  }
+});
+
+router.get("/institute/export", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+  try {
+    const instituteId = req.requesterInstituteId || String(req.query.instituteId || "");
+    if (!instituteId) return res.status(400).json({ error: "instituteId is required" });
+    const inst = await prisma.institute.findUnique({ where: { id: instituteId }, select: { id: true, name: true, isActive: true, attendanceMinPercent: true } });
+    if (!inst) return res.status(404).json({ error: "Institute not found" });
+    const days = rangeDays(req.query.days);
+    const kind = ["departments", "batches", "students"].includes(req.query.kind) ? req.query.kind : "departments";
+    let rows;
+    if (kind === "students") {
+      const students = await prisma.user.findMany({
+        where: { instituteId, role: "STUDENT" }, orderBy: { name: "asc" }, take: STUDENT_EXPORT_CAP,
+        select: { name: true, rollNumber: true, registrationNumber: true, isActive: true, lastLoginAt: true, createdAt: true, academicGroup: { select: { batch: true, section: true, department: { select: { name: true } } } }, studentProfile: { select: { mandatoryStatus: true } } },
+      });
+      rows = students.map((s) => ({
+        Name: s.name, "Roll number": s.rollNumber || "", "Registration number": s.registrationNumber || "", Department: s.academicGroup?.department.name || "", Batch: s.academicGroup?.batch || "", Section: s.academicGroup?.section || "",
+        Active: s.isActive ? "Yes" : "No", "Profile status": s.studentProfile?.mandatoryStatus || "NOT_STARTED", "Last login": s.lastLoginAt ? s.lastLoginAt.toISOString() : "", "Created": s.createdAt.toISOString(),
+      }));
+    } else {
+      const data = await loadInstituteCore(inst, days);
+      const label = kind === "departments" ? "Department" : "Batch";
+      rows = data[kind].map((r) => ({
+        [label]: r.label, Students: r.students, "Attendance %": r.attendancePercent ?? "", "Course completion %": r.courseCompletionPercent ?? "", "Readiness avg %": r.readinessAvg ?? "",
+        [`Active students (${days}d)`]: r.activeStudents, "Active %": r.activePercent ?? "", "Profiles complete %": r.profileCompletionPercent ?? "",
+      }));
+    }
+    await logAudit({ req, action: AUDIT_ACTIONS.DATA_EXPORTED, actorId: req.user.id, actorName: req.user.name, actorRole: req.user.role, instituteId, details: { entity: `command-institute-${kind}`, format: req.query.format || "csv", rowCount: rows.length } });
+    if (rows.length === 0) return res.status(204).end();
+    sendExport(res, { rows, filenameBase: `codearena-${inst.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${kind}-${new Date().toISOString().slice(0, 10)}`, format: req.query.format });
+  } catch (err) {
+    console.error("[command/institute/export] failed", err);
+    res.status(500).json({ error: "Export failed" });
   }
 });
 

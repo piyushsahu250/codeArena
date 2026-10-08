@@ -168,3 +168,32 @@ export function FullPageSkeleton() {
     </div>
   );
 }
+
+// Authenticated file download (the JWT lives in the axios client, so a plain <a href> can't be used).
+export async function downloadExport(path, params, fallbackName) {
+  const res = await api.get(path, { params, responseType: "blob" });
+  if (res.status === 204) return false;
+  const cd = res.headers?.["content-disposition"] || "";
+  const name = (/filename="([^"]+)"/.exec(cd) || [])[1] || fallbackName;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(res.data); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  return true;
+}
+
+export function ExportButton({ path, params, label = "Export CSV", fallbackName = "export.csv" }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  async function go() {
+    setBusy(true); setMsg("");
+    try { const ok = await downloadExport(path, { format: "csv", ...params }, fallbackName); if (!ok) setMsg("Nothing to export."); }
+    catch { setMsg("Export failed."); }
+    finally { setBusy(false); }
+  }
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <button type="button" className="ad-btn ghost sm" onClick={go} disabled={busy}>{busy ? "Preparing…" : label}</button>
+      {msg && <span className="ad-sub" role="status">{msg}</span>}
+    </span>
+  );
+}

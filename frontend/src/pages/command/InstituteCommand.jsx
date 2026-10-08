@@ -4,36 +4,31 @@ import { ChevronRight } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import {
   useDashboard, PageHeader, Panel, Kpi, StatusBadge, RangePicker, DataTable, PercentCell, Empty, FullPageSkeleton, ErrorLine,
-  fmt, timeAgo, actionLabel,
+  fmt, timeAgo, actionLabel, ExportButton,
 } from "../../components/admin/adKit";
 
-function GroupTable({ rows, label }) {
+function GroupTable({ rows, label, kind, days, instituteId }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("students");
   const view = useMemo(() => {
     const f = rows.filter((r) => !q || r.label.toLowerCase().includes(q.toLowerCase()));
     return [...f].sort((a, b) => (sort === "label" ? a.label.localeCompare(b.label) : (b[sort] ?? -1) - (a[sort] ?? -1)));
   }, [rows, q, sort]);
-  const csv = () => {
-    const head = [label, "Students", "Attendance %", "Readiness avg", "Active %", "Profile completion %"];
-    const body = view.map((r) => [r.label, r.students, r.attendancePercent ?? "", r.readinessAvg ?? "", r.activePercent ?? "", r.profileCompletionPercent ?? ""]);
-    const text = [head, ...body].map((l) => l.map((v) => `"${String(v).replace(/"/g, '""').replace(/^([=+\-@])/, "'$1")}"`).join(",")).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = `${label.toLowerCase()}-performance.csv`; a.click();
-  };
   return (
     <>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         <input className="ad-input" type="search" placeholder={`Search ${label.toLowerCase()}`} aria-label={`Search ${label}`} value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="ad-input" aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="students">Sort: students</option><option value="label">Sort: name</option><option value="attendancePercent">Sort: attendance</option><option value="readinessAvg">Sort: readiness</option><option value="activePercent">Sort: active %</option>
+          <option value="students">Sort: students</option><option value="label">Sort: name</option><option value="attendancePercent">Sort: attendance</option><option value="courseCompletionPercent">Sort: course completion</option><option value="readinessAvg">Sort: readiness</option><option value="activePercent">Sort: active %</option>
         </select>
-        <button type="button" className="ad-btn ghost sm" onClick={csv}>Export CSV</button>
+        <ExportButton path="/command/institute/export" params={{ kind, days, instituteId }} fallbackName={`${kind}.csv`} />
       </div>
       <DataTable caption={`${label} performance`} rows={view} rowKey={(r) => r.key} empty={`No ${label.toLowerCase()} data yet.`}
         columns={[
           { key: "label", header: label, render: (r) => <b>{r.label}</b> },
           { key: "students", header: "Students", right: true, render: (r) => fmt(r.students) },
           { key: "attendancePercent", header: "Attendance", render: (r) => <PercentCell value={r.attendancePercent} /> },
+          { key: "courseCompletionPercent", header: "Course completion", render: (r) => <PercentCell value={r.courseCompletionPercent} /> },
           { key: "readinessAvg", header: "Readiness", render: (r) => <PercentCell value={r.readinessAvg} /> },
           { key: "activePercent", header: "Active students", render: (r) => <PercentCell value={r.activePercent} /> },
           { key: "profileCompletionPercent", header: "Profiles complete", render: (r) => <PercentCell value={r.profileCompletionPercent} /> },
@@ -83,6 +78,7 @@ export default function InstituteCommand() {
                 <Kpi label="Courses assigned" value={fmt(c.courses)} to="/admin/course-assignments" />
                 <Kpi label="Assessments" value={fmt(c.assessments)} foot={`${c.liveAssessments} live · ${c.upcomingAssessments} upcoming`} to="/staff/tests" />
                 <Kpi label="Attendance" value={d.attendancePercent === null ? null : `${d.attendancePercent}%`} to="/staff/attendance/reports" />
+                <Kpi label="Course completion" value={d.courseCompletionPercent === null ? null : `${d.courseCompletionPercent}%`} foot="completed ÷ assigned lessons" />
                 <Kpi label="Coding runs" value={fmt(d.activity.codingActivity)} foot={`accepted, last ${days} d`} />
                 <Kpi label="Certificates" value={fmt(c.certificates)} to="/admin/certificates" />
                 <Kpi label="Talent pool" value={fmt(c.talentPoolStudents)} to="/admin/talent-pools" />
@@ -91,7 +87,8 @@ export default function InstituteCommand() {
 
               <div className="ad-grid main-side">
                 <Panel id="dep" title="Department performance" sub="Students → batches → sections are managed under Academic Groups" to="/admin/academic-groups" linkLabel="Academic groups">
-                  <GroupTable rows={d.departments} label="Department" />
+                  <GroupTable rows={d.departments} label="Department" kind="departments" days={days} instituteId={instituteId} />
+                  <p style={{ margin: "10px 0 0" }}><ExportButton path="/command/institute/export" params={{ kind: "students", days, instituteId }} label="Export student list (CSV)" fallbackName="students.csv" /></p>
                 </Panel>
                 <Panel id="pend" title="Needs your action">
                   <ul className="ad-list">
@@ -104,7 +101,7 @@ export default function InstituteCommand() {
               </div>
 
               <Panel id="batch" title="Batch performance">
-                <GroupTable rows={d.batches} label="Batch" />
+                <GroupTable rows={d.batches} label="Batch" kind="batches" days={days} instituteId={instituteId} />
               </Panel>
 
               <Panel id="act" title="Recent institute activity" to="/admin/audit-log" linkLabel="Full audit log">

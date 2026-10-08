@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import {
   useDashboard, PageHeader, Panel, Kpi, Delta, StatusBadge, RangePicker, DataTable, PercentCell, SeriesChart, Empty, FullPageSkeleton, ErrorLine,
-  fmt, timeAgo, actionLabel,
+  fmt, timeAgo, actionLabel, ExportButton,
 } from "../../components/admin/adKit";
 
 const ROLE_ROWS = [["STUDENT", "Students"], ["STAFF", "Staff"], ["CLERK", "Clerks"], ["INSTITUTE_ADMIN", "Institute admins"]];
@@ -29,6 +29,7 @@ export default function SuperAdminCommand() {
     { key: "courses", header: "Courses", right: true, render: (r) => fmt(r.courses) },
     { key: "assessments", header: "Tests", right: true, render: (r) => fmt(r.assessments) },
     { key: "attendancePercent", header: "Attendance", render: (r) => <PercentCell value={r.attendancePercent} /> },
+    { key: "courseCompletionPercent", header: "Course completion", render: (r) => <PercentCell value={r.courseCompletionPercent} /> },
     { key: "codingActivity", header: "Coding runs", right: true, render: (r) => fmt(r.codingActivity) },
     { key: "readinessAvg", header: "Readiness", render: (r) => <PercentCell value={r.readinessAvg} /> },
     { key: "lastActivity", header: "Last login", render: (r) => timeAgo(r.lastActivity) },
@@ -56,6 +57,7 @@ export default function SuperAdminCommand() {
                 <Kpi label="Tests completed" value={fmt(d.trends.testsCompleted.value)} foot={<Delta t={d.trends.testsCompleted} />} />
                 <Kpi label="Coding runs" value={fmt(t.codingInPeriod)} foot="accepted practice runs" />
                 <Kpi label="Students learning" value={fmt(t.learningStudentsInPeriod)} foot="completed a lesson" />
+                <Kpi label="Course completion" value={t.courseCompletionPercent === null ? null : `${t.courseCompletionPercent}%`} foot="completed ÷ assigned lessons" />
                 <Kpi label="Certificates" value={fmt(d.trends.certificates.value)} foot={<Delta t={d.trends.certificates} />} to="/admin/certificates" />
                 <Kpi label="Talent pool students" value={fmt(t.talentPoolStudents)} to="/admin/talent-pools" />
                 <Kpi label="Live test attempts" value={fmt(d.liveTestAttempts)} foot="in progress right now" />
@@ -88,12 +90,13 @@ export default function SuperAdminCommand() {
                 id="inst" title="Institute overview" sub={`${fmt(d.institutes.total)} institute${d.institutes.total === 1 ? "" : "s"}`}
                 actions={
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <ExportButton path="/command/super/export" params={{ days, q: dq || undefined, health: health || undefined }} fallbackName="institute-overview.csv" />
                     <input className="ad-input" type="search" placeholder="Search institute" aria-label="Search institutes" value={q} onChange={(e) => setQ(e.target.value)} />
                     <select className="ad-input" aria-label="Filter by health" value={health} onChange={(e) => { setHealth(e.target.value); setPage(1); }}>
                       <option value="">All health states</option><option value="CRITICAL">Critical</option><option value="NEEDS_ATTENTION">Needs attention</option><option value="HEALTHY">Healthy</option><option value="INACTIVE">Inactive</option>
                     </select>
                     <select className="ad-input" aria-label="Sort by" value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
-                      <option value="health">Sort: worst health first</option><option value="name">Sort: name</option><option value="students">Sort: students</option><option value="activeUsers">Sort: active users</option><option value="attendancePercent">Sort: attendance</option><option value="lastActivity">Sort: last login</option>
+                      <option value="health">Sort: worst health first</option><option value="name">Sort: name</option><option value="students">Sort: students</option><option value="activeUsers">Sort: active users</option><option value="attendancePercent">Sort: attendance</option><option value="courseCompletionPercent">Sort: course completion</option><option value="lastActivity">Sort: last login</option>
                     </select>
                   </div>
                 }

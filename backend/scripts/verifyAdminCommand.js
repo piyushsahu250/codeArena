@@ -22,6 +22,9 @@ async function login(email, password) {
 async function cleanup() {
   const insts = await prisma.institute.findMany({ where: { name: { startsWith: "ZZ Verify AC " } }, select: { id: true } });
   const ids = insts.map((i) => i.id);
+  const us = await prisma.user.findMany({ where: { email: { startsWith: "verify-ac-", endsWith: "@example.invalid" } }, select: { id: true } });
+  await prisma.certificate.deleteMany({ where: { studentId: { in: us.map((u) => u.id) } } });
+  await prisma.course.deleteMany({ where: { slug: { startsWith: "zz-verify-ac-" } } });
   await prisma.test.deleteMany({ where: { instituteId: { in: ids } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: "verify-ac-", endsWith: "@example.invalid" } } });
   await prisma.institute.deleteMany({ where: { id: { in: ids } } });
@@ -103,6 +106,57 @@ async function cleanup() {
     check("clerk sees only A's documents (1 pending) and no B offers", ck.body.metrics.documentsPending === 1 && ck.body.metrics.offersPending === 0, JSON.stringify(ck.body.metrics));
     check("clerk recent updates contain no institute B students", !ck.body.recent.some((r) => [stuB.id, stuB2.id].includes(r.studentId)));
     check("clerk task center is actionable (links present)", ck.body.tasks.length > 0 && ck.body.tasks.every((t) => t.to && t.count > 0));
+
+    // --- course completion (real lessons, assigned to A only)
+    const course = await prisma.course.create({ data: { slug: `zz-verify-ac-${ts}`, name: `ZZ Verify AC Course ${ts}`, status: "PUBLISHED", isActive: true } });
+    const mod = await prisma.courseModule.create({ data: { courseId: course.id, title: "M1", isActive: true } });
+    const l1 = await prisma.lesson.create({ data: { moduleId: mod.id, title: "L1", isActive: true } });
+    await prisma.lesson.create({ data: { moduleId: mod.id, title: "L2", isActive: true } });
+    await prisma.lesson.create({ data: { moduleId: mod.id, title: "Draft lesson (must not count)", isActive: false } });
+    await prisma.courseInstituteAssignment.create({ data: { courseId: course.id, instituteId: A.id, assignedByUserId: plat.id, assignedByName: "t" } });
+    await prisma.lessonProgress.create({ data: { studentId: stuA.id, lessonId: l1.id, status: "COMPLETED", completedAt: new Date() } });
+    const sup2 = await call(`/command/super?pageSize=100&q=${encodeURIComponent(`ZZ Verify AC`)}`, T.plat);
+    const a2 = sup2.body.institutes.rows.find((r) => r.id === A.id), b2 = sup2.body.institutes.rows.find((r) => r.id === B.id);
+    // cached 45s from the earlier call, so read the institute view (separate cache key, first call) and recompute via a fresh days value
+    const supFresh = await call(`/command/super?days=29&pageSize=100&q=${encodeURIComponent(`ZZ Verify AC`)}`, T.plat);
+    const aF = supFresh.body.institutes.rows.find((r) => r.id === A.id), bF = supFresh.body.institutes.rows.find((r) => r.id === B.id);
+    check("course completion: 1 of 2 live lessons done = 50% (draft lesson ignored)", aF?.courseCompletionPercent === 50, String(aF?.courseCompletionPercent));
+    check("course completion: institute with no assigned course shows null, not 0", bF?.courseCompletionPercent === null);
+    const iA2 = await call("/command/institute?days=29", T.iaA);
+    check("institute view reports the same completion and group rollups carry the field", iA2.body.courseCompletionPercent === 50 && iA2.body.departments.every((d) => "courseCompletionPercent" in d));
+
+    // --- search
+    await prisma.certificate.create({ data: { certificateCode: `CA-ZZAC-${ts}`, type: "MANUAL", studentId: stuA.id, title: "ZZ Verify AC Cert" } });
+    const s1 = await call(`/search?q=${encodeURIComponent("ZZ Verify AC")}`, T.plat);
+    const types = new Set(s1.body.results.map((r) => r.type));
+    check("platform admin search returns institutes, courses and certificates", ["Institute", "Course", "Certificate"].every((t) => types.has(t)), [...types].join(","));
+    const s2 = await call(`/search?q=${encodeURIComponent("verify-ac-")}`, T.plat);
+    const t2 = new Set(s2.body.results.map((r) => r.type));
+    check("platform admin search finds students, staff, clerks and institute admins by email", ["Student", "Staff", "Clerk", "Institute admin"].every((t) => t2.has(t)), [...t2].join(","));
+    check("institute drill-down link is used for platform results", s1.body.results.filter((r) => r.type === "Institute").every((r) => /^\/admin\/institutes\/.+\/overview$/.test(r.url)));
+    const s3 = await call(`/search?q=${encodeURIComponent("verify-ac-")}`, T.iaA);
+    check("institute admin A search never returns institute B people or institutes", s3.status === 200 && !JSON.stringify(s3.body).includes(`ZZ Verify AC B`) && !s3.body.results.some((r) => /Student B|Inst Admin B/i.test(r.label)));
+    check("institute admin A sees own people in search", s3.body.results.some((r) => /Student A/.test(r.label)));
+    check("search with a 1-character query is empty (no scan)", (await call("/search?q=a", T.plat)).body.results.length === 0);
+    check("search results are grouped (same types adjacent)", (() => { const seq = s2.body.results.map((r) => r.type); return seq.every((t, i) => i === 0 || t === seq[i - 1] || !seq.slice(0, i - 1).includes(t)); })());
+
+    // --- exports
+    const raw = async (path, token) => { const r = await fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }); return { status: r.status, type: r.headers.get("content-type") || "", text: await r.text() }; };
+    check("export requires login", (await raw("/command/super/export")).status === 401);
+    check("institute admin cannot use the global export", (await raw("/command/super/export", T.iaA)).status === 403);
+    check("staff / clerk cannot export the global or institute tables", (await raw("/command/super/export", T.stfA)).status === 403 && (await raw("/command/institute/export", T.clkA)).status === 403);
+    const ex = await raw(`/command/super/export?q=${encodeURIComponent("ZZ Verify AC")}&days=29`, T.plat);
+    check("global export is CSV with the table columns and both test institutes", ex.status === 200 && /text\/csv/.test(ex.type) && /Course completion %/.test(ex.text) && ex.text.includes(`ZZ Verify AC A ${ts}`) && ex.text.includes(`ZZ Verify AC B ${ts}`));
+    check("export honours the search filter (only matching institutes)", (ex.text.match(/\n/g) || []).length <= 4);
+    check("export with no matches returns 204, not an empty file", (await raw(`/command/super/export?q=${encodeURIComponent("no-such-institute-xyz")}`, T.plat)).status === 204);
+    const ed = await raw("/command/institute/export?kind=departments", T.iaA);
+    check("institute admin can export their own departments (or 204 when none exist)", [200, 204].includes(ed.status));
+    const es = await raw(`/command/institute/export?kind=students&instituteId=${B.id}`, T.iaA);
+    check("institute admin A asking to export B's students gets only A's", es.status === 200 && es.text.includes("Student A") && !es.text.includes("Student B"));
+    const esB = await raw(`/command/institute/export?kind=students&instituteId=${B.id}`, T.plat);
+    check("platform admin can export institute B's students", esB.status === 200 && esB.text.includes("Student B") && !esB.text.includes("Student A"));
+    const audit = await prisma.auditLog.count({ where: { action: "DATA_EXPORTED", createdAt: { gte: new Date(ts) }, details: { path: ["entity"], string_starts_with: "command-" } } });
+    check("every export is audit-logged", audit >= 3, String(audit));
 
     // --- latency
     const times = [];

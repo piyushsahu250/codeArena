@@ -49,7 +49,7 @@ export default function GlobalSearch() {
     <div className="ca-topbar-search" ref={boxRef}>
       <Search />
       <input
-        placeholder="Search modules, tests, students…"
+        placeholder="Search students, staff, institutes, courses…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onFocus={() => q.trim().length >= 2 && setOpen(true)}
@@ -59,10 +59,10 @@ export default function GlobalSearch() {
           {loading && <div className="ca-dropdown-item">Searching…</div>}
           {!loading && results.length === 0 && <div className="ca-dropdown-item">No results for "{q}"</div>}
           {!loading && results.map((r, i) => (
-            <button key={i} className="ca-dropdown-item" onClick={() => go(r.url)}>
-              <span className="mono" style={{ fontSize: 10, opacity: 0.6, marginRight: 6 }}>{r.type}</span>
-              {r.label}
-            </button>
+            <div key={i}>
+              {(i === 0 || results[i - 1].type !== r.type) && <div className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em", opacity: 0.6, padding: "8px 12px 2px" }}>{r.type}</div>}
+              <button className="ca-dropdown-item" onClick={() => go(r.url)}>{r.label}</button>
+            </div>
           ))}
         </div>
       )}
