@@ -49,6 +49,10 @@ jobs:
       - name: Validate Prisma schema
         run: npx prisma validate
       - run: npx prisma generate
+      # Unit tests only (the *.integration.test.js files need a live Postgres). 169 tests, all passing in the production container on
+      # 2026-10-08; they cover scoring, parsing, proctoring severity, option shuffling, AI state machine and similar pure logic.
+      - name: Unit tests
+        run: npm run test:unit
 
   frontend:
     runs-on: ubuntu-latest
