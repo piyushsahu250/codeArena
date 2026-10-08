@@ -212,6 +212,8 @@ export default function TestTaking() {
   // it honestly instead. Cleared the moment any autosave (MCQ or code) next succeeds.
   const [saveFailed, setSaveFailed] = useState(false);
   const autoSaveTimeoutRef = useRef(null);
+  // Saves already sent but not yet answered: finalize waits for these too, otherwise an answer saved on navigating away could still be in flight when the test is graded.
+  const inflightSavesRef = useRef(new Set());
   const pendingAutoSaveRef = useRef(null); // MCQ: { questionId, selected }
   const codeAutoSaveTimeoutRef = useRef(null);
   const pendingCodeAutoSaveRef = useRef(null); // Coding: { questionId, language, code }
@@ -1243,7 +1245,7 @@ export default function TestTaking() {
       const body = pending.numericResponse !== undefined
         ? { attemptId, questionId: pending.questionId, numericResponse: pending.numericResponse }
         : { attemptId, questionId: pending.questionId, selectedOptions: pending.selected };
-      await api.post("/submissions/submit", body);
+      await trackSave(api.post("/submissions/submit", body));
       flashSaved();
     } catch {
       // The selection stays in local state and gets retried on the next change, or flushed again
@@ -1273,7 +1275,7 @@ export default function TestTaking() {
     pendingCodeAutoSaveRef.current = null;
     setSavingAnswer(true);
     try {
-      await api.post("/submissions/autosave", { attemptId, questionId: pending.questionId, language: pending.language, code: pending.code, seq: pending.seq });
+      await trackSave(api.post("/submissions/autosave", { attemptId, questionId: pending.questionId, language: pending.language, code: pending.code, seq: pending.seq }));
       flashSaved();
     } catch {
       // Same "tell the student, don't just go silent" reasoning as MCQ auto-save above. Code
@@ -1282,6 +1284,13 @@ export default function TestTaking() {
     } finally {
       setSavingAnswer(false);
     }
+  }
+
+  function trackSave(promise) {
+    inflightSavesRef.current.add(promise);
+    const done = () => inflightSavesRef.current.delete(promise);
+    promise.then(done, done);
+    return promise;
   }
 
   function flashSaved() {
@@ -1466,6 +1475,7 @@ export default function TestTaking() {
     // lost to a race between submitting and the pending save timer.
     if (pendingAutoSaveRef.current) await flushAutoSave();
     if (pendingCodeAutoSaveRef.current) await flushCodeAutoSave();
+    await Promise.allSettled([...inflightSavesRef.current]);
     finalizingRef.current = true;
     setFinalizing(true);
     setFinalizeFailed(false);
