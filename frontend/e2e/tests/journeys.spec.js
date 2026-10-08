@@ -21,10 +21,10 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
   await page.getByRole("button", { name: /Begin Assessment/ }).click();
 
   // the first question appears; answer both
-  await expect(page.getByText(/E2E question d: pick option B/)).toBeVisible();
+  await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
   await page.getByText("Option B").first().click();
   await page.getByRole("button", { name: /Next/ }).first().click();
-  await expect(page.getByText(/E2E question d: pick option B/)).toBeVisible();
+  await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
   await page.getByText("Option B").first().click();
 
   await page.getByRole("button", { name: "Submit Test" }).click();
@@ -57,7 +57,7 @@ test("secure session: a second tab takes over a PROCTORED test and the first is 
   await expect(p1.getByText("Secure connection (HTTPS)")).toBeVisible();
   await p1.getByLabel("I have read and understood the instructions.").check();
   await p1.getByRole("button", { name: /Begin Assessment/ }).click();
-  await expect(p1.getByText(/E2E question d: pick option B/)).toBeVisible();
+  await expect(p1.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
 
   const ctx2 = await browser.newContext();
   const p2 = await ctx2.newPage();
@@ -66,7 +66,7 @@ test("secure session: a second tab takes over a PROCTORED test and the first is 
   await p2.getByRole("button", { name: "Run security check" }).click();
   await p2.getByLabel("I have read and understood the instructions.").check();
   await p2.getByRole("button", { name: /Begin Assessment/ }).click();
-  await expect(p2.getByText(/E2E question d: pick option B/)).toBeVisible();
+  await expect(p2.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
 
   // the first tab's next save is refused with 409 and it shows the blocking message
   await p1.getByText("Option B").first().click();
