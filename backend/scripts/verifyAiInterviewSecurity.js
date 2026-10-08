@@ -111,7 +111,7 @@ async function cleanup() {
     check("the student cannot answer an ended interview", (await call("POST", `/ai-interviews/${id2}/answer`, stu.token, { answerText: "x" }, {})).status === 409);
     check("every counted strike carries a strike marker in its evidence", (await prisma.examSecurityEvent.count({ where: { attemptKind: "AI_INTERVIEW", attemptId: id2 } })) >= 6);
     const tl2 = await call("GET", `/exam-security/exam-attempts/${id2}/timeline?kind=AI_INTERVIEW`, adA.token);
-    check("the timeline ends with the automatic end of the interview", tl2.status === 200 && tl2.body.timeline[tl2.body.timeline.length - 1].type === "COMPLETED");
+    check("the timeline ends with the automatic end of the interview", tl2.status === 200 && tl2.body.timeline[tl2.body.timeline.length - 1].type === "ENDED_BY_STRIKE_LIMIT");
     const idStd = await mkOpen("TECHNICAL");
     const ignored = await post(idStd, [{ type: "TAB_SWITCH" }, { type: "TAB_SWITCH" }, { type: "TAB_SWITCH" }]);
     check("a STANDARD (practice) interview ignores events: no strikes, never ended", ignored.body.ignored === true && (await prisma.aiInterviewSession.findUnique({ where: { id: idStd } })).status === "QUESTIONING");

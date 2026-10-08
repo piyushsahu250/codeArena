@@ -354,7 +354,7 @@ router.get("/exam-attempts/:attemptId/timeline", authenticate, requireRole(...ST
       { at: head.startedAt, type: "EXAM_STARTED", source: "system" },
       ...classic.map((c) => ({ id: c.id, at: c.createdAt, type: c.type, severity: c.severity, penalized: c.penalized, source: "proctoring" })),
       ...extra.map((e) => ({ id: e.id, at: e.createdAt, type: e.type, severity: e.severity, metadata: e.metadata, reviewable: true, reviewStatus: e.reviewStatus, reviewNote: e.reviewNote, source: "security" })),
-      ...(head.submittedAt ? [{ at: head.submittedAt, type: ["AUTO_SUBMITTED", "TERMINATED"].includes(head.status) ? head.status : "SUBMITTED", source: "system" }] : []),
+      ...(head.submittedAt ? [{ at: head.submittedAt, type: head.terminationReason === "MAX_VIOLATIONS" ? "ENDED_BY_STRIKE_LIMIT" : ["AUTO_SUBMITTED", "TERMINATED"].includes(head.status) ? head.status : "SUBMITTED", source: "system" }] : []),
     ].sort((a, b) => new Date(a.at) - new Date(b.at));
     const risk = X.computeRisk([...classic, ...extra]);
     res.json({ attemptId: head.id, student: head.student, status: head.status, risk: risk.level, riskScore: risk.score, byType: risk.byType, timeline });
