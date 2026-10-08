@@ -76,7 +76,8 @@ const login = async (email, pw) => (await call("POST", "/auth/login", null, { em
     check("the client cannot choose severity: the third SUSPICIOUS event is a strike", v3.status === 200 && v3.body.penalized === true && v3.body.violationCount === 1, JSON.stringify(v3.body));
     const mon = await call("GET", `/exam-security/readiness/${subject.id}/monitor`, instAdmin.token);
     check("institute admin sees the readiness monitor with this attempt and counts", mon.status === 200 && mon.body.rows.some((r) => r.attemptId === A.id && r.counts.focusLoss >= 2 && r.counts.sessionConflicts >= 1), JSON.stringify(mon.body?.rows?.[0]?.counts));
-    check("another institute's admin cannot open it", [403, 404].includes((await call("GET", `/exam-security/readiness/${subject.id}/monitor`, otherAdmin.token)).status));
+    const mo = await call("GET", `/exam-security/readiness/${subject.id}/monitor`, otherAdmin.token);
+    check("another institute's admin cannot see this student's attempt (403/404, or only their own institute's rows for a platform-wide subject)", [403, 404].includes(mo.status) || (mo.status === 200 && !mo.body.rows.some((r) => r.attemptId === A.id)));
     check("students cannot open the monitor", (await call("GET", `/exam-security/readiness/${subject.id}/monitor`, stu.token)).status === 403);
     const tl = await call("GET", `/exam-security/exam-attempts/${A.id}/timeline?kind=READINESS`, instAdmin.token);
     check("timeline (kind=READINESS) shows start, signals and the conflict", tl.status === 200 && tl.body.timeline[0].type === "EXAM_STARTED" && tl.body.timeline.some((e) => e.type === "SESSION_REPLACED") && tl.body.timeline.some((e) => e.type === "POSSIBLE_EXTERNAL_ASSISTANT"));
