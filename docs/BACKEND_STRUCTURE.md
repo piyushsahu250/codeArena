@@ -48,3 +48,10 @@ Limit: it is still one host. The service can now be moved to another machine (se
 Coverage: login and logout, role-based access, all five dashboards, responsive layout 320-1920 px, light and dark contrast (WCAG AA), accessibility (axe), a student taking and submitting a test, a finished test not restarting, a PROCTORED second-tab takeover, and no question content before the attempt starts.
 
 Not covered: a real mobile device, other browsers than Chromium, the secure exam desktop client, load.
+
+## 5. Results at the time of writing (2026-10-09)
+
+- Browser E2E on the AWS host: 48 passed, 0 failed (Chromium only), after fixing what the suite found: dark-mode contrast, an unnamed progress bar, and a test-taking bug where an answer could be lost when a student answered, moved to the next question and answered again before the first autosave had been sent (`TestTaking.jsx`: a pending answer is now sent before it can be replaced, and submitting waits for saves still in flight). The suite includes a regression test for exactly that sequence.
+- Judge service live and verified (`verifyJudgeService.js` 11/11, fallback with the judge stopped passed).
+- Permissions verified (`verifyPermissions.js` all checks), 2 modules on them.
+- The exact cause of the lost answer was inferred from request traces and the fix confirmed by the test turning green; it was not isolated further.
