@@ -21,7 +21,7 @@ export function watchCodeInsertion(editor, { charThreshold, lineThreshold, onIns
 // Batched evidence reporter: events queue locally and go out in one request every few seconds (and when the tab is
 // hidden or closing), never per keypress/mousemove/scroll. Failures are retried with the next batch; losing a weak
 // signal must never affect the exam itself.
-export function createEventReporter({ getAttemptId, getSessionId, flushMs = 10000, maxQueue = 50 }) {
+export function createEventReporter({ getAttemptId, getSessionId, send, flushMs = 10000, maxQueue = 50 }) {
   let queue = [];
   let timer = null;
   async function flush() {
@@ -29,7 +29,8 @@ export function createEventReporter({ getAttemptId, getSessionId, flushMs = 1000
     if (!attemptId || queue.length === 0) return;
     const batch = queue.splice(0, 25);
     try {
-      await api.post("/exam-security/events", { attemptId, events: batch }, { headers: { "X-Exam-Session": getSessionId?.() || "" } });
+      if (send) await send(batch, attemptId);
+      else await api.post("/exam-security/events", { attemptId, events: batch }, { headers: { "X-Exam-Session": getSessionId?.() || "" } });
     } catch {
       queue = [...batch, ...queue].slice(0, maxQueue); // keep for the next flush, bounded
     }

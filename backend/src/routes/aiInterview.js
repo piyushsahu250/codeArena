@@ -16,6 +16,9 @@ const { buildCompetencyPlan, selectNextObjective, recordObjectiveAsked } = requi
 const { aggregateScores, aggregateSkillScores, decideOutcome, DECISION_RULE_VERSION } = require("../services/aiInterview/scoring");
 const { processAnswer, publicEvaluation } = require("../services/aiInterview/answerProcessor");
 const { mintTicket } = require("../services/aiInterview/voiceTickets");
+const SecX = require("../utils/testExamSecurity");
+const XS = require("../utils/examSecurity");
+const { VIOLATION_SEVERITY } = require("../utils/proctoringSeverity");
 
 const router = express.Router();
 
@@ -30,6 +33,19 @@ const VALID_INTERVIEW_TYPES = [
   "MIXED", "COMPANY_SPECIFIC", "PLACEMENT", "AI_MOCK",
 ];
 const VALID_EXPERIENCE_LEVELS = ["FRESHER", "EXPERIENCED", "INTERN", "ENTRY_LEVEL", "JUNIOR", "MID_LEVEL", "SENIOR", "LEAD", "MANAGER"];
+
+// ---- secure-assessment model (shared with tests / readiness / mock interviews, see utils/testExamSecurity.js) ----
+// Phones are refused at the server for PROCTORED interview types; one active session per interview; observable signals are stored as
+// evidence for human review. This engine has no strike counter and never terminates an interview because of a signal.
+function phoneRefused(req, res, level) {
+  const failure = SecX.startRequirementFailure(req, SecX.policyOf({ securityLevel: level }));
+  if (!failure) return false;
+  res.status(403).json(failure);
+  return true;
+}
+const AI_EVENT_TYPES = new Set(["FULLSCREEN_EXIT", "TAB_SWITCH", "TAB_SWITCH_BRIEF", "POSSIBLE_EXTERNAL_ASSISTANT", "SPLIT_SCREEN_SUSPECTED", "SCREEN_OVERLAY_DETECTED", "COPY", "PASTE", "CUT", "RIGHT_CLICK", "DRAG_ATTEMPT", "DEVTOOLS", "ORIENTATION_CHANGE", "NETWORK_DISCONNECT", "NETWORK_RECONNECT"]);
+const SEV_TO_BAND = { CONFIRMED_VIOLATION: "HIGH", SUSPICIOUS: "MEDIUM", INTERRUPTION: "LOW", NORMAL: "LOW" };
+const eventLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, keyGenerator: (req) => req.user.id });
 
 // Ownership check reused by every route below — a student may only ever act on their OWN session.
 // 404 (not 403) on mismatch, same "don't confirm another student's session even exists" pattern
@@ -64,6 +80,8 @@ router.post("/", authenticate, requireRole("STUDENT"), attachRequesterInstitute,
       select: { skills: true, projects: true, experience: true },
     });
 
+    const securityLevel = SecX.aiInterviewLevelFor(interviewType);
+    if (phoneRefused(req, res, securityLevel)) return;
     const competencyPlan = buildCompetencyPlan({ targetSkills, durationMin: duration });
 
     // "Company-Style" interviews previously had no actual company context anywhere — the setup UI
@@ -93,6 +111,7 @@ router.post("/", authenticate, requireRole("STUDENT"), attachRequesterInstitute,
         resumeSnapshot: resume || null,
         jobDescription: (companyContext + trimmedJobDescription) || null,
         status: "CREATED",
+        securityLevel,
       },
     });
 
@@ -120,7 +139,7 @@ router.get("/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
           select: { id: true, turnIndex: true, questionText: true, questionType: true },
         })
       : null;
-    res.json({ ...session, remainingSeconds, competencyPlan: undefined, currentQuestion: currentTurn }); // hidden plan never leaves the server, spec §34
+    res.json({ ...session, sessionId: undefined, security: XS.clientPolicy(SecX.policyOf({ securityLevel: session.securityLevel })), remainingSeconds, competencyPlan: undefined, currentQuestion: currentTurn }); // hidden plan never leaves the server, spec §34
   } catch (err) {
     console.error("[ai-interviews] get session failed:", err.message);
     res.status(500).json({ error: "Failed to load interview session" });
@@ -137,6 +156,7 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), createLimiter, a
   try {
     const session = await loadOwnSession(req, res);
     if (!session) return;
+    if (phoneRefused(req, res, session.securityLevel)) return;
     if (!canTransition(session.status, "INTRODUCTION")) {
       return res.status(409).json({ error: `Cannot start an interview from status ${session.status}` });
     }
@@ -194,6 +214,7 @@ router.post("/:id/answer", authenticate, requireRole("STUDENT"), answerLimiter, 
   try {
     const session = await loadOwnSession(req, res);
     if (!session) return;
+    if (!(await SecX.enforceAiInterviewSession(req, res, session))) return;
     if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) {
       return res.status(409).json({ error: `No question is currently awaiting an answer (status: ${session.status})` });
     }
@@ -237,6 +258,7 @@ router.post("/:id/voice-session", authenticate, requireRole("STUDENT"), createLi
   try {
     const session = await loadOwnSession(req, res);
     if (!session) return;
+    if (phoneRefused(req, res, session.securityLevel)) return;
     if (session.status !== "CREATED" && !ACTIVE_QUESTIONING_STATES.includes(session.status)) {
       return res.status(409).json({ error: `Cannot start voice for an interview in status ${session.status}` });
     }
@@ -263,6 +285,7 @@ router.post("/:id/complete", authenticate, requireRole("STUDENT"), async (req, r
   try {
     const session = await loadOwnSession(req, res);
     if (!session) return;
+    if (!(await SecX.enforceAiInterviewSession(req, res, session))) return;
     if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) {
       return res.status(409).json({ error: `Cannot complete an interview from status ${session.status}` });
     }
@@ -276,6 +299,55 @@ router.post("/:id/complete", authenticate, requireRole("STUDENT"), async (req, r
   } catch (err) {
     console.error("[ai-interviews] complete failed:", err.message);
     res.status(500).json({ error: "Failed to complete interview session" });
+  }
+});
+
+// POST /api/ai-interviews/:id/claim — the explicit "start / resume" entry point of the one-active-session rule. The newest claim
+// owns the interview; REST answers must carry the returned id in X-Exam-Session (the voice WebSocket already keeps only the newest
+// connection per interview). Refuses phones for PROCTORED types. A page that never claims (older bundle) is simply not enforced.
+router.post("/:id/claim", authenticate, requireRole("STUDENT"), createLimiter, async (req, res) => {
+  try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    if (phoneRefused(req, res, session.securityLevel)) return;
+    if (session.status !== "CREATED" && !ACTIVE_QUESTIONING_STATES.includes(session.status)) {
+      return res.status(409).json({ error: `This interview is already ${session.status.toLowerCase().replace(/_/g, " ")}` });
+    }
+    const sessionId = SecX.newSessionId();
+    await prisma.aiInterviewSession.update({ where: { id: session.id }, data: { sessionId } });
+    res.json({ sessionId, security: XS.clientPolicy(SecX.policyOf({ securityLevel: session.securityLevel })) });
+  } catch (err) {
+    console.error("[ai-interviews] claim failed:", err.message);
+    res.status(500).json({ error: "Failed to start the secure session" });
+  }
+});
+
+// POST /api/ai-interviews/:id/events — batched observable signals (fullscreen exit, focus loss, split screen, clipboard ...) for
+// human review. The client sends only a type + small metadata; the SERVER assigns severity from the shared taxonomy. Evidence only:
+// nothing here ends or fails an interview. Capped per interview so the table can never grow without bound.
+router.post("/:id/events", authenticate, requireRole("STUDENT"), eventLimiter, async (req, res) => {
+  try {
+    const session = await loadOwnSession(req, res);
+    if (!session) return;
+    if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) return res.json({ accepted: 0, closed: true });
+    const events = Array.isArray(req.body?.events) ? req.body.events.slice(0, 25) : [];
+    if (events.length === 0) return res.status(400).json({ error: "events must be a non-empty array" });
+    const existing = await prisma.examSecurityEvent.count({ where: { attemptKind: "AI_INTERVIEW", attemptId: session.id } });
+    if (existing >= 2000) return res.json({ accepted: 0, capped: true });
+    const rows = [];
+    for (const ev of events) {
+      const type = String(ev?.type || "").toUpperCase();
+      if (!AI_EVENT_TYPES.has(type)) continue;
+      rows.push({
+        attemptKind: "AI_INTERVIEW", attemptId: session.id, studentId: req.user.id, testId: null,
+        type, severity: SEV_TO_BAND[VIOLATION_SEVERITY[type] || "INTERRUPTION"] || "LOW", metadata: XS.cleanMetadata(ev.metadata),
+      });
+    }
+    if (rows.length) await prisma.examSecurityEvent.createMany({ data: rows });
+    res.json({ accepted: rows.length });
+  } catch (err) {
+    console.error("[ai-interviews] events failed:", err.message);
+    res.status(500).json({ error: "Failed to record events" });
   }
 });
 

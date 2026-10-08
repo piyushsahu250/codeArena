@@ -108,3 +108,12 @@ module.exports = {
   enforceReadinessSession, readinessSecuritySnapshot, readinessPolicySource,
   INTERVIEW_LEVEL_BY_TYPE, interviewTypeOf, interviewLevelFor, enforceInterviewSession,
 };
+
+// -- AI voice interview: level from the interview TYPE (server-decided). Placement-style and mock types are PROCTORED; free practice
+// types stay STANDARD. Evidence only: this engine has no strike counter and never auto-terminates (a deliberate, documented product choice).
+const AI_INTERVIEW_LEVEL_BY_TYPE = { PLACEMENT: "PROCTORED", COMPANY_SPECIFIC: "PROCTORED", AI_MOCK: "PROCTORED" };
+const aiInterviewLevelFor = (interviewType) => AI_INTERVIEW_LEVEL_BY_TYPE[interviewType] || "STANDARD";
+const enforceAiInterviewSession = (req, res, s) => enforceSession(req, res, { kind: "AI_INTERVIEW", attemptId: s.id, studentId: s.studentId, testId: null, sessionId: s.sessionId, policySource: { securityLevel: s.securityLevel } });
+module.exports.AI_INTERVIEW_LEVEL_BY_TYPE = AI_INTERVIEW_LEVEL_BY_TYPE;
+module.exports.aiInterviewLevelFor = aiInterviewLevelFor;
+module.exports.enforceAiInterviewSession = enforceAiInterviewSession;

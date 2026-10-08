@@ -299,10 +299,30 @@ router.get("/interviews/monitor", authenticate, requireRole(...STAFF), attachReq
   } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load monitor" }); }
 });
 
+// AI VOICE INTERVIEW: one row per session in the caller's institute scope (evidence is ExamSecurityEvent kind AI_INTERVIEW only).
+router.get("/ai-interviews/monitor", authenticate, requireRole(...STAFF), attachRequesterInstitute, async (req, res) => {
+  try {
+    const studentScope = req.requesterInstituteId ? { instituteId: req.requesterInstituteId } : {};
+    const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 14));
+    const all = await prisma.aiInterviewSession.findMany({
+      where: { student: studentScope, createdAt: { gte: new Date(Date.now() - days * 86400000) }, status: { not: "CREATED" } }, orderBy: { createdAt: "desc" }, take: 3000,
+      select: { id: true, status: true, startedAt: true, completedAt: true, expiresAt: true, interviewType: true, securityLevel: true, student: { select: { id: true, name: true, registrationNumber: true, rollNumber: true, department: true } } },
+    });
+    const ids = all.map((a) => a.id);
+    const extra = ids.length ? await prisma.examSecurityEvent.findMany({ where: { attemptKind: "AI_INTERVIEW", attemptId: { in: ids } }, select: { attemptId: true, type: true, severity: true, reviewStatus: true, createdAt: true } }) : [];
+    const active = new Set(["INTRODUCTION", "QUESTIONING", "FOLLOW_UP", "DEEP_DIVE", "SKILL_TRANSITION", "FINAL_QUESTION"]);
+    const attempts = all.map((a) => ({
+      attemptId: a.id, student: a.student, status: active.has(a.status) ? "IN_PROGRESS" : a.status, startedAt: a.startedAt || a.createdAt, submittedAt: a.completedAt, strikes: 0,
+      label: `${a.interviewType}${a.securityLevel === "PROCTORED" ? " · proctored" : ""}`, deadlineAt: a.expiresAt ? new Date(a.expiresAt).getTime() : null,
+    }));
+    res.json(monitorResponse({ req, title: { id: "ai-interviews", title: `AI voice interviews (last ${days} days)` }, policy: X.clientPolicy(policyOf({ securityLevel: "PROCTORED" })), scored: buildMonitorRows(attempts, [], extra) }));
+  } catch (err) { console.error(err); res.status(500).json({ error: "Failed to load monitor" }); }
+});
+
 // Timeline for one attempt of any kind: ?kind=TEST (default) | READINESS | INTERVIEW. Scope checks are per kind and all institute-bound.
 router.get("/exam-attempts/:attemptId/timeline", authenticate, requireRole(...STAFF), attachRequesterInstitute, async (req, res) => {
   try {
-    const kind = ["READINESS", "INTERVIEW"].includes(req.query.kind) ? req.query.kind : "TEST";
+    const kind = ["READINESS", "INTERVIEW", "AI_INTERVIEW"].includes(req.query.kind) ? req.query.kind : "TEST";
     const id = req.params.attemptId;
     let head, classic;
     const inst = req.requesterInstituteId;
@@ -318,6 +338,11 @@ router.get("/exam-attempts/:attemptId/timeline", authenticate, requireRole(...ST
       if (inst && (a.student.instituteId !== inst || (a.subject.instituteId && a.subject.instituteId !== inst))) return res.status(403).json({ error: "Not allowed" });
       if (req.user.role === "STAFF" && a.subject.createdById && a.subject.createdById !== req.user.id) return res.status(403).json({ error: "Not allowed" });
       head = a; classic = await prisma.readinessViolation.findMany({ where: { assessmentId: id }, orderBy: { createdAt: "asc" }, take: 500 });
+    } else if (kind === "AI_INTERVIEW") {
+      const a = await prisma.aiInterviewSession.findUnique({ where: { id }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } } } });
+      if (!a) return res.status(404).json({ error: "Attempt not found" });
+      if (inst && a.student.instituteId !== inst) return res.status(403).json({ error: "Not allowed" });
+      head = { ...a, startedAt: a.startedAt || a.createdAt, submittedAt: a.completedAt }; classic = [];
     } else {
       const a = await prisma.interviewSession.findUnique({ where: { id }, include: { student: { select: { id: true, name: true, instituteId: true, registrationNumber: true } } } });
       if (!a) return res.status(404).json({ error: "Attempt not found" });
@@ -345,7 +370,7 @@ router.get("/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTI
     const since = new Date(Date.now() - hours * 3600 * 1000);
     const scope = inst ? { instituteId: inst } : {};
     const instSql = inst ? Prisma.sql`AND u."instituteId" = ${inst}` : Prisma.empty;
-    const [activeTests, activeCoding, newer, classic, penalizedAttempts, byInstitute, activeReadiness, activeInterviews, classicR, classicI] = await Promise.all([
+    const [activeTests, activeCoding, newer, classic, penalizedAttempts, byInstitute, activeReadiness, activeInterviews, classicR, classicI, activeAi] = await Promise.all([
       prisma.testAttempt.count({ where: { status: "IN_PROGRESS", student: scope } }),
       prisma.moduleCodingAttempt.count({ where: { status: "IN_PROGRESS", student: scope } }),
       prisma.$queryRaw`SELECT e.type, COUNT(*)::int AS n FROM "ExamSecurityEvent" e JOIN "User" u ON u.id = e."studentId" WHERE e."createdAt" >= ${since} ${instSql} GROUP BY e.type`,
@@ -356,13 +381,14 @@ router.get("/overview", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTI
       prisma.interviewSession.count({ where: { status: "IN_PROGRESS", student: scope } }),
       prisma.$queryRaw`SELECT v.type, COUNT(*)::int AS n FROM "ReadinessViolation" v JOIN "ReadinessAssessment" a ON a.id = v."assessmentId" JOIN "User" u ON u.id = a."studentId" WHERE v."createdAt" >= ${since} ${instSql} GROUP BY v.type`,
       prisma.$queryRaw`SELECT v.type, COUNT(*)::int AS n FROM "InterviewViolation" v JOIN "InterviewSession" a ON a.id = v."sessionId" JOIN "User" u ON u.id = a."studentId" WHERE v."createdAt" >= ${since} ${instSql} GROUP BY v.type`,
+      prisma.aiInterviewSession.count({ where: { status: { in: ["INTRODUCTION", "QUESTIONING", "FOLLOW_UP", "DEEP_DIVE", "SKILL_TRANSITION", "FINAL_QUESTION"] }, student: scope } }),
     ]);
     const totals = {};
     for (const r of [...newer, ...classic, ...classicR, ...classicI]) totals[r.type] = (totals[r.type] || 0) + Number(r.n);
     const sum = (...t) => t.reduce((s, k) => s + (totals[k] || 0), 0);
     res.json({
       hours, scope: inst ? "INSTITUTE" : "PLATFORM",
-      live: { testAttempts: activeTests, codingAttempts: activeCoding, readinessAttempts: activeReadiness, interviewSessions: activeInterviews, studentsTesting: activeTests + activeCoding + activeReadiness + activeInterviews },
+      live: { testAttempts: activeTests, codingAttempts: activeCoding, readinessAttempts: activeReadiness, interviewSessions: activeInterviews, aiInterviewSessions: activeAi, studentsTesting: activeTests + activeCoding + activeReadiness + activeInterviews + activeAi },
       last: {
         attemptsWithStrikes: Number(penalizedAttempts[0]?.n || 0),
         fullscreenExits: sum("FULLSCREEN_EXIT"), tabSwitches: sum("TAB_SWITCH", "TAB_SWITCH_BRIEF", "PAGE_HIDDEN"),

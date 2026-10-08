@@ -23,6 +23,7 @@ function Tile({ label, value, tone }) {
 const KINDS = {
   test: { path: (id) => `/exam-security/exams/${id}/monitor`, query: "", title: "Assessment security monitor", back: (id) => ({ to: `/staff/tests/${id}/results`, label: "Test results" }) },
   readiness: { path: (id) => `/exam-security/readiness/${id}/monitor`, query: "?kind=READINESS", title: "Readiness test security monitor", back: () => ({ to: "/staff/readiness-subjects", label: "Readiness tests" }) },
+  ai: { path: () => "/exam-security/ai-interviews/monitor", query: "?kind=AI_INTERVIEW", title: "AI voice interview security monitor", back: () => ({ to: "/staff/interview-reports", label: "Interview reports" }) },
   interviews: { path: () => "/exam-security/interviews/monitor", query: "?kind=INTERVIEW", title: "Mock interview security monitor", back: () => ({ to: "/staff/interviews", label: "Mock interviews" }) },
 };
 

@@ -3135,6 +3135,8 @@ enum AiInterviewDecision {
 // coverage, not a fixed question list; the engine consults and updates it
 // every turn but never exposes it to the candidate.
 model AiInterviewSession {
+  sessionId       String? // one-active-session control, see utils/testExamSecurity.js
+  securityLevel   String   @default("STANDARD") // set by the server from the interview type, never by the client
   id              String   @id @default(uuid())
   student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId       String

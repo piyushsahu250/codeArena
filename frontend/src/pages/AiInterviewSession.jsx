@@ -8,6 +8,9 @@ import { playPcm16, stopPlayback, closePcmPlayer } from "../utils/pcmPlayer";
 import { aiInterviewVoiceWsUrl } from "../utils/wsUrl";
 import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
+import { useExamSession } from "../hooks/useExamSession";
+import { runSecurityCheck, createFocusLossSignal, createSplitScreenWatch } from "../utils/secureAssessment";
+import { createEventReporter } from "../utils/examSecurityClient";
 import "./aiInterview.css";
 
 // The live voice-interview screen — the actual real-time loop:
@@ -49,6 +52,9 @@ export default function AiInterviewSession() {
   // wired in, via the same underlying fullscreenCompat.js/tabSwitchSignal.js utilities that hook
   // itself uses (shared primitives, not shared exam-lockdown behavior).
   const [fullscreenOk, setFullscreenOk] = useState(true);
+  const { replaced: sessionReplaced, setSession: setExamSession } = useExamSession();
+  const [secCheck, setSecCheck] = useState(null);
+  const [claimError, setClaimError] = useState(null);
   const [integrityNotice, setIntegrityNotice] = useState(null); // { text, sustained } | null
   const fullscreenActivatedAtRef = useRef(null);
   const integrityNoticeTimeoutRef = useRef(null);
@@ -239,6 +245,20 @@ export default function AiInterviewSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, enqueueSpeech, startListening, stopListening, mic, navigate]);
 
+  // One-active-session claim (the explicit start/resume entry point). Refused with a clear message when the server says this device
+  // cannot take a PROCTORED interview (phones). Returns false when the interview must not proceed.
+  async function claimSession() {
+    setClaimError(null);
+    try {
+      const { data } = await api.post(`/ai-interviews/${id}/claim`);
+      setExamSession(data.sessionId);
+      return true;
+    } catch (err) {
+      setClaimError(err.response?.data?.error || "Could not start the secure session. Please try again.");
+      return false;
+    }
+  }
+
   async function beginInterview() {
     // Must be the very first thing this does, synchronously, still inside the click handler that
     // invoked it — browsers only honor requestFullscreen() when the call stack traces back to a
@@ -248,6 +268,7 @@ export default function AiInterviewSession() {
     // no Fullscreen API for arbitrary elements at all — see fullscreenCompat.js — so treating this
     // as mandatory would lock those candidates out of starting an interview entirely).
     if (supportsFullscreen()) requestFullscreenCompat().catch(() => {});
+    if (!(await claimSession())) return;
     const granted = await mic.requestPermission();
     if (granted) connect();
   }
@@ -263,6 +284,7 @@ export default function AiInterviewSession() {
     wsRef.current?.close();
     setFatalError(null);
     setMode("text");
+    if (!(await claimSession())) { setMode("voice"); return; }
     if (!session?.startedAt && phase !== PHASES.ACTIVE) {
       setPhase(PHASES.CONNECTING);
       try {
@@ -415,6 +437,29 @@ export default function AiInterviewSession() {
     };
   }, [phase]);
 
+  // --- secure-assessment evidence (PROCTORED interview types only; detection + review, never ends the interview) ---
+  // Batched to /ai-interviews/:id/events every ~10 s. Paste/copy/cut/right-click are blocked on this page only while it is a
+  // PROCTORED interview in progress (a pasted answer from an outside assistant is the case this exists for); STANDARD is unchanged.
+  const proctoredInterview = session?.security?.level === "PROCTORED";
+  useEffect(() => {
+    if (phase !== PHASES.ACTIVE || !proctoredInterview) return;
+    const reporter = createEventReporter({ getAttemptId: () => id, send: (batch) => api.post(`/ai-interviews/${id}/events`, { events: batch }) });
+    reporter.start();
+    const startedAt = Date.now();
+    const stopFs = onFullscreenChange(() => { if (!getFullscreenElement() && Date.now() - startedAt > 2000) reporter.report("FULLSCREEN_EXIT"); });
+    const tab = createTabSwitchSignal({ onBrief: () => reporter.report("TAB_SWITCH_BRIEF"), onSwitch: () => reporter.report("TAB_SWITCH") });
+    const focus = createFocusLossSignal({ onLoss: () => reporter.report("POSSIBLE_EXTERNAL_ASSISTANT") });
+    const split = createSplitScreenWatch({ onSuspected: () => reporter.report("SPLIT_SCREEN_SUSPECTED") });
+    const block = (type) => (e) => { e.preventDefault(); reporter.report(type); };
+    const handlers = { copy: block("COPY"), paste: block("PASTE"), cut: block("CUT"), contextmenu: block("RIGHT_CLICK"), dragstart: block("DRAG_ATTEMPT") };
+    for (const [ev, fn] of Object.entries(handlers)) document.addEventListener(ev, fn);
+    return () => {
+      stopFs(); tab.destroy(); focus.destroy(); split.destroy();
+      for (const [ev, fn] of Object.entries(handlers)) document.removeEventListener(ev, fn);
+      reporter.stop();
+    };
+  }, [phase, proctoredInterview, id]);
+
   // --- server-authoritative countdown display (source of truth is session.expiresAt; the
   // backend's own scheduleExpiry force-completes the interview regardless of what this shows) ---
   useEffect(() => {
@@ -469,8 +514,22 @@ export default function AiInterviewSession() {
               <li>You can interrupt the AI at any time if you want it to repeat or rephrase.</li>
             </ul>
           )}
+          {session.security?.level === "PROCTORED" && (
+            <div style={{ marginTop: 12, padding: 12, border: "1px solid var(--line)", borderRadius: 10, textAlign: "left" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 6 }}>SECURE ASSESSMENT</div>
+              <p style={{ fontSize: 13, margin: "0 0 6px" }}>This interview is monitored. Stay on this page in fullscreen, keep the window full-size, and do not use other applications, copy/paste, screen sharing or outside assistance. Security events are recorded for review; they do not end your interview.</p>
+              {secCheck && (
+                <ul style={{ listStyle: "none", margin: "6px 0 0", padding: 0, fontSize: 13, lineHeight: 1.8 }}>
+                  {secCheck.items.map((i) => <li key={i.key} style={{ color: i.ok ? "var(--success-text)" : (i.required ? "var(--danger-text)" : "var(--warning-text)") }}>{i.ok ? "✓" : i.required ? "✕" : "!"} {i.label}</li>)}
+                </ul>
+              )}
+              {secCheck && !secCheck.ready && <p style={{ fontSize: 13, color: "var(--danger-text)", fontWeight: 600, margin: "6px 0 0" }}>This device or window cannot provide the required security controls. Use a laptop or desktop computer with a full-size window, then run the check again.</p>}
+              <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 12, padding: "5px 10px" }} onClick={() => setSecCheck(runSecurityCheck(session.security))}>{secCheck ? "Run security check again" : "Run security check"}</button>
+            </div>
+          )}
+          {claimError && <p className="ai-int-error">{claimError}</p>}
           {mic.error && <p className="ai-int-error">{mic.error}</p>}
-          <Button variant="primary" loading={mic.permission === "requesting"} onClick={beginInterview} style={{ width: "100%", justifyContent: "center" }}>
+          <Button variant="primary" disabled={session.security?.level === "PROCTORED" && !secCheck?.ready} loading={mic.permission === "requesting"} onClick={beginInterview} style={{ width: "100%", justifyContent: "center" }}>
             <Mic size={16} /> {isResuming ? "Reconnect & continue" : "Enable microphone & begin"}
           </Button>
           {(mic.error || isResuming) && (
@@ -479,6 +538,15 @@ export default function AiInterviewSession() {
             </Button>
           )}
         </div>
+      </div>
+    );
+  }
+
+  if (sessionReplaced) {
+    return (
+      <div className="ai-int-page ai-int-centered">
+        <h2>Interview open elsewhere</h2>
+        <p>This interview was opened in another tab, window or device, which now holds your session. Close this one and continue there. Your progress is saved.</p>
       </div>
     );
   }

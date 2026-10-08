@@ -14,7 +14,7 @@ function SecureAssessmentsPanel() {
     <Panel id="secure" title="Secure assessments (last 24 h)" sub="Evidence signals for human review, not findings of malpractice" loading={loading && !o} error={error && !o} onRetry={reload}>
       {o && (
         <div className="ad-kpis" style={{ "--ad-kpi-cols": 4 }}>
-          <Kpi label="Students testing now" value={fmt(o.live.studentsTesting)} foot={`${o.live.testAttempts} tests · ${o.live.codingAttempts} coding · ${o.live.readinessAttempts} readiness · ${o.live.interviewSessions} interviews`} />
+          <Kpi label="Students testing now" value={fmt(o.live.studentsTesting)} foot={`${o.live.testAttempts} tests · ${o.live.codingAttempts} coding · ${o.live.readinessAttempts} readiness · ${o.live.interviewSessions} interviews · ${o.live.aiInterviewSessions} AI voice`} />
           <Kpi label="Attempts with strikes" value={fmt(o.last.attemptsWithStrikes)} />
           <Kpi label="Fullscreen exits" value={fmt(o.last.fullscreenExits)} />
           <Kpi label="Tab switches" value={fmt(o.last.tabSwitches)} />
