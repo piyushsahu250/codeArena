@@ -6,6 +6,7 @@ const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
 const { requirePlatformLevel } = require("../utils/draftOwnership");
 const { verifyLimiter } = require("../middleware/publicLimiters");
+const { randomGroupedCode, normalizeVerifyCode } = require("../utils/secureCode");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
@@ -1329,7 +1330,7 @@ async function computeAverageInterviewScore(studentId) {
 async function issueOrFetchCertificate(studentId, avg) {
   let cert = await prisma.interviewCertificate.findUnique({ where: { studentId } });
   if (!cert) {
-    const code = `CA-INTERVIEW-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const code = `CA-INTERVIEW-${new Date().getFullYear()}-${randomGroupedCode()}`; // was 6 base-36 chars from Math.random()
     cert = await prisma.interviewCertificate.create({ data: { certificateCode: code, studentId, averageScore: avg } });
   }
   return cert;
@@ -1372,7 +1373,7 @@ router.get("/certificate/pdf", authenticate, requireRole("STUDENT"), async (req,
 router.get("/certificate/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const cert = await prisma.interviewCertificate.findUnique({
-      where: { certificateCode: req.params.code },
+      where: { certificateCode: normalizeVerifyCode(req.params.code) },
       include: { student: { select: { name: true } } },
     });
     if (!cert) return res.status(404).json({ valid: false });

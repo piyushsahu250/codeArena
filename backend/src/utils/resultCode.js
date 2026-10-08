@@ -1,4 +1,5 @@
 const prisma = require("../prisma");
+const { randomGroupedCode } = require("./secureCode");
 
 function slugCode(str, maxLen) {
   return String(str || "").toUpperCase().replace(/[^A-Z0-9]+/g, "").slice(0, maxLen);
@@ -12,7 +13,7 @@ async function generateMarksheetCode({ instituteCode }) {
   const year = new Date().getFullYear();
   const inst = slugCode(instituteCode, 10) || "GEN";
   for (let attempt = 0; attempt < 10; attempt++) {
-    const seq = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+    const seq = randomGroupedCode(); // 60 random bits (utils/secureCode.js); older 6-digit codes stay valid
     const code = `MS-${year}-${inst}-${seq}`;
     const existing = await prisma.resultEntry.findUnique({ where: { verificationCode: code } });
     if (!existing) return code;

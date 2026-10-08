@@ -2,6 +2,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const prisma = require("../prisma");
 const { verifyLimiter } = require("../middleware/publicLimiters");
+const { normalizeVerifyCode } = require("../utils/secureCode");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
@@ -1028,7 +1029,7 @@ router.get("/courses/:slug/certificate", authenticate, requireRole("STUDENT"), a
 router.get("/certificate/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const cert = await prisma.certificate.findUnique({
-      where: { certificateCode: req.params.code },
+      where: { certificateCode: normalizeVerifyCode(req.params.code) },
       include: { student: { select: { name: true } }, course: { select: { name: true } } },
     });
     if (!cert) return res.status(404).json({ valid: false });

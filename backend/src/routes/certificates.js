@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../prisma");
 const { verifyLimiter } = require("../middleware/publicLimiters");
+const { normalizeVerifyCode } = require("../utils/secureCode");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
@@ -103,7 +104,7 @@ router.get("/:id/download", authenticate, requireRole("STUDENT"), attachRequeste
 router.get("/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const cert = await prisma.certificate.findUnique({
-      where: { certificateCode: req.params.code },
+      where: { certificateCode: normalizeVerifyCode(req.params.code) },
       include: { student: { include: { institute: true } } },
     });
     if (!cert) return res.status(404).json({ valid: false, error: "No certificate found with this ID" });

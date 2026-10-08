@@ -3,6 +3,7 @@ const multer = require("multer");
 const XLSX = require("xlsx");
 const prisma = require("../prisma");
 const { verifyLimiter } = require("../middleware/publicLimiters");
+const { normalizeVerifyCode } = require("../utils/secureCode");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
@@ -301,7 +302,7 @@ router.get("/me/:entryId/marksheet.pdf", authenticate, requireRole("STUDENT"), a
 router.get("/verify/:code", verifyLimiter, async (req, res) => {
   try {
     const entry = await prisma.resultEntry.findUnique({
-      where: { verificationCode: req.params.code },
+      where: { verificationCode: normalizeVerifyCode(req.params.code) },
       include: { examination: { include: { institute: { select: { name: true } } } }, student: { select: { name: true } } },
     });
     if (!entry || entry.examination.status !== "PUBLISHED") {

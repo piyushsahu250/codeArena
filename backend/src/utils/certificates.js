@@ -1,4 +1,5 @@
 const prisma = require("../prisma");
+const { randomGroupedCode } = require("./secureCode");
 const { notifyCertificateIssued } = require("./notifications");
 
 function slugCode(str, maxLen) {
@@ -6,7 +7,7 @@ function slugCode(str, maxLen) {
 }
 
 // Builds a globally-unique certificate ID in the documented format:
-// CA-<year>-<institute code>-<program code>-<6-digit sequence>. The sequence is randomized
+// CA-<year>-<institute code>-<program code>-<XXXX-XXXX-XXXX>. The suffix is 60 random bits (it was a 6-digit number before 2026-10-08), randomized
 // rather than an incrementing counter, so concurrent issuances never contend on a shared lock —
 // a collision just retries with a fresh random sequence (astronomically unlikely twice in a row).
 async function generateCertificateCode({ instituteCode, programCode }) {
@@ -14,7 +15,7 @@ async function generateCertificateCode({ instituteCode, programCode }) {
   const inst = slugCode(instituteCode, 10) || "GEN";
   const prog = slugCode(programCode, 14) || "CERT";
   for (let attempt = 0; attempt < 10; attempt++) {
-    const seq = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
+    const seq = randomGroupedCode(); // 60 random bits (utils/secureCode.js); older 6-digit codes stay valid
     const code = `CA-${year}-${inst}-${prog}-${seq}`;
     const existing = await prisma.certificate.findUnique({ where: { certificateCode: code } });
     if (!existing) return code;
