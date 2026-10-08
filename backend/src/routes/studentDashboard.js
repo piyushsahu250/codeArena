@@ -13,7 +13,8 @@
 //    same reasoning as routes/dashboard.js.
 const express = require("express");
 const prisma = require("../prisma");
-const { authenticate, requireRole } = require("../middleware/auth");
+const { authenticate } = require("../middleware/auth");
+const { requirePermission } = require("../utils/permissions");
 const { LIVE, liveLessonWhere } = require("../utils/publishState");
 const { computeStudentPerformance } = require("../utils/studentPerformance");
 const { computeGroupRank } = require("../utils/groupRank");
@@ -295,7 +296,7 @@ async function getStreak(studentId) {
   return { current: live ? s.currentStreak : 0, longest: s.longestStreak };
 }
 
-router.get("/dashboard", authenticate, requireRole("STUDENT"), async (req, res) => {
+router.get("/dashboard", authenticate, requirePermission("student.portal"), async (req, res) => {
   const t0 = Date.now();
   try {
     const userRow = await prisma.user.findUnique({

@@ -4291,3 +4291,23 @@ model CodeReissueLog {
   @@index([kind, entityId])
   @@index([oldCode])
 }
+
+// Central RBAC (see src/utils/permissions.js and docs/BACKEND_STRUCTURE.md). A Permission is a named capability ("admin.console"); a RolePermission grants it to
+// one of the existing roles. Each account still has exactly one Role (User.role), so no separate user-to-role table is needed. Defaults are seeded from the code
+// registry; only permissions that do not exist yet are added, so an administrator's later changes are never overwritten.
+model Permission {
+  key         String           @id
+  description String           @default("")
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  role          Role
+  permissionKey String
+  permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+
+  @@id([role, permissionKey])
+  @@index([permissionKey])
+}

@@ -64,7 +64,7 @@ fi
 # unreachable the API falls back to running code in-process (utils/judgeGateway.js).
 NETWORK=codearena-net
 JUDGE_NAME=codearena-judge
-env_value() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '\r'; }
+env_value() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d "" || true; }
 JUDGE_REMOTE=$(env_value JUDGE_REMOTE_ENABLED)
 docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
 if [ "$JUDGE_REMOTE" = "1" ] && [ -z "$(env_value JUDGE_SHARED_SECRET)" ]; then

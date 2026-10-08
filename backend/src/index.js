@@ -310,6 +310,11 @@ startTestAttemptAutoFinalizeScheduler();
 const { startEmailRetryScheduler } = require("./utils/emailRetryScheduler");
 startEmailRetryScheduler();
 
+// Mirror the default permission grants into the database (adds only what is missing; never overwrites an administrator's changes). Best effort: checks fall back to the code registry.
+require("./utils/permissions").seedPermissions()
+  .then((r) => { if (r.added) console.log(`permissions: seeded ${r.added} new permission(s)`); })
+  .catch((err) => console.warn("permissions seed skipped:", err.message));
+
 const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => {
   console.log(`CodeArena API running on port ${PORT}`);

@@ -11,7 +11,8 @@
 const express = require("express");
 const { Prisma } = require("@prisma/client");
 const prisma = require("../prisma");
-const { authenticate, requireRole } = require("../middleware/auth");
+const { authenticate } = require("../middleware/auth");
+const { requirePermission } = require("../utils/permissions");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { cached } = require("../utils/cache");
 const { getQueueStatus } = require("../utils/queue");
@@ -258,7 +259,7 @@ const loadInstituteCore = (inst, days) => cached(`cmd:inst:${inst.id}:${days}`, 
       };
 });
 
-router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRequesterInstitute, platformLevel, async (req, res) => {
+router.get("/super", authenticate, requirePermission("platform.console"), attachRequesterInstitute, platformLevel, async (req, res) => {
   try {
     const days = rangeDays(req.query.days);
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -353,7 +354,7 @@ router.get("/super", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRe
 });
 
 // ---------------------------------------------------------------- INSTITUTE ADMIN
-router.get("/institute", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/institute", authenticate, requirePermission("institute.console"), attachRequesterInstitute, async (req, res) => {
   try {
     // Institute-scoped callers are pinned to their own institute; ?instituteId= is honoured only for platform-level callers.
     const instituteId = req.requesterInstituteId || String(req.query.instituteId || "");
@@ -376,7 +377,7 @@ router.get("/institute", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INST
 });
 
 // ---------------------------------------------------------------- STAFF
-router.get("/staff", authenticate, requireRole("STAFF"), attachRequesterInstitute, async (req, res) => {
+router.get("/staff", authenticate, requirePermission("staff.workspace"), attachRequesterInstitute, async (req, res) => {
   try {
     const me = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, name: true, department: true, instituteId: true, institute: { select: { name: true, attendanceMinPercent: true } } } });
     if (!me?.instituteId) return res.status(403).json({ error: "Staff account has no institute" });
@@ -453,7 +454,7 @@ router.get("/staff", authenticate, requireRole("STAFF"), attachRequesterInstitut
 });
 
 // ---------------------------------------------------------------- CLERK
-router.get("/clerk", authenticate, requireRole("CLERK"), attachRequesterInstitute, async (req, res) => {
+router.get("/clerk", authenticate, requirePermission("clerk.workspace"), attachRequesterInstitute, async (req, res) => {
   try {
     const me = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true, instituteId: true, institute: { select: { name: true } } } });
     if (!me?.instituteId) return res.status(403).json({ error: "Clerk account has no institute" });
@@ -508,7 +509,7 @@ router.get("/clerk", authenticate, requireRole("CLERK"), attachRequesterInstitut
 // capped so a single request can never load an unbounded result set.
 const STUDENT_EXPORT_CAP = 20000;
 
-router.get("/super/export", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), attachRequesterInstitute, platformLevel, async (req, res) => {
+router.get("/super/export", authenticate, requirePermission("platform.console"), attachRequesterInstitute, platformLevel, async (req, res) => {
   try {
     const days = rangeDays(req.query.days);
     const q = String(req.query.q || "").trim().toLowerCase();
@@ -533,7 +534,7 @@ router.get("/super/export", authenticate, requireRole("SUPER_ADMIN", "ADMIN"), a
   }
 });
 
-router.get("/institute/export", authenticate, requireRole("SUPER_ADMIN", "ADMIN", "INSTITUTE_ADMIN"), attachRequesterInstitute, async (req, res) => {
+router.get("/institute/export", authenticate, requirePermission("institute.console"), attachRequesterInstitute, async (req, res) => {
   try {
     const instituteId = req.requesterInstituteId || String(req.query.instituteId || "");
     if (!instituteId) return res.status(400).json({ error: "instituteId is required" });

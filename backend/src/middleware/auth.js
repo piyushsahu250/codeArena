@@ -63,4 +63,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authenticate, requireRole };
+module.exports = { authenticate, requireRole, logUnauthorizedAttempt };

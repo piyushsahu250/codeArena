@@ -199,6 +199,16 @@ router.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
+// The signed-in account's effective permissions (the UI may use them to show or hide controls; the server still enforces every request).
+router.get("/permissions", authenticate, async (req, res) => {
+  try {
+    const { permissionsFor } = require("../utils/permissions");
+    res.json({ role: req.user.role, permissions: await permissionsFor(req.user) });
+  } catch (err) {
+    res.status(500).json({ error: "Could not load permissions" });
+  }
+});
+
 router.post("/logout", authenticate, async (req, res) => {
   try {
     await endSession(req.user.jti);
