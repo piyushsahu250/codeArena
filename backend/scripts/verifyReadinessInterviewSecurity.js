@@ -55,7 +55,7 @@ const login = async (email, pw) => (await call("POST", "/auth/login", null, { em
     const A = s1.body.assessment;
     check("policy is snapshotted on the attempt (config.security.level) and proctoring is forced on", A.config?.security?.level === "PROCTORED" && A.config?.proctoring?.enabled === true);
     const q0 = s1.body.questions[0];
-    const ans = (sid, extra = {}) => call("POST", `/readiness/assessments/${A.id}/answer`, stu.token, { questionId: q0.id, selectedOptions: [0], code: "x", language: "python", skipped: false, ...extra }, sid === undefined ? {} : { "X-Exam-Session": sid });
+    const ans = (sid, extra = {}) => call("POST", `/readiness/assessments/${A.id}/answer`, stu.token, { questionId: q0.id, selectedOptions: [0], code: "x", language: "python", skipped: false, ...extra }, sid === undefined ? { "X-Client-Features": "exam-session-v1" } : { "X-Exam-Session": sid });
     check("answer with the owning session id is accepted", (await ans(s1.body.sessionId)).status === 200);
     const get = await call("GET", `/readiness/assessments/${A.id}`, stu.token);
     check("GET never exposes the session id (a second tab cannot read it) and returns the policy", get.status === 200 && !("sessionId" in (get.body.assessment || {}) && get.body.assessment.sessionId) && get.body.security?.level === "PROCTORED");

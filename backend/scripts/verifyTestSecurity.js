@@ -80,8 +80,10 @@ async function cleanup() {
     check("a second start (refresh / other tab) takes the session over", p2.status === 200 && p2.body.sessionId !== s1);
     const stale = await call("POST", "/submissions/submit", T.stuA, { attemptId: att, questionId: qid, selectedOptions: [2] }, { "X-Exam-Session": s1 });
     check("the stale tab is refused with 409 SESSION_REPLACED", stale.status === 409 && stale.body?.code === "SESSION_REPLACED");
-    const noHeader = await call("POST", "/submissions/submit", T.stuA, { attemptId: att, questionId: qid, selectedOptions: [2] });
-    check("a request with no session header is refused too (PROCTORED)", noHeader.status === 409);
+    const noHeader = await call("POST", "/submissions/submit", T.stuA, { attemptId: att, questionId: qid, selectedOptions: [2] }, { "X-Client-Features": "exam-session-v1" });
+    const legacy = await call("POST", "/submissions/submit", T.stuA, { attemptId: att, questionId: qid, selectedOptions: [0] });
+    check("a page bundle that predates session control (no headers at all) keeps working until reloaded", legacy.status === 200, String(legacy.status));
+    check("a current client with no session id (a second tab) is refused (PROCTORED)", noHeader.status === 409);
     check("the new session still works", (await call("POST", "/submissions/submit", T.stuA, { attemptId: att, questionId: qid, selectedOptions: [0] }, { "X-Exam-Session": p2.body.sessionId })).status === 200);
     check("the stale session was recorded as evidence", (await prisma.examSecurityEvent.count({ where: { attemptKind: "TEST", attemptId: att, type: "SESSION_REPLACED" } })) >= 1);
 

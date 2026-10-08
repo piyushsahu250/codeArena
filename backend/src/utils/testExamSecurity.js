@@ -63,6 +63,10 @@ const lastSessionEvent = new Map();
 async function enforceSession(req, res, { kind, attemptId, studentId, testId, sessionId, policySource }) {
   if (!sessionId) return true;
   const given = req.get("x-exam-session");
+  // Compatibility: a page bundle that predates session control sends neither header. It keeps working (no enforcement) until it is
+  // reloaded; every current client sends X-Client-Features, so a current client with no session id (a second tab) IS refused.
+  // Set EXAM_SESSION_REQUIRE_CLIENT=1 to drop this allowance once old bundles have aged out.
+  if (!given && !req.get("x-client-features") && process.env.EXAM_SESSION_REQUIRE_CLIENT !== "1") return true;
   if (given === sessionId) return true;
   const policy = policyOf(policySource);
   const now = Date.now();
