@@ -1,5 +1,6 @@
 const express = require("express");
 const prisma = require("../prisma");
+const { requirePlatformLevel } = require("../utils/draftOwnership");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { cached, invalidate } = require("../utils/cache");
@@ -38,7 +39,7 @@ router.get("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADM
 });
 
 // ADMIN: create an institute
-router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, requirePlatformLevel, async (req, res) => {
   try {
     const { name, code, address, contact } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Institute name is required" });

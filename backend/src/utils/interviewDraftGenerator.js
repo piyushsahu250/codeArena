@@ -123,6 +123,7 @@ async function generateQuestionDrafts({ category, company, count, difficulty, pa
           tags: Array.isArray(q.tags) && q.tags.length > 0 ? q.tags : undefined,
           testCases: q.testCases ?? undefined,
           sourceRun: sourceRun || null,
+          instituteId: instituteId || null, createdById: userId || null,
         },
       });
     })
@@ -143,7 +144,7 @@ async function generateCompanyPatternNote({ company, category, sourceRun, userId
     validate: (v) => !Array.isArray(v?.checklistItems) ? "expected a checklistItems array" : null,
   });
   const checklistItems = Array.isArray(draft?.checklistItems) ? draft.checklistItems.filter((s) => typeof s === "string" && s.trim()) : [];
-  return prisma.companyPatternNote.create({ data: { company, category, checklistItems, sourceRun: sourceRun || undefined } });
+  return prisma.companyPatternNote.create({ data: { company, category, checklistItems, sourceRun: sourceRun || undefined, instituteId: instituteId || null, createdById: userId || null } });
 }
 
 module.exports = { generateQuestionDrafts, generateCompanyPatternNote, clampCount };

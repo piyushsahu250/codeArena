@@ -4,6 +4,7 @@ const rateLimit = require("express-rate-limit");
 const XLSX = require("xlsx");
 const { safeRow, safeCell } = require("../utils/spreadsheetSafe");
 const prisma = require("../prisma");
+const { requirePlatformLevel } = require("../utils/draftOwnership");
 const { verifyLimiter } = require("../middleware/publicLimiters");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
@@ -1556,7 +1557,7 @@ function validateRoundPlan(roundPlan) {
   return null;
 }
 
-router.post("/admin/company-profiles", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.post("/admin/company-profiles", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, requirePlatformLevel, async (req, res) => {
   try {
     const { company, isActive, categoryWeights, roundPlan, notes } = req.body;
     const trimmed = String(company || "").trim();
@@ -1583,7 +1584,7 @@ router.post("/admin/company-profiles", authenticate, requireRole("ADMIN", "SUPER
   }
 });
 
-router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, requirePlatformLevel, async (req, res) => {
   try {
     const existing = await prisma.companyInterviewProfile.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Profile not found" });
@@ -1615,7 +1616,7 @@ router.patch("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "
   }
 });
 
-router.delete("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.delete("/admin/company-profiles/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, requirePlatformLevel, async (req, res) => {
   try {
     const existing = await prisma.companyInterviewProfile.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Profile not found" });

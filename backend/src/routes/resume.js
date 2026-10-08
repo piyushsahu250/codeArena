@@ -3,6 +3,7 @@ const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const { Prisma } = require("@prisma/client");
 const prisma = require("../prisma");
+const { requirePlatformLevel } = require("../utils/draftOwnership");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { computeCompletion, computeAtsScore, ATS_ENGINE_VERSION } = require("../utils/resumeAts");
@@ -795,7 +796,7 @@ router.get("/field-config", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "I
   res.json(await getFieldConfig());
 });
 
-router.patch("/field-config", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
+router.patch("/field-config", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), attachRequesterInstitute, requirePlatformLevel, async (req, res) => {
   try {
     const { mandatorySections } = req.body;
     if (!Array.isArray(mandatorySections)) return res.status(400).json({ error: "mandatorySections must be an array" });

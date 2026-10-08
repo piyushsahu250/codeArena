@@ -10,6 +10,7 @@ const { COMPANIES } = require("../utils/companies");
 const { safeErrorMessage } = require("../utils/errors");
 const { ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
 const { sendAiError } = require("../utils/aiErrors");
+const { ownerWhere, ownsRow } = require("../utils/draftOwnership");
 
 const router = express.Router();
 
@@ -41,8 +42,8 @@ router.post("/admin/drafts/questions/generate", authenticate, requireRole("ADMIN
   }
 });
 
-router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
-  const where = {};
+router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const where = { ...ownerWhere(req) };
   if (req.query.status) where.status = req.query.status;
   if (req.query.company) where.company = req.query.company;
   if (req.query.category) where.category = req.query.category;
@@ -61,10 +62,10 @@ router.get("/admin/drafts/questions", authenticate, requireRole("ADMIN", "SUPER_
   res.json({ rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
-router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: "Draft not found" });
+    if (!existing || !ownsRow(req, existing)) return res.status(404).json({ error: "Draft not found" });
     if (existing.status !== "PENDING") return res.status(400).json({ error: "Only a pending draft can be edited" });
 
     const fields = [
@@ -155,7 +156,7 @@ async function approveDraftQuestion(draft, { req, frequencyTag, packageBand, exp
 router.post("/admin/drafts/questions/:id/approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
-    if (!draft) return res.status(404).json({ error: "Draft not found" });
+    if (!draft || !ownsRow(req, draft)) return res.status(404).json({ error: "Draft not found" });
     const question = await approveDraftQuestion(draft, { req, ...req.body });
     res.json(question);
   } catch (err) {
@@ -178,7 +179,7 @@ router.post("/admin/drafts/questions/bulk-approve", authenticate, requireRole("A
   for (const id of ids) {
     try {
       const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id } });
-      if (!draft) { results.push({ id, success: false, error: "Draft not found" }); continue; }
+      if (!draft || !ownsRow(req, draft)) { results.push({ id, success: false, error: "Draft not found" }); continue; }
       const question = await approveDraftQuestion(draft, { req });
       results.push({ id, success: true, questionId: question.id });
     } catch (err) {
@@ -188,10 +189,10 @@ router.post("/admin/drafts/questions/bulk-approve", authenticate, requireRole("A
   res.json({ approved: results.filter((r) => r.success).length, failed: results.filter((r) => !r.success).length, results });
 });
 
-router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
-    if (!draft) return res.status(404).json({ error: "Draft not found" });
+    if (!draft || !ownsRow(req, draft)) return res.status(404).json({ error: "Draft not found" });
     if (draft.status !== "PENDING") return res.status(400).json({ error: "Draft has already been reviewed" });
     const updated = await prisma.interviewQuestionDraft.update({
       where: { id: req.params.id },
@@ -204,10 +205,10 @@ router.post("/admin/drafts/questions/:id/reject", authenticate, requireRole("ADM
   }
 });
 
-router.delete("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.delete("/admin/drafts/questions/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const draft = await prisma.interviewQuestionDraft.findUnique({ where: { id: req.params.id } });
-    if (!draft) return res.status(404).json({ error: "Draft not found" });
+    if (!draft || !ownsRow(req, draft)) return res.status(404).json({ error: "Draft not found" });
     if (draft.status === "APPROVED") return res.status(400).json({ error: "An approved draft's record can't be deleted — delete the live question via /admin/questions instead" });
     await prisma.interviewQuestionDraft.delete({ where: { id: req.params.id } });
     res.json({ success: true });
@@ -235,18 +236,18 @@ router.post("/admin/drafts/patterns/generate", authenticate, requireRole("ADMIN"
   }
 });
 
-router.get("/admin/drafts/patterns", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
-  const where = {};
+router.get("/admin/drafts/patterns", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const where = { ...ownerWhere(req) };
   if (req.query.status) where.status = req.query.status;
   if (req.query.company) where.company = req.query.company;
   const rows = await prisma.companyPatternNote.findMany({ where, orderBy: { generatedAt: "desc" }, take: 200 });
   res.json(rows);
 });
 
-router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: "Pattern note not found" });
+    if (!existing || !ownsRow(req, existing)) return res.status(404).json({ error: "Pattern note not found" });
     if (existing.status !== "PENDING") return res.status(400).json({ error: "Only a pending pattern note can be edited" });
     const checklistItems = Array.isArray(req.body.checklistItems) ? req.body.checklistItems.filter((s) => typeof s === "string" && s.trim()) : existing.checklistItems;
     const updated = await prisma.companyPatternNote.update({ where: { id: req.params.id }, data: { checklistItems } });
@@ -257,10 +258,10 @@ router.patch("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "S
   }
 });
 
-router.post("/admin/drafts/patterns/:id/approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/patterns/:id/approve", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: "Pattern note not found" });
+    if (!existing || !ownsRow(req, existing)) return res.status(404).json({ error: "Pattern note not found" });
     if (existing.status !== "PENDING") return res.status(400).json({ error: "Pattern note has already been reviewed" });
     if (!Array.isArray(existing.checklistItems) || existing.checklistItems.length === 0) {
       return res.status(400).json({ error: "Pattern note needs at least one checklist item before approval" });
@@ -276,10 +277,10 @@ router.post("/admin/drafts/patterns/:id/approve", authenticate, requireRole("ADM
   }
 });
 
-router.post("/admin/drafts/patterns/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.post("/admin/drafts/patterns/:id/reject", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: "Pattern note not found" });
+    if (!existing || !ownsRow(req, existing)) return res.status(404).json({ error: "Pattern note not found" });
     if (existing.status !== "PENDING") return res.status(400).json({ error: "Pattern note has already been reviewed" });
     const updated = await prisma.companyPatternNote.update({
       where: { id: req.params.id },
@@ -292,10 +293,10 @@ router.post("/admin/drafts/patterns/:id/reject", authenticate, requireRole("ADMI
   }
 });
 
-router.delete("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.delete("/admin/drafts/patterns/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const existing = await prisma.companyPatternNote.findUnique({ where: { id: req.params.id } });
-    if (!existing) return res.status(404).json({ error: "Pattern note not found" });
+    if (!existing || !ownsRow(req, existing)) return res.status(404).json({ error: "Pattern note not found" });
     if (existing.status === "APPROVED") return res.status(400).json({ error: "An approved pattern note can't be deleted — reject a new draft to supersede it instead" });
     await prisma.companyPatternNote.delete({ where: { id: req.params.id } });
     res.json({ success: true });
@@ -336,15 +337,17 @@ router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", 
 
 // =========================== Companies catalog + AI-estimated pattern ===========================
 
-router.get("/companies/catalog", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/companies/catalog", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const counts = await prisma.interviewQuestion.groupBy({ by: ["company"], where: { company: { not: null } }, _count: { _all: true } });
   const countByCompany = Object.fromEntries(counts.map((c) => [c.company, c._count._all]));
   res.json(COMPANIES.map((company) => ({ company, questionCount: countByCompany[company] || 0 })));
 });
 
-router.get("/companies/:company/pattern", authenticate, async (req, res) => {
+// Students (and staff) read APPROVED notes: platform-owned ones plus those approved by their own institute. A pattern another institute
+// approved is that institute's content and is not shown here. A platform-level caller sees every approved note.
+router.get("/companies/:company/pattern", authenticate, attachRequesterInstitute, async (req, res) => {
   const notes = await prisma.companyPatternNote.findMany({
-    where: { company: req.params.company, status: "APPROVED" },
+    where: { company: req.params.company, status: "APPROVED", ...(req.requesterInstituteId ? { OR: [{ instituteId: null }, { instituteId: req.requesterInstituteId }] } : {}) },
     orderBy: { category: "asc" },
   });
   res.json(notes.map((n) => ({ aiEstimated: true, category: n.category, checklistItems: n.checklistItems, generatedAt: n.generatedAt })));

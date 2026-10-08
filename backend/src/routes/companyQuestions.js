@@ -8,6 +8,8 @@ const { logAudit, AUDIT_ACTIONS } = require("../utils/auditLog");
 const { safeErrorMessage } = require("../utils/errors");
 const { sendAiError } = require("../utils/aiErrors");
 const aiService = require("../services/ai/aiService");
+const { ownerWhere, ownsRow } = require("../utils/draftOwnership");
+const { instituteWhere } = require("../utils/interviewQuestionVisibility");
 const {
   findLikelyDuplicates, assignConfidenceLevel, computeRecencyBucket,
 } = require("../utils/companyQuestionIntelligence");
@@ -51,15 +53,15 @@ async function runGenerationJob({ companyId, role, experienceLevel, round, techn
     data: {
       companyId, role: role.trim(), experienceLevel: experienceLevel || null, round, technology: technology || null,
       status: "PROCESSING", startedAt: new Date(),
-      requestedByAdminId: req.user.id, requestedByName: req.user.name,
+      requestedByAdminId: req.user.id, requestedByName: req.user.name, instituteId: req.requesterInstituteId || null,
     },
   });
 
   try {
     const matchWhere = { companyId, role: role.trim(), category: round, ...(experienceLevel ? { experienceLevel } : {}) };
     const [existingQuestions, existingDrafts] = await Promise.all([
-      prisma.interviewQuestion.findMany({ where: matchWhere, select: { id: true, prompt: true, title: true, lastSeenAt: true, lastVerifiedAt: true, sourceType: true, confidenceLevel: true, verificationCount: true, createdAt: true } }),
-      prisma.interviewQuestionDraft.findMany({ where: { ...matchWhere, status: "PENDING" }, select: { id: true, prompt: true, title: true } }),
+      prisma.interviewQuestion.findMany({ where: { ...matchWhere, AND: [instituteWhere(req.requesterInstituteId)] }, select: { id: true, prompt: true, title: true, lastSeenAt: true, lastVerifiedAt: true, sourceType: true, confidenceLevel: true, verificationCount: true, createdAt: true } }),
+      prisma.interviewQuestionDraft.findMany({ where: { ...matchWhere, status: "PENDING", ...ownerWhere(req) }, select: { id: true, prompt: true, title: true } }),
     ]);
 
     const staleCutoff = Date.now() - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000;
@@ -97,7 +99,7 @@ async function runGenerationJob({ companyId, role, experienceLevel, round, techn
             explanation: q.explanation || null, expectedKeywords: q.expectedKeywords ?? undefined, modelAnswer: q.modelAnswer || null,
             companyId, role: role.trim(), experienceLevel: experienceLevel || null,
             sourceType: "AI_GENERATED_VARIANT", confidenceLevel, verificationCount: 0,
-            sourceRun: job.id,
+            sourceRun: job.id, instituteId: req.requesterInstituteId || null, createdById: req.user.id,
           },
         });
         dedupCorpus.push({ prompt: draft.prompt, title: draft.title });
@@ -151,7 +153,7 @@ router.post("/admin/company-questions/generate", authenticate, requireRole("ADMI
 
 router.post("/admin/company-questions/jobs/:id/retry", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, requireFeature("ai_draftview"), generateLimiter, async (req, res) => {
   const original = await prisma.questionGenerationJob.findUnique({ where: { id: req.params.id } });
-  if (!original) return res.status(404).json({ error: "Job not found" });
+  if (!original || !ownsRow(req, original)) return res.status(404).json({ error: "Job not found" });
   if (original.status !== "FAILED") return res.status(400).json({ error: "Only a failed job can be retried" });
   try {
     const result = await runGenerationJob({
@@ -167,8 +169,8 @@ router.post("/admin/company-questions/jobs/:id/retry", authenticate, requireRole
   }
 });
 
-router.get("/admin/company-questions/jobs", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
-  const where = {};
+router.get("/admin/company-questions/jobs", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const where = { ...ownerWhere(req) };
   if (req.query.companyId) where.companyId = req.query.companyId;
   if (req.query.status) where.status = req.query.status;
   const rows = await prisma.questionGenerationJob.findMany({
@@ -178,16 +180,17 @@ router.get("/admin/company-questions/jobs", authenticate, requireRole("ADMIN", "
   res.json(rows);
 });
 
-router.get("/admin/company-questions/jobs/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/company-questions/jobs/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   const job = await prisma.questionGenerationJob.findUnique({ where: { id: req.params.id }, include: { companyRef: { select: { id: true, name: true } } } });
-  if (!job) return res.status(404).json({ error: "Job not found" });
+  if (!job || !ownsRow(req, job)) return res.status(404).json({ error: "Job not found" });
   res.json(job);
 });
 
 // ============================================================
 // "Company Question Health" dashboard (spec §23)
 // ============================================================
-router.get("/admin/company-questions/health", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.get("/admin/company-questions/health", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  const visWhere = instituteWhere(req.requesterInstituteId); // shared (legacy/platform) questions plus the caller's own institute's
   const companies = req.query.companyId
     ? await prisma.company.findMany({ where: { id: req.query.companyId }, select: { id: true, name: true } })
     : await prisma.company.findMany({ where: { isActive: true }, select: { id: true, name: true }, take: 50 });
@@ -198,14 +201,14 @@ router.get("/admin/company-questions/health", authenticate, requireRole("ADMIN",
   const health = await Promise.all(companies.map(async (c) => {
     const baseWhere = { companyId: c.id };
     const [total, recent, stale, high, medium, low, aiGenerated, needsReview] = await Promise.all([
-      prisma.interviewQuestion.count({ where: baseWhere }),
-      prisma.interviewQuestion.count({ where: { ...baseWhere, OR: [{ lastVerifiedAt: { gte: recentCutoff } }, { lastSeenAt: { gte: recentCutoff } }] } }),
-      prisma.interviewQuestion.count({ where: { ...baseWhere, sourceType: { not: "AI_GENERATED_VARIANT" }, lastVerifiedAt: { lt: staleCutoff }, OR: [{ lastSeenAt: { lt: staleCutoff } }, { lastSeenAt: null }] } }),
-      prisma.interviewQuestion.count({ where: { ...baseWhere, confidenceLevel: "HIGH" } }),
-      prisma.interviewQuestion.count({ where: { ...baseWhere, confidenceLevel: "MEDIUM" } }),
-      prisma.interviewQuestion.count({ where: { ...baseWhere, confidenceLevel: "LOW" } }),
-      prisma.interviewQuestion.count({ where: { ...baseWhere, sourceType: "AI_GENERATED_VARIANT" } }),
-      prisma.interviewQuestionDraft.count({ where: { ...baseWhere, status: "PENDING" } }),
+      prisma.interviewQuestion.count({ where: { ...baseWhere, AND: [visWhere] } }),
+      prisma.interviewQuestion.count({ where: { AND: [visWhere], ...baseWhere, OR: [{ lastVerifiedAt: { gte: recentCutoff } }, { lastSeenAt: { gte: recentCutoff } }] } }),
+      prisma.interviewQuestion.count({ where: { AND: [visWhere], ...baseWhere, sourceType: { not: "AI_GENERATED_VARIANT" }, lastVerifiedAt: { lt: staleCutoff }, OR: [{ lastSeenAt: { lt: staleCutoff } }, { lastSeenAt: null }] } }),
+      prisma.interviewQuestion.count({ where: { AND: [visWhere], ...baseWhere, confidenceLevel: "HIGH" } }),
+      prisma.interviewQuestion.count({ where: { AND: [visWhere], ...baseWhere, confidenceLevel: "MEDIUM" } }),
+      prisma.interviewQuestion.count({ where: { AND: [visWhere], ...baseWhere, confidenceLevel: "LOW" } }),
+      prisma.interviewQuestion.count({ where: { AND: [visWhere], ...baseWhere, sourceType: "AI_GENERATED_VARIANT" } }),
+      prisma.interviewQuestionDraft.count({ where: { ...baseWhere, status: "PENDING", ...ownerWhere(req) } }),
     ]);
     return { companyId: c.id, companyName: c.name, total, recent, stale, high, medium, low, aiGenerated, needsReview };
   }));
@@ -251,8 +254,9 @@ router.get("/company-questions/reports/mine", authenticate, requireRole("STUDENT
   res.json(rows);
 });
 
-router.get("/admin/company-questions/reports", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
-  const where = {};
+router.get("/admin/company-questions/reports", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
+  // A report belongs to the institute of the student who submitted it; institute-bound reviewers only see their own students' reports.
+  const where = req.requesterInstituteId ? { student: { instituteId: req.requesterInstituteId } } : {};
   if (req.query.status) where.status = req.query.status;
   if (req.query.companyId) where.companyId = req.query.companyId;
   const rows = await prisma.candidateQuestionReport.findMany({
@@ -268,20 +272,20 @@ router.get("/admin/company-questions/reports", authenticate, requireRole("ADMIN"
 // InterviewQuestionDraft (sourceType=CANDIDATE_REPORTED, confidenceLevel=MEDIUM) for the normal
 // PENDING review/approve pipeline. Either way, nothing reaches a student without a separate
 // explicit approval — verifying a report is not the same action as publishing a question.
-router.patch("/admin/company-questions/reports/:id/verify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), async (req, res) => {
+router.patch("/admin/company-questions/reports/:id/verify", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
   try {
     const { status, rejectionReason, convertToDraft } = req.body;
     if (!["VERIFIED", "REJECTED"].includes(status)) return res.status(400).json({ error: "status must be VERIFIED or REJECTED" });
     if (status === "REJECTED" && !rejectionReason?.trim()) return res.status(400).json({ error: "A reason is required when rejecting" });
 
-    const report = await prisma.candidateQuestionReport.findUnique({ where: { id: req.params.id } });
-    if (!report) return res.status(404).json({ error: "Report not found" });
+    const report = await prisma.candidateQuestionReport.findUnique({ where: { id: req.params.id }, include: { student: { select: { instituteId: true } } } });
+    if (!report || (req.requesterInstituteId && report.student?.instituteId !== req.requesterInstituteId)) return res.status(404).json({ error: "Report not found" });
     if (report.status !== "PENDING") return res.status(400).json({ error: "This report has already been reviewed" });
 
     let promotedDraftId = null;
     if (status === "VERIFIED" && convertToDraft !== false) {
       const existing = await prisma.interviewQuestion.findMany({
-        where: { companyId: report.companyId, role: report.role, category: report.round },
+        where: { companyId: report.companyId, role: report.role, category: report.round, AND: [instituteWhere(req.requesterInstituteId)] },
         select: { id: true, prompt: true, title: true, verificationCount: true, sourceType: true },
       });
       const dupes = findLikelyDuplicates(report.questionText, existing);
@@ -303,7 +307,7 @@ router.patch("/admin/company-questions/reports/:id/verify", authenticate, requir
             companyId: report.companyId, role: report.role, experienceLevel: report.experienceLevel,
             sourceType: "CANDIDATE_REPORTED", confidenceLevel: assignConfidenceLevel({ sourceType: "CANDIDATE_REPORTED", verificationCount: 1 }),
             verificationCount: 1, firstSeenAt: report.interviewDate || report.createdAt, lastSeenAt: report.interviewDate || report.createdAt,
-            candidateReportId: report.id,
+            candidateReportId: report.id, instituteId: req.requesterInstituteId || null, createdById: req.user.id,
           },
         });
         promotedDraftId = draft.id;

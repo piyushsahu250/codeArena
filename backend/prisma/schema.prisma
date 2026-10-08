@@ -2389,6 +2389,10 @@ model Company {
 
   // No separate @@index([name]) — `name` is already @unique above, which creates its own index;
   // an explicit duplicate index here was pure write overhead with zero query benefit.
+  // Owner of this catalogue entry (T-3). null = platform catalogue (only platform-level admins may edit it); set = created by that
+  // institute, which alone (besides platform-level admins) may edit its details. Everyone can still READ and use every company.
+  instituteId String?
+  @@index([instituteId])
 }
 
 enum OfferVerificationStatus {
@@ -2773,6 +2777,11 @@ model InterviewQuestionDraft {
   @@index([category])
   @@index([companyId])
   @@index([role])
+  // Ownership (T-3): the institute whose reviewer queue this belongs to. null = platform-owned (legacy rows, scheduler output);
+  // institute-bound reviewers only see and act on their own institute's rows, platform-level reviewers see all.
+  instituteId String?
+  createdById String?
+  @@index([instituteId, status])
 }
 
 // Student/staff-submitted "I was actually asked this" report — the ONE source of company-question
@@ -2841,6 +2850,8 @@ model QuestionGenerationJob {
   @@index([companyId])
   @@index([status])
   @@index([createdAt])
+  instituteId String? // owner institute of the requester (null = platform-level)
+  @@index([instituteId])
 }
 
 // AI-drafted "hiring pattern" checklist for a company+category (e.g. Amazon/CODING ->
@@ -2861,6 +2872,11 @@ model CompanyPatternNote {
 
   @@index([status])
   @@index([company])
+  // Ownership (T-3): the institute whose reviewer queue this belongs to. null = platform-owned (legacy rows, scheduler output);
+  // institute-bound reviewers only see and act on their own institute's rows, platform-level reviewers see all.
+  instituteId String?
+  createdById String?
+  @@index([instituteId, status])
 }
 
 // Legally-safe, general-knowledge interview pattern for one company — topic emphasis, difficulty

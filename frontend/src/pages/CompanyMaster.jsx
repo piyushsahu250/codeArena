@@ -159,8 +159,8 @@ export default function CompanyMaster() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn btn-ghost" onClick={() => startEdit(c)}>Edit</button>
-                  <button className="btn btn-ghost" onClick={() => toggleActive(c)}>{c.isActive ? "Deactivate" : "Activate"}</button>
+                  {c.editable !== false ? <button className="btn btn-ghost" onClick={() => startEdit(c)}>Edit</button> : <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }} title="Only a platform administrator, or the institute that added this company, can change it">Shared catalogue</span>}
+                  {c.canToggle !== false && <button className="btn btn-ghost" onClick={() => toggleActive(c)}>{c.isActive ? "Deactivate" : "Activate"}</button>}
                 </div>
               </div>
             ))
