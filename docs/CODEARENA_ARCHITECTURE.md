@@ -60,7 +60,7 @@ therefore **not multi-instance safe** — see audit item S-3.
 * **Feature flags**: `FeatureSetting(instituteId, featureKey)` + `requireFeature(key)` per institute (Feature Management page).
 * **Tenant ownership of data**: `instituteId` is on `User`, `AcademicGroup`, `Department`, `Test`, `Question`, institute-authored `Course`,
   `ResultExamination`, `EmailLog`, `AuditLog`, etc. Courses are shared content assigned to institutes/groups. A few resources are deliberately
-  global (company master, interview AI-draft queue, gamification config) — audit items T-2/T-3.
+  global (company master, interview AI-draft queue, gamification config) — audit item T-3 (T-2, the "overall" leaderboard, is resolved).
 
 ## 5. Domain modules
 
