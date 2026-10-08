@@ -121,3 +121,22 @@ and are unchanged; moving them onto the same policy/evidence/monitor model is th
   server-side timer, mobile and secure-browser enforcement, retention, setting restoration.
 * `frontend/scripts/keyboardRegression.mjs` — normal typing (A/S/D and the full key set) is never intercepted; insertion classifier false-positive checks.
 * `backend/scripts/verifyJavaPractice.js` — attempt limit, hidden-test protection, institute isolation on the same flow.
+
+## Formal Test engine (MCQ / company / coding tests) — added 2026-10-08
+
+`tests.js` + `TestTaking.jsx` now share the same policy, evidence and review model (levels **STANDARD** and **PROCTORED**; LOCKDOWN is refused here
+because it needs the secure-client attempt engine).
+
+* **Question-enumeration guard**: a student gets question content only while their attempt is IN_PROGRESS (or after the window closes for a finished
+  attempt). Before start — including before `startTime`, and the whole bank in RANDOM mode — they receive an aggregate summary (count, max marks, types).
+* **Phones**: PROCTORED tests refuse phone/tablet browsers at the server (`403 MOBILE_NOT_SUPPORTED`) unless the admin explicitly allows them.
+* **One active session**: the newest start/resume owns `TestAttempt.sessionId`; later answers/submits carry `X-Exam-Session`; a stale tab gets `409 SESSION_REPLACED`
+  (PROCTORED) and the conflict is recorded as evidence.
+* **New observable signals** (never named as an application): `POSSIBLE_EXTERNAL_ASSISTANT` (page visible but not focused ≥ 2.5 s: split-screen window, floating
+  assistant, app on a second monitor) and `SPLIT_SCREEN_SUSPECTED` (touch device, window < 62 % of the screen on two consecutive checks). Both are SUSPICIOUS:
+  the 3rd on an attempt becomes a strike; none auto-fails a student by itself.
+* **Pre-start security check** for PROCTORED tests (HTTPS, storage, fullscreen support, window size, supported device); a failed required item blocks Begin.
+* **Monitor**: `/staff/exam-security/test/:testId` (risk filter, per-attempt counts, timeline with review); **overview**: `GET /api/exam-security/overview`.
+* **Not covered**: the same limits as above. A web page cannot see another app or an OS overlay; on a phone the only reliable control is not allowing phones
+  (or a managed device). `POST /submissions/run` is not attempt-bound (it runs sample cases of any question id the caller knows).
+* Verify with `backend/scripts/verifyTestSecurity.js`.
