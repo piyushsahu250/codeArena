@@ -10,6 +10,13 @@ async function pickB(page) {
 
 test("student journey: dashboard -> navigation -> take a test -> submit -> result", async ({ page }) => {
   const problems = watch(page);
+  const traffic = [];
+  page.on("response", async (r) => {
+    if (/\/api\/(tests|attempts)/.test(r.url()) && r.request().method() !== "GET") {
+      let b = ""; try { b = (await r.text()).slice(0, 300); } catch { /* ignore */ }
+      traffic.push(`${r.request().method()} ${r.url().replace(/^.*\/api/, "")} ${r.status()} req=${(r.request().postData() || "").slice(0, 200)} res=${b}`);
+    }
+  });
   await login(page, users.student);
   await expect(page.locator("h1")).toBeVisible();
 
@@ -41,6 +48,7 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
   // result page: both answers were correct (2 x 5 points)
   await page.goto(`/test/${data.testId}/result`);
   await expect(page.locator("h1")).toContainText("Your result");
+  console.log("TRAFFIC\n" + traffic.join("\n"));
   await expect(page.locator("body")).toContainText(/10\s*\/\s*10|100(\.0)?\s*%/);
   await expectNoBrokenText(page);
   expect(problems).toEqual([]);
