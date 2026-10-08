@@ -45,6 +45,7 @@ function phoneRefused(req, res, level) {
 }
 const AI_EVENT_TYPES = new Set(["FULLSCREEN_EXIT", "TAB_SWITCH", "TAB_SWITCH_BRIEF", "POSSIBLE_EXTERNAL_ASSISTANT", "SPLIT_SCREEN_SUSPECTED", "SCREEN_OVERLAY_DETECTED", "COPY", "PASTE", "CUT", "RIGHT_CLICK", "DRAG_ATTEMPT", "DEVTOOLS", "ORIENTATION_CHANGE", "NETWORK_DISCONNECT", "NETWORK_RECONNECT"]);
 const SEV_TO_BAND = { CONFIRMED_VIOLATION: "HIGH", SUSPICIOUS: "MEDIUM", INTERRUPTION: "LOW", NORMAL: "LOW" };
+const claimLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id }); // cheap DB write, no AI call, so not the 5/min create limiter
 const eventLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, keyGenerator: (req) => req.user.id });
 
 // Ownership check reused by every route below — a student may only ever act on their OWN session.
@@ -305,7 +306,7 @@ router.post("/:id/complete", authenticate, requireRole("STUDENT"), async (req, r
 // POST /api/ai-interviews/:id/claim — the explicit "start / resume" entry point of the one-active-session rule. The newest claim
 // owns the interview; REST answers must carry the returned id in X-Exam-Session (the voice WebSocket already keeps only the newest
 // connection per interview). Refuses phones for PROCTORED types. A page that never claims (older bundle) is simply not enforced.
-router.post("/:id/claim", authenticate, requireRole("STUDENT"), createLimiter, async (req, res) => {
+router.post("/:id/claim", authenticate, requireRole("STUDENT"), claimLimiter, async (req, res) => {
   try {
     const session = await loadOwnSession(req, res);
     if (!session) return;
