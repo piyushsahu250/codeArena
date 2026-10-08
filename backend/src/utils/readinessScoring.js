@@ -1,4 +1,4 @@
-const { judgeSubmission } = require("./judge");
+const { judgeSubmission } = require("./judgeGateway");
 const { runQueued } = require("./queue");
 
 // BTL level -> the "dimension" label the spec asks the report to speak in (knowledge/conceptual/

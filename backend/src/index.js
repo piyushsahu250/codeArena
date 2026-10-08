@@ -165,6 +165,8 @@ app.get("/api/health/deep", async (req, res) => {
     checks.database = { ok: false, error: "unreachable" };
   }
 
+  // Informational only (never makes the API unhealthy): with a separate judge service the API falls back to running code in-process.
+  checks.judge = { ok: true, ...(await require("./utils/judgeGateway").status().catch(() => ({ mode: "unknown" }))) };
   checks.ai = { ok: aiService.isConfigured(), configured: aiService.isConfigured() };
 
   checks.questionImageStorage = { ok: true, configured: questionImages.isConfigured() }; // not configured yet is a valid, non-broken state -- feature-gated, not a failure
@@ -316,7 +318,7 @@ const server = app.listen(PORT, () => {
   // this matters specifically on this instance. Fire-and-forget: must never delay startup or crash
   // the process if it fails.
   const judge = require("./utils/judge");
-  judge.warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message));
+  if (!process.env.JUDGE_URL) judge.warmUpCompilers().catch((err) => console.warn("judge warm-up failed", err.message)); // a separate judge service warms its own
   // Network-egress isolation for sandbox-uid submissions is now installed once, as real root,
   // by docker-entrypoint.sh BEFORE this process ever starts — not from here. Node itself no
   // longer holds cap_net_admin (see the Dockerfile's setcap comment); that capability delegation

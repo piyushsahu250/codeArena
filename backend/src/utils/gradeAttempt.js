@@ -1,5 +1,5 @@
 const prisma = require("../prisma");
-const { judgeSubmission } = require("./judge");
+const { judgeSubmission } = require("./judgeGateway");
 const { runQueued } = require("./queue");
 
 // Grades one coding Submission row against its question's hidden test cases (falling back to the

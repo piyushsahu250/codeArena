@@ -1,5 +1,5 @@
 const prisma = require("../prisma");
-const { judgeSubmission } = require("./judge");
+const { judgeSubmission } = require("./judgeGateway");
 const { runQueued } = require("./queue");
 const { issueCertificate } = require("./certificates");
 const { getCertificateGatingTestIds } = require("./gatingLevels");

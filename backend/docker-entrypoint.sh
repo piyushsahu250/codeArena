@@ -53,7 +53,10 @@ fi
 # This lets one Docker image serve as the Cloud Run Service, the Cloud Run migration Job, AND
 # the existing Render deployment (kept as a rollback target) with zero external command
 # overrides needed and zero behavior change on Render.
-if [ -n "$CLOUD_RUN_JOB" ]; then
+if [ "$JUDGE_ROLE" = "server" ]; then
+  # Stand-alone judge service (see src/judgeServer.js): no migrations, no database, just the sandboxed executor.
+  exec node src/judgeServer.js
+elif [ -n "$CLOUD_RUN_JOB" ]; then
   # Cloud Run Job: apply migrations/backfills/seed once per deploy, then exit.
   exec sh scripts/migrateAndSeed.sh
 elif [ -n "$K_SERVICE" ]; then

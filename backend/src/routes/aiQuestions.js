@@ -8,7 +8,7 @@ const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { shuffleQuestionOptions, answerIndexSetsMatch } = require("../utils/optionShuffle");
 const { questionVisibilityWhere } = require("../utils/questionVisibility");
-const { judgeSubmission } = require("../utils/judge");
+const { judgeSubmission } = require("../utils/judgeGateway");
 const { runQueued } = require("../utils/queue");
 const { checkNearDuplicate } = require("../utils/textSimilarity");
 

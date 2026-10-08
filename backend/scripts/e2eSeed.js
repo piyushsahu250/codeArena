@@ -51,7 +51,7 @@ async function seed() {
   });
   const test = await mkTest(`${TAG} Standard Test`);
   const proctored = await mkTest(`${TAG} Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, proctoredTestId: proctored.id, questionTexts: [`${TAG} Question 1`, `${TAG} Question 2`] }));
+  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, proctoredTestId: proctored.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {

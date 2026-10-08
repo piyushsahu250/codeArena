@@ -58,12 +58,59 @@ else
   echo "Schema guard: no destructive changes ($(printf '%s\n' "$DIFF" | grep -vc '^--\|^$' || true) statements, additive/index only)."
 fi
 
+# Separate judge service (optional, switched by JUDGE_REMOTE_ENABLED=1 in container.env). The API and the judge are two containers of the SAME
+# image on a private docker network: the judge (JUDGE_ROLE=server, no database access, own CPU/memory limits) executes student code and the API
+# calls it over HTTP with an HMAC-signed request. With the flag off, no judge container exists and code runs in-process as before; if the judge is
+# unreachable the API falls back to running code in-process (utils/judgeGateway.js).
+NETWORK=codearena-net
+JUDGE_NAME=codearena-judge
+env_value() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '\r'; }
+JUDGE_REMOTE=$(env_value JUDGE_REMOTE_ENABLED)
+docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
+if [ "$JUDGE_REMOTE" = "1" ] && [ -z "$(env_value JUDGE_SHARED_SECRET)" ]; then
+  echo "JUDGE_SHARED_SECRET=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')" >> "$ENV_FILE"
+  echo "Generated JUDGE_SHARED_SECRET in $ENV_FILE"
+fi
+
+run_judge() {
+  grep -E '^JUDGE_' "$ENV_FILE" | grep -vE '^JUDGE_(REMOTE_ENABLED|URL|CONCURRENCY|MAX_QUEUE_SIZE)=' > /tmp/judge.env
+  docker run -d --name "$JUDGE_NAME" --restart unless-stopped --network "$NETWORK" \
+    --pids-limit=512 --cap-add=NET_ADMIN --cpus="${JUDGE_CPUS:-1.6}" --memory="${JUDGE_MEMORY:-3g}" \
+    --env-file /tmp/judge.env -e JUDGE_ROLE=server \
+    -e JUDGE_CONCURRENCY="${JUDGE_SERVER_CONCURRENCY:-2}" -e JUDGE_MAX_QUEUE_SIZE="${JUDGE_SERVER_QUEUE:-200}" \
+    "$1" >/dev/null
+  rm -f /tmp/judge.env
+}
+wait_judge_healthy() {
+  for _ in $(seq 1 20); do
+    docker exec "$JUDGE_NAME" node -e "fetch('http://localhost:4100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  return 1
+}
+
+docker rm -f "$JUDGE_NAME" >/dev/null 2>&1 || true
+JUDGE_ARGS=()
+if [ "$JUDGE_REMOTE" = "1" ]; then
+  run_judge "$NAME:latest"
+  if wait_judge_healthy; then
+    echo "Judge service is up ($JUDGE_NAME)."
+    # the API only queues behind the judge service now, so its own in-process limit is lifted to a safety ceiling
+    JUDGE_ARGS=(-e "JUDGE_URL=http://$JUDGE_NAME:4100" -e "JUDGE_CONCURRENCY=${JUDGE_API_CONCURRENCY:-64}" -e "JUDGE_MAX_QUEUE_SIZE=${JUDGE_API_QUEUE:-400}")
+  else
+    echo "WARNING: the judge service did not become healthy; the API will run code in-process." >&2
+    docker logs --tail 20 "$JUDGE_NAME" >&2 || true
+    docker rm -f "$JUDGE_NAME" >/dev/null 2>&1 || true
+  fi
+fi
+
 run_container() {
-  docker run -d --name "$NAME" --restart unless-stopped \
+  docker run -d --name "$NAME" --restart unless-stopped --network "$NETWORK" \
     --pids-limit=512 \
     --cap-add=NET_ADMIN \
     -p 127.0.0.1:4000:4000 \
     --env-file "$ENV_FILE" \
+    "${JUDGE_ARGS[@]}" \
     --mount source=codearena-backend-logs,target=/app/logs \
     "$1" >/dev/null
 }

@@ -26,7 +26,7 @@
 // request should pay the judge-queue cost of. A starter template that fails to even compile is
 // exactly the safe case, not an error to surface -- judgeSubmission() itself already reports that
 // as a normal (non-ACCEPTED) verdict, so no separate try/catch branch is needed here for it.
-const { judgeSubmission } = require("./judge");
+const { judgeSubmission } = require("./judgeGateway");
 const { runQueued } = require("./queue");
 
 async function guardStarterCodeIsNotSolution({ starterCodeByLanguage, testCases, evaluationType, functionSignature, timeLimitMs, memoryLimitKb, comparisonMode, floatAbsoluteTolerance, floatRelativeTolerance }) {

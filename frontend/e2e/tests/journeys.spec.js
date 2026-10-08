@@ -85,6 +85,6 @@ test("question content is not in the page before a test is started", async ({ pa
   await expect(page.getByText("SECURE ASSESSMENT")).toBeVisible();
   const joined = bodies.join("\n");
   expect(joined).not.toContain("pick option B");
-  expect(joined).not.toContain("ZZ E2E Question");
+  expect(joined).not.toContain("E2E question 1");
   expect(joined).not.toContain("correctAnswer");
 });
