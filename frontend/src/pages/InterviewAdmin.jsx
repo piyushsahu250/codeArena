@@ -399,7 +399,7 @@ function QuestionRow({ q, onDelete }) {
           <button style={{ background: "none", border: "none", color: "var(--ink-dim)", fontSize: 12 }} onClick={toggleUsage}>
             {loadingUsage ? "Loading…" : usage ? "Hide usage" : "View usage"}
           </button>
-          <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => onDelete(q.id)}>Delete</button>
+          {q.editable !== false ? <button style={{ background: "none", border: "none", color: "var(--rust)", fontSize: 12 }} onClick={() => onDelete(q.id)}>Delete</button> : <span className="mono" style={{ fontSize: 11, color: "var(--ink-dim)" }} title="Shared question: only a platform administrator can change it">Shared</span>}
         </div>
       </div>
       {usage && (

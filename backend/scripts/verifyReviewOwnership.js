@@ -18,6 +18,7 @@ async function cleanup() {
   const insts = await prisma.institute.findMany({ where: { name: { startsWith: "ZZ Verify RO " } }, select: { id: true } });
   const ids = insts.map((i) => i.id);
   await prisma.interviewQuestionDraft.deleteMany({ where: { prompt: { startsWith: "ZZ-RO " } } });
+  await prisma.interviewQuestion.deleteMany({ where: { prompt: { startsWith: "ZZ-RO " } } });
   await prisma.companyPatternNote.deleteMany({ where: { company: { startsWith: "ZZ Verify RO " } } });
   await prisma.company.deleteMany({ where: { name: { startsWith: "ZZ Verify RO " } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: "verify-ro-", endsWith: "@example.invalid" } } });
@@ -32,6 +33,7 @@ async function cleanup() {
   const mk = async (name, role, instituteId) => { const pw = crypto.randomBytes(18).toString("base64url"); const u = await prisma.user.create({ data: { name, email: `verify-ro-${name.toLowerCase().replace(/\W+/g, "")}-${ts}@example.invalid`, passwordHash: await bcrypt.hash(pw, 10), role, instituteId, mustChangePassword: false } }); return { ...u, token: await login(u.email, pw) }; };
   try {
     const stfA = await mk("Staff A", "STAFF", A.id), stfB = await mk("Staff B", "STAFF", B.id), stuA = await mk("Stu A", "STUDENT", A.id), stuB = await mk("Stu B", "STUDENT", B.id);
+    const adminA = await mk("Inst Admin A", "INSTITUTE_ADMIN", A.id);
     const clkA = await mk("Clerk A", "CLERK", A.id), clkB = await mk("Clerk B", "CLERK", B.id), plat = await mk("Platform", "ADMIN", null), legacyAdmin = await mk("Legacy Admin A", "ADMIN", A.id);
     const co = await prisma.company.create({ data: { name: `ZZ Verify RO Co ${ts}`, createdByUserId: plat.id, createdByName: "t" } });
     const draft = (inst, tag) => prisma.interviewQuestionDraft.create({ data: { category: "HR", prompt: `ZZ-RO ${tag} ${ts}`, instituteId: inst } });
@@ -102,6 +104,21 @@ async function cleanup() {
     const mine = gl.body?.find((c) => c.id === cid), plain = gl.body?.find((c) => c.id === co.id);
     check("everyone can still read and use every company; the list says what the caller may edit", gl.status === 200 && mine?.editable === false && plain?.editable === false && mine?.canToggle === false);
     check("students can read the catalogue", (await call("GET", "/companies", stuA.token)).status === 200);
+
+    // ---------------- T-3b: shared / legacy interview questions ----------------
+    const mkQ = (inst, tag) => prisma.interviewQuestion.create({ data: { category: "HR", prompt: `ZZ-RO question ${tag} ${ts}`, instituteId: inst } });
+    const qShared = await mkQ(null, "shared"), qA = await mkQ(A.id, "A"), qB = await mkQ(B.id, "B");
+    const ql = await call("GET", "/interview/admin/questions?pageSize=500", stfA.token);
+    const rowOf = (id) => (ql.body?.rows || []).find((r) => r.id === id);
+    check("institute staff still READ shared questions and their own, but not another institute's", !!rowOf(qShared.id) && !!rowOf(qA.id) && !rowOf(qB.id));
+    check("the list says which rows are editable (shared: no, own: yes)", rowOf(qShared.id)?.editable === false && rowOf(qA.id)?.editable === true);
+    const ed = await call("PATCH", `/interview/admin/questions/${qShared.id}`, stfA.token, { prompt: "ZZ-RO hacked" });
+    check("institute staff cannot edit a shared question (403)", ed.status === 403, String(ed.status));
+    check("institute staff cannot delete a shared question (403) and it still exists", (await call("DELETE", `/interview/admin/questions/${qShared.id}`, stfA.token)).status === 403 && (await prisma.interviewQuestion.findUnique({ where: { id: qShared.id } })).prompt.includes("shared"));
+    check("an institute ADMIN-tier account cannot change a shared question either", (await call("PATCH", `/interview/admin/questions/${qShared.id}`, adminA.token, { prompt: "ZZ-RO hacked" })).status === 403);
+    check("another institute's question is invisible to edit/delete (404)", (await call("PATCH", `/interview/admin/questions/${qB.id}`, stfA.token, { prompt: "x" })).status === 404 && (await call("DELETE", `/interview/admin/questions/${qB.id}`, stfA.token)).status === 404);
+    check("staff can still edit their own institute's question", (await call("PATCH", `/interview/admin/questions/${qA.id}`, stfA.token, { prompt: `ZZ-RO question A edited ${ts}` })).status === 200);
+    check("a platform-level admin can edit and delete a shared question", (await call("PATCH", `/interview/admin/questions/${qShared.id}`, plat.token, { prompt: `ZZ-RO question shared edited ${ts}` })).status === 200 && (await call("DELETE", `/interview/admin/questions/${qShared.id}`, plat.token)).status === 200);
 
     // ---------------- platform-wide settings are platform-level only ----------------
     check("an institute-bound ADMIN cannot change platform-wide interview company profiles", (await call("PATCH", "/interview/admin/company-profiles/00000000-0000-0000-0000-000000000000", legacyAdmin.token, { notes: "x" })).status === 403);

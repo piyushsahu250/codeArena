@@ -9,7 +9,7 @@ const { verifyLimiter } = require("../middleware/publicLimiters");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
-const { interviewQuestionVisibilityWhere, ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
+const { interviewQuestionVisibilityWhere, ownsInterviewQuestionRow, canSeeInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
 const { judgeSubmission } = require("../utils/judge");
 const { runQueued } = require("../utils/queue");
 const { resolveCodingFields } = require("../utils/functionHarness");
@@ -1395,7 +1395,8 @@ router.get("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN",
     prisma.interviewQuestion.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
     prisma.interviewQuestion.count({ where }),
   ]);
-  res.json({ rows: questions, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+  // `editable` tells the page which rows this caller may change or delete; the server enforces it (shared/legacy rows are platform-owned).
+  res.json({ rows: questions.map((q) => ({ ...q, editable: ownsInterviewQuestionRow(req, q) })), page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 });
 
 router.post("/admin/questions", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"), attachRequesterInstitute, async (req, res) => {
@@ -1460,7 +1461,8 @@ router.patch("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_A
   try {
     const existing = await prisma.interviewQuestion.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Question not found" });
-    if (!ownsInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!canSeeInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!ownsInterviewQuestionRow(req, existing)) return res.status(403).json({ error: "This is a shared question. Only a platform administrator can change or delete it." });
     const effectiveCategory = req.body.category !== undefined ? req.body.category : existing.category;
     if (effectiveCategory === "CODING" && Array.isArray(req.body.testCases)) {
       if (req.body.testCases.filter((tc) => !tc.isHidden).length < 2) {
@@ -1514,7 +1516,8 @@ router.delete("/admin/questions/:id", authenticate, requireRole("ADMIN", "SUPER_
   try {
     const existing = await prisma.interviewQuestion.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: "Question not found" });
-    if (!ownsInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!canSeeInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+    if (!ownsInterviewQuestionRow(req, existing)) return res.status(403).json({ error: "This is a shared question. Only a platform administrator can change or delete it." });
     await prisma.interviewQuestion.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {

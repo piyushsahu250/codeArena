@@ -8,7 +8,7 @@ const { resolveCodingFields } = require("../utils/functionHarness");
 const { generateQuestionDrafts, generateCompanyPatternNote } = require("../utils/interviewDraftGenerator");
 const { COMPANIES } = require("../utils/companies");
 const { safeErrorMessage } = require("../utils/errors");
-const { ownsInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
+const { canSeeInterviewQuestionRow } = require("../utils/interviewQuestionVisibility");
 const { sendAiError } = require("../utils/aiErrors");
 const { ownerWhere, ownsRow } = require("../utils/draftOwnership");
 
@@ -319,7 +319,7 @@ router.get("/admin/questions/:id/analytics", authenticate, requireRole("ADMIN", 
   // usage analytics for any InterviewQuestion id, including another institute's private question.
   const existing = await prisma.interviewQuestion.findUnique({ where: { id: questionId }, select: { instituteId: true, createdById: true } });
   if (!existing) return res.status(404).json({ error: "Question not found" });
-  if (!ownsInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
+  if (!canSeeInterviewQuestionRow(req, existing)) return res.status(404).json({ error: "Question not found" });
   const [timesServed, answered, skipped] = await Promise.all([
     prisma.interviewAnswer.count({ where: { questionId } }),
     prisma.interviewAnswer.aggregate({ where: { questionId, skipped: false }, _avg: { score: true }, _count: { _all: true } }),
