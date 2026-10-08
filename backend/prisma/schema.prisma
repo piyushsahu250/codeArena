@@ -4276,3 +4276,18 @@ model SecureExamSession {
   @@index([state, lastHeartbeatAt])
   @@index([instituteId])
 }
+
+// Record of verification codes replaced by scripts/reissueLegacyCodes.js (audit item T-4): lets a person trace an old printed code to the
+// current one and lets the change be reversed. Rows are only ever added.
+model CodeReissueLog {
+  id         String   @id @default(uuid())
+  kind       String   // CERTIFICATE | MARKSHEET | INTERVIEW_CERTIFICATE
+  entityId   String
+  oldCode    String
+  newCode    String
+  reason     String   @default("LEGACY_GUESSABLE_FORMAT")
+  reissuedAt DateTime @default(now())
+
+  @@index([kind, entityId])
+  @@index([oldCode])
+}
