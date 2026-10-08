@@ -95,7 +95,7 @@ async function cleanup() {
     check("staff A loads dashboard", st.status === 200, `${st.ms}ms`);
     check("staff sees only institute A students", st.body.metrics.students === 1 && !st.body.attention.students.some((s) => [stuB.id, stuB2.id].includes(s.id)));
     check("staff scope states it is institute-wide when no class is assigned", st.body.scope.type === "INSTITUTE");
-    check("student A is flagged (never logged in, profile incomplete)", st.body.attention.students.some((s) => s.id === stuA.id && s.reasons.length >= 2));
+    check("student A is flagged for an incomplete profile", st.body.attention.students.some((s) => s.id === stuA.id && s.reasons.some((r) => r.code === "PROFILE_INCOMPLETE")));
 
     // --- clerk
     const ck = await call("/command/clerk", T.clkA);
