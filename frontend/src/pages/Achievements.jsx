@@ -6,7 +6,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 
 const CATEGORY_LABEL = { LEARNING: "Learning", CODING: "Coding", ASSESSMENT: "Assessment", CONSISTENCY: "Consistency", SPECIAL: "Special" };
-const SCOPES = [{ id: "group", label: "Group" }, { id: "department", label: "Department" }, { id: "institute", label: "Institute" }, { id: "overall", label: "Overall" }];
+const SCOPES = [{ id: "group", label: "Group" }, { id: "department", label: "Department" }, { id: "institute", label: "Institute" }];
 const METRICS = [{ id: "xp", label: "XP" }, { id: "problems", label: "Problems Solved" }, { id: "learning", label: "Learning Progress" }, { id: "streak", label: "Streak" }];
 
 export default function Achievements() {

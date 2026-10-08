@@ -6,7 +6,7 @@ import Navbar from "../components/Navbar";
 import ChalkUnderline from "../components/ChalkUnderline";
 import "./interviewPrep.css";
 
-const SCOPES = [{ id: "group", label: "Group" }, { id: "institute", label: "Institute" }, { id: "overall", label: "Overall" }];
+const SCOPES = [{ id: "group", label: "Group" }, { id: "institute", label: "Institute" }];
 
 export default function InterviewLeaderboard() {
   const { user } = useAuth();

@@ -61,7 +61,7 @@ router.get("/me", authenticate, requireRole("STUDENT"), async (req, res) => {
 // request doesn't 400 — both resolve identically, off academicGroupId.
 // Tenant scoping: an institute-bound caller (every student, and institute-bound staff/admins) can only ever see students of their OWN
 // institute through the group / department / institute scopes -- whatever ids or names the query string carries. Only a platform-level
-// caller (no instituteId) may name another institute. The "overall" scope is a platform-wide product feature and is unchanged here.
+// caller (no instituteId) may name another institute. "overall" is likewise limited to the caller's own institute for institute-bound callers.
 async function resolveScopeStudentIds(scope, req, requester) {
   const own = requester.instituteId || null;
   if (scope === "group" || scope === "class") {
@@ -79,7 +79,9 @@ async function resolveScopeStudentIds(scope, req, requester) {
     if (!instituteId) return { error: "instituteId is required for this scope" };
     return { ids: (await prisma.user.findMany({ where: { instituteId, role: "STUDENT" }, select: { id: true } })).map((u) => u.id) };
   }
-  return { ids: (await prisma.user.findMany({ where: { role: "STUDENT" }, select: { id: true } })).map((u) => u.id) };
+  // "overall": an institute-bound caller only ever sees their own institute (names and roll numbers of other institutes are never
+  // returned); only a platform-level caller gets the platform-wide list.
+  return { ids: (await prisma.user.findMany({ where: { role: "STUDENT", ...(own ? { instituteId: own } : {}) }, select: { id: true } })).map((u) => u.id) };
 }
 
 async function computeXpValues(ids) {

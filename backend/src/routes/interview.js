@@ -1172,7 +1172,8 @@ router.get("/leaderboard", authenticate, requireRole("STUDENT"), async (req, res
     if (scope === "institute" && student.instituteId) {
       studentIds = (await prisma.user.findMany({ where: { instituteId: student.instituteId, role: "STUDENT" }, select: { id: true } })).map((u) => u.id);
     } else if (scope === "overall") {
-      studentIds = (await prisma.user.findMany({ where: { role: "STUDENT" }, select: { id: true } })).map((u) => u.id);
+      // own institute only (never other institutes' students); a student without an institute falls back to nobody but themselves
+      studentIds = (await prisma.user.findMany({ where: student.instituteId ? { role: "STUDENT", instituteId: student.instituteId } : { id: student.id }, select: { id: true } })).map((u) => u.id);
     } else if (student.academicGroupId) {
       // "group" (and the deprecated "class" alias) both land here — scoped to the student's own
       // academic group.

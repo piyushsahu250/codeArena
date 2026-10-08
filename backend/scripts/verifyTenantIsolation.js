@@ -67,6 +67,16 @@ async function cleanup() {
     const pInst = await call("GET", `/gamification/leaderboard?scope=institute&metric=xp&instituteId=${B.id}`, plat.token);
     check("a platform-level admin can still choose any institute", pInst.status === 200 && names(pInst).join() === "Bob Other", JSON.stringify(names(pInst)));
 
+    // ---- "overall" scope no longer spans institutes
+    const ovA = await call("GET", "/gamification/leaderboard?scope=overall&metric=xp", sA1.token);
+    check("overall leaderboard for a student contains only their own institute", ovA.status === 200 && names(ovA).includes("Alice One") && !names(ovA).includes("Bob Other"), JSON.stringify(names(ovA)));
+    const ovS = await call("GET", "/gamification/leaderboard?scope=overall&metric=xp", stfA.token);
+    check("overall leaderboard for institute staff is limited to their institute", ovS.status === 200 && !names(ovS).includes("Bob Other"), JSON.stringify(names(ovS)));
+    const ovP = await call("GET", "/gamification/leaderboard?scope=overall&metric=xp", plat.token);
+    check("a platform-level admin still gets the platform-wide list", ovP.status === 200 && names(ovP).includes("Bob Other") && names(ovP).includes("Alice One"));
+    const iov = await call("GET", "/interview/leaderboard?scope=overall", sA1.token);
+    check("the interview leaderboard 'overall' is limited to the student's institute", iov.status === 200 && !JSON.stringify(iov.body).includes("Bob Other"));
+
     // ---- public verification endpoints are rate limited per IP
     // one shared per-IP budget across all public verification endpoints: the first path is driven to its limit, the rest then share it
     let limited = false, first = 0;
