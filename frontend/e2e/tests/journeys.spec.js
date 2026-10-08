@@ -12,7 +12,7 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
   const problems = watch(page);
   const traffic = [];
   page.on("response", async (r) => {
-    if (/\/api\/(tests|attempts)/.test(r.url()) && r.request().method() !== "GET") {
+    if (/\/api\//.test(r.url()) && r.request().method() !== "GET") {
       let b = ""; try { b = (await r.text()).slice(0, 300); } catch { /* ignore */ }
       traffic.push(`${r.request().method()} ${r.url().replace(/^.*\/api/, "")} ${r.status()} req=${(r.request().postData() || "").slice(0, 200)} res=${b}`);
     }
