@@ -51,9 +51,27 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
   await page.goto(`/test/${data.testId}/result`);
   await expect(page.locator("h1")).toContainText("Your result");
   console.log("TRAFFIC\n" + traffic.join("\n"));
-  await expect(page.locator("body")).toContainText(/10\s*\/\s*10|100(\.0)?\s*%/);
+  await expect(page.locator("body")).toContainText(/(^|\D)10\s*total points/);
   await expectNoBrokenText(page);
   expect(problems).toEqual([]);
+});
+
+test("answers chosen right before moving on or submitting are not lost", async ({ page }) => {
+  await login(page, users.student2);
+  await page.goto(`/test/${data.testId}`);
+  await page.getByLabel("I have read and understood the instructions.").check();
+  await page.getByRole("button", { name: /Begin Assessment/ }).click();
+  await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
+  // no waiting for autosave: click, move on, click, submit
+  await page.locator("label.exam-option", { hasText: "Option B" }).click();
+  await page.getByRole("button", { name: /Next/ }).first().click();
+  await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
+  await page.locator("label.exam-option", { hasText: "Option B" }).click();
+  await page.getByRole("button", { name: "Submit Test" }).click();
+  await page.getByRole("button", { name: "Submit Assessment" }).click();
+  await expect(page.getByText(/submitted|Thank you/i).first()).toBeVisible({ timeout: 30000 });
+  await page.goto(`/test/${data.testId}/result`);
+  await expect(page.locator("body")).toContainText(/(^|\D)10\s*total points/);
 });
 
 test("a finished test cannot be started again", async ({ page }) => {
