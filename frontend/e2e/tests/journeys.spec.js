@@ -1,6 +1,13 @@
 const { test, expect } = require("@playwright/test");
 const { data, users, watch, login, expectNoBrokenText } = require("./helpers");
 
+// Selects "Option B" through the real radio input and proves the selection registered (the input is visually hidden, so the label is clicked).
+async function pickB(page) {
+  const radio = page.getByRole("radio", { name: /Option B/ });
+  await page.locator("label.exam-option", { hasText: "Option B" }).click();
+  await expect(radio).toBeChecked();
+}
+
 test("student journey: dashboard -> navigation -> take a test -> submit -> result", async ({ page }) => {
   const problems = watch(page);
   await login(page, users.student);
@@ -22,10 +29,10 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
 
   // the first question appears; answer both
   await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
-  await page.getByText("Option B").first().click();
+  await pickB(page);
   await page.getByRole("button", { name: /Next/ }).first().click();
   await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
-  await page.getByText("Option B").first().click();
+  await pickB(page);
 
   await page.getByRole("button", { name: "Submit Test" }).click();
   await page.getByRole("button", { name: "Submit Assessment" }).click();
@@ -69,7 +76,7 @@ test("secure session: a second tab takes over a PROCTORED test and the first is 
   await expect(p2.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
 
   // the first tab's next save is refused with 409 and it shows the blocking message
-  await p1.getByText("Option B").first().click();
+  await pickB(p1);
   await expect(p1.getByText("Assessment open elsewhere")).toBeVisible({ timeout: 20000 });
   await ctx1.close();
   await ctx2.close();
