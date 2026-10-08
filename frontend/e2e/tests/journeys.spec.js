@@ -57,6 +57,13 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
 });
 
 test("answers chosen right before moving on or submitting are not lost", async ({ page }) => {
+  const traffic = [];
+  page.on("response", async (r) => {
+    if (/\/api\//.test(r.url()) && r.request().method() !== "GET" && /submissions|tests/.test(r.url())) {
+      let b = ""; try { b = (await r.text()).slice(0, 160); } catch { /* ignore */ }
+      traffic.push(`${Date.now() % 100000} ${r.request().method()} ${r.url().replace(/^.*\/api/, "")} ${r.status()} req=${(r.request().postData() || "").slice(0, 120)} res=${b}`);
+    }
+  });
   await login(page, users.student2);
   await page.goto(`/test/${data.testId}`);
   await page.getByLabel("I have read and understood the instructions.").check();
@@ -70,6 +77,9 @@ test("answers chosen right before moving on or submitting are not lost", async (
   await page.getByRole("button", { name: "Submit Test" }).click();
   await page.getByRole("button", { name: "Submit Assessment" }).click();
   await expect(page.getByText(/submitted|Thank you/i).first()).toBeVisible({ timeout: 30000 });
+  console.log("FASTTRAFFIC
+" + traffic.join("
+"));
   await page.goto(`/test/${data.testId}/result`);
   await expect(page.locator("body")).toContainText(/(^|\D)10\s*total points/);
 });
