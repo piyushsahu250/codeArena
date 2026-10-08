@@ -1,0 +1,7 @@
+{
+  "name": "codearena-e2e",
+  "private": true,
+  "description": "Browser end-to-end tests. Run on the host with scripts/run-e2e-host.sh (builds the SPA, seeds disposable accounts, runs Playwright against localhost, cleans up).",
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "1.49.1", "@axe-core/playwright": "4.10.1" }
+}
