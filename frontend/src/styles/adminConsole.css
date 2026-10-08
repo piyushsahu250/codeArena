@@ -100,3 +100,9 @@ a.ad-kpi:hover { background: var(--ad-surface-2); }
 .ad-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; font-size: var(--ad-fs-sm); color: var(--ad-muted); }
 
 @media (prefers-reduced-motion: reduce) { .ad *, .ad *::before, .ad *::after { animation: none !important; transition: none !important; } }
+
+/* Dark-mode status and link colours (see studentDashboard.css: same E2E contrast finding). */
+:root[data-theme="dark"] .ad {
+  --ad-link: #8CB8F2; --ad-info: #8CB8F2;
+  --ad-good: #7FD6A2; --ad-warn: #F2C16B; --ad-bad: #F4A08C;
+}

@@ -24,7 +24,7 @@ export default function ClerkHome() {
                   <ul className="ad-list">{d.tasks.map((t) => <li key={t.code} className="ad-row"><span className="ad-row-main"><b className="ad-num">{fmt(t.count)}</b> {t.text}</span><Link to={t.to} className="ad-link">Open</Link></li>)}</ul>
                 )}
               </Panel>
-              <div className="ad-kpis" style={{ "--ad-kpi-cols": 4 }} role="list" aria-label="Key numbers">
+              <div className="ad-kpis" style={{ "--ad-kpi-cols": 4 }} role="group" aria-label="Key numbers">
                 <Kpi label="Students" value={fmt(m.students)} to="/clerk/students" />
                 <Kpi label="New (30 days)" value={fmt(m.newStudents30d)} />
                 <Kpi label="Incomplete profiles" value={fmt(m.incompleteProfiles)} to="/clerk/students" />

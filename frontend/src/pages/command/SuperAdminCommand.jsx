@@ -70,7 +70,7 @@ export default function SuperAdminCommand() {
           {loading && !d && <FullPageSkeleton />}
           {d && (
             <>
-              <div className="ad-kpis" style={{ "--ad-kpi-cols": 5 }} role="list" aria-label="Platform totals">
+              <div className="ad-kpis" style={{ "--ad-kpi-cols": 5 }} role="group" aria-label="Platform totals">
                 <Kpi label="Institutes" value={fmt(t.institutes)} foot={`${t.activeInstitutes} active · ${t.inactiveInstitutes} inactive`} to="/admin/institutes" />
                 <Kpi label="Students" value={fmt(t.students)} foot={<>{fmt(d.trends.newStudents.value)} new <Delta t={d.trends.newStudents} /></>} />
                 <Kpi label="Active users" value={fmt(t.activeUsers)} foot={`logged in, last ${days} d`} />

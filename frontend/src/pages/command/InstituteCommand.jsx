@@ -69,7 +69,7 @@ export default function InstituteCommand() {
                 <details style={{ marginTop: 8 }}><summary className="ad-sub" style={{ cursor: "pointer" }}>How health is calculated</summary><ul className="ad-sub">{d.healthRules.map((r) => <li key={r}>{r}</li>)}</ul></details>
               </Panel>
 
-              <div className="ad-kpis" style={{ "--ad-kpi-cols": 6 }} role="list" aria-label="Institute overview">
+              <div className="ad-kpis" style={{ "--ad-kpi-cols": 6 }} role="group" aria-label="Institute overview">
                 <Kpi label="Students" value={fmt(c.students)} to="/admin/students" />
                 <Kpi label="Active students" value={d.activity.activeStudentPercent === null ? null : `${d.activity.activeStudentPercent}%`} foot={`${fmt(d.activity.activeStudents)} logged in`} />
                 <Kpi label="Staff" value={fmt(c.staff)} to="/admin/staff-clerk" />

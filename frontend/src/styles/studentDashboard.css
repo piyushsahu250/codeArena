@@ -129,3 +129,12 @@
 @media (prefers-reduced-motion: reduce) {
   .sd *, .sd *::before, .sd *::after { animation: none !important; transition: none !important; }
 }
+
+/* Dark-mode status and link colours (found by the E2E contrast check: the platform's dark --info-text / --rust measured 2.8-3.1:1 on the dark card).
+   These lighter tones keep the same hue family and reach AA (>= 4.5:1) on --sd-surface and on the dark tinted chip backgrounds. */
+:root[data-theme="dark"] .sd {
+  --sd-info: #8CB8F2;
+  --sd-good: #7FD6A2;
+  --sd-warn: #F2C16B;
+  --sd-bad: #F4A08C;
+}

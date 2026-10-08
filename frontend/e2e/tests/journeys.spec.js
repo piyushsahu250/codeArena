@@ -15,7 +15,7 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
 
   // pre-start screen: summary only (questions are withheld by the server until the attempt starts)
   await page.goto(`/test/${data.testId}`);
-  await expect(page.getByText("ZZ E2E Standard Test")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ZZ E2E Standard Test" })).toBeVisible();
   await expect(page.getByText(data.questionTexts[0])).toHaveCount(0);
   await page.getByLabel("I have read and understood the instructions.").check();
   await page.getByRole("button", { name: /Begin Assessment/ }).click();
@@ -85,5 +85,6 @@ test("question content is not in the page before a test is started", async ({ pa
   await expect(page.getByText("SECURE ASSESSMENT")).toBeVisible();
   const joined = bodies.join("\n");
   expect(joined).not.toContain("pick option B");
+  expect(joined).not.toContain("ZZ E2E Question");
   expect(joined).not.toContain("correctAnswer");
 });

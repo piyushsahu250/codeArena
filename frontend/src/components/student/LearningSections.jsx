@@ -110,7 +110,7 @@ export function PerformanceOverview({ d }) {
   const k = d.kpis;
   if (isErr(k)) return <SectionCard title="Performance" icon={BarChart3} error />;
   return (
-    <div className="sd-kpis" role="list" aria-label="Performance overview">
+    <div className="sd-kpis" role="group" aria-label="Performance overview">
       <Kpi label="Average score" value={k.averageScorePercent === null ? null : `${k.averageScorePercent}%`} sub="across completed tests" />
       <Kpi label="Tests done" value={k.testsAssigned ? `${k.testsCompleted}/${k.testsAssigned}` : null} sub={k.testsPending ? `${k.testsPending} not started` : undefined} />
       <Kpi label="Class rank" value={k.rank ? `#${k.rank}` : null} sub={k.totalInGroup ? `of ${k.totalInGroup}` : undefined} />

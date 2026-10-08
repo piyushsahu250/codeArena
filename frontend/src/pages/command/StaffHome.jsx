@@ -38,7 +38,7 @@ function StaffCommand() {
           {loading && !d && <FullPageSkeleton />}
           {d && (
             <>
-              <div className="ad-kpis" style={{ "--ad-kpi-cols": 4 }} role="list" aria-label="Key numbers">
+              <div className="ad-kpis" style={{ "--ad-kpi-cols": 4 }} role="group" aria-label="Key numbers">
                 <Kpi label="Students in scope" value={fmt(m.students)} to="/staff/students" />
                 <Kpi label="At risk" value={fmt(m.atRisk)} foot="low attendance or failed result" />
                 <Kpi label="Today's attendance" value={m.todayAttendancePlanned ? `${m.todayAttendanceMarked}/${m.todayAttendancePlanned}` : null} foot={m.todayAttendancePlanned ? "lectures marked" : undefined} to="/staff/attendance" />

@@ -18,7 +18,7 @@ test("student dashboard: header, sections, honest empty states, one aggregated r
 
 test("student dashboard shows the pending test as a task with a deadline", async ({ page }) => {
   await login(page, users.student);
-  await expect(page.getByText("ZZ E2E Standard Test")).toBeVisible();
+  await expect(page.locator(".sd-row-title", { hasText: "ZZ E2E Standard Test" })).toBeVisible();
   await expect(page.getByText(/Due/).first()).toBeVisible();
 });
 
@@ -53,7 +53,7 @@ test("institute dashboard: health, KPIs, department table and export", async ({ 
   const problems = watch(page);
   await login(page, users.instAdmin);
   await expect(page.getByText("Institute health")).toBeVisible();
-  await expect(page.getByText("Department performance")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Department performance" })).toBeVisible();
   await expect(page.getByText("E2E Computer Science").first()).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /Export CSV/ }).first().click()]);
   expect(download.suggestedFilename()).toMatch(/\.csv$/);
@@ -64,7 +64,7 @@ test("institute dashboard: health, KPIs, department table and export", async ({ 
 test("global command center: institutes table, search and drill-down", async ({ page }) => {
   const problems = watch(page);
   await login(page, users.platform);
-  await expect(page.getByText("Institute overview")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Institute overview" })).toBeVisible();
   await page.getByPlaceholder("Search institute").fill("ZZ E2E Alpha");
   await expect(page.getByRole("link", { name: /ZZ E2E Alpha Institute/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /ZZ E2E Beta Institute/ })).toHaveCount(0);

@@ -90,10 +90,10 @@ export function SectionCard({ title, icon: Icon, to, linkLabel = "View all", loa
 
 export function Empty({ children }) { return <div className="sd-empty">{children}</div>; }
 
-export function Bar({ value, tone }) {
+export function Bar({ value, tone, label }) {
   const v = Math.max(0, Math.min(100, Number(value) || 0));
   return (
-    <div className={`sd-bar ${tone || ""}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={v}>
+    <div className={`sd-bar ${tone || ""}`} role="progressbar" aria-label={label || "Progress"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={v}>
       <i style={{ width: `${v}%` }} />
     </div>
   );
