@@ -50,6 +50,7 @@ const MENU = {
   CLERK: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/clerk", icon: LayoutDashboard },
+      { label: "Placement Analytics", to: "/clerk/placement-analytics", icon: BarChart3 },
       { label: "Student Search", to: "/clerk/students", icon: Users },
       { label: "Company Master", to: "/clerk/companies", icon: Building },
       { label: "Results", to: "/clerk/results", icon: ClipboardList },
@@ -61,6 +62,7 @@ const MENU = {
   STAFF: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/staff", icon: LayoutDashboard },
+      { label: "Tests & Analytics", to: "/staff/tests", icon: BarChart3 },
       { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion, featureKey: "question_bank" },
       { label: "Readiness Tests", to: "/staff/readiness-subjects", icon: Target, featureKey: "readiness_test" },
@@ -91,6 +93,7 @@ const MENU = {
     { group: "Main", items: [
       { label: "Dashboard", to: "/admin", icon: LayoutDashboard },
       { label: "Institutes", to: "/admin/institutes", icon: Building2 },
+      { label: "Users & Accounts", to: "/admin/users", icon: UserCog },
       { label: "Academic Groups", to: "/admin/academic-groups", icon: School },
       { label: "Bulk Upload", to: "/admin/bulk-upload", icon: Upload },
       { label: "Students", to: "/admin/students", icon: Users },
@@ -143,6 +146,7 @@ const MENU = {
   INSTITUTE_ADMIN: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/admin", icon: LayoutDashboard },
+      { label: "Users & Accounts", to: "/admin/users", icon: UserCog },
       { label: "Academic Groups", to: "/admin/academic-groups", icon: School },
       { label: "Bulk Upload", to: "/admin/bulk-upload", icon: Upload },
       { label: "Students", to: "/admin/students", icon: Users },

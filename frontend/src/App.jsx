@@ -50,6 +50,10 @@ const ProjectView = lazy(() => import("./pages/ProjectView"));
 // Lazy-loaded: these pull in recharts, which every student/login/account-settings page load was
 // previously downloading regardless of whether that user ever visits a chart-bearing page.
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminHome = lazy(() => import("./pages/command/AdminHome"));
+const InstituteCommand = lazy(() => import("./pages/command/InstituteCommand"));
+const StaffHome = lazy(() => import("./pages/command/StaffHome"));
+const ClerkHome = lazy(() => import("./pages/command/ClerkHome"));
 const StaffDashboard = lazy(() => import("./pages/StaffDashboard"));
 const StudentPerformance = lazy(() => import("./pages/StudentPerformance"));
 const InterviewProgress = lazy(() => import("./pages/InterviewProgress"));
@@ -419,7 +423,8 @@ export default function App() {
           />
 
           {/* Staff (and Admin, who can also manage tests/questions) */}
-          <Route path="/staff" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffDashboard /></Suspense></Protected>} />
+          <Route path="/staff" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffHome /></Suspense></Protected>} />
+          <Route path="/staff/tests" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffDashboard /></Suspense></Protected>} />
           <Route path="/staff/learning" element={<Protected roles={["ADMIN", "STAFF"]}><LearningManagement /></Protected>} />
           <Route path="/staff/exam-security/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><ExamSecurityMonitor /></Protected>} />
           <Route path="/staff/secure-devices" element={<Protected roles={["ADMIN", "STAFF"]}><SecureDevices /></Protected>} />
@@ -451,7 +456,9 @@ export default function App() {
           <Route path="/staff/attendance/:assignmentId/execute/:planId" element={<Protected roles={["ADMIN", "STAFF"]}><FeatureProtected featureKey="attendance"><ExecuteAttendance /></FeatureProtected></Protected>} />
 
           {/* Admin only: account management */}
-          <Route path="/admin" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><AdminDashboard /></Suspense></Protected>} />
+          <Route path="/admin" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><AdminHome /></Suspense></Protected>} />
+          <Route path="/admin/users" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><AdminDashboard /></Suspense></Protected>} />
+          <Route path="/admin/institutes/:instituteId/overview" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><InstituteCommand /></Suspense></Protected>} />
           <Route path="/admin/bulk-upload" element={<Protected roles={["ADMIN"]}><BulkUpload /></Protected>} />
           <Route path="/admin/academic-groups" element={<Protected roles={["ADMIN"]}><AcademicGroups /></Protected>} />
           <Route path="/admin/course-assignments" element={<Protected roles={["ADMIN"]}><CourseAssignments /></Protected>} />
@@ -482,7 +489,8 @@ export default function App() {
 
           {/* Placement Clerk — always institute-scoped, Placement Cell operations only (no
               Learning/Test Management access — those routes above simply never list CLERK). */}
-          <Route path="/clerk" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><ClerkDashboard /></Suspense></Protected>} />
+          <Route path="/clerk" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><ClerkHome /></Suspense></Protected>} />
+          <Route path="/clerk/placement-analytics" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><ClerkDashboard /></Suspense></Protected>} />
           <Route path="/clerk/students" element={<Protected roles={["CLERK"]}><StudentSearch basePath="/clerk" /></Protected>} />
           <Route path="/clerk/students/:id" element={<Protected roles={["CLERK"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/clerk" /></Suspense></Protected>} />
           <Route path="/clerk/companies" element={<Protected roles={["CLERK"]}><CompanyMaster /></Protected>} />
