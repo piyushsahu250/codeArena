@@ -23,6 +23,10 @@ const login = async (email, pw) => (await call("POST", "/auth/login", null, { em
   const assignment = subject.academicGroupAssignments[0] || null;
   const instituteId = assignment ? assignment.academicGroup.instituteId : (await prisma.institute.findFirst({ where: { isActive: true } })).id;
   const orig = { securityLevel: subject.securityLevel, securityPolicy: subject.securityPolicy, maxAttempts: subject.maxAttempts, proctoringEnabled: subject.proctoringEnabled };
+  // The chosen institute may have these features switched off; enable them for the duration of the test and restore afterwards.
+  const FEATURES = ["readiness_test", "ai_mock_interview"];
+  const priorFeatures = await prisma.featureSetting.findMany({ where: { instituteId, featureKey: { in: FEATURES } } });
+  for (const k of FEATURES) await prisma.featureSetting.upsert({ where: { instituteId_featureKey: { instituteId, featureKey: k } }, update: { enabled: true }, create: { instituteId, featureKey: k, enabled: true } });
   const ts = Date.now();
   const otherInst = await prisma.institute.create({ data: { name: `ZZ Verify RI Other ${ts}` } });
   const created = [];
@@ -115,6 +119,11 @@ const login = async (email, pw) => (await call("POST", "/auth/login", null, { em
     check("institute-scoped overview includes readiness/interview live counters and stays institute-scoped", ov.status === 200 && ov.body.scope === "INSTITUTE" && "readinessAttempts" in ov.body.live && "interviewSessions" in ov.body.live);
   } finally {
     await prisma.readinessSubject.update({ where: { id: subject.id }, data: { securityLevel: orig.securityLevel, securityPolicy: orig.securityPolicy ?? undefined, maxAttempts: orig.maxAttempts, proctoringEnabled: orig.proctoringEnabled } }).catch((e) => console.error("restore failed", e.message));
+    for (const k of FEATURES) {
+      const prior = priorFeatures.find((p) => p.featureKey === k);
+      if (prior) await prisma.featureSetting.update({ where: { instituteId_featureKey: { instituteId, featureKey: k } }, data: { enabled: prior.enabled } }).catch(() => {});
+      else await prisma.featureSetting.delete({ where: { instituteId_featureKey: { instituteId, featureKey: k } } }).catch(() => {});
+    }
     await prisma.user.deleteMany({ where: { id: { in: created } } });
     await prisma.institute.deleteMany({ where: { id: otherInst.id } });
   }
