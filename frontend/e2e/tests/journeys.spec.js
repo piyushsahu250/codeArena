@@ -1,11 +1,13 @@
 const { test, expect } = require("@playwright/test");
 const { data, users, watch, login, expectNoBrokenText } = require("./helpers");
 
-// Selects "Option B" through the real radio input and proves the selection registered (the input is visually hidden, so the label is clicked).
+// Selects "Option B" through the real radio input, proves the selection registered, and waits for the autosave request to be answered.
 async function pickB(page) {
   const radio = page.getByRole("radio", { name: /Option B/ });
+  const saved = page.waitForResponse((r) => r.url().includes("/submissions/submit") && r.request().method() === "POST", { timeout: 15000 }).catch(() => null);
   await page.locator("label.exam-option", { hasText: "Option B" }).click();
   await expect(radio).toBeChecked();
+  await saved;
 }
 
 test("student journey: dashboard -> navigation -> take a test -> submit -> result", async ({ page }) => {
