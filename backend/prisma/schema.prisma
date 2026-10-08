@@ -373,6 +373,10 @@ model Test {
   endTime      DateTime
   isPublished  Boolean  @default(false)
   requireFullscreen Boolean @default(true)
+  // Exam-security level for the formal Test engine (same presets/overrides as ModuleCodingTest, see utils/examSecurity.js).
+  // Only STANDARD and PROCTORED are valid here: LOCKDOWN needs the secure-client attempt engine and is refused for tests.
+  securityLevel     String  @default("STANDARD")
+  securityPolicy    Json?
   requireWebcam     Boolean @default(false) // best-effort face presence check, mirrors ModuleCodingTest
   requireMicrophone Boolean @default(false) // mic-drop is monitored/warned but never blocks Submit
   // Attendance Management integration: when true, this test only appears in the Attendance
@@ -1087,6 +1091,9 @@ model TestAttempt {
   // configured order when shuffleQuestions is off). optionOrder: { [questionId]: number[] }, a
   // permutation of original option indices per MCQ/MULTISELECT/TRUE_FALSE question — populated
   // only when shuffleOptions is on.
+  // One-active-session control (PROCTORED): the newest start/resume owns this id; later requests carry it in X-Exam-Session.
+  sessionId   String?
+
   questionOrder Json?
   optionOrder   Json?
 

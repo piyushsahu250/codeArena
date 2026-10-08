@@ -9,6 +9,7 @@ const { gradePendingCodingSubmissions, gradeCodingSubmission, recomputeAttemptSc
 const { processGamification } = require("../utils/gamification");
 const { safeErrorMessage } = require("../utils/errors");
 const { gradeNumericAnswer } = require("../utils/numericAnswer");
+const { enforceTestSession } = require("../utils/testExamSecurity");
 
 const router = express.Router();
 
@@ -138,7 +139,7 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
 
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
-      include: { test: { select: { durationMin: true, questions: { select: { questionId: true } } } } },
+      include: { test: { select: { durationMin: true, securityLevel: true, securityPolicy: true, questions: { select: { questionId: true } } } } },
     });
     if (!attempt || attempt.studentId !== req.user.id) {
       return res.status(403).json({ error: "Invalid attempt" });
@@ -146,6 +147,7 @@ router.post("/autosave", authenticate, requireRole("STUDENT"), async (req, res) 
     if (attempt.status !== "IN_PROGRESS") {
       return res.status(403).json({ error: "This test attempt is already finalized" });
     }
+    if (!(await enforceTestSession(req, res, attempt))) return;
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this test" });
 
     // Same assigned-question check as /submit-code below, and just as important here: per the
@@ -225,7 +227,7 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
 
     const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
-      include: { test: { select: { durationMin: true, questions: { select: { questionId: true } } } } },
+      include: { test: { select: { durationMin: true, securityLevel: true, securityPolicy: true, questions: { select: { questionId: true } } } } },
     });
     if (!attempt || attempt.studentId !== req.user.id) {
       return res.status(403).json({ error: "Invalid attempt" });
@@ -233,6 +235,7 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
     if (attempt.status !== "IN_PROGRESS") {
       return res.status(403).json({ error: "This test attempt is already finalized" });
     }
+    if (!(await enforceTestSession(req, res, attempt))) return;
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this test" });
 
     // Must be one of THIS attempt's locked-in questions (attempt.questionOrder — see TestAttempt
@@ -309,13 +312,14 @@ router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async 
   try {
     const { attemptId, questionId, selectedOptions, numericResponse } = req.body;
 
-    const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, include: { test: { select: { durationMin: true } } } });
+    const attempt = await prisma.testAttempt.findUnique({ where: { id: attemptId }, include: { test: { select: { durationMin: true, securityLevel: true, securityPolicy: true } } } });
     if (!attempt || attempt.studentId !== req.user.id) {
       return res.status(403).json({ error: "Invalid attempt" });
     }
     if (attempt.status !== "IN_PROGRESS") {
       return res.status(403).json({ error: "This test attempt is already finalized" });
     }
+    if (!(await enforceTestSession(req, res, attempt))) return;
     if (Date.now() > deadlineOf(attempt)) return res.status(403).json({ error: "Time is up for this test" });
 
     const question = await prisma.question.findUnique({ where: { id: questionId } });
@@ -388,7 +392,7 @@ const PREMATURE_FINALIZE_GRACE_MS = 15000;
 // again on an already-finalized attempt just returns the current state.
 router.post("/finalize/:attemptId", authenticate, requireRole("STUDENT"), async (req, res) => {
   try {
-    const attempt = await prisma.testAttempt.findUnique({ where: { id: req.params.attemptId }, include: { test: { select: { durationMin: true } } } });
+    const attempt = await prisma.testAttempt.findUnique({ where: { id: req.params.attemptId }, include: { test: { select: { durationMin: true, securityLevel: true, securityPolicy: true } } } });
     if (!attempt || attempt.studentId !== req.user.id) {
       return res.status(403).json({ error: "Invalid attempt" });
     }
@@ -397,6 +401,7 @@ router.post("/finalize/:attemptId", authenticate, requireRole("STUDENT"), async 
       return res.json(attempt);
     }
 
+    if (!(await enforceTestSession(req, res, attempt))) return;
     // An automatic ("time") finalize call is only honored once the server's own clock agrees time
     // is actually up — a manual Submit click (reason omitted) is never blocked here, since a
     // student is always allowed to submit early on purpose. This is what makes the server, not the

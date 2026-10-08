@@ -8,6 +8,27 @@ import {
 
 const ROLE_ROWS = [["STUDENT", "Students"], ["STAFF", "Staff"], ["CLERK", "Clerks"], ["INSTITUTE_ADMIN", "Institute admins"]];
 
+function SecureAssessmentsPanel() {
+  const { data: o, error, loading, reload } = useDashboard("/exam-security/overview", { hours: 24 });
+  return (
+    <Panel id="secure" title="Secure assessments (last 24 h)" sub="Evidence signals for human review, not findings of malpractice" loading={loading && !o} error={error && !o} onRetry={reload}>
+      {o && (
+        <div className="ad-kpis" style={{ "--ad-kpi-cols": 4 }}>
+          <Kpi label="Students testing now" value={fmt(o.live.studentsTesting)} foot={`${o.live.testAttempts} tests · ${o.live.codingAttempts} coding`} />
+          <Kpi label="Attempts with strikes" value={fmt(o.last.attemptsWithStrikes)} />
+          <Kpi label="Fullscreen exits" value={fmt(o.last.fullscreenExits)} />
+          <Kpi label="Tab switches" value={fmt(o.last.tabSwitches)} />
+          <Kpi label="Possible external activity" value={fmt(o.last.possibleExternalActivity)} foot="focus lost / split screen" />
+          <Kpi label="Clipboard attempts" value={fmt(o.last.clipboardAttempts)} />
+          <Kpi label="Session conflicts" value={fmt(o.last.sessionConflicts)} />
+          <Kpi label="Secure-client failures" value={fmt(o.last.secureClientFailures)} />
+        </div>
+      )}
+      {o?.topInstitutes?.length > 0 && <p className="ad-sub" style={{ margin: "10px 0 0" }}>Most events: {o.topInstitutes.map((i) => `${i.name} (${i.events})`).join(" · ")}</p>}
+    </Panel>
+  );
+}
+
 export default function SuperAdminCommand() {
   const [days, setDays] = useState(30);
   const [q, setQ] = useState("");
@@ -142,6 +163,7 @@ export default function SuperAdminCommand() {
                 </div>
               </div>
 
+              <SecureAssessmentsPanel />
               <Panel id="feed" title="Recent platform activity" to="/admin/audit-log" linkLabel="Full audit log">
                 {d.activity.length === 0 ? <Empty>No recorded activity yet.</Empty> : (
                   <DataTable caption="Recent platform activity" rows={d.activity} rowKey={(r) => r.id}

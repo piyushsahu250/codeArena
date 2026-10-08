@@ -10,12 +10,12 @@ const RISK_TONE = { LOW: "default", MEDIUM: "warning", HIGH: "danger", CRITICAL:
 const REVIEW_LABEL = { PENDING: "Needs review", REVIEWED: "Reviewed", LEGITIMATE: "Legitimate", SUSPICIOUS: "Suspicious", ESCALATED: "Escalated" };
 const fmt = (d) => new Date(d).toLocaleTimeString();
 
-function Timeline({ attemptId, onClose }) {
+export function Timeline({ attemptId, onClose, base = "/exam-security/attempts" }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const load = useCallback(() => {
-    api.get(`/exam-security/attempts/${attemptId}/timeline`).then((r) => setData(r.data)).catch((e) => setError(e.response?.data?.error || "Could not load the timeline"));
-  }, [attemptId]);
+    api.get(`${base}/${attemptId}/timeline`).then((r) => setData(r.data)).catch((e) => setError(e.response?.data?.error || "Could not load the timeline"));
+  }, [attemptId, base]);
   useEffect(() => { load(); }, [load]);
 
   async function review(id, reviewStatus) {

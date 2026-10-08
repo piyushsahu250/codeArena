@@ -100,6 +100,7 @@ const CourseCertificate = lazy(() => import("./pages/CourseCertificate"));
 const CourseCertificateVerify = lazy(() => import("./pages/CourseCertificateVerify"));
 const LearningManagement = lazy(() => import("./pages/LearningManagement"));
 const ExamSecurityMonitor = lazy(() => import("./pages/ExamSecurityMonitor"));
+const TestSecurityMonitor = lazy(() => import("./pages/TestSecurityMonitor"));
 const SecureDevices = lazy(() => import("./pages/SecureDevices"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const GamificationManagement = lazy(() => import("./pages/GamificationManagement"));
@@ -427,6 +428,7 @@ export default function App() {
           <Route path="/staff/tests" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><StaffDashboard /></Suspense></Protected>} />
           <Route path="/staff/learning" element={<Protected roles={["ADMIN", "STAFF"]}><LearningManagement /></Protected>} />
           <Route path="/staff/exam-security/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><ExamSecurityMonitor /></Protected>} />
+          <Route path="/staff/exam-security/test/:testId" element={<Protected roles={["ADMIN", "STAFF"]}><Suspense fallback={<LoadingScreen />}><TestSecurityMonitor /></Suspense></Protected>} />
           <Route path="/staff/secure-devices" element={<Protected roles={["ADMIN", "STAFF"]}><SecureDevices /></Protected>} />
           <Route path="/staff/gamification" element={<Protected roles={["ADMIN", "STAFF"]}><GamificationManagement /></Protected>} />
           <Route path="/staff/resumes" element={<Protected roles={["ADMIN", "STAFF"]}><ResumeAdmin /></Protected>} />

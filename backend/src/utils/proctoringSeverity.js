@@ -68,6 +68,10 @@ const VIOLATION_SEVERITY = {
   // turns a *repeated* pattern of short absences into a real strike, and a sustained absence past
   // the long window is unaffected — still an immediate CONFIRMED_VIOLATION, exactly as before.
   TAB_SWITCH_BRIEF: "SUSPICIOUS",
+  // Observable-only signals (never a claim about WHICH app): the page stayed visible but lost keyboard/pointer focus to another
+  // window or overlay, or the window is a fraction of the screen (split-screen / floating window). Escalate after repeats.
+  POSSIBLE_EXTERNAL_ASSISTANT: "SUSPICIOUS",
+  SPLIT_SCREEN_SUSPECTED: "SUSPICIOUS",
 
   // INTERRUPTION — environmental signals that are usually innocent.
   FACE_MISSING: "INTERRUPTION",

@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const express = require("express");
 const XLSX = require("xlsx");
 const { sendTable } = require("../utils/spreadsheetSafe");
@@ -22,6 +23,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "https://codearena.site";
 const aiService = require("../services/ai/aiService");
 const { sendAiError } = require("../utils/aiErrors");
 const { classifyViolation } = require("../utils/proctoringSeverity");
+const { parseSecurityInput, policyOf, startRequirementFailure, enforceTestSession } = require("../utils/testExamSecurity");
+const X = require("../utils/examSecurity");
 
 const router = express.Router();
 
@@ -172,6 +175,8 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
       subject, unit, program, allowDuplicate,
       subjectId, unitId,
     } = req.body;
+    const sec = parseSecurityInput(req.body);
+    if (sec.error) return res.status(400).json({ error: sec.error });
 
     // Subject/Unit FK — optional (mirrors the legacy free-text subject/unit's own "(optional)"
     // convention); Unit itself is also optional even when Subject is set (see
@@ -233,6 +238,7 @@ router.post("/", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUTE_AD
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         requireFullscreen: requireFullscreen === undefined ? true : !!requireFullscreen,
+        ...sec.data,
         requireWebcam: !!requireWebcam,
         requireMicrophone: !!requireMicrophone,
         attendanceMandatory: !!attendanceMandatory,
@@ -297,6 +303,8 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       company, instituteId: bodyInstituteId, subject, unit, program,
       subjectId, unitId, scheduledPublishAt,
     } = req.body;
+    const sec = parseSecurityInput(req.body);
+    if (sec.error) return res.status(400).json({ error: sec.error });
 
     // Scheduled Publishing: only meaningful for a test that isn't already live, and only ever a
     // future moment -- a past/now timestamp would just mean "publish immediately," which is what
@@ -375,6 +383,7 @@ router.patch("/:id", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "INSTITUT
       startTime: startTime ? new Date(startTime) : existing.startTime,
       endTime: endTime ? new Date(endTime) : existing.endTime,
       requireFullscreen: requireFullscreen === undefined ? existing.requireFullscreen : !!requireFullscreen,
+      ...sec.data,
       requireWebcam: requireWebcam === undefined ? existing.requireWebcam : !!requireWebcam,
       requireMicrophone: requireMicrophone === undefined ? existing.requireMicrophone : !!requireMicrophone,
       attendanceMandatory: attendanceMandatory === undefined ? existing.attendanceMandatory : !!attendanceMandatory,
@@ -990,9 +999,27 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
     // they're previewing/editing the question bank, not taking the shuffled exam.
     const attempt = await prisma.testAttempt.findUnique({
       where: { testId_studentId: { testId: test.id, studentId: req.user.id } },
-      select: { questionOrder: true, optionOrder: true },
+      select: { questionOrder: true, optionOrder: true, status: true },
     });
-    if (attempt?.questionOrder) {
+    // QUESTION ENUMERATION GUARD: a student only receives question content while their attempt is IN_PROGRESS (or, once their
+    // attempt is finished, after the test window has closed). Before the attempt starts -- including before startTime, and for a
+    // RANDOM-mode test the whole bank -- they get an aggregate summary only, never the questions.
+    const attemptNow = attempt;
+    const questionsAllowed = attemptNow?.status === "IN_PROGRESS" || (!!attemptNow && new Date() > test.endTime);
+    if (!questionsAllowed) {
+      const pts = test.questions.map((tq) => tq.question?.points || 0);
+      const random = test.questionSelectionMode === "RANDOM";
+      test.questionSummary = {
+        count: random && test.randomQuestionsPerStudent ? test.randomQuestionsPerStudent : test.questions.length,
+        maxMarks: random ? null : pts.reduce((a, b) => a + b, 0),
+        types: [...new Set(test.questions.map((tq) => tq.question?.questionType).filter(Boolean))],
+      };
+      test.questions = [];
+      test.questionsWithheld = true;
+    }
+    if (test.questionsWithheld) {
+      // nothing to order: questions are withheld until the attempt is running
+    } else if (attempt?.questionOrder) {
       const byId = new Map(test.questions.map((tq) => [tq.questionId, tq]));
       // A question locked into this student's questionOrder at attempt-start time can end up
       // missing from `test.questions` later — the admin edited the test afterward (removed a
@@ -1050,6 +1077,8 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
     test.attendanceStatus = record ? record.status : "NOT_MARKED";
   }
 
+  test.security = X.clientPolicy(policyOf(test));
+  if (!isStaff) delete test.securityPolicy;
   await questionImages.attachQuestionImageUrls(test.questions);
   res.json(test);
 });
@@ -1084,6 +1113,11 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     // "already-loaded" vs "DB-authoritative" comments in testEligibility.js.
     const allowed = isTestVisibleToStudent(test, student.academicGroupId, student.classId, memberPoolIds, student.instituteId);
     if (!allowed) return res.status(404).json({ error: "Test not available" });
+    // Server-side start requirements (the page cannot override these): phones/tablets are refused when the test is PROCTORED
+    // (or an admin turned phones off). Applies to resume as well as a first start.
+    const startPolicy = policyOf(test);
+    const startFailure = startRequirementFailure(req, startPolicy);
+    if (startFailure) return res.status(403).json(startFailure);
 
     const existing = await prisma.testAttempt.findUnique({
       where: { testId_studentId: { testId, studentId: req.user.id } },
@@ -1147,6 +1181,12 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
         await prisma.testReattemptGrant.delete({ where: { id: reattemptGrant.id } }).catch(() => {});
       }
     }
+    // One-active-session control: the newest start/resume owns attempt.sessionId (every later answer/submit must carry it in
+    // X-Exam-Session). A harmless refresh simply takes the session over; a second tab/device that kept the old id is the one refused.
+    const sessionId = crypto.randomBytes(16).toString("hex");
+    if (attempt.status === "IN_PROGRESS") {
+      await prisma.testAttempt.update({ where: { id: attempt.id }, data: { sessionId } });
+    }
     // Include already-saved submissions (auto-saved MCQ answers, locked coding submissions)
     // so a page refresh mid-test restores exactly where the candidate left off. codeSavedSeq is
     // stripped before this ever reaches res.json() below — it's a BigInt column (see its schema
@@ -1157,7 +1197,7 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
     // serverTime lets the client compute its own clock's offset from the server's — the deadline
     // timer then measures against (Date.now() + offset) instead of raw Date.now(), so a student
     // whose device clock is skewed doesn't get auto-submitted early or late relative to real time.
-    res.json({ ...attempt, submissions, serverTime: Date.now() });
+    res.json({ ...attempt, sessionId, submissions, serverTime: Date.now(), security: X.clientPolicy(startPolicy) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Could not start test" });

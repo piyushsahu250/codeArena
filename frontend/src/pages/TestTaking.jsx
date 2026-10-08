@@ -15,6 +15,7 @@ import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, on
 import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
+import { createFocusLossSignal, createSplitScreenWatch, runSecurityCheck } from "../utils/secureAssessment";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { classifyKeyEvent } from "../utils/keyboardShortcuts";
@@ -125,6 +126,8 @@ export default function TestTaking() {
   const [submitResultMsg, setSubmitResultMsg] = useState(null); // { ok, text } — replaces alert(), which forces fullscreen exit
   const [secondsLeft, setSecondsLeft] = useState(null);
   const [tabWarning, setTabWarning] = useState(null);
+  const [sessionReplaced, setSessionReplaced] = useState(false);
+  const [secCheck, setSecCheck] = useState(null);
   // Distinct from tabWarning above: shown for a SUSPICIOUS-severity event that did NOT get
   // penalized this time -- see backend/src/utils/proctoringSeverity.js. Softer styling, no "X/Y"
   // counter (since it didn't actually count), and a note that repeating it will start counting.
@@ -564,6 +567,7 @@ export default function TestTaking() {
     }
     try {
       const startRes = await api.post(`/tests/${testId}/start`);
+      if (startRes.data.sessionId) api.defaults.headers.common["X-Exam-Session"] = startRes.data.sessionId;
       setAttemptId(startRes.data.id);
       attemptIdRef.current = startRes.data.id;
       const testRes = await api.get(`/tests/${testId}`);
@@ -955,6 +959,38 @@ export default function TestTaking() {
       },
     });
     return () => signal.destroy();
+  }, [started]);
+
+  // --- Secure-assessment signals (detection only; the server holds the authority, see utils/secureAssessment.js) ---
+  // 1) X-Exam-Session: the newest start/resume owns the attempt; a second tab/device that kept the old id gets 409 and lands
+  //    on the blocking screen below instead of silently racing the first one.
+  useEffect(() => {
+    const id = api.interceptors.response.use((r) => r, (err) => {
+      if (err?.response?.status === 409 && err.response.data?.code === "SESSION_REPLACED") setSessionReplaced(true);
+      return Promise.reject(err);
+    });
+    return () => { api.interceptors.response.eject(id); delete api.defaults.headers.common["X-Exam-Session"]; };
+  }, []);
+
+  // 2) Focus lost while the page stays visible: the footprint of a split-screen window, a floating assistant, or an app on a
+  //    second monitor taking focus. Reported as a POSSIBLE signal (never as a named application).
+  useEffect(() => {
+    if (!started) return;
+    const signal = createFocusLossSignal({
+      onLoss: () => reportViolation("POSSIBLE_EXTERNAL_ASSISTANT", "the assessment window lost focus (another window or overlay may be open)"),
+    });
+    return () => signal.destroy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started]);
+
+  // 3) Window is a fraction of the screen (split-screen / floating window) on a touch device; sustained, debounced, one report/min.
+  useEffect(() => {
+    if (!started || !isTouchDevice()) return;
+    const watch = createSplitScreenWatch({
+      onSuspected: () => reportViolation("SPLIT_SCREEN_SUSPECTED", "the assessment window is sharing the screen with another window"),
+    });
+    return () => watch.destroy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
   // Best-effort multi-monitor check — Chrome's experimental, permission-free screen.isExtended
@@ -1557,6 +1593,17 @@ export default function TestTaking() {
     );
   }
 
+  if (sessionReplaced) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
+        <div className="card" style={{ padding: 32, maxWidth: 480, textAlign: "center" }}>
+          <h2>Assessment open elsewhere</h2>
+          <p style={{ marginTop: 10, color: "var(--ink-dim)" }}>This assessment was opened in another tab, window or device, which now holds your session. Close this one and continue there. Your saved answers are safe.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (autoSubmitted) {
     return (
       <AssessmentEndCard
@@ -1613,10 +1660,15 @@ export default function TestTaking() {
     const attendanceMessage = testMeta.attendanceStatus === "ABSENT"
       ? "You have been marked absent for this test and cannot start it."
       : "Attendance has not yet been marked for this test. Please contact your faculty.";
-    const questionCount = testMeta.questions?.length || 0;
-    const maxMarks = (testMeta.questions || []).reduce((sum, tq) => sum + (tq.question?.points || 0), 0);
-    const questionTypes = [...new Set((testMeta.questions || []).map((tq) => tq.question?.questionType).filter(Boolean))];
-    const canBegin = (!needsMedia || mediaGranted) && !attendanceBlocked && instructionsAcked && !otherTabsDetected;
+    // Questions are withheld by the server until the attempt starts (question-enumeration guard), so the pre-start screen
+    // reads the aggregate summary it provides instead of the question list.
+    const qs = testMeta.questionSummary;
+    const questionCount = qs ? qs.count : (testMeta.questions?.length || 0);
+    const maxMarks = qs ? (qs.maxMarks ?? "—") : (testMeta.questions || []).reduce((sum, tq) => sum + (tq.question?.points || 0), 0);
+    const questionTypes = qs ? qs.types : [...new Set((testMeta.questions || []).map((tq) => tq.question?.questionType).filter(Boolean))];
+    const proctoredLevel = testMeta.security?.level === "PROCTORED";
+    const securityBlocked = proctoredLevel && !!secCheck && !secCheck.ready;
+    const canBegin = (!needsMedia || mediaGranted) && !attendanceBlocked && instructionsAcked && !otherTabsDetected && !securityBlocked && (!proctoredLevel || !!secCheck);
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
         <div className="card" style={{ padding: 32, maxWidth: 520, width: "100%", textAlign: "center" }}>
@@ -1663,6 +1715,20 @@ export default function TestTaking() {
               <li>Answers are saved automatically as you work. You cannot edit anything once you submit.</li>
             </ul>
           </div>
+
+          {proctoredLevel && (
+            <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--line)", borderRadius: 10, textAlign: "left" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 8 }}>SECURE ASSESSMENT</div>
+              <p style={{ fontSize: 13, margin: "0 0 8px" }}>This assessment uses secure monitoring. Stay on this page, remain in fullscreen, keep the window full-size, and do not use other applications, copy/paste, screen sharing or outside assistance. Security events are recorded and reviewed by your institute.</p>
+              {secCheck ? (
+                <ul style={{ listStyle: "none", margin: "8px 0 0", padding: 0, fontSize: 13, lineHeight: 1.8 }}>
+                  {secCheck.items.map((i) => <li key={i.key} style={{ color: i.ok ? "var(--success-text)" : (i.required ? "var(--danger-text)" : "var(--warning-text)") }}>{i.ok ? "✓" : i.required ? "✕" : "!"} {i.label}</li>)}
+                </ul>
+              ) : null}
+              {secCheck && !secCheck.ready && <p style={{ fontSize: 13, color: "var(--danger-text)", fontWeight: 600, margin: "8px 0 0" }}>This device or window cannot provide the required security controls. Use a laptop or desktop computer, make the browser window full-size, then run the check again.</p>}
+              <button type="button" className="btn btn-ghost" style={{ marginTop: 10, fontSize: 12, padding: "5px 10px" }} onClick={() => setSecCheck(runSecurityCheck(testMeta.security))}>{secCheck ? "Run security check again" : "Run security check"}</button>
+            </div>
+          )}
 
           {attendanceBlocked && (
             <div style={{ marginTop: 20, padding: 16, border: "1px solid var(--rust)", borderRadius: 10, background: "rgba(220,38,38,0.08)" }}>

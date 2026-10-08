@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import api from "../api";
 import Navbar from "../components/Navbar";
 import { downloadFromApi } from "../utils/downloadFile";
@@ -170,6 +170,7 @@ export default function TestResults() {
             <p style={{ margin: "4px 0 0", color: "var(--ink-dim)" }}>{test?.title || "Loading test…"}</p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
+            <Link className="btn btn-ghost" to={`/staff/exam-security/test/${id}`}>Security monitor</Link>
             <button className="btn btn-ghost" onClick={toggleAnalytics}>
               📊 {showAnalytics ? "Hide" : "Question Analytics"}
             </button>

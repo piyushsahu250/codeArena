@@ -19,6 +19,7 @@ const emptyForm = {
   title: "", code: "", description: "", instructions: "", company: "", durationMin: 60, passingMarks: "", showResults: true, startTime: "", endTime: "", scheduledPublishAt: "",
   subject: "", unit: "", program: "",
   requireFullscreen: true, requireWebcam: false, requireMicrophone: false, attendanceMandatory: false,
+  securityLevel: "STANDARD", securityPolicy: {},
   shuffleQuestions: true, shuffleOptions: false,
   questionSelectionMode: "FIXED", randomBankFolderId: "", randomQuestionsPerStudent: "",
   randomEasy: "", randomMedium: "", randomHard: "",
@@ -166,6 +167,7 @@ export default function CreateTest() {
         scheduledPublishAt: toLocalInputValue(t.scheduledPublishAt),
         requireFullscreen: t.requireFullscreen !== false, requireWebcam: !!t.requireWebcam, requireMicrophone: !!t.requireMicrophone,
         attendanceMandatory: !!t.attendanceMandatory,
+        securityLevel: t.securityLevel === "PROCTORED" ? "PROCTORED" : "STANDARD", securityPolicy: t.securityPolicy && typeof t.securityPolicy === "object" ? t.securityPolicy : {},
         shuffleQuestions: t.shuffleQuestions !== false, shuffleOptions: !!t.shuffleOptions,
         questionSelectionMode: t.questionSelectionMode || "FIXED",
         randomBankFolderId: t.randomBankFolderId || "",
@@ -528,6 +530,31 @@ export default function CreateTest() {
               <input type="checkbox" checked={form.attendanceMandatory} onChange={(e) => setForm({ ...form, attendanceMandatory: e.target.checked })} /> Attendance Mandatory
             </label>
           </div>
+          <div style={{ marginTop: 14, padding: 12, border: "1px solid var(--line)", borderRadius: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Assessment security</div>
+            <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: "2px 0 8px" }}>
+              Layered browser + server controls: evidence is recorded for human review, and the server refuses what a browser can never guarantee. It cannot see other apps or block OS-level overlays; for that use a managed device.
+            </p>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <label style={{ fontSize: 13 }}>Level{" "}
+                <select value={form.securityLevel} onChange={(e) => setForm({ ...form, securityLevel: e.target.value })}>
+                  <option value="STANDARD">Standard — monitoring and clipboard blocking</option>
+                  <option value="PROCTORED">Proctored — one tab only, fullscreen, security check, phones refused</option>
+                </select>
+              </label>
+              {form.securityLevel === "PROCTORED" && (
+                <>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input type="checkbox" checked={form.securityPolicy?.mobileAllowed === true} onChange={(e) => setForm({ ...form, securityPolicy: { ...form.securityPolicy, mobileAllowed: e.target.checked } })} /> Allow phones and tablets
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input type="checkbox" checked={form.securityPolicy?.multiSession !== "FLAG"} onChange={(e) => setForm({ ...form, securityPolicy: { ...form.securityPolicy, multiSession: e.target.checked ? "BLOCK" : "FLAG" } })} /> Refuse a second tab/device
+                  </label>
+                </>
+              )}
+            </div>
+          </div>
+
           <p style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 2 }}>
             When checked, this test only appears in the Attendance module's Practice Test/Exam "Select Test" list, and a
             student must be marked Present for the linked lecture before they can start it.
