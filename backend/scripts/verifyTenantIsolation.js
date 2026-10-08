@@ -72,6 +72,9 @@ async function cleanup() {
     check("overall leaderboard for a student contains only their own institute", ovA.status === 200 && names(ovA).includes("Alice One") && !names(ovA).includes("Bob Other"), JSON.stringify(names(ovA)));
     const ovS = await call("GET", "/gamification/leaderboard?scope=overall&metric=xp", stfA.token);
     check("overall leaderboard for institute staff is limited to their institute", ovS.status === 200 && !names(ovS).includes("Bob Other"), JSON.stringify(names(ovS)));
+    // the platform list is only the top 100 of thousands: lift both test students to the top so the assertion is about scope, not rank
+    await prisma.xpEvent.create({ data: { studentId: sA1.id, activity: "TEST", label: "verify", xp: 90000000 } });
+    await prisma.xpEvent.create({ data: { studentId: sB.id, activity: "TEST", label: "verify", xp: 90000001 } });
     const ovP = await call("GET", "/gamification/leaderboard?scope=overall&metric=xp", plat.token);
     check("a platform-level admin still gets the platform-wide list", ovP.status === 200 && names(ovP).includes("Bob Other") && names(ovP).includes("Alice One"));
     const iov = await call("GET", "/interview/leaderboard?scope=overall", sA1.token);
