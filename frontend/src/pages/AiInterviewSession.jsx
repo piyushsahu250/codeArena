@@ -55,6 +55,7 @@ export default function AiInterviewSession() {
   const { replaced: sessionReplaced, setSession: setExamSession } = useExamSession();
   const [secCheck, setSecCheck] = useState(null);
   const [claimError, setClaimError] = useState(null);
+  const [terminatedNotice, setTerminatedNotice] = useState(false);
   const [integrityNotice, setIntegrityNotice] = useState(null); // { text, sustained } | null
   const fullscreenActivatedAtRef = useRef(null);
   const integrityNoticeTimeoutRef = useRef(null);
@@ -437,19 +438,42 @@ export default function AiInterviewSession() {
     };
   }, [phase]);
 
+  // Server verdict on a batch of security signals (see POST /ai-interviews/:id/events): a counted strike shows a plain warning, a
+  // soft notice for the first suspicious signals, and at the limit the server has already ended the interview -- stop media, leave
+  // fullscreen and send the candidate to their report (answers so far are kept).
+  function onSecurityVerdict(data) {
+    if (!data) return;
+    if (data.terminated) {
+      stopListening();
+      mic.release();
+      wsRef.current?.close();
+      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      setTerminatedNotice(true);
+      setPhase(PHASES.COMPLETED);
+      setTimeout(() => navigate(`/ai-interview/report/${id}`), 4000);
+    } else if (data.newStrikes > 0) {
+      setIntegrityNotice({ text: `Security warning ${data.violationCount}/${data.maxViolations}: the interview window was left or interrupted. The interview ends automatically at ${data.maxViolations}. Please stay in fullscreen on this page.`, sustained: false });
+      setTimeout(() => setIntegrityNotice(null), 8000);
+    } else if (data.suspiciousNotice) {
+      setIntegrityNotice({ text: "Notice: unusual activity was recorded. Please stay on this page and avoid copy/paste or other windows.", sustained: false });
+      setTimeout(() => setIntegrityNotice(null), 6000);
+    }
+  }
+
   // --- secure-assessment evidence (PROCTORED interview types only; detection + review, never ends the interview) ---
   // Batched to /ai-interviews/:id/events every ~10 s. Paste/copy/cut/right-click are blocked on this page only while it is a
   // PROCTORED interview in progress (a pasted answer from an outside assistant is the case this exists for); STANDARD is unchanged.
   const proctoredInterview = session?.security?.level === "PROCTORED";
   useEffect(() => {
     if (phase !== PHASES.ACTIVE || !proctoredInterview) return;
-    const reporter = createEventReporter({ getAttemptId: () => id, send: (batch) => api.post(`/ai-interviews/${id}/events`, { events: batch }) });
+    const reporter = createEventReporter({ getAttemptId: () => id, send: async (batch) => { const { data } = await api.post(`/ai-interviews/${id}/events`, { events: batch }); onSecurityVerdict(data); } });
     reporter.start();
     const startedAt = Date.now();
-    const stopFs = onFullscreenChange(() => { if (!getFullscreenElement() && Date.now() - startedAt > 2000) reporter.report("FULLSCREEN_EXIT"); });
-    const tab = createTabSwitchSignal({ onBrief: () => reporter.report("TAB_SWITCH_BRIEF"), onSwitch: () => reporter.report("TAB_SWITCH") });
-    const focus = createFocusLossSignal({ onLoss: () => reporter.report("POSSIBLE_EXTERNAL_ASSISTANT") });
-    const split = createSplitScreenWatch({ onSuspected: () => reporter.report("SPLIT_SCREEN_SUSPECTED") });
+    const urgent = (t) => { reporter.report(t); reporter.flush(); }; // strike-bearing signals reach the server at once instead of waiting for the 10 s batch
+    const stopFs = onFullscreenChange(() => { if (!getFullscreenElement() && Date.now() - startedAt > 2000) urgent("FULLSCREEN_EXIT"); });
+    const tab = createTabSwitchSignal({ onBrief: () => urgent("TAB_SWITCH_BRIEF"), onSwitch: () => urgent("TAB_SWITCH") });
+    const focus = createFocusLossSignal({ onLoss: () => urgent("POSSIBLE_EXTERNAL_ASSISTANT") });
+    const split = createSplitScreenWatch({ onSuspected: () => urgent("SPLIT_SCREEN_SUSPECTED") });
     const block = (type) => (e) => { e.preventDefault(); reporter.report(type); };
     const handlers = { copy: block("COPY"), paste: block("PASTE"), cut: block("CUT"), contextmenu: block("RIGHT_CLICK"), dragstart: block("DRAG_ATTEMPT") };
     for (const [ev, fn] of Object.entries(handlers)) document.addEventListener(ev, fn);
@@ -517,7 +541,7 @@ export default function AiInterviewSession() {
           {session.security?.level === "PROCTORED" && (
             <div style={{ marginTop: 12, padding: 12, border: "1px solid var(--line)", borderRadius: 10, textAlign: "left" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-dim)", marginBottom: 6 }}>SECURE ASSESSMENT</div>
-              <p style={{ fontSize: 13, margin: "0 0 6px" }}>This interview is monitored. Stay on this page in fullscreen, keep the window full-size, and do not use other applications, copy/paste, screen sharing or outside assistance. Security events are recorded for review; they do not end your interview.</p>
+              <p style={{ fontSize: 13, margin: "0 0 6px" }}>This interview is monitored. Stay on this page in fullscreen, keep the window full-size, and do not use other applications, copy/paste, screen sharing or outside assistance. Leaving fullscreen or switching away counts as a security warning, and repeated warnings (3) end the interview automatically; your answers so far are kept. Every event is recorded for review.</p>
               {secCheck && (
                 <ul style={{ listStyle: "none", margin: "6px 0 0", padding: 0, fontSize: 13, lineHeight: 1.8 }}>
                   {secCheck.items.map((i) => <li key={i.key} style={{ color: i.ok ? "var(--success-text)" : (i.required ? "var(--danger-text)" : "var(--warning-text)") }}>{i.ok ? "✓" : i.required ? "✕" : "!"} {i.label}</li>)}
@@ -552,7 +576,7 @@ export default function AiInterviewSession() {
   }
 
   if (phase === PHASES.COMPLETED) {
-    return <div className="ai-int-page ai-int-centered"><p>Interview complete. Preparing your report…</p></div>;
+    return <div className="ai-int-page ai-int-centered"><p>{terminatedNotice ? "Your interview was ended because of repeated security interruptions. Your answers so far are saved and your report is being prepared." : "Interview complete. Preparing your report…"}</p></div>;
   }
 
   if (sessionExpiredNotice) {

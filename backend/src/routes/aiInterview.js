@@ -18,7 +18,8 @@ const { processAnswer, publicEvaluation } = require("../services/aiInterview/ans
 const { mintTicket } = require("../services/aiInterview/voiceTickets");
 const SecX = require("../utils/testExamSecurity");
 const XS = require("../utils/examSecurity");
-const { VIOLATION_SEVERITY } = require("../utils/proctoringSeverity");
+const { VIOLATION_SEVERITY, classifyViolation } = require("../utils/proctoringSeverity");
+const voiceHandler = require("../services/aiInterview/voiceSessionHandler");
 
 const router = express.Router();
 
@@ -140,7 +141,7 @@ router.get("/:id", authenticate, requireRole("STUDENT"), async (req, res) => {
           select: { id: true, turnIndex: true, questionText: true, questionType: true },
         })
       : null;
-    res.json({ ...session, sessionId: undefined, security: XS.clientPolicy(SecX.policyOf({ securityLevel: session.securityLevel })), remainingSeconds, competencyPlan: undefined, currentQuestion: currentTurn }); // hidden plan never leaves the server, spec §34
+    res.json({ ...session, sessionId: undefined, security: XS.clientPolicy(SecX.policyOf({ securityLevel: session.securityLevel })), maxViolations: AI_MAX_VIOLATIONS, remainingSeconds, competencyPlan: undefined, currentQuestion: currentTurn }); // hidden plan never leaves the server, spec §34
   } catch (err) {
     console.error("[ai-interviews] get session failed:", err.message);
     res.status(500).json({ error: "Failed to load interview session" });
@@ -324,28 +325,57 @@ router.post("/:id/claim", authenticate, requireRole("STUDENT"), claimLimiter, as
 });
 
 // POST /api/ai-interviews/:id/events — batched observable signals (fullscreen exit, focus loss, split screen, clipboard ...) for
-// human review. The client sends only a type + small metadata; the SERVER assigns severity from the shared taxonomy. Evidence only:
-// nothing here ends or fails an interview. Capped per interview so the table can never grow without bound.
+// PROCTORED interviews. The client sends only a type + small metadata; the SERVER assigns severity and decides what counts as a strike
+// using the shared taxonomy (utils/proctoringSeverity.js): CONFIRMED_VIOLATION (fullscreen exit, tab switch) is a strike every time,
+// SUSPICIOUS signals (focus lost, split screen, clipboard ...) only on every 3rd, INTERRUPTION never. Reaching AI_MAX_VIOLATIONS ends
+// the interview server-side (answers so far are kept and the report is still produced) -- a strike is a counted event, never an
+// accusation, and every event stays in the timeline for human review. Capped per interview. STANDARD interviews ignore events.
+const AI_MAX_VIOLATIONS = 3;
+const SUSPICIOUS_TYPES = Object.keys(VIOLATION_SEVERITY).filter((t) => VIOLATION_SEVERITY[t] === "SUSPICIOUS");
 router.post("/:id/events", authenticate, requireRole("STUDENT"), eventLimiter, async (req, res) => {
   try {
     const session = await loadOwnSession(req, res);
     if (!session) return;
-    if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) return res.json({ accepted: 0, closed: true });
+    if (!ACTIVE_QUESTIONING_STATES.includes(session.status)) return res.json({ accepted: 0, closed: true, violationCount: session.violationCount, maxViolations: AI_MAX_VIOLATIONS });
+    if (session.securityLevel !== "PROCTORED") return res.json({ accepted: 0, ignored: true });
     const events = Array.isArray(req.body?.events) ? req.body.events.slice(0, 25) : [];
     if (events.length === 0) return res.status(400).json({ error: "events must be a non-empty array" });
     const existing = await prisma.examSecurityEvent.count({ where: { attemptKind: "AI_INTERVIEW", attemptId: session.id } });
     if (existing >= 2000) return res.json({ accepted: 0, capped: true });
+
+    let priorSuspicious = await prisma.examSecurityEvent.count({ where: { attemptKind: "AI_INTERVIEW", attemptId: session.id, type: { in: SUSPICIOUS_TYPES } } });
+    let violationCount = session.violationCount;
+    let newStrikes = 0;
+    let suspiciousNotice = false;
     const rows = [];
     for (const ev of events) {
       const type = String(ev?.type || "").toUpperCase();
       if (!AI_EVENT_TYPES.has(type)) continue;
+      const { severity, penalized } = classifyViolation(type, priorSuspicious);
+      if (severity === "SUSPICIOUS") { priorSuspicious += 1; if (!penalized) suspiciousNotice = true; }
+      if (penalized) { violationCount += 1; newStrikes += 1; }
       rows.push({
         attemptKind: "AI_INTERVIEW", attemptId: session.id, studentId: req.user.id, testId: null,
-        type, severity: SEV_TO_BAND[VIOLATION_SEVERITY[type] || "INTERRUPTION"] || "LOW", metadata: XS.cleanMetadata(ev.metadata),
+        type, severity: SEV_TO_BAND[severity] || "LOW", metadata: { ...(XS.cleanMetadata(ev.metadata) || {}), ...(penalized ? { strike: true } : {}) },
       });
     }
     if (rows.length) await prisma.examSecurityEvent.createMany({ data: rows });
-    res.json({ accepted: rows.length });
+    if (newStrikes > 0) await prisma.aiInterviewSession.update({ where: { id: session.id }, data: { violationCount } });
+
+    let terminated = false;
+    if (newStrikes > 0 && violationCount >= AI_MAX_VIOLATIONS) {
+      // updateMany with the status guard so two racing batches (or the timer) end the interview exactly once
+      const done = await prisma.aiInterviewSession.updateMany({
+        where: { id: session.id, status: { in: ACTIVE_QUESTIONING_STATES } },
+        data: { status: "COMPLETED", completedAt: new Date(), terminationReason: "MAX_VIOLATIONS" },
+      });
+      terminated = true; // the limit was reached either way; done.count only says whether THIS request performed the transition
+      if (done.count === 1) {
+        console.log("[ai-interviews] session ended: security strike limit", { sessionId: session.id, violationCount });
+        voiceHandler.terminateConnection(session.id, "MAX_VIOLATIONS");
+      }
+    }
+    res.json({ accepted: rows.length, violationCount, maxViolations: AI_MAX_VIOLATIONS, newStrikes, suspiciousNotice: suspiciousNotice && newStrikes === 0, terminated });
   } catch (err) {
     console.error("[ai-interviews] events failed:", err.message);
     res.status(500).json({ error: "Failed to record events" });

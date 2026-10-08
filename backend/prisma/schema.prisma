@@ -3137,6 +3137,7 @@ enum AiInterviewDecision {
 model AiInterviewSession {
   sessionId       String? // one-active-session control, see utils/testExamSecurity.js
   securityLevel   String   @default("STANDARD") // set by the server from the interview type, never by the client
+  violationCount  Int      @default(0) // penalized security strikes (PROCTORED types); reaching AI_MAX_VIOLATIONS ends the interview, answers so far are kept
   id              String   @id @default(uuid())
   student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId       String

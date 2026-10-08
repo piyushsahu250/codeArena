@@ -83,6 +83,40 @@ async function cleanup() {
     check("another institute's admin cannot read the timeline", (await call("GET", `/exam-security/exam-attempts/${id}/timeline?kind=AI_INTERVIEW`, adB.token)).status === 403);
     const ov = await call("GET", "/exam-security/overview", adA.token);
     check("overview counts AI voice interviews and stays institute-scoped", ov.status === 200 && ov.body.scope === "INSTITUTE" && ov.body.live.aiInterviewSessions >= 1, JSON.stringify(ov.body?.live));
+
+    // ---- strike limit (separate interview so the live-count checks above stay valid) ----
+    console.log("\n--- strike limit ---");
+    check("the first batch above counted exactly one strike (fullscreen exit) and two suspicious signals are not strikes yet", ev.body.violationCount === 1 && ev.body.newStrikes === 1 && ev.body.terminated === false, JSON.stringify(ev.body));
+    const mkOpen = async (type = "PLACEMENT", token = stu.token) => {
+      const r = await call("POST", "/ai-interviews", token, body(type));
+      await prisma.aiInterviewSession.update({ where: { id: r.body.id }, data: { status: "QUESTIONING", startedAt: new Date(ts), expiresAt: new Date(Date.now() + 600000) } });
+      return r.body.id;
+    };
+    const post = (iid, events, token = stu.token) => call("POST", `/ai-interviews/${iid}/events`, token, { events });
+    const id2 = await mkOpen();
+    const s1 = await post(id2, [{ type: "TAB_SWITCH" }]);
+    check("a tab switch is a strike (1/3) and the interview goes on", s1.body.violationCount === 1 && s1.body.newStrikes === 1 && s1.body.terminated === false);
+    const s2 = await post(id2, [{ type: "NETWORK_DISCONNECT" }, { type: "ORIENTATION_CHANGE" }]);
+    check("network drops and rotation are recorded but never count", s2.body.accepted === 2 && s2.body.violationCount === 1 && s2.body.newStrikes === 0);
+    const s3 = await post(id2, [{ type: "POSSIBLE_EXTERNAL_ASSISTANT" }]);
+    check("the first suspicious signal gives a soft notice, not a strike", s3.body.newStrikes === 0 && s3.body.suspiciousNotice === true && s3.body.violationCount === 1);
+    const s4 = await post(id2, [{ type: "PASTE" }, { type: "SPLIT_SCREEN_SUSPECTED" }]);
+    check("the 3rd suspicious signal escalates to a strike (2/3)", s4.body.newStrikes === 1 && s4.body.violationCount === 2 && s4.body.terminated === false, JSON.stringify(s4.body));
+    const s5 = await post(id2, [{ type: "FULLSCREEN_EXIT", metadata: { strike: false } }]);
+    check("the 3rd strike ends the interview server-side", s5.body.terminated === true && s5.body.violationCount === 3, JSON.stringify(s5.body));
+    const done = await prisma.aiInterviewSession.findUnique({ where: { id: id2 } });
+    check("the interview is COMPLETED with reason MAX_VIOLATIONS and keeps its strike count", done.status === "COMPLETED" && done.terminationReason === "MAX_VIOLATIONS" && done.violationCount === 3 && !!done.completedAt);
+    const after = await post(id2, [{ type: "TAB_SWITCH" }]);
+    check("events after the end are ignored (no further strikes)", after.body.closed === true && (await prisma.aiInterviewSession.findUnique({ where: { id: id2 } })).violationCount === 3);
+    check("the student cannot answer an ended interview", (await call("POST", `/ai-interviews/${id2}/answer`, stu.token, { answerText: "x" }, {})).status === 409);
+    check("every counted strike carries a strike marker in its evidence", (await prisma.examSecurityEvent.count({ where: { attemptKind: "AI_INTERVIEW", attemptId: id2 } })) >= 6);
+    const tl2 = await call("GET", `/exam-security/exam-attempts/${id2}/timeline?kind=AI_INTERVIEW`, adA.token);
+    check("the timeline ends with the automatic end of the interview", tl2.status === 200 && tl2.body.timeline[tl2.body.timeline.length - 1].type === "COMPLETED");
+    const idStd = await mkOpen("TECHNICAL");
+    const ignored = await post(idStd, [{ type: "TAB_SWITCH" }, { type: "TAB_SWITCH" }, { type: "TAB_SWITCH" }]);
+    check("a STANDARD (practice) interview ignores events: no strikes, never ended", ignored.body.ignored === true && (await prisma.aiInterviewSession.findUnique({ where: { id: idStd } })).status === "QUESTIONING");
+    const g2 = await call("GET", `/ai-interviews/${id2}`, stu.token);
+    check("GET exposes the strike count and the limit for the page", g2.body.violationCount === 3 && g2.body.maxViolations === 3);
   } finally {
     await cleanup();
   }

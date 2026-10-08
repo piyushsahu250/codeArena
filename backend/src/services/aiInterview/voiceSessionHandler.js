@@ -214,3 +214,14 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
 }
 
 module.exports = { handleVoiceConnection };
+
+// Ends the live voice connection for an interview the server has just terminated (e.g. security strike limit). The connection's own
+// close handler does the cleanup; the client gets a normal "completed" message first so it can show the right screen.
+function terminateConnection(sessionId, terminationReason) {
+  const ws = activeConnections.get(sessionId);
+  if (!ws) return;
+  send(ws, { type: "completed", terminationReason });
+  if (ws.readyState === ws.OPEN) ws.close();
+  activeConnections.delete(sessionId);
+}
+module.exports.terminateConnection = terminateConnection;
