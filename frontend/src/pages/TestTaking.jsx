@@ -1230,6 +1230,9 @@ export default function TestTaking() {
   // successive changes (ticking several MULTISELECT checkboxes, typing a numeric answer) into one
   // request instead of firing on every keystroke/click, while still feeling instantaneous.
   function scheduleAutoSave(questionId, payload) {
+    // A change for a different question must never overwrite one still waiting to be sent (the student clicked an option, moved on and clicked again before the
+    // first debounce fired): send the older one now.
+    if (pendingAutoSaveRef.current && pendingAutoSaveRef.current.questionId !== questionId) flushAutoSave();
     pendingAutoSaveRef.current = { questionId, ...payload };
     clearTimeout(autoSaveTimeoutRef.current);
     autoSaveTimeoutRef.current = setTimeout(flushAutoSave, 600);
