@@ -61,7 +61,7 @@ async function cleanup() {
 
     // evidence intake needs an open interview: set the state directly (no AI call involved)
     check("events are ignored while the interview is not open", (await call("POST", `/ai-interviews/${id}/events`, stu.token, { events: [{ type: "FULLSCREEN_EXIT" }] })).body?.closed === true);
-    await prisma.aiInterviewSession.update({ where: { id }, data: { status: "QUESTIONING", startedAt: new Date(), expiresAt: new Date(Date.now() + 600000) } });
+    await prisma.aiInterviewSession.update({ where: { id }, data: { status: "QUESTIONING", startedAt: new Date(ts), expiresAt: new Date(Date.now() + 600000) } });
     const ev = await call("POST", `/ai-interviews/${id}/events`, stu.token, { events: [
       { type: "FULLSCREEN_EXIT", severity: "LOW" }, { type: "POSSIBLE_EXTERNAL_ASSISTANT" }, { type: "PASTE" }, { type: "NOT_A_REAL_TYPE" }, { type: "GEMINI_DETECTED" },
     ] });
