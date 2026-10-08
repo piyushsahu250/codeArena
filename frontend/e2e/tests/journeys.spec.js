@@ -77,9 +77,7 @@ test("answers chosen right before moving on or submitting are not lost", async (
   await page.getByRole("button", { name: "Submit Test" }).click();
   await page.getByRole("button", { name: "Submit Assessment" }).click();
   await expect(page.getByText(/submitted|Thank you/i).first()).toBeVisible({ timeout: 30000 });
-  console.log("FASTTRAFFIC
-" + traffic.join("
-"));
+  console.log("FASTTRAFFIC\n" + traffic.join("\n"));
   await page.goto(`/test/${data.testId}/result`);
   await expect(page.locator("body")).toContainText(/(^|\D)10\s*total points/);
 });
