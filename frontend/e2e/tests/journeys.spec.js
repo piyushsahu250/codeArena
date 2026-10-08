@@ -40,7 +40,7 @@ test("student journey: dashboard -> navigation -> take a test -> submit -> resul
   await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
   await pickB(page);
   await page.getByRole("button", { name: /Next/ }).first().click();
-  await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
+  await expect(page.getByText("Question 2 of 2")).toBeVisible();
   await pickB(page);
 
   await page.getByRole("button", { name: "Submit Test" }).click();
@@ -65,7 +65,7 @@ test("answers chosen right before moving on or submitting are not lost", async (
   // no waiting for autosave: click, move on, click, submit
   await page.locator("label.exam-option", { hasText: "Option B" }).click();
   await page.getByRole("button", { name: /Next/ }).first().click();
-  await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
+  await expect(page.getByText("Question 2 of 2")).toBeVisible();
   await page.locator("label.exam-option", { hasText: "Option B" }).click();
   await page.getByRole("button", { name: "Submit Test" }).click();
   await page.getByRole("button", { name: "Submit Assessment" }).click();
