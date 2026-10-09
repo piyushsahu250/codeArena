@@ -92,7 +92,7 @@ async function cleanup() {
   const fin2 = await http("POST", `/submissions/finalize/${attemptA.id}`, tok.a, { reason: null });
   const after = await prisma.testAttempt.findUnique({ where: { id: attemptA.id } });
   check("repeated finalize leaves the score unchanged (idempotent)", after.totalScore === 56, `status ${fin2.status}, score ${after.totalScore}`);
-  r = await http("GET", `/tests/${t30.id}/result`, tok.a);
+  r = await http("GET", `/tests/${t30.id}/my-result`, tok.a);
   check("result is out of 30 questions / 60 points even though 28 were answered", r.json.maxScore === 60 && r.json.expectedQuestionCount === 30, JSON.stringify({ max: r.json.maxScore, exp: r.json.expectedQuestionCount }));
   check("result separates answered (28) from unanswered (2)", r.json.answeredCount === 28 && r.json.unansweredCount === 2);
 
@@ -104,7 +104,7 @@ async function cleanup() {
   for (const qid of attemptC.questionOrder) await http("POST", "/submissions/submit", tok.c, { attemptId: attemptC.id, questionId: qid, selectedOptions: [1] });
   r = await http("POST", `/submissions/finalize/${attemptC.id}`, tok.c, { reason: null });
   check("that student's 30 correct answers score 60", r.json.totalScore === 60, `${r.json.totalScore}`);
-  r = await http("GET", `/tests/${t30.id}/result`, tok.c);
+  r = await http("GET", `/tests/${t30.id}/my-result`, tok.c);
   check("result denominator stays 60 although the test now lists 28 questions", r.json.maxScore === 60 && r.json.expectedQuestionCount === 30);
   r = await http("GET", `/tests/${t30.id}/results/export?format=csv`, tok.admin);
 
