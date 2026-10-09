@@ -1,0 +1,134 @@
+{
+  "schema_version": "codearena-interview-import/1",
+  "research": {
+    "company": "ExampleCorp",
+    "role": "Software Engineer",
+    "experience_level": "FRESHER",
+    "hiring_region": "Pune, India",
+    "target_year": 2026,
+    "researched_on": "2026-10-09",
+    "researcher": "EXAMPLE FILE - FICTIONAL COMPANY, NOT REAL DATA, DO NOT IMPORT",
+    "job_description_url": "https://example.com/careers/software-engineer",
+    "job_description_summary": "Fictional job description used only to show the file format.",
+    "required_skills": ["Arrays and strings", "SQL basics", "Object-oriented design", "Communication"],
+    "limitations": ["This is an illustration of the format, not research. ExampleCorp does not exist."]
+  },
+  "sources": [
+    { "source_id": "S1", "kind": "JOB_DESCRIPTION", "url": "https://example.com/careers/software-engineer", "title": "Software Engineer (fictional)", "publisher": "ExampleCorp", "published_on": "2026-08", "accessed_on": "2026-10-09", "reliability_note": "Fictional." },
+    { "source_id": "S2", "kind": "CANDIDATE_REPORT", "url": "https://example.com/experiences/software-engineer-pune", "title": "A candidate's interview experience (fictional)", "publisher": "example.com", "published_on": "2026-06-14", "accessed_on": "2026-10-09", "reliability_note": "Fictional; a single report." }
+  ],
+  "rounds": [
+    { "round_id": "R1", "name": "Online coding assessment", "category": "CODING_ASSESSMENT", "order": 1, "evidence": "REPORTED", "duration_min": 60, "description": "Two coding problems, one easy and one medium (fictional).", "source_ids": ["S2"] },
+    { "round_id": "R2", "name": "Core technical interview", "category": "CORE_TECHNICAL", "order": 2, "evidence": "PROPOSED", "duration_min": 45, "description": "A suggested preparation structure; no evidence the company runs this exact round.", "source_ids": [] },
+    { "round_id": "R3", "name": "HR interview", "category": "HR", "order": 3, "evidence": "PROPOSED", "duration_min": 20, "description": "Suggested.", "source_ids": [] }
+  ],
+  "questions": [
+    {
+      "question_id": "EXAMPLECORP-SWE-R1-001",
+      "round_id": "R1",
+      "topic": "Arrays",
+      "subtopic": "Two pointers",
+      "question_type": "CODING",
+      "difficulty": "EASY",
+      "prompt": "Given a sorted list of integers and a target value, report whether any two different positions hold values that add up to the target.",
+      "relevance_to_role": "The job description asks for strong array and string problem solving.",
+      "evidence_class": "B_CANDIDATE_REPORTED",
+      "source_ids": ["S2"],
+      "times_reported": 1,
+      "verification_status": "UNVERIFIED",
+      "confidence": "LOW",
+      "originality_status": "PARAPHRASED",
+      "expected_answer": "Use two indices, one at each end. If the sum is too small move the left index right, if too large move the right index left, until they meet.",
+      "rubric": [
+        { "criterion": "Recognises the sorted input allows two pointers", "weight": 4 },
+        { "criterion": "Correct pointer movement and termination", "weight": 4 },
+        { "criterion": "States O(n) time and O(1) space", "weight": 2 }
+      ],
+      "key_concepts": ["two pointers", "sorted input", "linear scan"],
+      "follow_ups": ["How would this change if the list were not sorted?", "How do you handle duplicates?"],
+      "common_mistakes": ["Using nested loops (O(n^2)) without noticing the sorted order", "Allowing the same position to be used twice"],
+      "suggested_time_min": 15,
+      "tags": ["arrays", "two-pointers"],
+      "notes": "Fictional example of a single, unverified candidate report.",
+      "coding": {
+        "problem_statement": "Given a non-decreasing list of integers and an integer target, determine whether two different positions i and j exist with values[i] + values[j] equal to target.",
+        "input_format": "First line: n and target. Second line: n integers in non-decreasing order.",
+        "output_format": "Print YES or NO.",
+        "constraints": "2 <= n <= 100000; -1000000000 <= values[i], target <= 1000000000",
+        "samples": [
+          { "input": "5 9\n1 2 4 7 11", "output": "YES", "explanation": "2 + 7 = 9" },
+          { "input": "3 100\n1 2 3", "output": "NO", "explanation": "No pair adds up to 100" }
+        ],
+        "edge_cases": ["n = 2", "all values equal", "negative numbers", "the target needs the same value at two different positions"],
+        "expected_algorithm": "Two pointers from both ends.",
+        "time_complexity": "O(n)",
+        "space_complexity": "O(1)",
+        "hidden_test_categories": ["minimum size", "large input", "negative values", "no valid pair", "duplicate values"]
+      }
+    },
+    {
+      "question_id": "EXAMPLECORP-SWE-R2-001",
+      "round_id": "R2",
+      "topic": "SQL",
+      "subtopic": "Joins",
+      "question_type": "MCQ",
+      "difficulty": "EASY",
+      "prompt": "A table of employees and a table of departments are joined so that every employee appears even if their department is missing. Which join does this?",
+      "relevance_to_role": "The job description lists SQL basics.",
+      "evidence_class": "C_INFERRED_FROM_JD",
+      "source_ids": ["S1"],
+      "times_reported": 0,
+      "verification_status": "UNVERIFIED",
+      "confidence": "MEDIUM",
+      "originality_status": "ORIGINAL",
+      "expected_answer": "A LEFT JOIN from employees to departments.",
+      "rubric": [ { "criterion": "Chooses the join that keeps all employees", "weight": 10 } ],
+      "key_concepts": ["left join", "null handling"],
+      "follow_ups": ["What does the department column contain for an employee with no department?"],
+      "common_mistakes": ["Choosing INNER JOIN, which drops employees without a department"],
+      "suggested_time_min": 2,
+      "tags": ["sql", "joins"],
+      "notes": "Written to test a skill the job description requires; nobody is claimed to have been asked it.",
+      "mcq": {
+        "options": ["INNER JOIN", "LEFT JOIN from employees to departments", "RIGHT JOIN from employees to departments", "CROSS JOIN"],
+        "correct_options": [1],
+        "explanation": "A LEFT JOIN keeps every row of the left table (employees) and fills missing department values with NULL.",
+        "distractor_notes": "INNER JOIN is the common wrong answer; RIGHT JOIN from employees keeps every department instead."
+      }
+    },
+    {
+      "question_id": "EXAMPLECORP-SWE-R3-001",
+      "round_id": "R3",
+      "topic": "Communication",
+      "subtopic": "Handling disagreement",
+      "question_type": "BEHAVIORAL",
+      "difficulty": "MEDIUM",
+      "prompt": "Describe a time you disagreed with a teammate about how to build something. How did you reach a decision?",
+      "relevance_to_role": "The job description lists teamwork and communication.",
+      "evidence_class": "D_PRACTICE",
+      "source_ids": [],
+      "times_reported": 0,
+      "verification_status": "UNVERIFIED",
+      "confidence": "LOW",
+      "originality_status": "ORIGINAL",
+      "expected_answer": "A specific situation, what the candidate did to understand the other view, how the decision was made, and what was learned.",
+      "rubric": [
+        { "criterion": "Specific, real situation", "weight": 3 },
+        { "criterion": "Listens and weighs the other view", "weight": 4 },
+        { "criterion": "Clear outcome and reflection", "weight": 3 }
+      ],
+      "key_concepts": ["collaboration", "conflict resolution"],
+      "follow_ups": ["What would you do differently now?"],
+      "common_mistakes": ["Blaming the teammate", "A vague answer with no concrete example"],
+      "suggested_time_min": 4,
+      "tags": ["behavioral"],
+      "notes": "Practice question for preparation; not claimed to be asked by any company.",
+      "behavioral": {
+        "competency": "Collaboration and conflict resolution",
+        "star_guidance": "Situation: the project and the disagreement. Task: your responsibility. Action: how you listened and proposed a way forward. Result: the decision and what you learned.",
+        "positive_signals": ["Takes ownership of their part", "Uses data or a small experiment to decide"],
+        "negative_signals": ["Blames others", "No concrete example"]
+      }
+    }
+  ]
+}
