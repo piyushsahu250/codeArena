@@ -47,7 +47,7 @@ const maskEmail = (e) => (e ? e.replace(/^(.).*(@.*)$/, "$1***$2") : "-");
       overdueDays: Math.round((now - deadline) / 864e5 * 10) / 10, lastActivity: lastActivity.toISOString(),
       studentLastLogin: lastLogin ? lastLogin.loginAt.toISOString() : null, loggedInAfterDeadline: lastLogin ? lastLogin.loginAt.getTime() > deadline : null,
       questions: a.questions.length, savedAnswers: subs.length, evaluated: graded.length, savedNotEvaluated: pending.length,
-      proctoringEvents: a.violations.length, otherAttempts: otherAttempts.map((o) => `#${o.attemptNumber} ${o.status}${o.passed ? " PASSED" : ""}`).join(", ") || "none",
+      proctoringEvents: a.violations.length, strikes: a.violationCount, autoSubmitReason: a.autoSubmitReason, eventTypes: [...new Set(a.violations.map((v) => v.type))].join("+"), otherAttempts: otherAttempts.map((o) => `#${o.attemptNumber} ${o.status}${o.passed ? " PASSED" : ""}`).join(", ") || "none",
       perQuestion: subs.map((s) => ({ language: s.language, codeChars: (s.code || "").length, verdict: s.verdict, cases: `${s.passedCases}/${s.totalCases}`, savedAt: s.updatedAt.toISOString() })),
       evidence, proposal,
     });
@@ -57,7 +57,7 @@ const maskEmail = (e) => (e ? e.replace(/^(.).*(@.*)$/, "$1***$2") : "-");
   console.log("by evidence:", JSON.stringify(by));
   console.log("\nWhy they are stuck: these attempts were never finalized by the student's browser. Module coding attempts are only closed (a) by the student's own finalize call, (b) lazily when the student restarts that assessment, or (c) since 2026-10-09 by a sweep limited to the last 48 hours. There is no persistent judge queue to lose a job: grading runs inside the finalize request, and an unevaluated saved answer shows verdict PENDING. A judge failure would show verdicts such as RUNTIME_ERROR or COMPILE_ERROR on saved answers, not PENDING.\n");
   for (const r of rows) {
-    console.log(`${r.attemptId.slice(0, 8)}  ${r.student}  ${r.institute}\n   ${r.assessment}  attempt #${r.attemptNo}\n   started ${r.startedAt.slice(0, 16)}  deadline ${r.deadline.slice(0, 16)}  overdue ${r.overdueDays} d  last activity ${r.lastActivity.slice(0, 16)}  student last login ${r.studentLastLogin ? r.studentLastLogin.slice(0, 10) : "-"}${r.loggedInAfterDeadline ? " (after the deadline)" : ""}\n   questions ${r.questions}, saved ${r.savedAnswers}, evaluated ${r.evaluated}, saved-not-evaluated ${r.savedNotEvaluated}, proctoring events ${r.proctoringEvents}, other attempts: ${r.otherAttempts}\n   evidence: ${r.evidence}\n   proposal: ${r.proposal}\n`);
+    console.log(`${r.attemptId.slice(0, 8)}  ${r.student}  ${r.institute}\n   ${r.assessment}  attempt #${r.attemptNo}\n   started ${r.startedAt.slice(0, 16)}  deadline ${r.deadline.slice(0, 16)}  overdue ${r.overdueDays} d  last activity ${r.lastActivity.slice(0, 16)}  student last login ${r.studentLastLogin ? r.studentLastLogin.slice(0, 10) : "-"}${r.loggedInAfterDeadline ? " (after the deadline)" : ""}\n   questions ${r.questions}, saved ${r.savedAnswers}, evaluated ${r.evaluated}, saved-not-evaluated ${r.savedNotEvaluated}, proctoring events ${r.proctoringEvents} (${r.eventTypes || "-"}; strikes recorded ${r.strikes}, auto-submit reason ${r.autoSubmitReason || "none"}), other attempts: ${r.otherAttempts}\n   evidence: ${r.evidence}\n   proposal: ${r.proposal}\n`);
   }
   const out = arg("json", "");
   if (out) { fs.writeFileSync(out, JSON.stringify(rows, null, 2)); console.log(`wrote ${out}`); }
