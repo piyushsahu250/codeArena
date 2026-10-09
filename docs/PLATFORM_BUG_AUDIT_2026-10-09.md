@@ -62,3 +62,30 @@ Full browser suite on `main` (`5c805c2`): **60 passed, 0 failed**; the lesson sm
 Formal tests and readiness assessments: 0 stuck (their sweeps work).
 
 The first run of the new sweep in production may close one real attempt that expired about 21 hours before the deploy (all three answers saved); that is the intended behaviour and equivalent to the student returning.
+
+## Update: third audit pass (verification batch, request logs, metrics)
+
+### Verification scripts for the previously unaudited areas (run on the live host, each on disposable data)
+
+22 of 26 passed outright: attendance and certificate flows, certificate codes, talent pools (25/25), results export and bulk import, LMS and multi-institute isolation (30/30), admin stats scoping, admin audit and institute admin, role-fix routes, profile edit permissions (32/32), roll-number integrity (13/13), publish hierarchy, feature management, issue reports, platform health guard, review ownership, exam security, secure exam, module coding and formal test flows, formal test autosave (10/10), test creation overhaul (26/26).
+
+The other four were test problems, not product bugs:
+- `verifyResultManagementV2` was stale: the create-exam route (by design) now requires an academic group. Script updated; now 18/18.
+- `verifyReadinessAndTalentPoolFlows` and `verifyReadinessStrictProctoring` pick an institute where the `readiness_test` feature is switched off (403 "Feature not available"). Environmental. Not re-run against an institute with the feature on.
+- `verifyModuleCodingAutosubmit` targets an assessment that is now a draft ("not currently available"). Stale; not updated.
+
+### Real traffic, 9 days of request logs (101,296 requests; `scripts/analyzeRequestLogs.js`, read-only)
+
+- Server errors outside 2026-10-07: 1, 1 and 0 on the other days. The platform is stable under real use (2026-10-08: 18,089 requests, about 143 users, 1 error).
+- 2026-10-07 shows 1,030 server errors and a 67 s median on the attempt finalize endpoint. That day is the synthetic secure-exam load test (2,961 distinct users in one day, 60,112 requests), not a student incident. It does show the capacity limit: about a third of ~3,000 near-simultaneous coding finalizations failed when the judge saturated. The judge now runs as a separate service (see `BACKEND_STRUCTURE.md`), but a repeat of that test has not been run against it.
+- Requests with `undefined` in the URL (a client building a URL from a missing id): 10 in total, all from verification scripts failing earlier the same day. No real client bug found.
+- Login: 4,794 attempts, 720 failures, 272 rate-limited. The limiter is keyed by IP plus email, so a shared campus network cannot lock out other students. On 2026-10-08 there were 176 wrong-password failures and 175 lockouts: students retrying credentials they probably never received, consistent with the known email-delivery limit (see project notes). Not a limiter bug.
+- Scanner noise (wp-login, .env, wp-json) is answered 404 quickly; no action.
+
+### Monitoring added
+
+`backend/src/utils/metrics.js` now keeps a bounded per-route breakdown (slowest by p95, routes with 5xx) in the existing monitoring snapshot (`routeTiming`), so the next audit can use live data instead of logs. Verified by `scripts/verifyRouteMetrics.js`. The first version keyed failing routes without their mount path; fixed in the same pass and covered by the test.
+
+### Read-only analysis tools added
+
+`analyzeRequestLogs.js`, `analyzeRouteByDay.js`, `analyzeBadPaths.js`, `auditStuckSessions.js`, `auditStuckModuleCoding.js`.
