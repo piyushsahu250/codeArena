@@ -54,10 +54,14 @@ async function runOnce() {
     console.error("[testAttemptAutoFinalizeScheduler] readiness sweep failed:", err.message);
     return { closed: 0 };
   });
+  const moduleCoding = await sweepExpiredModuleCodingAttempts().catch((err) => {
+    console.error("[testAttemptAutoFinalizeScheduler] module coding sweep failed:", err.message);
+    return { closed: 0 };
+  });
   await pruneExamSecurityEvents().catch((err) => console.error("[testAttemptAutoFinalizeScheduler] security-event retention failed:", err.message));
   const secureSweep = await require("../routes/secureExam").sweepLostSecureSessions().catch((err) => { console.error("[testAttemptAutoFinalizeScheduler] secure-session sweep failed:", err.message); return { submitted: 0 }; });
   const sessions = await expireStaleLoginSessions().catch((err) => { console.error("[testAttemptAutoFinalizeScheduler] session expiry failed:", err.message); return { expired: 0 }; });
-  return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed, sessionsExpired: sessions.expired };
+  return { candidateCount: candidates.length, finalized, failed, readinessClosed: readiness.closed, moduleCodingClosed: moduleCoding.closed, sessionsExpired: sessions.expired };
 }
 
 
@@ -109,6 +113,42 @@ async function sweepExpiredReadinessAssessments() {
   return { closed };
 }
 
+// Module coding assessments have only a per-attempt startedAt+timeLimitMin deadline and depend on the student's browser to submit. A closed tab used to
+// leave the attempt IN_PROGRESS and ungraded until (if ever) the student came back and restarted it (moduleCoding.js POST /start grades an expired one then).
+// Audit 2026-10-09: 11 attempts were stuck this way, nine of them with every answer already saved. This closes attempts whose deadline passed recently and
+// grades them exactly as a late finalize would. Only attempts that expired within MODULE_CODING_SWEEP_MAX_AGE_HOURS (default 48) are touched: older ones
+// are a historical backlog whose grading could change a student's module access, so they are handled by a reviewed one-off, never by this loop.
+async function sweepExpiredModuleCodingAttempts({ studentId } = {}) { // studentId only narrows the sweep (used by the verification script)
+  const { gradeModuleCodingAttempt } = require("./gradeModuleCodingAttempt");
+  const grace = 3 * 60 * 1000;
+  const maxAgeMs = Math.max(1, Number(process.env.MODULE_CODING_SWEEP_MAX_AGE_HOURS) || 48) * 3600 * 1000;
+  const now = Date.now();
+  const open = await prisma.moduleCodingAttempt.findMany({
+    where: { status: "IN_PROGRESS", startedAt: { gt: new Date(now - maxAgeMs - 12 * 3600 * 1000), lt: new Date(now - grace) }, ...(studentId ? { studentId } : {}) },
+    select: { id: true, startedAt: true, moduleCodingTest: { select: { timeLimitMin: true } } },
+    take: 200,
+  });
+  const due = open.filter((a) => {
+    const deadline = a.startedAt.getTime() + (a.moduleCodingTest?.timeLimitMin || 45) * 60000;
+    return now > deadline + grace && now - deadline <= maxAgeMs;
+  });
+  let closed = 0;
+  const ids = [];
+  for (const a of due) {
+    try {
+      await gradeModuleCodingAttempt(a.id, { reason: "TIME_EXPIRED" });
+      closed++;
+      ids.push(a.id);
+    } catch (err) {
+      console.error(`[testAttemptAutoFinalizeScheduler] Failed to close module coding attempt ${a.id}:`, err.message);
+    }
+  }
+  if (closed > 0) {
+    await logAudit({ action: AUDIT_ACTIONS.TEST_ATTEMPTS_AUTO_FINALIZED, actorName: "Auto-Finalize Scheduler", details: { kind: "MODULE_CODING", finalized: closed, attemptIds: ids.slice(0, 100) } });
+  }
+  return { closed };
+}
+
 // Off by default like every other background scheduler on this platform — see
 // testScheduledPublishScheduler.js's identical reasoning.
 function startTestAttemptAutoFinalizeScheduler() {
@@ -124,4 +164,4 @@ function startTestAttemptAutoFinalizeScheduler() {
   }, intervalMs);
 }
 
-module.exports = { startTestAttemptAutoFinalizeScheduler, runOnce, pruneExamSecurityEvents };
+module.exports = { startTestAttemptAutoFinalizeScheduler, runOnce, pruneExamSecurityEvents, sweepExpiredModuleCodingAttempts };
