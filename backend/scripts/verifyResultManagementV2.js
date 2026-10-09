@@ -40,12 +40,15 @@ async function main() {
   const cleanup = [];
   const examIds = [];
   try {
+    const groupB = await prisma.academicGroup.findFirst({ where: { instituteId: instB.id }, select: { id: true } });
+    const groupA = await prisma.academicGroup.findFirst({ where: { instituteId: instA.id }, select: { id: true } });
+    if (!groupA) { console.log("SKIP: institute A has no academic group (the create-exam route requires one)"); process.exit(0); }
     const superAdmin = await prisma.user.findFirst({ where: { role: "SUPER_ADMIN" } });
     const adminA = await mkUser("INSTITUTE_ADMIN", instA.id);
     const adminB = await mkUser("INSTITUTE_ADMIN", instB.id);
     const staffA = await mkUser("STAFF", instA.id);
     const staffB = await mkUser("STAFF", instB.id);
-    const studentA = await mkUser("STUDENT", instA.id);
+    const studentA = await mkUser("STUDENT", instA.id, groupA.id);
     const studentB = await mkUser("STUDENT", instB.id);
     cleanup.push(adminA, adminB, staffA, staffB, studentA, studentB);
 
@@ -61,7 +64,7 @@ async function main() {
     console.log("=== Create exam (Institute Admin A) ===");
     const createRes = await fetch(`${API_BASE}/results/admin/examinations`, {
       method: "POST", headers: adminA.headers,
-      body: JSON.stringify({ title: "RM Verify Exam", examDate: new Date().toISOString(), totalMarks: 100, passingPercent: 40 }),
+      body: JSON.stringify({ title: "RM Verify Exam", examDate: new Date().toISOString(), totalMarks: 100, passingPercent: 40, academicGroupIds: [groupA.id] }),
     });
     const exam = await j(createRes);
     check("Exam created (200)", createRes.status === 200, `got ${createRes.status}`);
@@ -82,7 +85,7 @@ async function main() {
     console.log("\n=== Staff A cannot access Institute B exam ===");
     const examBRes = await fetch(`${API_BASE}/results/admin/examinations`, {
       method: "POST", headers: adminB.headers,
-      body: JSON.stringify({ title: "RM Verify Exam B", examDate: new Date().toISOString(), totalMarks: 50, passingMarks: 20 }),
+      body: JSON.stringify({ title: "RM Verify Exam B", examDate: new Date().toISOString(), totalMarks: 50, passingMarks: 20, academicGroupIds: groupB ? [groupB.id] : [] }),
     });
     const examB = await j(examBRes);
     examIds.push(examB.id);
@@ -96,7 +99,7 @@ async function main() {
 
     // ---- 5. Absent status: no fabricated 0/fail ----
     console.log("\n=== Absent status does not fabricate a scored result ===");
-    const studentA2 = await mkUser("STUDENT", instA.id);
+    const studentA2 = await mkUser("STUDENT", instA.id, groupA.id);
     cleanup.push(studentA2);
     const absentRes = await fetch(`${API_BASE}/results/admin/examinations/${exam.id}/entries`, {
       method: "POST", headers: staffA.headers,
@@ -118,7 +121,7 @@ async function main() {
     console.log("\n=== Pre-publish validation blocks an exam with zero entries ===");
     const emptyExamRes = await fetch(`${API_BASE}/results/admin/examinations`, {
       method: "POST", headers: adminA.headers,
-      body: JSON.stringify({ title: "RM Empty Exam", examDate: new Date().toISOString(), totalMarks: 100, passingPercent: 40 }),
+      body: JSON.stringify({ title: "RM Empty Exam", examDate: new Date().toISOString(), totalMarks: 100, passingPercent: 40, academicGroupIds: [groupA.id] }),
     });
     const emptyExam = await j(emptyExamRes);
     examIds.push(emptyExam.id);
