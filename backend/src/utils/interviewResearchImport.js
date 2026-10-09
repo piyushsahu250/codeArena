@@ -73,6 +73,7 @@ function validateFile(data, fileName = "") {
   }
   if (!list(data.questions).length) err("questions", "none");
 
+  const unsupported = new Map();
   const seen = new Set();
   const used = new Set();
   for (const q of list(data.questions)) {
@@ -97,9 +98,9 @@ function validateFile(data, fileName = "") {
       const m = q.mcq || {};
       if (!Array.isArray(m.options) || m.options.length < 2) err(w, "mcq.options missing");
       else if (!Array.isArray(m.correct_options) || m.correct_options.length !== 1 || !(m.correct_options[0] >= 0 && m.correct_options[0] < m.options.length)) err(w, "MCQ needs exactly one valid correct option");
-      if (!aptitudeCategoryFor(q.topic)) err(w, "MCQ topic does not map to an aptitude category (technical MCQs are not supported by the draft model)");
+      if (!aptitudeCategoryFor(q.topic)) unsupported.set(q.question_id, "technical MCQ: the draft model only supports aptitude-style options");
     }
-    if (q.question_type === "MULTI_SELECT") err(w, "MULTI_SELECT is not supported by the draft model");
+    if (q.question_type === "MULTI_SELECT") unsupported.set(q.question_id, "MULTI_SELECT is not supported by the draft model");
     if (q.question_type === "CODING") {
       const c = q.coding || {};
       if (list(c.samples).length < 2) err(w, "coding needs at least 2 samples");
@@ -109,7 +110,7 @@ function validateFile(data, fileName = "") {
     if (!list(q.rubric).length) warn(w, "rubric empty");
   }
   for (const s of sourceIds) if (!used.has(s) && !list(data.rounds).some((r) => list(r.source_ids).includes(s))) warn("sources", `${s} unused`);
-  return { errors, warnings };
+  return { errors, warnings, unsupported };
 }
 
 // ---------- mapping ----------
@@ -202,12 +203,13 @@ function planImport(files, existing) {
   const byKey = new Map(existing.filter((e) => e.importKey).map((e) => [e.importKey, e]));
   const accepted = [];
   for (const { fileName, data } of files) {
-    const { errors, warnings } = validateFile(data, fileName);
+    const { errors, warnings, unsupported } = validateFile(data, fileName);
     if (errors.length) {
       rows.push({ fileName, questionId: null, action: "FILE_REJECTED", reasons: errors, warnings });
       continue;
     }
     for (const q of data.questions) {
+      if (unsupported.has(q.question_id)) { rows.push({ fileName, questionId: q.question_id, action: "UNSUPPORTED_TYPE", reasons: [unsupported.get(q.question_id)] }); continue; }
       const payload = mapQuestion(data, q, fileName);
       const hash = contentHash(payload);
       const row = { fileName, questionId: q.question_id, category: payload.category, sourceType: payload.sourceType, confidenceLevel: payload.confidenceLevel, payload, hash, reasons: [], flags: [] };
