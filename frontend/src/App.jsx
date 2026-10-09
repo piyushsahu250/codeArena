@@ -382,9 +382,11 @@ export default function App() {
             element={
               <Protected roles={["STUDENT", "ADMIN", "STAFF"]}>
                 <FeatureProtected featureKey="lms">
+                  <ErrorBoundary title="We hit a temporary problem" message="Unable to load this lesson. Reloading usually fixes this; if it keeps happening, tell your faculty.">
                   <Suspense fallback={<LoadingScreen label="Loading lesson…" />}>
                     <LessonView />
                   </Suspense>
+                  </ErrorBoundary>
                 </FeatureProtected>
               </Protected>
             }

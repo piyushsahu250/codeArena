@@ -23,20 +23,11 @@ export default function LessonView() {
   const { slug, lessonId } = useParams();
   const navigate = useNavigate();
   const { notify } = useGamification();
-  const isMobile = useIsMobile();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [completing, setCompleting] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
   const [advancing, setAdvancing] = useState(false);
-  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
-  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
-
-  function handleEditorMount(editor) {
-    monacoEditorRef.current = editor;
-    applyPlainTextInputHints(editor);
-    watchForNonAsciiInput(editor, () => setImeWarning(true));
-  }
 
   function load() {
     api.get(`/learning/lessons/${lessonId}`)
@@ -464,6 +455,15 @@ function PracticeQuestionCard({ question }) {
   // fire the moment a student submitted a wrong CODING answer (ai/status is cached module-level
   // in useAiStatus.js, so this second call costs nothing extra).
   const aiAvailable = useAiStatus();
+  const isMobile = useIsMobile();
+  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
+
+  function handleEditorMount(editor) {
+    monacoEditorRef.current = editor;
+    applyPlainTextInputHints(editor);
+    watchForNonAsciiInput(editor, () => setImeWarning(true));
+  }
   const [selected, setSelected] = useState(null);
   const [textAnswer, setTextAnswer] = useState("");
   const [result, setResult] = useState(null);
