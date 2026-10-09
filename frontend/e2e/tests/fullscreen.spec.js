@@ -111,6 +111,13 @@ test.describe("mock interview", () => {
     await expect(page).toHaveURL(/\/interview$/);
     const notice = page.getByRole("alert").filter({ hasText: /still in fullscreen/i });
     await expect(notice).toBeVisible();
+    // diagnostic: is the notice stable on screen? (logs any add/remove of the alert for 2 s)
+    await page.evaluate(() => {
+      window.__alertLog = [];
+      new MutationObserver((muts) => { for (const m of muts) { for (const n of m.removedNodes) if (n.nodeType === 1 && (n.matches?.('[role="alert"]') || n.querySelector?.('[role="alert"]'))) window.__alertLog.push("removed@" + Math.round(performance.now())); for (const n of m.addedNodes) if (n.nodeType === 1 && (n.matches?.('[role="alert"]') || n.querySelector?.('[role="alert"]'))) window.__alertLog.push("added@" + Math.round(performance.now())); } }).observe(document.body, { childList: true, subtree: true });
+    });
+    await page.waitForTimeout(2000);
+    console.log("ALERT-MUTATIONS", JSON.stringify(await page.evaluate(() => window.__alertLog)), "fs=", await inFullscreen(page));
     expect(await inFullscreen(page)).toBe(true); // never claims success while the browser is still fullscreen
     await page.evaluate(() => { delete document.exitFullscreen; }); // the browser relents
     await notice.getByRole("button", { name: "Exit fullscreen" }).click();
