@@ -757,7 +757,7 @@ export default function StudentPerformance({ basePath }) {
         {testHistory.length > 0 && (
           <>
             <h3 style={{ fontSize: 16, marginTop: 32, marginBottom: 12 }}>Performance analytics</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(420px, 100%), 1fr))", gap: 20 }}>
               <ChartCard title="Score trend over time">
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={analytics.scoreTrend}>

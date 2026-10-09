@@ -272,7 +272,7 @@ export default function StaffDashboard() {
         )}
 
         {/* Student analytics */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20, marginTop: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))", gap: 20, marginTop: 24 }}>
           <div>
             <h3 style={{ fontSize: 16, marginBottom: 12 }}>Test Status Overview</h3>
             <div className="card" style={{ padding: 20, height: 220 }}>

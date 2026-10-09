@@ -193,7 +193,7 @@ export default function InterviewHub() {
           </div>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginTop: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 16, marginTop: 28 }}>
           {CARDS.map((c) => (
             <div key={c.key} className="ip-glass ip-card" onClick={() => handleCardClick(c.key)}>
               <c.icon size={28} />
