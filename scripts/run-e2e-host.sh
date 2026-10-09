@@ -23,10 +23,10 @@ docker cp backend/scripts/e2eSeed.js codearena-backend:/app/scripts/e2eSeed.js
 docker exec codearena-backend node scripts/e2eSeed.js --seed > "$RUN/users.json" || { echo "seed failed"; exit 4; }
 
 echo "== playwright"
-docker run --rm --network host --ipc=host -v "$BUILD":/app -v "$RUN":/e2e -e E2E_USERS_JSON=/e2e/users.json "$PW_IMAGE" bash -c '
+docker run --rm --network host --ipc=host -v "$BUILD":/app -v "$RUN":/e2e -e E2E_USERS_JSON=/e2e/users.json -e E2E_ARGS="${E2E_ARGS:-}" "$PW_IMAGE" bash -c '
   cd /app && (npx vite preview --port 5173 --strictPort --host 127.0.0.1 > /tmp/preview.log 2>&1 &)
   for i in $(seq 1 30); do curl -fs http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done
-  cd /e2e && npm install --no-audit --no-fund --silent && npx playwright test'
+  cd /e2e && npm install --no-audit --no-fund --silent && npx playwright test $E2E_ARGS'
 CODE=$?
 cp "$RUN/results.json" /tmp/e2e-results.json 2>/dev/null || true
 exit $CODE
