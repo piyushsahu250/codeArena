@@ -26,6 +26,18 @@ git pull --ff-only origin main
 SHA=$(git rev-parse --short HEAD)
 echo "Deploying commit $SHA"
 
+# Release gate: do not deploy a commit whose CI has not passed (all of: lint, backend, frontend, integration -- see scripts/check-ci-green.sh and docs/CI.md).
+# Fails closed: a red, running, cancelled or missing check, or an unreachable GitHub API, stops the deploy. Emergency override: SKIP_CI_CHECK=1 bash scripts/deploy-aws-host.sh
+if [ "${SKIP_CI_CHECK:-0}" != "1" ]; then
+  echo "Release gate: CI must be green for $SHA..."
+  if ! bash "$REPO/scripts/check-ci-green.sh" "$(git rev-parse HEAD)"; then
+    echo "ABORTING deploy: CI is not green for commit $SHA. Wait for CI to finish, fix what failed, or (emergency only) re-run with SKIP_CI_CHECK=1." >&2
+    exit 7
+  fi
+else
+  echo "WARNING: release gate skipped (SKIP_CI_CHECK=1)." >&2
+fi
+
 # Pre-deploy gate: a variable that is used but never declared only fails when that line runs (a 500 for the one request that reaches it), so it is
 # caught here instead. If the linter itself cannot run (no network), the deploy is not blocked.
 echo "Pre-deploy gate: undefined variables in backend code..."
