@@ -246,7 +246,7 @@ function planImport(files, existing) {
 
 function summarize(rows) {
   const counts = {};
-  for (const r of rows) counts[r.action] = (counts[r.action] || 0) + 1;
+  for (const r of rows) { if (r.action !== "FILE_WARNING") counts[r.action] = (counts[r.action] || 0) + 1; }
   return counts;
 }
 
