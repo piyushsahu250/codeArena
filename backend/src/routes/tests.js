@@ -109,6 +109,8 @@ function buildAttemptOrder(test) {
   return { questionOrder, optionOrder };
 }
 
+const { MANIFEST_VERSION, validateManifest, scoreBases, scoreBase, logCountMismatch } = require("../utils/attemptManifest");
+
 const SELECTION_MODES = ["FIXED", "RANDOM"];
 
 // In RANDOM mode the "question list" is resolved server-side from the selected bank folder,
@@ -999,7 +1001,7 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
     // they're previewing/editing the question bank, not taking the shuffled exam.
     const attempt = await prisma.testAttempt.findUnique({
       where: { testId_studentId: { testId: test.id, studentId: req.user.id } },
-      select: { questionOrder: true, optionOrder: true, status: true },
+      select: { questionOrder: true, optionOrder: true, status: true, id: true, expectedQuestionCount: true, manifestVersion: true },
     });
     // QUESTION ENUMERATION GUARD: a student only receives question content while their attempt is IN_PROGRESS (or, once their
     // attempt is finished, after the test window has closed). Before the attempt starts -- including before startTime, and for a
@@ -1053,6 +1055,13 @@ router.get("/:id", authenticate, attachRequesterInstitute, async (req, res) => {
         }
       }
       test.questions = attempt.questionOrder.map((qId) => byId.get(qId)).filter(Boolean);
+      // Authoritative manifest for the client: how many questions this attempt must show and exactly which. The browser verifies it received all of them
+      // before the exam starts, instead of assuming that whatever arrived is everything. Ids only -- no content.
+      const expected = attempt.expectedQuestionCount ?? attempt.questionOrder.length;
+      // unavailableCount = assigned questions that no longer exist at all (hard-deleted): permanent, so the client must not keep retrying for them.
+      const unavailableCount = attempt.questionOrder.filter((qId) => !byId.has(qId)).length;
+      test.manifest = { version: attempt.manifestVersion ?? 0, expectedCount: expected, questionIds: attempt.questionOrder, unavailableCount };
+      logCountMismatch("GET /tests/:id", { attemptId: attempt.id, testId: test.id, expected, manifest: attempt.questionOrder.length, delivered: test.questions.length });
     }
     if (attempt?.optionOrder) {
       for (const tq of test.questions) {
@@ -1161,8 +1170,14 @@ router.post("/:id/start", authenticate, requireRole("STUDENT"), async (req, res)
       }
 
       const { questionOrder, optionOrder } = buildAttemptOrder(test);
+      // Never start a shorter (or empty, or duplicated) assessment than the one configured: refuse with an actionable message instead.
+      const manifestCheck = validateManifest(test, questionOrder);
+      if (!manifestCheck.ok) {
+        console.error(JSON.stringify({ event: "assessment_manifest_invalid", testId, studentId: req.user.id, errors: manifestCheck.errors, configured: manifestCheck.configuredCount, available: manifestCheck.availableCount, delivered: manifestCheck.deliveredCount, at: new Date().toISOString() }));
+        return res.status(409).json({ error: manifestCheck.message, code: "ASSESSMENT_CONFIG_INVALID", configuredCount: manifestCheck.configuredCount, availableCount: manifestCheck.availableCount });
+      }
       try {
-        attempt = await prisma.testAttempt.create({ data: { testId, studentId: req.user.id, questionOrder, optionOrder } });
+        attempt = await prisma.testAttempt.create({ data: { testId, studentId: req.user.id, questionOrder, optionOrder, expectedQuestionCount: questionOrder.length, manifestVersion: MANIFEST_VERSION } });
       } catch (err) {
         // A double-click or a client retry (slow response during the exam-start burst, the client
         // gives up and tries again) can race two /start calls for the same student+test — the
@@ -1499,8 +1514,9 @@ router.get("/:id/results/export", authenticate, requireRole("ADMIN", "SUPER_ADMI
       orderBy: [{ totalScore: "desc" }, { startedAt: "asc" }],
       take: 20000,
     });
-    const points = new Map(test.questions.map((tq) => [tq.questionId, tq.question?.points || 0]));
-    const allIds = test.questions.map((tq) => tq.questionId);
+    // Each attempt is scored out of ITS OWN assigned questions (manifest), with points read from the Question table so a question removed from the test later
+    // still counts for the students who were given it.
+    const bases = await scoreBases(prisma, attempts);
     const roll = String(req.query.roll || "").trim().toLowerCase();
     const STATUS = { IN_PROGRESS: "In progress", SUBMITTED: "Submitted", AUTO_SUBMITTED: "Auto-submitted" };
     const iso = (d) => (d ? new Date(d).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "");
@@ -1509,8 +1525,8 @@ router.get("/:id/results/export", authenticate, requireRole("ADMIN", "SUPER_ADMI
       .map((a, idx) => ({ a, rank: idx + 1 }))
       .filter(({ a }) => !roll || (a.student.rollNumber || "").toLowerCase().includes(roll))
       .map(({ a, rank }) => {
-        const assigned = Array.isArray(a.questionOrder) && a.questionOrder.length > 0 ? a.questionOrder : allIds;
-        const max = assigned.reduce((s, id) => s + (points.get(id) || 0), 0);
+        const base = bases.get(a.id);
+        const max = base.maxScore;
         const completed = a.status !== "IN_PROGRESS";
         return {
           Rank: rank,
@@ -1523,7 +1539,7 @@ router.get("/:id/results/export", authenticate, requireRole("ADMIN", "SUPER_ADMI
           "Percentage (%)": max > 0 ? Math.round(((a.totalScore ?? 0) / max) * 1000) / 10 : "",
           Result: !completed || test.passingMarks == null ? "" : (a.totalScore ?? 0) >= test.passingMarks ? "Pass" : "Fail",
           Attempted: new Set(a.submissions.map((s) => s.questionId)).size,
-          "Total Questions": assigned.length,
+          "Total Questions": base.expectedCount,
           Status: STATUS[a.status] || a.status,
           "Tab Switches / Violations": a.tabSwitchCount ?? 0,
           "Started At": iso(a.startedAt),
@@ -1625,10 +1641,17 @@ router.get("/:id/my-result", authenticate, requireRole("STUDENT"), async (req, r
       return res.json({ status: attempt.status, showResults: false });
     }
 
+    // Scored out of the questions this attempt was assigned (its manifest), never out of what was answered or rendered.
+    const base = await scoreBase(prisma, attempt);
+    const answeredCount = new Set((attempt.submissions || []).map((s) => s.questionId)).size;
     res.json({
       status: attempt.status,
       showResults: true,
       totalScore: attempt.totalScore,
+      maxScore: base.maxScore,
+      expectedQuestionCount: base.expectedCount,
+      answeredCount,
+      unansweredCount: Math.max(0, base.expectedCount - answeredCount),
       passingMarks: test.passingMarks,
       submittedAt: attempt.submittedAt,
       tabSwitchCount: attempt.tabSwitchCount,

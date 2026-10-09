@@ -1096,6 +1096,10 @@ model TestAttempt {
 
   questionOrder Json?
   optionOrder   Json?
+  // Assessment manifest (see utils/attemptManifest.js): the number of questions this attempt was assigned, frozen at start, and the manifest format version.
+  // Null on attempts that predate it -- never back-filled with a guess; reports derive the count from questionOrder for those.
+  expectedQuestionCount Int?
+  manifestVersion       Int?
 
   submissions Submission[]
 

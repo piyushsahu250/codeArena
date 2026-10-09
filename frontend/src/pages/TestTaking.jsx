@@ -20,6 +20,7 @@ import { createFocusLossSignal, createSplitScreenWatch, runSecurityCheck } from 
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { classifyKeyEvent } from "../utils/keyboardShortcuts";
+import { manifestProblem } from "../utils/assessmentManifest";
 
 const FACE_CHECK_INTERVAL_MS = 2000;
 const FACE_CONFIDENCE_THRESHOLD = 0.7;
@@ -573,7 +574,19 @@ export default function TestTaking() {
       setExamSession(startRes.data.sessionId);
       setAttemptId(startRes.data.id);
       attemptIdRef.current = startRes.data.id;
-      const testRes = await api.get(`/tests/${testId}`);
+      // The server states how many questions this attempt must contain (manifest). The exam only starts once that many unique questions have arrived;
+      // a short or slow response is retried, not accepted as "the questions that loaded".
+      let testRes = await api.get(`/tests/${testId}`);
+      for (let tries = 1; tries <= 3 && manifestProblem(testRes.data) && !(testRes.data.manifest?.unavailableCount > 0); tries++) {
+        await new Promise((r) => setTimeout(r, tries * 700));
+        testRes = await api.get(`/tests/${testId}`);
+      }
+      const incomplete = manifestProblem(testRes.data);
+      if (incomplete) {
+        const err = new Error("incomplete question set");
+        err.manifestMessage = incomplete;
+        throw err;
+      }
       setTest(testRes.data);
 
       // The candidate's deadline is their own start time + the configured duration — every
@@ -654,7 +667,7 @@ export default function TestTaking() {
       setSecondsLeft(Math.max(0, Math.floor((deadline - (Date.now() + clockOffsetRef.current)) / 1000)));
       setStarted(true);
     } catch (err) {
-      setLoadError(err.response?.data?.error || "Could not start this test");
+      setLoadError(err.manifestMessage || err.response?.data?.error || "Could not start this test");
     } finally {
       setStarting(false);
     }

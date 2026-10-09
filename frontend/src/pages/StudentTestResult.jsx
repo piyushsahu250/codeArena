@@ -43,8 +43,13 @@ export default function StudentTestResult() {
           <div className="card" style={{ padding: 24, marginTop: 24 }}>
             <div className="mono" style={{ fontSize: 40, fontWeight: 700, color: "var(--mint)" }}>{result.totalScore}</div>
             <div style={{ fontSize: 13, color: "var(--ink-dim)" }}>
-              total points{result.passingMarks != null ? ` · passing marks: ${result.passingMarks}` : ""}
+              total points{result.maxScore != null ? ` out of ${result.maxScore}` : ""}{result.passingMarks != null ? ` · passing marks: ${result.passingMarks}` : ""}
             </div>
+            {result.expectedQuestionCount != null && (
+              <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 6 }}>
+                {result.expectedQuestionCount} questions assigned · {result.answeredCount} answered{result.unansweredCount > 0 ? ` · ${result.unansweredCount} unanswered (scored 0)` : ""}
+              </div>
+            )}
             {result.passingMarks != null && (
               <div className="mono" style={{ marginTop: 8, fontWeight: 700, color: result.totalScore >= result.passingMarks ? "var(--mint)" : "var(--rust)" }}>
                 {result.totalScore >= result.passingMarks ? "PASSED" : "NOT PASSED"}

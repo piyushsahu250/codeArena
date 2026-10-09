@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const XLSX = require("xlsx");
 const prisma = require("../prisma");
+const { scoreBases } = require("../utils/attemptManifest");
 const { authenticate, requireRole } = require("../middleware/auth");
 const { attachRequesterInstitute } = require("../middleware/institute");
 const { requireFeature } = require("../middleware/featureGate");
@@ -268,16 +269,15 @@ async function computeTalentPoolAnalytics(req) {
       testIds.length && memberIds.length
         ? prisma.testAttempt.findMany({
             where: { testId: { in: testIds }, studentId: { in: memberIds }, status: { not: "IN_PROGRESS" } },
-            select: { testId: true, totalScore: true },
+            select: { id: true, testId: true, totalScore: true, questionOrder: true },
           })
         : [],
-      testIds.length
-        ? prisma.test.findMany({ where: { id: { in: testIds } }, select: { id: true, questions: { select: { question: { select: { points: true } } } } } })
-        : [],
+      Promise.resolve([]),
     ]);
-    const maxByTest = new Map(tests.map((t) => [t.id, t.questions.reduce((s, q) => s + q.question.points, 0)]));
+    // Each attempt is scored out of its own assigned questions (a RANDOM-mode test holds the whole bank, so the test-level sum is not what a student faced).
+    const bases = await scoreBases(prisma, attempts);
     const scorePercents = attempts
-      .map((a) => { const max = maxByTest.get(a.testId) || 0; return max > 0 ? (a.totalScore / max) * 100 : null; })
+      .map((a) => { const max = bases.get(a.id).maxScore; return max > 0 ? (a.totalScore / max) * 100 : null; })
       .filter((p) => p != null);
 
     // "Assigned" = every (pool-exclusive test) x (pool member) pairing — the maximum number of
@@ -1045,17 +1045,14 @@ router.get("/:id/dashboard", authenticate, requireRole("ADMIN", "SUPER_ADMIN", "
   const memberIds = members.map((m) => m.studentId);
   const [poolTests, attempts, reports] = await Promise.all([
     prisma.talentPoolTest.findMany({ where: { poolId: pool.id }, select: { testId: true } }),
-    memberIds.length ? prisma.testAttempt.findMany({ where: { studentId: { in: memberIds } }, select: { studentId: true, testId: true, totalScore: true, status: true } }) : [],
+    memberIds.length ? prisma.testAttempt.findMany({ where: { studentId: { in: memberIds } }, select: { id: true, studentId: true, testId: true, totalScore: true, status: true, questionOrder: true } }) : [],
     memberIds.length ? prisma.interviewReport.findMany({ where: { studentId: { in: memberIds } }, select: { overallScore: true } }) : [],
   ]);
   const poolTestIds = new Set(poolTests.map((t) => t.testId));
   const relevantAttempts = attempts.filter((a) => poolTestIds.has(a.testId) && a.status !== "IN_PROGRESS");
-  const tests = poolTestIds.size
-    ? await prisma.test.findMany({ where: { id: { in: [...poolTestIds] } }, select: { id: true, questions: { select: { question: { select: { points: true } } } } } })
-    : [];
-  const maxByTest = new Map(tests.map((t) => [t.id, t.questions.reduce((s, q) => s + q.question.points, 0)]));
+  const bases = await scoreBases(prisma, relevantAttempts);
   const scorePercents = relevantAttempts.map((a) => {
-    const max = maxByTest.get(a.testId) || 0;
+    const max = bases.get(a.id).maxScore;
     return max > 0 ? (a.totalScore / max) * 100 : null;
   }).filter((p) => p != null);
   const avgCodingScore = scorePercents.length ? Math.round(scorePercents.reduce((s, p) => s + p, 0) / scorePercents.length) : null;
