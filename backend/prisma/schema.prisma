@@ -2561,6 +2561,8 @@ enum QuestionSourceType {
   PUBLIC_INTERVIEW_REPORT // admin-entered, citing a public source (blog, forum) via sourceUrl
   CODEARENA_VERIFIED      // multiple independent CANDIDATE_REPORTED submissions corroborate it
   AI_GENERATED_VARIANT    // drafted by aiService from reported patterns — never a real reported question
+  INFERRED_FROM_JD        // written to test a skill an official job description requires; nobody is claimed to have been asked it
+  ORIGINAL_PRACTICE       // original practice question; no claim it was ever asked by any company
 }
 
 // HIGH/MEDIUM/LOW only — deliberately no numeric score stored, since a fake-precise number (e.g.
@@ -2684,6 +2686,12 @@ model InterviewQuestion {
   firstSeenAt        DateTime?
   lastSeenAt         DateTime?
   lastVerifiedAt     DateTime?
+  // Research-import provenance (additive): roundName is the named interview round the question belongs to,
+  // importKey ties the row back to the research file question_id, researchMeta holds the admin-only
+  // rubric/follow-ups/evidence record. None of these are read by sanitizeQuestion().
+  roundName          String?
+  importKey          String?
+  researchMeta       Json?
 
   // KI-001 fix: every InterviewQuestion created before this field existed keeps instituteId/
   // createdById: null, which interviewQuestionVisibilityWhere() (interview.js) treats as "shared
@@ -2707,6 +2715,7 @@ model InterviewQuestion {
   @@index([companyId])
   @@index([role])
   @@index([confidenceLevel])
+  @@index([importKey])
 }
 
 // AI-generated candidate question, held here — structurally separate from InterviewQuestion —
@@ -2775,6 +2784,13 @@ model InterviewQuestionDraft {
   firstSeenAt       DateTime?
   lastSeenAt        DateTime?
   candidateReportId String? // set when this draft originated from a verified CandidateQuestionReport, not a fresh AI generation
+  // Research-import provenance (additive) — see the identically-named block on InterviewQuestion.
+  // importKey is unique so re-running an import can never create a second draft for the same file question;
+  // importHash detects a changed question in a later file version.
+  roundName         String?
+  importKey         String?   @unique
+  importHash        String?
+  researchMeta      Json?
 
   @@index([status])
   @@index([company])

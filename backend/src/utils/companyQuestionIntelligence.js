@@ -56,7 +56,7 @@ function findLikelyDuplicates(candidateText, existingQuestions) {
 // confidence, and an AI-generated variant can never reach HIGH regardless of anything else, per
 // the platform's standing "AI must never automatically receive HIGH confidence" rule.
 function assignConfidenceLevel({ sourceType, verificationCount = 0 }) {
-  if (sourceType === "AI_GENERATED_VARIANT") return "LOW";
+  if (sourceType === "AI_GENERATED_VARIANT" || sourceType === "INFERRED_FROM_JD" || sourceType === "ORIGINAL_PRACTICE") return "LOW";
   if (sourceType === "OFFICIAL_COMPANY") return "HIGH";
   if (sourceType === "CODEARENA_VERIFIED" || verificationCount >= 2) return "HIGH";
   if (sourceType === "CANDIDATE_REPORTED" || sourceType === "PUBLIC_INTERVIEW_REPORT") return "MEDIUM";
