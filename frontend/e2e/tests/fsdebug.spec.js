@@ -9,7 +9,7 @@ test("diagnose notice flicker", async ({ page }) => {
   await login(page, users.student3);
   const H = { Authorization: `Bearer ${await page.evaluate(() => localStorage.getItem("token"))}` };
   const created = await page.request.post(`${API}/interview/sessions`, { headers: H, data: { isMock: true, config: {} } });
-  const id = (await created.json()).id;
+  const cb = await created.json(); const id = cb.id || cb.session?.id;
   await page.goto(`/interview/session/${id}`);
   await page.getByRole("button", { name: /Resume Interview/ }).click();
   await expect(page.getByRole("button", { name: "Exit", exact: true })).toBeVisible({ timeout: 20000 });
