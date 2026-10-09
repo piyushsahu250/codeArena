@@ -872,3 +872,6 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   *:has(> select), *:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="range"])), *:has(> textarea) { min-width: 0; max-width: 100%; }
   [style*="display: flex"] > *, [style*="display:flex"] > * { min-width: 0; }
 }
+@media (max-width: 640px) {
+  input[type="file"] { max-width: 100%; min-width: 0; }
+}

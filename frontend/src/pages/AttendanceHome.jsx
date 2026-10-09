@@ -47,7 +47,7 @@ export default function AttendanceHome() {
         )}
 
         {assignments && assignments.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginTop: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: 16, marginTop: 24 }}>
             {assignments.map((a) => (
               <div key={a.id} className="card" style={{ padding: 20, display: "flex", flexDirection: "column" }}>
                 {a.talentPoolId ? (

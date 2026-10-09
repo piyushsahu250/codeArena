@@ -296,7 +296,7 @@ export default function AdminDashboard() {
             Active User trend charts from the spec are intentionally omitted: this platform has no
             login/session event log to derive them from honestly, and fabricating a plausible-looking
             trend line would be worse than not showing one. */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20, marginTop: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(320px, 100%), 1fr))", gap: 20, marginTop: 24 }}>
           <div>
             <h3 style={{ fontSize: 16, marginBottom: 12 }}>Test Status Distribution</h3>
             <div className="card" style={{ padding: 20, height: 220 }}>

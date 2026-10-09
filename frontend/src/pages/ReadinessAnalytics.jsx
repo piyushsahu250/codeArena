@@ -284,7 +284,7 @@ export default function ReadinessAnalytics() {
             )}
 
             {["departmentWise", "batchWise", "sectionWise", "subjectWise"].some((k) => analytics[k]?.length > 0) && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 40 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(260px, 100%), 1fr))", gap: 20, marginTop: 40 }}>
                 {[["departmentWise", "By Department"], ["batchWise", "By Batch"], ["sectionWise", "By Section"], ["subjectWise", "By Subject"]].map(([key, label]) => (
                   analytics[key]?.length > 0 && (
                     <div key={key} className="card" style={{ padding: 16 }}>
