@@ -95,3 +95,11 @@ test("the audited TCS files validate and map without errors", () => {
   assert.equal(total, 50);
   assert.ok(rows.filter((r) => r.payload).every((r) => r.payload.category && r.payload.importKey));
 });
+
+test("a technical MCQ is skipped on its own without rejecting the rest of the file", () => {
+  const d = base();
+  d.questions.push({ ...d.questions[0], question_id: "ACME-R1-002", question_type: "MCQ", topic: "Java", prompt: "Which keyword prevents a class from being subclassed in Java?", evidence_class: "D_PRACTICE", source_ids: [], times_reported: 0, mcq: { options: ["final", "static", "abstract", "sealed"], correct_options: [0], explanation: "final" } });
+  assert.deepEqual(validateFile(d).errors, []);
+  assert.equal(validateFile(d).unsupported.size, 1);
+  assert.deepEqual(summarize(planImport([{ fileName: "f.json", data: d }], [])), { CREATE_PENDING_DRAFT: 1, UNSUPPORTED_TYPE: 1 });
+});
