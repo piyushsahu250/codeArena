@@ -7,9 +7,14 @@ name: CI
 # syntax/relation errors without touching any database.
 on:
   push:
-    branches: [main]
+    branches: [main, "ci/**"]
+  workflow_dispatch: {}
   pull_request:
-    branches: [main]
+    branches: [main, "ci/**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -74,3 +79,98 @@ jobs:
       # has no actual effect on what ships.
       - run: npm install
       - run: npm run build
+
+  # Static gate, no installs needed. A variable that is used but never declared only fails when that line runs (a blank page for the one screen that reaches it,
+  # or a 500 for one request); three such bugs reached production before this existed (lesson page, project page, AI voice interview).
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Frontend undefined variables and hooks rules
+        run: npx --yes oxlint@latest -c frontend/.oxlintrc.json frontend/src
+      - name: Backend undefined variables
+        run: npx --yes oxlint@latest -c backend/.oxlintrc.json backend/src backend/scripts
+
+  # The real thing: a throwaway Postgres, the real API and the built SPA, then the browser suite (login, role access, every page on phone and laptop,
+  # dashboards, exam journeys, fullscreen, accessibility, dark-mode contrast, every lesson) and the database-backed verification scripts.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0123456789
+      PII_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      FRONTEND_URL: http://localhost:5173
+      PORT: "4000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update -o Acquire::Retries=3 && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev
+      - name: Backend install, schema, seed
+        working-directory: backend
+        run: |
+          npm install
+          npx prisma generate
+          npx prisma db push --accept-data-loss --skip-generate
+          npm run seed
+      - name: Start the API
+        working-directory: backend
+        run: |
+          nohup node src/index.js > ../api.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs http://localhost:4000/api/health >/dev/null && break; sleep 2; done
+          curl -fs http://localhost:4000/api/health || { echo "::error::API did not start"; tail -40 ../api.log; exit 1; }
+      - name: Backend verification scripts (database-backed)
+        working-directory: backend
+        run: |
+          fail=0
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest; do
+            echo "=== $s"; node scripts/$s.js || { echo "::error::$s failed"; fail=1; }
+          done
+          exit $fail
+      - name: Build the SPA and serve it
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+          nohup npx vite preview --port 5173 --strictPort --host 127.0.0.1 > ../preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:5173/ >/dev/null && break; sleep 1; done
+      - name: Seed disposable E2E accounts
+        working-directory: backend
+        run: node scripts/e2eSeed.js --seed > ../frontend/e2e/users.json
+      - name: Browser suite
+        working-directory: frontend/e2e
+        env:
+          E2E_USERS_JSON: ${{ github.workspace }}/frontend/e2e/users.json
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Show API log tail on failure
+        if: failure()
+        run: tail -80 api.log || true
+      - name: Keep Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            frontend/e2e/test-results
+            frontend/e2e/results.json
+          if-no-files-found: ignore
+          retention-days: 7
