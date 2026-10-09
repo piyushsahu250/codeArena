@@ -29,6 +29,8 @@ const { runQueued } = require("../src/utils/queue");
     for (const { question } of a.questions) {
       const sub = bySub.get(question.id);
       if (!sub || !sub.code || !sub.code.trim()) { lines.push(`   - ${(question.title || "question").slice(0, 40)}: no saved code -> 0%`); continue; }
+      const starter = (question.starterCodeByLanguage && typeof question.starterCodeByLanguage === "object" ? question.starterCodeByLanguage[sub.language] : null) || question.starterCode || "";
+      const unchanged = starter.trim().length > 0 && sub.code.trim() === starter.trim();
       let passed = sub.passedCases, total = sub.totalCases, verdict = sub.verdict, source = "already evaluated";
       if (sub.verdict === "PENDING") {
         const hidden = question.testCases.filter((t) => t.isHidden);
@@ -40,7 +42,7 @@ const { runQueued } = require("../src/utils/queue");
       }
       const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
       sum += total > 0 ? pct : 0;
-      lines.push(`   - ${(question.title || "question").slice(0, 40)}: ${sub.language}, ${passed}/${total} cases, ${verdict}, ${pct}% (${source})`);
+      lines.push(`   - ${(question.title || "question").slice(0, 40)}: ${sub.language}, ${passed}/${total} cases, ${verdict}, ${pct}% (${source})${unchanged ? " [saved code is the UNCHANGED starter template]" : ""} [${sub.code.length} chars, saved ${sub.updatedAt.toISOString().slice(11, 16)}]`);
     }
     const n = a.questions.length;
     const score = n > 0 ? Math.round(sum / n) : 0;
