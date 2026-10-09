@@ -9,6 +9,7 @@ require("dotenv").config();
 // strip it. Any BigInt column added in the future degrades to a JSON string instead of crashing.
 BigInt.prototype.toJSON = function () { return this.toString(); };
 const express = require("express");
+require("./utils/asyncErrors"); // a rejected async route handler becomes a normal error response instead of a hung request
 const cors = require("cors");
 const { WebSocketServer } = require("ws");
 const helmet = require("helmet");
@@ -273,6 +274,7 @@ app.use("/api/platform-health", platformHealthRoutes);
 // by the upload middleware BEFORE a route's own try/catch ever runs, on every bulk-upload route
 // across the platform) come back as clean JSON instead of a raw response the frontend can't parse.
 app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err); // the response already started: let Express close the connection
   if (err?.code === "LIMIT_FILE_SIZE") {
     return res.status(413).json({ error: "File size exceeds the allowed limit (5 MB). Please upload a smaller file." });
   }
