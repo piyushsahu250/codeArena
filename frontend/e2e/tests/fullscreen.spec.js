@@ -6,6 +6,8 @@ const { data, users, login } = require("./helpers");
 // The mock interview is driven through its "Resume" screen (a session that already has an answer skips the camera/face readiness gate), with fake
 // camera/microphone devices supplied by the browser launch flags in playwright.config.js.
 const API = "http://localhost:4000/api";
+// the Exit control (a button now; it used to be a router link, which is the bug) -- matched either way so the same test can prove the old behaviour fails
+const exitControl = (page) => page.locator('button:text-is("Exit"), a:text-is("Exit")');
 const inFullscreen = (page) => page.evaluate(() => !!(document.fullscreenElement || document.webkitFullscreenElement));
 
 async function tokenOf(page) { return page.evaluate(() => localStorage.getItem("token")); }
@@ -30,7 +32,7 @@ async function mockInterviewWithProgress(page) {
 async function openAndResume(page, id) {
   await page.goto(`/interview/session/${id}`);
   await page.getByRole("button", { name: /Resume Interview/ }).click();
-  await expect(page.getByRole("button", { name: "Exit", exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(exitControl(page)).toBeVisible({ timeout: 20000 });
 }
 
 test.describe("mock interview", () => {
@@ -41,7 +43,7 @@ test.describe("mock interview", () => {
     const id = await mockInterviewWithProgress(page);
     await openAndResume(page, id);
     await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(true);
-    await page.getByRole("button", { name: "Exit", exact: true }).click();
+    await exitControl(page).click();
     await expect(page).toHaveURL(/\/interview$/);
     await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(false);
     await expect(page.getByText(/still in fullscreen/i)).toHaveCount(0);
@@ -61,7 +63,7 @@ test.describe("mock interview", () => {
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
     const id = await mockInterviewWithProgress(page);
     await openAndResume(page, id);
-    const exit = page.getByRole("button", { name: "Exit", exact: true });
+    const exit = exitControl(page);
     await exit.click();
     await exit.click({ timeout: 500 }).catch(() => {}); // the button is already gone: that is the expected outcome
     await expect(page).toHaveURL(/\/interview$/);
@@ -75,7 +77,7 @@ test.describe("mock interview", () => {
     const id = await mockInterviewWithProgress(page);
     await openAndResume(page, id);
     expect(await inFullscreen(page)).toBe(false);
-    await page.getByRole("button", { name: "Exit", exact: true }).click();
+    await exitControl(page).click();
     await expect(page).toHaveURL(/\/interview$/);
     expect(errors).toEqual([]);
   });
@@ -87,7 +89,7 @@ test.describe("mock interview", () => {
     const errors = []; page.on("pageerror", (e) => errors.push(e.message));
     const id = await mockInterviewWithProgress(page);
     await openAndResume(page, id);
-    await page.getByRole("button", { name: "Exit", exact: true }).click();
+    await exitControl(page).click();
     await expect(page).toHaveURL(/\/interview$/);
     expect(errors).toEqual([]);
   });
@@ -97,7 +99,7 @@ test.describe("mock interview", () => {
     await openAndResume(page, id);
     await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(true);
     await page.evaluate(() => { document.exitFullscreen = () => Promise.reject(new Error("exit blocked by the browser")); });
-    await page.getByRole("button", { name: "Exit", exact: true }).click();
+    await exitControl(page).click();
     await expect(page).toHaveURL(/\/interview$/);
     const notice = page.getByRole("alert").filter({ hasText: /still in fullscreen/i });
     await expect(notice).toBeVisible();
@@ -122,8 +124,8 @@ test.describe("mock interview", () => {
     // client-side navigation (a full page load would end fullscreen by itself)
     await page.evaluate((sid) => { history.pushState({}, "", `/interview/session/${sid}`); window.dispatchEvent(new PopStateEvent("popstate")); }, id);
     await page.getByRole("button", { name: /Resume Interview/ }).click();
-    await expect(page.getByRole("button", { name: "Exit", exact: true })).toBeVisible({ timeout: 20000 });
-    await page.getByRole("button", { name: "Exit", exact: true }).click();
+    await expect(exitControl(page)).toBeVisible({ timeout: 20000 });
+    await exitControl(page).click();
     await expect(page).toHaveURL(/\/interview$/);
     expect(await inFullscreen(page)).toBe(true); // not ours to end
     await page.evaluate(() => document.exitFullscreen());
