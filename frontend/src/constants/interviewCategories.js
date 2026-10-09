@@ -22,5 +22,6 @@ export const SOURCE_TYPE_LABEL = {
   OFFICIAL_COMPANY: "Official company source", CANDIDATE_REPORTED: "Candidate reported",
   PUBLIC_INTERVIEW_REPORT: "Public interview report", CODEARENA_VERIFIED: "CodeArena verified (multiple reports)",
   AI_GENERATED_VARIANT: "AI-generated variant",
+  INFERRED_FROM_JD: "Based on the job description", ORIGINAL_PRACTICE: "Practice question",
 };
 export const CONFIDENCE_LEVEL_COLOR = { HIGH: "var(--mint)", MEDIUM: "var(--amber, #b8860b)", LOW: "var(--ink-dim)" };

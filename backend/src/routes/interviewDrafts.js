@@ -139,6 +139,7 @@ async function approveDraftQuestion(draft, { req, frequencyTag, packageBand, exp
         sourceType: draft.sourceType, sourceUrl: draft.sourceUrl, sourceDate: draft.sourceDate,
         confidenceLevel: draft.confidenceLevel, verificationCount: draft.verificationCount,
         firstSeenAt: draft.firstSeenAt, lastSeenAt: draft.lastSeenAt, lastVerifiedAt: new Date(),
+        roundName: draft.roundName, importKey: draft.importKey, researchMeta: draft.researchMeta ?? undefined,
       },
     });
     await tx.interviewQuestionDraft.update({
