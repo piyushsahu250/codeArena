@@ -18,6 +18,12 @@ const arg = (n, d) => { const a = process.argv.find((x) => x.startsWith(`--${n}=
   const byDay = {};
   for (const r of rows) { const d = r.createdAt.toISOString().slice(0, 10); const x = (byDay[d] ||= { calls: 0, failed: 0, quota: 0 }); x.calls++; if (!r.success) { x.failed++; if (/QUOTA|RATE/.test(r.errorType || "")) x.quota++; } }
   console.table(Object.entries(byDay).sort().map(([day, x]) => ({ day, calls: x.calls, failed: x.failed, quotaOrRateLimit: x.quota })));
+  const feature = arg("feature", "");
+  if (feature) {
+    const d = {};
+    for (const r of rows.filter((x) => x.feature === feature)) { const k = r.createdAt.toISOString().slice(0, 10); const x = (d[k] ||= { ok: 0 }); if (r.success) x.ok++; else x[r.errorType || "UNKNOWN"] = (x[r.errorType || "UNKNOWN"] || 0) + 1; }
+    console.log(`daily breakdown for ${feature}:`); console.table(d);
+  }
   console.log("READ ONLY.");
   process.exit(0);
 })().catch((e) => { console.error(e); process.exit(1); });
