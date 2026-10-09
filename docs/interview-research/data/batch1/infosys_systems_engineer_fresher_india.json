@@ -1,0 +1,1416 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Infosys",
+                     "role":  "Systems Engineer",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://freshershunt.in/infosys-system-engineer-specialist-2026/",
+                     "job_description_summary":  "Infosys hires freshers (BE/B.Tech/ME/M.Tech/MCA/MSc, 2024-2026 batches, 60% or 6.0 CGPA, no active backlogs) as Systems Engineer, Specialist Programmer and Digital Specialist Engineer. Secondary sources describe an online test (aptitude, reasoning, pseudocode, and DSA coding for Specialist Programmer; Automata Fix for Digital Specialist Engineer), a technical interview (programming, DBMS, OS, project) and an HR interview. Training is at the Mysuru campus.",
+                     "required_skills":  [
+                                             "Java, Python or C++",
+                                             "Data structures and algorithms",
+                                             "DBMS and SQL",
+                                             "Operating systems basics",
+                                             "OOP",
+                                             "Aptitude and pseudocode tracing",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official Infosys pages that could be fetched (infosys.com careers and graduates pages, last modified 2026-05-05) name programmes such as HackWithInfy, InfyTQ and Power Programmers but list no fresher roles, rounds or eligibility; the role and process description comes from a secondary aggregator (freshershunt.in, 2026-06-23), which also says the drive had closed.",
+                                         "The largest candidate-reported source is an anonymous aggregate on freshershunt.in (published 2026-08-19, 220 questions, 1,097 citations). Counts are user-submitted estimates; some entries are garbled, and several listed questions show no count (recorded as at least one report).",
+                                         "placementpreparation.io content is labelled \u0027sample questions\u0027 and is not attributed to candidates; it was used only as topic context.",
+                                         "No question reports specific to Specialist Programmer or Digital Specialist Engineer were found; those tracks use original practice questions (class D) mapped to the described focus areas.",
+                                         "The 2026 aptitude, pseudocode and debugging items are original practice items, not reported questions.",
+                                         "Package figures differ between sources and were not used.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.placementpreparation.io/infosys/interview-experience/",
+                        "title":  "",
+                        "publisher":  "www.placementpreparation.io",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://freshershunt.in/?p=54914",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "INFY-SE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Averages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "The average of five numbers is 24. When one number is removed, the average of the remaining four becomes 22. What is the number that was removed?",
+                          "relevance_to_role":  "Secondary sources list verbal, logical, quantitative and pseudocode sections in the Infosys online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "32",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Averages",
+                                               "Totals"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the average had risen to 26 instead?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Subtracting the averages (24 - 22)",
+                                                  "Using 5 instead of 4 for the remaining count"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude",
+                                       "averages"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "28",
+                                                      "30",
+                                                      "32",
+                                                      "34"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Total = 5 x 24 = 120. Remaining total = 4 x 22 = 88. Removed number = 120 - 88 = 32.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Speed and distance",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A 120 m long train crosses a signal pole in 6 seconds. What is its speed in km/h?",
+                          "relevance_to_role":  "Secondary sources list verbal, logical, quantitative and pseudocode sections in the Infosys online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "72 km/h",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Unit conversion",
+                                               "Speed = distance / time"
+                                           ],
+                          "follow_ups":  [
+                                             "How long would it take to cross a 180 m platform at that speed?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting to convert m/s to km/h",
+                                                  "Using 3.6 inverted"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude",
+                                       "speed"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "60",
+                                                      "66",
+                                                      "72",
+                                                      "80"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Speed = 120 / 6 = 20 m/s. Converting: 20 x 18/5 = 72 km/h.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Blood relations",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Pointing to a man in a photograph, Asha says, \u0027He is the son of my mother\u0027s only brother.\u0027 How is the man related to Asha?",
+                          "relevance_to_role":  "Secondary sources list verbal, logical, quantitative and pseudocode sections in the Infosys online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Cousin",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Family trees",
+                                               "Step-by-step decoding"
+                                           ],
+                          "follow_ups":  [
+                                             "How would the answer change if the man were \u0027the son of my mother\u0027s only sister\u0027?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling the maternal uncle\u0027s son a brother",
+                                                  "Skipping a generation"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning",
+                                       "relations"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Brother",
+                                                      "Cousin",
+                                                      "Uncle",
+                                                      "Nephew"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Asha\u0027s mother\u0027s brother is her maternal uncle; his son is her cousin.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Synonyms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the word closest in meaning to \u0027meticulous\u0027.",
+                          "relevance_to_role":  "Secondary sources list verbal, logical, quantitative and pseudocode sections in the Infosys online assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Thorough",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Vocabulary",
+                                               "Context clues"
+                                           ],
+                          "follow_ups":  [
+                                             "Give an antonym of \u0027meticulous\u0027."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing an antonym",
+                                                  "Picking a word that merely sounds similar"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal",
+                                       "vocabulary"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Careless",
+                                                      "Thorough",
+                                                      "Hasty",
+                                                      "Vague"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Meticulous means showing great attention to detail, so \u0027thorough\u0027 is closest.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Pseudocode",
+                          "subtopic":  "Loop tracing",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Pseudocode: x = 5; y = 0; while x \u003e 0: y = y + x; x = x - 2; end while; print y. What is printed?",
+                          "relevance_to_role":  "Pseudocode tracing is listed for Systems Engineer assessments by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "9",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loop tracing",
+                                               "Termination condition"
+                                           ],
+                          "follow_ups":  [
+                                             "What is printed if the loop condition is x \u003e= 0?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Stopping after two iterations",
+                                                  "Counting x = -1 as an iteration"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "pseudocode",
+                                       "loops"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5",
+                                                      "8",
+                                                      "9",
+                                                      "15"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Iterations: x=5 gives y=5; x=3 gives y=8; x=1 gives y=9; then x=-1 stops the loop. Output is 9.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Number Theory",
+                          "subtopic":  "Armstrong number",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether a given non-negative integer is an Armstrong number, meaning it equals the sum of its digits each raised to the number of digits.",
+                          "relevance_to_role":  "Armstrong-number programs appear in aggregated 2026 candidate reports for Infosys.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Use len(str(n)) as the exponent and sum the powers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct exponent",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct sum",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Digit extraction",
+                                               "Powers"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you list all Armstrong numbers below 10^5?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using exponent 3 for every number",
+                                                  "Mutating n while extracting digits"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "numbers",
+                                       "easy"
+                                   ],
+                          "notes":  "Listed by the aggregated source without a visible count (at least one report).",
+                          "coding":  {
+                                         "problem_statement":  "Given a non-negative integer n, print Yes if it equals the sum of each digit raised to the power of the digit count, otherwise print No.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "0 \u003c= n \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "153",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "154",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single-digit numbers",
+                                                            "n = 0",
+                                                            "Large 9-digit Armstrong numbers"
+                                                        ],
+                                         "expected_algorithm":  "Convert to digits and sum powers.",
+                                         "time_complexity":  "O(d)",
+                                         "space_complexity":  "O(d)",
+                                         "hidden_test_categories":  [
+                                                                        "Single digit",
+                                                                        "0",
+                                                                        "3-digit",
+                                                                        "Large Armstrong",
+                                                                        "Non-Armstrong"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Linked Lists",
+                          "subtopic":  "Reverse a linked list",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Reverse a singly linked list and print its values from the new head.",
+                          "relevance_to_role":  "Reversing a linked list appears in aggregated 2026 Infosys candidate reports.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Walk the list, pointing each node\u0027s next to the previous node.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct pointer updates",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "No extra list",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointers",
+                                               "In-place reversal"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you reverse only a sub-range of the list?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Losing the next node before reassigning",
+                                                  "Returning the old head"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "linked-list",
+                                       "pointers"
+                                   ],
+                          "notes":  "Reported in the aggregated source; the I/O format is original (values are given as an array for judging).",
+                          "coding":  {
+                                         "problem_statement":  "A singly linked list is given by its values from head to tail. Reverse it and print the values from the new head.",
+                                         "input_format":  "Line 1: n. Line 2: n space-separated values.",
+                                         "output_format":  "The reversed values separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 2 3 4 5",
+                                                             "output":  "5 4 3 2 1",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n7",
+                                                             "output":  "7",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single node",
+                                                            "Two nodes",
+                                                            "Large list"
+                                                        ],
+                                         "expected_algorithm":  "Iterative pointer reversal (prev, curr, next).",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Single node",
+                                                                        "Two nodes",
+                                                                        "Large list",
+                                                                        "Repeated values"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Recursion",
+                          "subtopic":  "Fibonacci series",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the first n terms of the Fibonacci series, starting with 0 and 1, and explain how you would write it recursively.",
+                          "relevance_to_role":  "A recursive Fibonacci series program is reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Define F(0)=0, F(1)=1, F(k)=F(k-1)+F(k-2); memoize to avoid repeated work.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct base cases",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Output format",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Explains recursion cost",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recursion",
+                                               "Memoization"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is plain recursion exponential?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Printing from F(1)",
+                                                  "Off-by-one in the count"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "recursion",
+                                       "easy"
+                                   ],
+                          "notes":  "Reported in the aggregated source; limits and format are original.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print the first n terms of the Fibonacci series (0, 1, 1, 2, ...) separated by spaces.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "n integers separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 30",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "7",
+                                                             "output":  "0 1 1 2 3 5 8",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "n = 30"
+                                                        ],
+                                         "expected_algorithm":  "Recursive definition with memoization, or an iterative loop.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "n = 2",
+                                                                        "Small",
+                                                                        "n = 30"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Four pillars with real-life examples",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the four pillars of object-oriented programming with real-life examples.",
+                          "relevance_to_role":  "OOP concepts are the most frequently reported technical question in the aggregated Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  21,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Encapsulation: a bank account hides its balance behind methods. Inheritance: a SavingsAccount extends Account. Polymorphism: one withdraw() behaves differently per account type. Abstraction: callers use an interface without knowing the internals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "All four correct",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Real-life example for each",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Code-level mention",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Encapsulation",
+                                               "Inheritance",
+                                               "Polymorphism",
+                                               "Abstraction"
+                                           ],
+                          "follow_ups":  [
+                                             "Where do you use abstract classes vs interfaces?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Giving definitions without examples",
+                                                  "Confusing abstraction with encapsulation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Reported 12 and 9 times in two variants on the source page; counted as 21 mentions.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Polymorphism",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is polymorphism? Explain compile-time and run-time polymorphism with an example.",
+                          "relevance_to_role":  "Polymorphism is reported separately from the pillars question in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  6,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Polymorphism lets one interface take many forms. Compile-time: method overloading or operator overloading. Run-time: method overriding with a base-class reference calling a subclass method via dynamic dispatch.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Both types named",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Dynamic dispatch",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Overloading",
+                                               "Overriding",
+                                               "Dynamic dispatch"
+                                           ],
+                          "follow_ups":  [
+                                             "Can static methods be overridden?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling overloading run-time polymorphism",
+                                                  "No example"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop",
+                                       "polymorphism"
+                                   ],
+                          "notes":  "Reported 6 times on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Array vs list",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare an array with a list (for example Java\u0027s ArrayList). When would you choose each?",
+                          "relevance_to_role":  "Array-versus-list is reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Arrays have fixed size and contiguous memory with O(1) index access. Lists grow dynamically; insertion in the middle costs O(n) for array-backed lists. Use arrays when size is known and performance matters, lists for flexibility.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Size and access contrast",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Insertion/deletion cost",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Use cases",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Contiguous memory",
+                                               "Dynamic resizing"
+                                           ],
+                          "follow_ups":  [
+                                             "How does ArrayList grow internally?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying lists are always slower",
+                                                  "Ignoring resizing cost"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "ds",
+                                       "arrays"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process vs thread",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between a process and a thread?",
+                          "relevance_to_role":  "Process-versus-thread is reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A process is an independent program in execution with its own address space. Threads share a process\u0027s memory and resources but have their own stack and registers, so they are lighter and communicate faster but need synchronization.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Memory model",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Cost and communication",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Address space",
+                                               "Context switching",
+                                               "Synchronization"
+                                           ],
+                          "follow_ups":  [
+                                             "What problems can shared memory cause?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying threads have separate heaps",
+                                                  "Ignoring synchronization"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "os",
+                                       "threads"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "TCP vs UDP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between TCP and UDP? Give one use case for each.",
+                          "relevance_to_role":  "TCP-versus-UDP is reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "TCP is connection-oriented and reliable, with ordered delivery and retransmission (web, email). UDP is connectionless and has lower overhead without delivery guarantees (video calls, DNS queries).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Reliability contrast",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Use cases",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Overhead",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Connection-oriented",
+                                               "Reliability",
+                                               "Latency"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does DNS commonly use UDP?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying UDP is always faster for the user",
+                                                  "Mixing up use cases"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "networks",
+                                       "transport"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "INNER JOIN vs LEFT JOIN",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the difference between INNER JOIN and LEFT JOIN with a small example.",
+                          "relevance_to_role":  "DBMS joins are reported in the aggregated 2026 data and listed as a sample question by another source.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "INNER JOIN returns only rows with matches in both tables. LEFT JOIN returns all rows from the left table and NULLs for unmatched right-side columns. Example: customers LEFT JOIN orders shows customers with no orders.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct definitions",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "NULL behavior",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Joins",
+                                               "NULLs"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you find customers who never placed an order?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying LEFT JOIN removes unmatched rows",
+                                                  "Forgetting NULLs"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "joins"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "SQL",
+                          "subtopic":  "Second-highest salary",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given a table Employee(id, name, salary), return the second-highest distinct salary using two different approaches.",
+                          "relevance_to_role":  "The second-highest-salary query is reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Approach 1: SELECT MAX(salary) FROM Employee WHERE salary \u003c (SELECT MAX(salary) FROM Employee). Approach 2: SELECT DISTINCT salary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET 1 (or DENSE_RANK() = 2). Mention NULL when no second value exists.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Two valid approaches",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Handles ties",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Handles missing value",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subquery",
+                                               "Window functions"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you generalise it to the Nth highest?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using OFFSET 1 without DISTINCT",
+                                                  "Ignoring ties"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "sql",
+                                       "query"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Project walkthrough",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about your project: your role, the technologies used and the biggest challenge.",
+                          "relevance_to_role":  "Project questions are among the most reported items in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  47,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Clear problem, own contribution, technologies and why, result, and one specific challenge with how it was solved.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Clear problem and role",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Technology choices",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Specific challenge",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication",
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you improve if you rebuilt it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Describing only the team\u0027s work",
+                                                  "Cannot explain listed technologies"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project",
+                                       "resume"
+                                   ],
+                          "notes":  "Reported 47 times on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Communication",
+                          "subtopic":  "Self-introduction",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about yourself.",
+                          "relevance_to_role":  "The most frequently reported HR question in the aggregated Infosys data (100 mentions).",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  100,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A 60 to 90 second structured introduction ending with why Infosys and this role.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-presentation"
+                                           ],
+                          "follow_ups":  [
+                                             "What is one thing not on your resume?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rambling",
+                                                  "Repeating the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "intro"
+                                   ],
+                          "notes":  "Reported 100 times on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Self-presentation",
+                                             "star_guidance":  "Present, past, future: current studies and skills, one project or achievement, and why this role.",
+                                             "positive_signals":  [
+                                                                      "Structured and concise",
+                                                                      "Relevant to the role",
+                                                                      "Confident tone"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Reads the resume aloud",
+                                                                      "Over two minutes",
+                                                                      "Irrelevant personal details"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "INFY-SE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Questions for the interviewer",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have any questions for us?",
+                          "relevance_to_role":  "Reported 41 times in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  41,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Ask two thoughtful questions, such as the training programme, how projects are allocated, or what success looks like in the first year. Do not ask only about salary.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Asks relevant questions",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Shows research",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Professional tone",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Curiosity",
+                                               "Preparation"
+                                           ],
+                          "follow_ups":  [
+                                             "Which question would you most like answered?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying \u0027no questions\u0027",
+                                                  "Asking only about pay or leave"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "closing"
+                                   ],
+                          "notes":  "Reported 41 times on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Why IT and why Infosys",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why did you choose IT as a career, and why Infosys?",
+                          "relevance_to_role":  "Reported 9 times (why IT) and 6 times (why Infosys) in the aggregated 2026 data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  15,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Link a genuine interest in technology to specific facts about Infosys (training in Mysuru, breadth of domains, learning culture).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Genuine reasons",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific Infosys facts",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Concise",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation",
+                                               "Company research"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about Infosys\u0027s recent work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic flattery",
+                                                  "Mentioning only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Combined count of the two reported variants.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your biggest strength and weakness, and how will your strength help in this role?",
+                          "relevance_to_role":  "Strengths and weaknesses are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Pick one real strength with evidence, one real weakness with steps you are taking to improve, and link the strength to the role.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Honest and specific",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Improvement plan",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Role link",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness"
+                                           ],
+                          "follow_ups":  [
+                                             "Give an example where your strength made a difference."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness (\u0027I work too hard\u0027)",
+                                                  "No evidence"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "self-awareness"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation and shifts",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate to any Infosys location and to work in shifts if required?",
+                          "relevance_to_role":  "Relocation and shift flexibility are reported in the aggregated 2026 data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A clear, honest answer. State willingness or real constraints calmly, and ask how training and relocation support work.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Direct answer",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Professional tone",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Relevant question",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Flexibility",
+                                               "Honesty"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make relocation difficult?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Evasive reply",
+                                                  "Promising what you cannot do"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "relocation"
+                                   ],
+                          "notes":  "At least one report on the first source.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SE-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Career goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see yourself in five years and in ten years?",
+                          "relevance_to_role":  "Career-goal questions are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Show growth tied to skills: becoming a strong engineer in five years and taking on design or leadership responsibility later, linked to what Infosys offers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Realistic plan",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Linked to the company",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Humble",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ambition",
+                                               "Planning"
+                                           ],
+                          "follow_ups":  [
+                                             "What skills will you build first?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying \u0027I will own the company\u0027",
+                                                  "Having no plan"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "goals"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

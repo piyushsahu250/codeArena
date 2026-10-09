@@ -1,0 +1,1609 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Capgemini",
+                     "role":  "Senior Analyst",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.capgemini.com/in-en/careers/join-capgemini/recruitment-process/",
+                     "job_description_summary":  "Capgemini India hires fresh graduates mainly as Analyst and Senior Analyst. Secondary 2026 sources describe a game-based aptitude assessment, about 25 pseudocode and technical MCQs, a coding test (mainly for Senior Analyst), a technical interview and an HR interview. The official recruitment-process pages were located but not fetched.",
+                     "required_skills":  [
+                                             "Aptitude and logical reasoning",
+                                             "Pseudocode tracing",
+                                             "Programming fundamentals (Java or Python)",
+                                             "OOP",
+                                             "DBMS and SQL",
+                                             "Operating systems and networking basics",
+                                             "Data structures",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "Capgemini\u0027s official recruitment-process and technical-graduates pages were located but not fetched, so no round is marked DOCUMENTED; rounds come from two 2026 secondary sources and are labeled REPORTED.",
+                                         "The Analyst and Senior Analyst split (coding mainly for Senior Analyst) is from a JobRise guide (2026-02-11) and was not confirmed officially.",
+                                         "The freshershunt aggregate (2026-08-19) reports counts such as Tell me about yourself 54, project 25, questions for us 23, Why Capgemini 12, hobbies 11, OOPS 6. Counts are user-submitted estimates. Items it names without counts are recorded with times_reported 1.",
+                                         "JobRise states a number of candidates were consulted but does not attribute its lists to individuals, so those lists are used only as topic context (class D).",
+                                         "Package figures (Analyst 4 to 4.5 LPA, Senior Analyst 7 to 7.5 LPA, aggregate 3.8 to 4.25 LPA) disagree and were not used.",
+                                         "Aptitude items are original practice proxies for the game-based round, which cannot be reproduced in text.",
+                                         "Track-specific allocation is a proposed structure; the aggregate does not split reports by role.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://freshershunt.in/capgemini-interview-questions/",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Game-based Aptitude Assessment",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Pseudocode and Technical MCQ Test",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Coding Assessment",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R5",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  5,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "CAP-SA-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Time and distance",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A train 150 m long passes a pole in 10 seconds. How long does it take to cross a 250 m platform?",
+                          "relevance_to_role":  "A 2026 guide describes a game-based aptitude assessment as the first stage; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "26.7 s",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Relative length"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the speed in km/h?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring the train length"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "16 s",
+                                                      "20 s",
+                                                      "24 s",
+                                                      "26.7 s"
+                                                  ],
+                                      "correct_options":  [
+                                                              3
+                                                          ],
+                                      "explanation":  "Speed = 15 m/s. Distance to cross = 150 + 250 = 400 m, so time = 400 / 15 = 26.67 s.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Syllogisms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Statements: All coders are thinkers. Some thinkers are writers. Conclusions: I. Some coders are writers. II. Some writers are thinkers.",
+                          "relevance_to_role":  "A 2026 guide describes a game-based aptitude assessment as the first stage; this item is a conventional aptitude proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Only II follows",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Syllogism"
+                                           ],
+                          "follow_ups":  [
+                                             "Add \u0027All writers are coders\u0027. What changes?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming I follows"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Only I follows",
+                                                      "Only II follows",
+                                                      "Both follow",
+                                                      "Neither follows"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Some thinkers are writers implies some writers are thinkers (II). The link from coders to writers is not guaranteed (I).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Pseudocode",
+                          "subtopic":  "Recursion",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What does g(4) return?\n\ng(n):\n    if n == 0 return 0\n    return n * n + g(n - 1)",
+                          "relevance_to_role":  "A 2026 guide describes about 25 pseudocode and technical MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "30",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recursion tracing"
+                                           ],
+                          "follow_ups":  [
+                                             "What does g(5) return?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Summing n instead of n squared"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "pseudocode"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "10",
+                                                      "20",
+                                                      "30",
+                                                      "36"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "16 + 9 + 4 + 1 = 30.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Recursion",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a necessary part of every correct recursive function?",
+                          "relevance_to_role":  "A 2026 guide describes about 25 pseudocode and technical MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A base case",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Base case"
+                                           ],
+                          "follow_ups":  [
+                                             "What error occurs without it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Believing a loop is required"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "programming-fundamentals"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "A loop",
+                                                      "A base case",
+                                                      "A global variable",
+                                                      "An array"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A base case stops the recursion; otherwise it overflows the stack.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Subqueries",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which clause is evaluated first logically in a SQL query?",
+                          "relevance_to_role":  "A 2026 guide describes about 25 pseudocode and technical MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "FROM",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Query order"
+                                           ],
+                          "follow_ups":  [
+                                             "Why can\u0027t WHERE use a SELECT alias?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing SELECT"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "SELECT",
+                                                      "FROM",
+                                                      "ORDER BY",
+                                                      "HAVING"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Logical order is FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "HTTP vs HTTPS",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What does HTTPS add over HTTP?",
+                          "relevance_to_role":  "A 2026 guide describes about 25 pseudocode and technical MCQs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Encryption with TLS and server authentication",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "TLS"
+                                           ],
+                          "follow_ups":  [
+                                             "How does a browser trust a certificate?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking HTTPS is for speed"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Faster downloads",
+                                                      "Encryption with TLS and server authentication",
+                                                      "A new port 8080",
+                                                      "Compression of images"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "HTTPS wraps HTTP in TLS, giving confidentiality, integrity and server authentication (port 443).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "Palindrome check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether a string is a palindrome, ignoring case and non-alphanumeric characters.",
+                          "relevance_to_role":  "A 2026 guide says coding is asked mainly for Senior Analyst roles.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Clean and compare to the reverse.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Cleaning",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Correct check",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it in O(1) space."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring case handling"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Palindrome is named as a reported coding question by an aggregated page without a count; the wording here is original.",
+                          "coding":  {
+                                         "problem_statement":  "Given a line of text, print Yes if it reads the same forwards and backwards after removing non-alphanumeric characters and ignoring case, otherwise No.",
+                                         "input_format":  "One line of text.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "A man, a plan, a canal: Panama",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "race a car",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Punctuation",
+                                                            "Case",
+                                                            "Single character"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers or clean and reverse.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Punctuation",
+                                                                        "Case",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Number Sequences",
+                          "subtopic":  "Fibonacci series",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the first n Fibonacci numbers.",
+                          "relevance_to_role":  "A 2026 guide says coding is asked mainly for Senior Analyst roles.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Keep a and b, update a, b = b, a + b.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct terms",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Efficiency",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Iteration"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it recursively with memoisation."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Exponential recursion",
+                                                  "Starting from 1"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "fibonacci"
+                                   ],
+                          "notes":  "Fibonacci is named as a reported coding question by an aggregated page without a count; the wording here is original.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print the first n terms of the Fibonacci sequence starting 0, 1.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Terms separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 50",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "7",
+                                                             "output":  "0 1 1 2 3 5 8",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "n = 50"
+                                                        ],
+                                         "expected_algorithm":  "Iterative with two variables.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "2",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Remove duplicates keeping order",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Remove duplicate values from an array while keeping the first occurrence of each.",
+                          "relevance_to_role":  "A 2026 guide says coding is asked mainly for Senior Analyst roles.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Add to output only if unseen.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Hash set",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Order",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it for a sorted array in O(1) space."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Sorting (breaks order)"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "arrays",
+                                       "hashing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n tokens, print them with later duplicates removed, order preserved.",
+                                         "input_format":  "Line 1: n. Line 2: n tokens.",
+                                         "output_format":  "Tokens separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n4 5 4 6 5 7",
+                                                             "output":  "4 5 6 7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\na a a",
+                                                             "output":  "a",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All same",
+                                                            "All distinct",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "Hash set while scanning.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "All same",
+                                                                        "Distinct",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "Count vowels and consonants",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count vowels and consonants in a string.",
+                          "relevance_to_role":  "A 2026 guide says coding is asked mainly for Senior Analyst roles.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Count letters; vowels are a, e, i, o, u.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct counting",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings"
+                                           ],
+                          "follow_ups":  [
+                                             "Count each vowel separately."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting spaces as consonants"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a line, print the number of vowels and the number of consonants (letters only, case-insensitive) separated by a space.",
+                                         "input_format":  "One line of text.",
+                                         "output_format":  "\u0027v c\u0027",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "Hello World",
+                                                             "output":  "3 7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "AEIOU 123",
+                                                             "output":  "5 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No letters",
+                                                            "Digits and symbols",
+                                                            "Upper case"
+                                                        ],
+                                         "expected_algorithm":  "Single pass.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Symbols",
+                                                                        "Upper case",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Searching",
+                          "subtopic":  "Majority element",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the majority element, the value that appears more than n/2 times.",
+                          "relevance_to_role":  "A 2026 guide says coding is asked mainly for Senior Analyst roles.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Candidate voting, then verify the count.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Verification",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Voting",
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Find elements appearing more than n/3 times."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping verification"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n tokens, print the value that appears more than floor(n/2) times, or -1 if none exists.",
+                                         "input_format":  "Line 1: n. Line 2: n tokens.",
+                                         "output_format":  "A token or -1.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "7\n2 2 1 1 2 2 3",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4\n1 2 3 4",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No majority",
+                                                            "n = 1",
+                                                            "All same"
+                                                        ],
+                                         "expected_algorithm":  "Boyer-Moore voting or counting.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1) or O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "None",
+                                                                        "All same",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Procedural vs OOP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare procedural and object-oriented programming.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Procedural code organises logic as functions acting on shared data; OOP bundles data and behaviour into objects, supporting encapsulation, inheritance and polymorphism, easing maintenance of large systems.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Paradigms"
+                                           ],
+                          "follow_ups":  [
+                                             "When is procedural fine?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling one always better"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Python",
+                          "subtopic":  "Data types",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are Python\u0027s built-in data types? Which are mutable?",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Numbers (int, float, complex), bool, str, list, tuple, set, frozenset, dict, bytes. Mutable: list, set, dict, bytearray. Immutable: int, float, str, tuple, frozenset, bytes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Data types",
+                                               "Mutability"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the difference between a set and a list?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking tuple is mutable"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "python"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "DBMS",
+                          "subtopic":  "Joins",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the types of joins in SQL and write a query that lists employees with their department names.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Inner, left, right, full outer and cross joins. SELECT e.name, d.name FROM Employees e JOIN Departments d ON e.dept_id = d.id;",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Joins"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you include employees without a department?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing the ON condition"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "SQL",
+                          "subtopic":  "GROUP BY vs ORDER BY",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between GROUP BY and ORDER BY?",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "GROUP BY collapses rows into groups for aggregates; ORDER BY sorts the result rows. They can be used together.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Grouping",
+                                               "Sorting"
+                                           ],
+                          "follow_ups":  [
+                                             "Can ORDER BY use an aggregate?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Thinking GROUP BY sorts"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process vs thread",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the difference between a process and a thread? What are the advantages of multithreading?",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A process has its own memory space; threads share a process\u0027s memory and resources. Multithreading improves responsiveness and parallelism but needs synchronisation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Concurrency"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a race condition?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying threads have separate heaps"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain your main project in detail: architecture, your part, a tough bug and how you solved it.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  25,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Clear architecture, your contribution, a specific debugging story and the lesson.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership",
+                                               "Depth"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you scale it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  7,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "The source lists project questions with a count of 25 reports.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Array vs linked list",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare arrays and linked lists, and write the steps to reverse a linked list.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Arrays give O(1) indexing; lists give cheap inserts. To reverse: keep prev, curr, next; set curr.next = prev; advance all three until curr is null.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linked lists",
+                                               "Pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "Reverse it recursively."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Losing the next pointer"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "OOPs concepts",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain polymorphism, abstraction and encapsulation with real examples and say how they differ.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported technical questions for Capgemini.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  6,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Polymorphism: same interface, different behaviour; abstraction: hide complexity and expose essentials; encapsulation: bundle data and restrict access.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "Compile-time vs runtime polymorphism?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing abstraction and encapsulation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "The source lists OOPs with a count of 6 reports.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R5-001",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Tell me about yourself",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about yourself.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported HR questions, led by \u0027Tell me about yourself\u0027.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  54,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A 60-90 second summary of education, skills, a project, and interest in the role.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which skill are you proudest of?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The source lists this with a count of 54 reports.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R5-002",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Why Capgemini",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why Capgemini over other IT companies?",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported HR questions, led by \u0027Tell me about yourself\u0027.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  12,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Researched points on services, training and culture, linked to your goals, without criticising others.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make you decline?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise",
+                                                  "Criticising others"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The source lists this with a count of 12 reports.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R5-003",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Questions for us",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have any questions for us?",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported HR questions, led by \u0027Tell me about yourself\u0027.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  23,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Ask thoughtful questions about training, projects and growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you expect in year one?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No questions",
+                                                  "Only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The source lists this with a count of 23 reports.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R5-004",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Salary and growth",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are your career goals for the next five years?",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported HR questions, led by \u0027Tell me about yourself\u0027.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Connect learning goals to a path in the company: strong engineer first, then wider responsibility.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What will you do if growth is slower than expected?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims",
+                                                  "No plan"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "CAP-SA-R5-005",
+                          "round_id":  "R5",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Hardest problem you solved",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe the hardest technical problem you solved and how you approached it.",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported HR questions, led by \u0027Tell me about yourself\u0027.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific bug or design problem solved step by step.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Problem solving",
+                                             "star_guidance":  "Situation: the problem. Action: how you broke it down and tested options. Result: outcome and learning.",
+                                             "positive_signals":  [
+                                                                      "Breaks down the problem",
+                                                                      "Tests hypotheses",
+                                                                      "Learns"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames tools",
+                                                                      "No result"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "CAP-SA-R5-006",
+                          "round_id":  "R5",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Conflict in a team",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a conflict in a team and how you handled it (use the STAR method).",
+                          "relevance_to_role":  "An aggregated 2026 page collects candidate-reported HR questions, led by \u0027Tell me about yourself\u0027.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete conflict resolved with respect.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/capgemini-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, task, action, result with a focus on your actions.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Seeks facts",
+                                                                      "Resolves"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "Avoids"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

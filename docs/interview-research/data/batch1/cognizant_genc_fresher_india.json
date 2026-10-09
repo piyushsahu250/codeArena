@@ -1,0 +1,1268 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Cognizant",
+                     "role":  "GenC",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.cognizant.com/india-en/pathways-to-cognizant/genc-program/",
+                     "job_description_summary":  "Cognizant\u0027s official GenC page describes Generation Cognizant as its hiring and development programme for entry-level talent in India, with campus and off-campus drives, assessments that test communication, aptitude and/or technical skills depending on the role, interviews, and no service bond. The page names no job titles, tracks or eligibility criteria. Secondary sources describe GenC, GenC Next and GenC Elevate tracks assigned by assessment score.",
+                     "required_skills":  [
+                                             "Quantitative, logical and verbal aptitude",
+                                             "Communication in English",
+                                             "Code debugging (Automata Fix style)",
+                                             "Programming in Java or Python",
+                                             "SQL",
+                                             "OOP and data structures",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official GenC page lists the process in general terms only; it names no roles, tracks, eligibility, assessment patterns or cutoffs. The GenC Next and GenC Elevate track names and pay bands come from secondary sources (JobRise 2026-02-11, unsourced cutoffs).",
+                                         "The only candidate-attributed material found is two short accounts in a 2023 article (updated 2024) on placementpreparation.io, which are generic about rounds and name no specific questions beyond SQL basics and joins; those items are marked low confidence.",
+                                         "The JobRise guide says it spoke with 30+ candidates but does not attribute its lists of most-asked questions to individuals, so those lists were used only as topic context (class D).",
+                                         "A second placementpreparation.io page is partly behind a login wall; its visible sample problems are editorial and not candidate-attributed.",
+                                         "That page\u0027s meta description mentions another company, suggesting a copy error; its cluster descriptions (Java/SQL/web and SQL/Python/cloud) are unconfirmed.",
+                                         "Aptitude, communication and debugging items are original practice items.",
+                                         "Because the track names are secondary-sourced, track-specific question allocation is a proposed structure, not documented.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://careers.cognizant.com/india-en/pathways-to-cognizant/genc-program/",
+                        "title":  "",
+                        "publisher":  "careers.cognizant.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://placementpreparation.io/blog/cognizant-genc-elevate-interview-experience",
+                        "title":  "",
+                        "publisher":  "placementpreparation.io",
+                        "published_on":  "2023-10-17",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment (Aptitude, Communication, Automata Fix, SQL)",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "COG-GENC-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Pipes and cisterns",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Pipe A fills an empty tank in 10 hours and pipe B empties a full tank in 15 hours. If both are opened together on an empty tank, how long will it take to fill?",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "30 hours",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Rates",
+                                               "Net work"
+                                           ],
+                          "follow_ups":  [
+                                             "What if B emptied the tank in 8 hours?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding the rates",
+                                                  "Averaging 10 and 15"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude",
+                                       "pipes"
+                                   ],
+                          "notes":  "Original practice item; the official page names the assessment areas only.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "20 hours",
+                                                      "25 hours",
+                                                      "30 hours",
+                                                      "35 hours"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Net rate = 1/10 - 1/15 = 1/30 of the tank per hour, so it takes 30 hours.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Simple interest",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What principal earns Rs. 1,200 as simple interest in 3 years at 8% per annum?",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 5,000",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Simple interest formula"
+                                           ],
+                          "follow_ups":  [
+                                             "What would the amount be after 3 years?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using compound interest",
+                                                  "Dropping the time"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude",
+                                       "interest"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 4,000",
+                                                      "Rs. 4,500",
+                                                      "Rs. 5,000",
+                                                      "Rs. 6,000"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "P = (SI x 100) / (R x T) = (1200 x 100) / (8 x 3) = 5000.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Direction sense",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Rahul faces north, turns 90 degrees clockwise, and then 135 degrees anticlockwise. Which direction is he facing now?",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "North-West",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Angles on a compass",
+                                               "Clockwise vs anticlockwise"
+                                           ],
+                          "follow_ups":  [
+                                             "What if he first turned 90 anticlockwise?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing up turn directions"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "reasoning",
+                                       "directions"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "North-West",
+                                                      "South-West",
+                                                      "North-East",
+                                                      "South-East"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Clockwise 90 from north gives east. Turning 135 anticlockwise from east points 45 degrees past north, towards the north-west.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Coding-decoding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "If TABLE is written as UBCMF in a certain code, how is CHAIR written?",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DIBJS",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Letter shifting"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you encode ZONE?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Shifting backwards",
+                                                  "Skipping a letter"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning",
+                                       "coding"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "DIBJS",
+                                                      "DHBJS",
+                                                      "BGZHQ",
+                                                      "DIBIS"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Each letter is shifted one place forward: C to D, H to I, A to B, I to J, R to S.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Communication",
+                          "subtopic":  "Sentence arrangement",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Arrange into a meaningful sentence: P. the report  Q. was submitted  R. by the team  S. yesterday",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "PQRS",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sentence structure"
+                                           ],
+                          "follow_ups":  [
+                                             "Rewrite it in the active voice."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Placing the time marker first without a pronoun"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "communication",
+                                       "arrangement"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "PQRS",
+                                                      "QPRS",
+                                                      "PRQS",
+                                                      "SPQR"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "\u0027The report was submitted by the team yesterday.\u0027 is the natural order (P, Q, R, S).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Communication",
+                          "subtopic":  "Error spotting",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Identify the part with an error: \u0027Each of the students (A) / have completed (B) / their assignments (C) / on time (D).\u0027",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "B",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subject-verb agreement",
+                                               "Indefinite pronouns"
+                                           ],
+                          "follow_ups":  [
+                                             "Correct the sentence in two ways."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Matching the verb to \u0027students\u0027"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "communication",
+                                       "grammar"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "A",
+                                                      "B",
+                                                      "C",
+                                                      "D"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "\u0027Each\u0027 takes a singular verb: \u0027has completed\u0027.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Debugging",
+                          "subtopic":  "Wrong condition in a count",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Fix the bug: def count_even(arr): c = 0; for x in arr: if x % 2 == 1: c += 1; return c",
+                          "relevance_to_role":  "Automata Fix tasks ask candidates to repair buggy code, per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "The condition counts odd numbers. Change it to x % 2 == 0 to count even numbers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Finds bug",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct fix",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modulo",
+                                               "Conditions"
+                                           ],
+                          "follow_ups":  [
+                                             "How does it behave for negative numbers?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Changing the return value",
+                                                  "Altering the loop"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging",
+                                       "python"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Debugging",
+                          "subtopic":  "Digit sum loop",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Fix the bug in this Java method so it returns the sum of digits: int sumDigits(int n) { int s = 0; while (n \u003e 0) { s += n / 10; n %= 10; } return s; }",
+                          "relevance_to_role":  "Automata Fix tasks ask candidates to repair buggy code, per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "The digit and the remaining number are swapped. Use s += n % 10; n /= 10;.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Finds bug",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct fix",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modulo and division",
+                                               "Loop update"
+                                           ],
+                          "follow_ups":  [
+                                             "What does the method return for 0?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fixing only one line",
+                                                  "Changing the loop condition"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "debugging",
+                                       "java"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "SQL",
+                          "subtopic":  "Join two tables",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given Employee(id, name, dept_id) and Department(id, name), write a query to list each employee\u0027s name with the department name.",
+                          "relevance_to_role":  "Two candidate accounts mention basic SQL queries and joins in the GenC Elevate skill assessment (older, 2023 source).",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "SELECT e.name AS employee, d.name AS department FROM Employee e JOIN Department d ON e.dept_id = d.id; use LEFT JOIN to include employees without a department.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct join",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Aliases",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Mentions LEFT JOIN",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "JOIN",
+                                               "Aliases"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you list departments with no employees?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing the ON condition",
+                                                  "Ambiguous column names"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "sql",
+                                       "joins"
+                                   ],
+                          "notes":  "Two named candidates in a 2023 article (updated 2024); low confidence.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "SQL",
+                          "subtopic":  "Fetching data with filters",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a query to fetch names of employees in department 10 with salary above 50,000, highest salary first.",
+                          "relevance_to_role":  "Two candidate accounts mention basic queries and fetching data in the skill assessment (older, 2023 source).",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "SELECT name FROM Employee WHERE dept_id = 10 AND salary \u003e 50000 ORDER BY salary DESC;",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct WHERE",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "ORDER BY",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Syntax",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SELECT",
+                                               "WHERE",
+                                               "ORDER BY"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you return only the top 3?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using HAVING instead of WHERE",
+                                                  "Wrong sort direction"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "sql",
+                                       "basics"
+                                   ],
+                          "notes":  "Two named candidates in a 2023 article; low confidence.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "final, finally and finalize",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the difference between final, finally and finalize in Java?",
+                          "relevance_to_role":  "These keywords are listed in a 2026 Cognizant guide\u0027s most-asked list.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "final is a modifier (constant variable, non-overridable method, non-extendable class); finally is a block that runs after try/catch for cleanup; finalize() is a deprecated method called by the garbage collector before reclaiming an object.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Three correct",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Deprecation note",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "final",
+                                               "finally",
+                                               "finalize"
+                                           ],
+                          "follow_ups":  [
+                                             "Does finally run after return?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating them as the same",
+                                                  "Saying finalize is recommended"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java",
+                                       "keywords"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Array vs ArrayList",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between an array and an ArrayList in Java?",
+                          "relevance_to_role":  "Array versus ArrayList is listed in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Arrays are fixed-size, can hold primitives and are typed at creation. ArrayList is a resizable class holding objects, offering methods like add and remove, with automatic growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Size and types",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Methods",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Performance",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Collections",
+                                               "Generics"
+                                           ],
+                          "follow_ups":  [
+                                             "How does an ArrayList grow?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying arrays are always faster in every case"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "java",
+                                       "collections"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "== vs equals()",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between == and equals() in Java for strings?",
+                          "relevance_to_role":  "== versus equals() is listed in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "== compares references (same object); equals() compares content. Two strings with the same text can be different objects, so use equals() for content.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Reference vs content",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "String pool note",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Reference equality",
+                                               "String pool"
+                                           ],
+                          "follow_ups":  [
+                                             "What does new String(\"hi\") == \"hi\" give?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using == for content"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "java",
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Abstract class vs interface",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between an abstract class and an interface?",
+                          "relevance_to_role":  "OOP principles are listed as a core interview topic in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An abstract class can hold state, constructors and concrete methods and supports single inheritance; an interface defines a contract (with default methods in modern Java) and a class can implement many. Use abstract classes for shared code and interfaces for capabilities.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct contrast",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "When to use",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Abstraction",
+                                               "Interfaces"
+                                           ],
+                          "follow_ups":  [
+                                             "Can an interface have a constructor?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying interfaces cannot have any implementation in modern Java"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop",
+                                       "abstraction"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Architecture and challenge",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Describe your main project\u0027s architecture, its biggest challenge and what you would change today.",
+                          "relevance_to_role":  "Project questions (architecture, biggest challenge, what you would change) are listed in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clear problem, components and data flow, your role, one concrete challenge with the fix, and a thoughtful improvement.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Clear architecture",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific challenge",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Reflection",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication",
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you test it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Naming tools without explaining",
+                                                  "Claiming team work as personal"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Count vowels",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count the vowels in a given line of text, ignoring case.",
+                          "relevance_to_role":  "A report says a coding challenge was solved on the spot in the technical interview; the problem was not specified.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Lowercase and count membership in \u0027aeiou\u0027.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct count",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Case handling",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings",
+                                               "Sets"
+                                           ],
+                          "follow_ups":  [
+                                             "Count consonants instead."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring uppercase",
+                                                  "Counting \u0027y\u0027"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "strings",
+                                       "easy"
+                                   ],
+                          "notes":  "The source (2023, two named candidates) does not give the problem; this one is original. Topic context only (no candidate attribution): https://placementpreparation.io/blog/cognizant-genc-elevate-interview-experience.",
+                          "coding":  {
+                                         "problem_statement":  "Given a line of text, print the number of vowels (a, e, i, o, u, case-insensitive).",
+                                         "input_format":  "One line: text.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= length \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "Cognizant GenC",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "rhythm",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No vowels",
+                                                            "Empty line",
+                                                            "Upper and lower case"
+                                                        ],
+                                         "expected_algorithm":  "Single scan with a vowel set.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "No vowels",
+                                                                        "All vowels",
+                                                                        "Mixed case",
+                                                                        "Spaces"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Anagram check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether two strings are anagrams of each other.",
+                          "relevance_to_role":  "A report says a coding challenge was solved on the spot in the technical interview; the problem was not specified.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compare character counts or sorted strings.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Length check",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Sorting"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you handle Unicode?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring repeated letters",
+                                                  "Comparing sets"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "strings",
+                                       "hashing"
+                                   ],
+                          "notes":  "The source (2023, two named candidates) does not give the problem; this one is original. Topic context only (no candidate attribution): https://placementpreparation.io/blog/cognizant-genc-elevate-interview-experience.",
+                          "coding":  {
+                                         "problem_statement":  "Given two lowercase strings, print Yes if one is a rearrangement of the other, otherwise No.",
+                                         "input_format":  "Line 1: first string. Line 2: second string.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "listen\nsilent",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "apple\napply",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Different lengths",
+                                                            "Repeated letters",
+                                                            "Single character"
+                                                        ],
+                                         "expected_algorithm":  "Count frequencies.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Different lengths",
+                                                                        "Repeats",
+                                                                        "Identical",
+                                                                        "Single",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Why Cognizant",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join Cognizant?",
+                          "relevance_to_role":  "\u0027Why Cognizant\u0027 is listed in a 2026 guide\u0027s HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Tie specific facts (GenC training, no service bond per the official page, project variety) to your goals and skills.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Goal link",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Concise",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about GenC?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise",
+                                                  "Only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Location flexibility and other offers",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you flexible about work location, and do you have any other offers?",
+                          "relevance_to_role":  "Location flexibility and other offers are listed in a 2026 guide\u0027s HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Answer honestly: state flexibility or constraints, mention other offers without bluffing, and explain why Cognizant interests you.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Honest",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Clear",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Honesty"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make you choose one offer over another?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Bluffing",
+                                                  "Evasive answers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "logistics"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-GENC-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Resilience",
+                          "subtopic":  "Handling stress and setbacks",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you handle stress and setbacks? Give an example.",
+                          "relevance_to_role":  "One candidate account says the HR round covered how the candidate handles stress and setbacks (older, 2023 source).",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A real setback handled calmly with a lesson learned.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Resilience"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you notice stress early?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No example",
+                                                  "Claiming you never feel stress"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "behavioral",
+                                       "resilience"
+                                   ],
+                          "notes":  "One named candidate in a 2023 article; low confidence.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Resilience",
+                                             "star_guidance":  "Situation: a stressful period or setback. Action: how you responded. Result: outcome and what you do now.",
+                                             "positive_signals":  [
+                                                                      "Specific example",
+                                                                      "Calm response",
+                                                                      "Learning"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames others",
+                                                                      "Generic claim"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

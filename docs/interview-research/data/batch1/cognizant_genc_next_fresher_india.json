@@ -1,0 +1,982 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Cognizant",
+                     "role":  "GenC Next",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.cognizant.com/india-en/pathways-to-cognizant/genc-program/",
+                     "job_description_summary":  "Cognizant\u0027s official GenC page describes Generation Cognizant as its hiring and development programme for entry-level talent in India, with campus and off-campus drives, assessments that test communication, aptitude and/or technical skills depending on the role, interviews, and no service bond. The page names no job titles, tracks or eligibility criteria. Secondary sources describe GenC, GenC Next and GenC Elevate tracks assigned by assessment score.",
+                     "required_skills":  [
+                                             "Quantitative, logical and verbal aptitude",
+                                             "Communication in English",
+                                             "Code debugging (Automata Fix style)",
+                                             "Programming in Java or Python",
+                                             "SQL",
+                                             "OOP and data structures",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official GenC page lists the process in general terms only; it names no roles, tracks, eligibility, assessment patterns or cutoffs. The GenC Next and GenC Elevate track names and pay bands come from secondary sources (JobRise 2026-02-11, unsourced cutoffs).",
+                                         "The only candidate-attributed material found is two short accounts in a 2023 article (updated 2024) on placementpreparation.io, which are generic about rounds and name no specific questions beyond SQL basics and joins; those items are marked low confidence.",
+                                         "The JobRise guide says it spoke with 30+ candidates but does not attribute its lists of most-asked questions to individuals, so those lists were used only as topic context (class D).",
+                                         "A second placementpreparation.io page is partly behind a login wall; its visible sample problems are editorial and not candidate-attributed.",
+                                         "That page\u0027s meta description mentions another company, suggesting a copy error; its cluster descriptions (Java/SQL/web and SQL/Python/cloud) are unconfirmed.",
+                                         "Aptitude, communication and debugging items are original practice items.",
+                                         "Because the track names are secondary-sourced, track-specific question allocation is a proposed structure, not documented.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://careers.cognizant.com/india-en/pathways-to-cognizant/genc-program/",
+                        "title":  "",
+                        "publisher":  "careers.cognizant.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "OTHER",
+                        "url":  "https://www.placementpreparation.io/cognizant-genc/interview-experience/",
+                        "title":  "",
+                        "publisher":  "www.placementpreparation.io",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment (Aptitude, Automata Fix, Coding)",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "COG-NEXT-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Ages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "The ratio of A\u0027s age to B\u0027s age is 4:5. After 6 years it will be 5:6. What is A\u0027s present age?",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "24",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linear equations",
+                                               "Ratios"
+                                           ],
+                          "follow_ups":  [
+                                             "What will B\u0027s age be after 6 years?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 6 to the ratio numbers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "aptitude",
+                                       "ages"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "20",
+                                                      "24",
+                                                      "28",
+                                                      "30"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "(4x+6)/(5x+6) = 5/6 gives 24x + 36 = 25x + 30, so x = 6 and A = 24.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Probability",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A bag has 5 red and 3 blue balls. Two balls are drawn without replacement. What is the probability that both are red?",
+                          "relevance_to_role":  "Cognizant\u0027s official GenC page says assessments test communication, aptitude and/or technical skills depending on the role.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "5/14",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Without replacement"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the first ball is replaced?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using 5/8 twice"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "aptitude",
+                                       "probability"
+                                   ],
+                          "notes":  "Original practice item.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "5/14",
+                                                      "25/64",
+                                                      "5/16",
+                                                      "3/14"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "P = (5/8) x (4/7) = 20/56 = 5/14.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Debugging",
+                          "subtopic":  "Index out of range",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Fix the bug: def is_sorted(a): for i in range(len(a)): if a[i] \u003e a[i + 1]: return False; return True",
+                          "relevance_to_role":  "Automata Fix tasks ask candidates to repair buggy code, per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "The loop reads a[i + 1] on the last index and raises IndexError. Loop to range(len(a) - 1).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Finds bug",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct fix",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bounds",
+                                               "Off-by-one"
+                                           ],
+                          "follow_ups":  [
+                                             "What does it return for an empty list?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Changing the comparison"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging",
+                                       "python"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Debugging",
+                          "subtopic":  "Wrong initial value",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Fix the bug: int power(int b, int e) { int r = 0; for (int i = 0; i \u003c e; i++) r *= b; return r; }",
+                          "relevance_to_role":  "Automata Fix tasks ask candidates to repair buggy code, per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "r starts at 0, so the product is always 0. Initialise r = 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Finds bug",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct fix",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Accumulators",
+                                               "Initial values"
+                                           ],
+                          "follow_ups":  [
+                                             "What does power(5, 0) return after the fix?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Changing the loop bound"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging",
+                                       "java"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "First non-repeating character",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the position of the first character that appears only once in a string.",
+                          "relevance_to_role":  "Strings and hashing are typical coding topics for the Cognizant assessment per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Count characters, then scan for count == 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Frequency map",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Second pass",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it in one pass."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using sorted order",
+                                                  "Returning the character instead of the index"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "strings",
+                                       "hashing"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a lowercase string, print the 0-based index of the first character that occurs exactly once, or -1 if none.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "leetcode",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "aabb",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No unique character",
+                                                            "Unique at the end",
+                                                            "Single character"
+                                                        ],
+                                         "expected_algorithm":  "Frequency count then scan.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "None unique",
+                                                                        "Unique at end",
+                                                                        "Single",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Arrays and Hashing",
+                          "subtopic":  "Count pairs with a given sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count the pairs of positions (i \u003c j) whose values add up to k.",
+                          "relevance_to_role":  "Arrays and hashing are typical coding topics for the Cognizant assessment per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "For each x, add count[k - x] then increment count[x].",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Hash map",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Counts duplicates",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Overflow awareness",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Counting"
+                                           ],
+                          "follow_ups":  [
+                                             "What if you need distinct value pairs?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting pairs twice",
+                                                  "Using sets and losing duplicates"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays",
+                                       "hashing"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers and k, print the number of index pairs i \u003c j with a[i] + a[j] = k.",
+                                         "input_format":  "Line 1: n and k. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 6\n1 5 3 3 3",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4 4\n2 2 2 2",
+                                                             "output":  "6",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Duplicates",
+                                                            "No pair",
+                                                            "Negative numbers"
+                                                        ],
+                                         "expected_algorithm":  "Hash map of seen counts.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Duplicates",
+                                                                        "No pair",
+                                                                        "Negatives",
+                                                                        "Large counts"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Move zeros to the end",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Move all zeros to the end of an array while keeping the order of the other elements.",
+                          "relevance_to_role":  "Arrays are typical coding topics for the Cognizant assessment per a 2026 guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Write non-zero elements forward, then fill the rest with zeros.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Order preserved",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "In place",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it with the minimum writes."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Sorting",
+                                                  "Losing order"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "arrays",
+                                       "two-pointers"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print the array with all zeros moved to the end, preserving the order of non-zero elements.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "n integers separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n0 1 0 3 12 0",
+                                                             "output":  "1 3 12 0 0 0",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n0 0 0",
+                                                             "output":  "0 0 0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All zeros",
+                                                            "No zeros",
+                                                            "Single element"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers (stable partition).",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "All zeros",
+                                                                        "No zeros",
+                                                                        "Mixed",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "HashMap internals",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does a HashMap work internally in Java?",
+                          "relevance_to_role":  "HashMap is listed as a data-structure topic in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Keys hash to bucket indexes; collisions chain entries in a list or tree; equals() selects the key; resizing rehashes when the load factor is exceeded; average O(1) get and put.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Buckets",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Collisions",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Resize",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Load factor"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the default load factor?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying it is sorted",
+                                                  "Ignoring equals/hashCode"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "java",
+                                       "collections"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalization and keys",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain normalization up to 3NF and the difference between primary, candidate and foreign keys.",
+                          "relevance_to_role":  "Normalization and keys are listed DBMS topics in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Normalization removes redundancy: 1NF atomic values, 2NF no partial dependency, 3NF no transitive dependency. A candidate key is any minimal unique identifier; the primary key is the chosen one; a foreign key references another table\u0027s key.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Normal forms",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Keys",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normalization",
+                                               "Keys"
+                                           ],
+                          "follow_ups":  [
+                                             "When is denormalization useful?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing candidate and primary keys"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Stored procedures and indexing",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a stored procedure, and how do indexes affect query performance?",
+                          "relevance_to_role":  "Stored procedures and indexing are listed DBMS topics in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A stored procedure is precompiled SQL logic stored on the server, reusable and parameterised, reducing network round trips. Indexes speed reads on indexed columns but slow writes and use storage.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Procedure explained",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Index trade-off",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stored procedures",
+                                               "Indexes"
+                                           ],
+                          "follow_ups":  [
+                                             "How do procedures differ from functions?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying indexes have no cost"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "indexing"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Multithreading",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the life cycle of a thread in Java and how you would make a counter thread-safe.",
+                          "relevance_to_role":  "Multithreading is listed for the technical interview by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "States: new, runnable, running, blocked/waiting, terminated. A shared counter needs synchronization (synchronized, locks) or atomic classes to avoid lost updates.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "States",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Thread safety",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Atomic option",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Threads",
+                                               "Synchronization"
+                                           ],
+                          "follow_ups":  [
+                                             "Difference between wait and sleep?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring atomicity"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "java",
+                                       "threads"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Code Reading",
+                          "subtopic":  "What does this code print",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed? int f() { try { return 1; } finally { System.out.println(\"F\"); } } System.out.println(f());",
+                          "relevance_to_role":  "Explaining code snippets is listed for the technical interview by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "F is printed first (finally runs before the method returns), then 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct output",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Explains finally",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "finally",
+                                               "Control flow"
+                                           ],
+                          "follow_ups":  [
+                                             "What if finally also returned a value?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Printing 1 first"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "java",
+                                       "finally"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Design decision defence",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In your project, which design decision would you defend most strongly, and what alternatives did you reject?",
+                          "relevance_to_role":  "Design patterns and what you would change appear in a 2026 guide\u0027s project questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name a decision, the alternatives and trade-offs, evidence (tests, metrics), and lessons.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Trade-offs",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Evidence",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Honesty",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Design reasoning"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do differently now?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Defending without alternatives"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project",
+                                       "design"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Handling weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is your biggest weakness and what are you doing about it?",
+                          "relevance_to_role":  "Weakness questions are listed in a 2026 Cognizant guide\u0027s HR round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name a real, non-critical weakness with concrete steps and progress.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Honest",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Improvement",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Concise",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness"
+                                           ],
+                          "follow_ups":  [
+                                             "Give an example of progress."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cliche weaknesses",
+                                                  "No plan"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "weakness"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-NEXT-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Other offers and commitment",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have other offers, and what would make you commit to Cognizant?",
+                          "relevance_to_role":  "Other offers are listed in a 2026 Cognizant guide\u0027s HR round.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest about offers, explain what attracts you (training, project variety) and show seriousness.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Honest",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Reasons",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Honesty",
+                                               "Commitment"
+                                           ],
+                          "follow_ups":  [
+                                             "What would change your mind?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Bluffing",
+                                                  "Negative comments"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "offers"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

@@ -1,0 +1,1021 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Infosys",
+                     "role":  "Specialist Programmer",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://freshershunt.in/infosys-system-engineer-specialist-2026/",
+                     "job_description_summary":  "Infosys hires freshers (BE/B.Tech/ME/M.Tech/MCA/MSc, 2024-2026 batches, 60% or 6.0 CGPA, no active backlogs) as Systems Engineer, Specialist Programmer and Digital Specialist Engineer. Secondary sources describe an online test (aptitude, reasoning, pseudocode, and DSA coding for Specialist Programmer; Automata Fix for Digital Specialist Engineer), a technical interview (programming, DBMS, OS, project) and an HR interview. Training is at the Mysuru campus.",
+                     "required_skills":  [
+                                             "Java, Python or C++",
+                                             "Data structures and algorithms",
+                                             "DBMS and SQL",
+                                             "Operating systems basics",
+                                             "OOP",
+                                             "Aptitude and pseudocode tracing",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official Infosys pages that could be fetched (infosys.com careers and graduates pages, last modified 2026-05-05) name programmes such as HackWithInfy, InfyTQ and Power Programmers but list no fresher roles, rounds or eligibility; the role and process description comes from a secondary aggregator (freshershunt.in, 2026-06-23), which also says the drive had closed.",
+                                         "The largest candidate-reported source is an anonymous aggregate on freshershunt.in (published 2026-08-19, 220 questions, 1,097 citations). Counts are user-submitted estimates; some entries are garbled, and several listed questions show no count (recorded as at least one report).",
+                                         "placementpreparation.io content is labelled \u0027sample questions\u0027 and is not attributed to candidates; it was used only as topic context.",
+                                         "No question reports specific to Specialist Programmer or Digital Specialist Engineer were found; those tracks use original practice questions (class D) mapped to the described focus areas.",
+                                         "The 2026 aptitude, pseudocode and debugging items are original practice items, not reported questions.",
+                                         "Package figures differ between sources and were not used.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://freshershunt.in/infosys-system-engineer-specialist-2026/",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://www.infosys.com/careers/graduates.html",
+                        "title":  "",
+                        "publisher":  "www.infosys.com",
+                        "published_on":  "2026-05-05",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Advanced Coding Test",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "INFY-SP-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Longest increasing subsequence",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the length of the longest strictly increasing subsequence in an array.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Maintain tails[]; replace the first element \u003e= x with x using binary search.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Recognises LIS",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "O(n log n) approach",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Strictness handled",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DP",
+                                               "Binary search"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you reconstruct the sequence?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "O(n^2) only",
+                                                  "Using \u003c= instead of strict increase"
+                                              ],
+                          "suggested_time_min":  25,
+                          "tags":  [
+                                       "dp",
+                                       "binary-search"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print the length of the longest strictly increasing subsequence (elements need not be adjacent).",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000; -10^9 \u003c= a[i] \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n10 9 2 5 3 7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4\n4 4 4 4",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All equal",
+                                                            "Strictly decreasing",
+                                                            "Already increasing",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Patience-sorting with binary search.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "All equal",
+                                                                        "Decreasing",
+                                                                        "Increasing",
+                                                                        "n = 1",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "Minimum coin change",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the minimum number of coins needed to make a given amount, or report that it is impossible.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "dp[x] = min(dp[x - c] + 1) over coins c \u003c= x.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "DP recurrence",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Impossible case",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Unbounded knapsack",
+                                               "DP"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you count the number of ways instead?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Greedy approach",
+                                                  "Not handling impossible"
+                                              ],
+                          "suggested_time_min":  25,
+                          "tags":  [
+                                       "dp",
+                                       "coins"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given coin denominations (unlimited supply) and an amount, print the minimum number of coins that sum to the amount, or -1 if impossible.",
+                                         "input_format":  "Line 1: n. Line 2: n coin values. Line 3: amount.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100; 1 \u003c= amount \u003c= 10000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n1 2 5\n11",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1\n2\n3",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Amount 0 not allowed",
+                                                            "Impossible amount",
+                                                            "Single coin larger than amount"
+                                                        ],
+                                         "expected_algorithm":  "Bottom-up DP over amounts.",
+                                         "time_complexity":  "O(n * amount)",
+                                         "space_complexity":  "O(amount)",
+                                         "hidden_test_categories":  [
+                                                                        "Impossible",
+                                                                        "Exact single coin",
+                                                                        "Large amount",
+                                                                        "Many denominations"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Graphs",
+                          "subtopic":  "Count islands in a grid",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count the connected groups of land cells (islands) in a grid where land cells connect horizontally and vertically.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Iterate cells; start a flood fill from each unvisited land cell and count starts.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Flood fill",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "No revisits",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Iterative or recursion limit awareness",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Graph traversal",
+                                               "Flood fill"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you count islands that change over time?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting diagonals as connected",
+                                                  "Recursion depth overflow"
+                                              ],
+                          "suggested_time_min":  25,
+                          "tags":  [
+                                       "graphs",
+                                       "grid"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given an R x C grid of \u00270\u0027 and \u00271\u0027, count connected components of \u00271\u0027 using 4-directional adjacency.",
+                                         "input_format":  "Line 1: R and C. Next R lines: strings of 0/1.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= R, C \u003c= 500",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4 5\n11000\n11000\n00100\n00011",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1 1\n0",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No land",
+                                                            "All land",
+                                                            "Diagonal-only neighbours",
+                                                            "Single cell"
+                                                        ],
+                                         "expected_algorithm":  "DFS or BFS flood fill with a visited set.",
+                                         "time_complexity":  "O(R*C)",
+                                         "space_complexity":  "O(R*C)",
+                                         "hidden_test_categories":  [
+                                                                        "No land",
+                                                                        "All land",
+                                                                        "Diagonals",
+                                                                        "Snake shape",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Dynamic Programming",
+                          "subtopic":  "0/1 knapsack",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Choose items to maximise total value without exceeding a weight limit, using each item at most once.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "dp[w] = max(dp[w], dp[w - wt] + val), looping w from W down to wt.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct DP",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Iterates capacity downward",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "0/1 knapsack",
+                                               "Space optimisation"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does iterating upward give the unbounded version?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping capacity upward",
+                                                  "Reusing items"
+                                              ],
+                          "suggested_time_min":  30,
+                          "tags":  [
+                                       "dp",
+                                       "knapsack"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n items with weights and values and a capacity W, print the maximum total value achievable using each item at most once.",
+                                         "input_format":  "Line 1: n and W. Line 2: weights. Line 3: values.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 200; 1 \u003c= W \u003c= 10000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 50\n10 20 30\n60 100 120",
+                                                             "output":  "220",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 5\n6 7\n10 20",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All items too heavy",
+                                                            "Exact fit",
+                                                            "Single item"
+                                                        ],
+                                         "expected_algorithm":  "1D DP iterating capacity downward.",
+                                         "time_complexity":  "O(n*W)",
+                                         "space_complexity":  "O(W)",
+                                         "hidden_test_categories":  [
+                                                                        "All too heavy",
+                                                                        "Exact fit",
+                                                                        "Single item",
+                                                                        "Large W"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Greedy",
+                          "subtopic":  "Minimum jumps to reach the end",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the minimum number of jumps needed to reach the last index, where each element is the maximum jump length from that index.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Track the farthest reachable index and extend the jump count when the current window ends.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Greedy window",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Unreachable case",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Linear time",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Greedy",
+                                               "Reachability"
+                                           ],
+                          "follow_ups":  [
+                                             "How does this differ from the DP approach?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "O(n^2) DP only",
+                                                  "Not handling unreachable"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "greedy",
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n non-negative integers where a[i] is the maximum jump from index i, print the minimum jumps to reach index n-1 from index 0, or -1 if unreachable.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n2 3 1 1 4",
+                                                             "output":  "2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 0 3",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "Zero blocks the path",
+                                                            "All ones"
+                                                        ],
+                                         "expected_algorithm":  "Greedy window expansion.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "Blocked by zero",
+                                                                        "All ones",
+                                                                        "Large first jump",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "DevOps",
+                          "subtopic":  "Containers vs virtual machines",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between a Docker container and a virtual machine?",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Containers share the host kernel and package only the app and its dependencies, so they are lighter and start faster. Virtual machines run a full guest OS on a hypervisor, giving stronger isolation but more overhead.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Isolation vs overhead",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Kernel sharing",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Use cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Containers",
+                                               "Hypervisor"
+                                           ],
+                          "follow_ups":  [
+                                             "When would you prefer a VM?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying containers have no isolation",
+                                                  "Confusing image and container"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "devops",
+                                       "docker"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "DevOps",
+                          "subtopic":  "CI/CD pipeline",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe the stages of a typical CI/CD pipeline for a web application.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Commit triggers build, then unit and integration tests, static analysis, packaging (container image), deployment to staging, automated checks, and promotion to production with rollback support.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Stages in order",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Quality gates",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Rollback",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "CI",
+                                               "CD",
+                                               "Automation"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you stop a bad deploy reaching all users?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping tests",
+                                                  "No rollback plan"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "devops",
+                                       "ci-cd"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Backend",
+                          "subtopic":  "REST API design",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How would you design a REST API for a to-do application? Cover URLs, HTTP methods, status codes and idempotency.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Resources like /tasks and /tasks/{id}; GET list/read, POST create (201), PUT or PATCH update, DELETE (204). GET, PUT and DELETE are idempotent; POST is not. Use 400 for bad input, 404 for missing, 401/403 for auth, pagination for lists.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Resource design",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Methods and codes",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Idempotency",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "REST",
+                                               "HTTP",
+                                               "Idempotency"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you version the API?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Verbs in URLs",
+                                                  "Using GET for state change"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "backend",
+                                       "rest"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Concurrency",
+                          "subtopic":  "Race conditions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a race condition? Show how two threads incrementing a shared counter can go wrong and how to fix it.",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Increment is read-modify-write, so two threads can read the same value and lose an update. Fix with a mutex or synchronized block, or an atomic increment.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Explains lost update",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Valid fix",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Alternatives",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Race conditions",
+                                               "Atomicity",
+                                               "Locks"
+                                           ],
+                          "follow_ups":  [
+                                             "What risk do locks introduce?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying volatile alone fixes it",
+                                                  "Ignoring atomicity"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "concurrency"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Databases",
+                          "subtopic":  "Indexing trade-offs",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does a database index speed up queries, and what does it cost?",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A B-tree index lets lookups and range scans avoid reading the whole table. It costs extra storage and slows writes because the index must be updated; choose indexes for selective, frequently filtered or joined columns.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Speed benefit",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Costs",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Choosing columns",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "B-tree",
+                                               "Selectivity"
+                                           ],
+                          "follow_ups":  [
+                                             "Why might the optimizer ignore an index?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Indexing every column",
+                                                  "Ignoring write cost"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "database",
+                                       "indexing"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Version Control",
+                          "subtopic":  "Merge vs rebase",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between git merge and git rebase, and when should you avoid rebase?",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Merge combines histories with a merge commit and preserves them; rebase replays commits on top of another branch for a linear history but rewrites commits. Avoid rebasing branches others have already pulled.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct difference",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "History rewrite risk",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Use cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Git",
+                                               "History"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you resolve a merge conflict?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rebasing shared branches",
+                                                  "Confusing merge with pull"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "git"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Hardest coding problem",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe the hardest coding problem you have solved. How did you approach it, and what would you do differently?",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A real problem with approaches compared and a clear lesson.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you test it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Memorised solution",
+                                                  "No alternatives considered"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "behavioral",
+                                       "coding"
+                                   ],
+                          "notes":  "The Infosys graduate page names HackWithInfy and Power Programmers as coding-focused programmes; question is original. Topic context only (no candidate attribution): https://www.infosys.com/careers/graduates.html.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Problem solving",
+                                             "star_guidance":  "Situation: the problem and constraints. Action: approaches tried, why they failed, and the final idea. Result: complexity and what you learned.",
+                                             "positive_signals":  [
+                                                                      "Explains reasoning",
+                                                                      "Compares approaches",
+                                                                      "Reflects on lessons"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Only states the answer",
+                                                                      "Cannot explain complexity"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "INFY-SP-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Consistent practice",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you stay consistent with coding practice, and how do you handle a problem you cannot solve?",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Describe a routine (regular problems, contests, reading solutions), and a method for stuck problems: reduce, test small cases, then study solutions and re-implement without looking.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Concrete routine",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Handling failure",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Learning mindset",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Discipline",
+                                               "Growth mindset"
+                                           ],
+                          "follow_ups":  [
+                                             "Which contest platform do you use?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No routine",
+                                                  "Giving up quickly"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "hr",
+                                       "practice"
+                                   ],
+                          "notes":  "The Infosys graduate page names HackWithInfy; question is original. Topic context only (no candidate attribution): https://www.infosys.com/careers/graduates.html.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-SP-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Communication",
+                          "subtopic":  "Explaining a project to a manager",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain one of your projects as if to a non-technical manager. What value did it deliver?",
+                          "relevance_to_role":  "A secondary source describes Specialist Programmer as advanced coding, full-stack and DevOps with a DSA-based online test; the Infosys graduate page names HackWithInfy and Power Programmers.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A jargon-free explanation tied to user value.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What was the riskiest part?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Technical jargon",
+                                                  "Skipping the \u0027why\u0027"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "communication"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.infosys.com/careers/graduates.html.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Communication",
+                                             "star_guidance":  "Situation: the user problem. Action: the solution in plain terms. Result: impact, trade-offs and next steps.",
+                                             "positive_signals":  [
+                                                                      "Plain language",
+                                                                      "Focuses on value",
+                                                                      "Handles follow-ups"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Jargon-heavy",
+                                                                      "No outcome"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

@@ -1,0 +1,1333 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Wipro",
+                     "role":  "Wipro Turbo (Senior Project Engineer)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.wipro.com/content/Early-Careers/?locale=en_US",
+                     "job_description_summary":  "Wipro\u0027s official early-careers page lists the Elite programme (newly graduated engineers) and the Turbo programme (engineering talent from 46 named institutes, including IIITs and NITs), among others, but gives no selection stages or skills. Secondary sources describe the National Level Talent Hunt (NLTH) online test (aptitude, essay, and per one source a coding section), followed by a technical and an HR interview. Elite is described as the Project Engineer track (about 3.5 LPA) and Turbo as a higher track.",
+                     "required_skills":  [
+                                             "Quantitative, logical and verbal aptitude",
+                                             "Essay writing",
+                                             "Programming fundamentals (C, C++, Java or Python)",
+                                             "OOP",
+                                             "DBMS and SQL",
+                                             "Operating systems and networking basics",
+                                             "Data structures",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official Wipro early-careers page names the programmes but describes no selection stages, exam pattern or required skills; a sample official Project Engineer posting (2025) is for a mechanical design role and is not relevant to fresher software hiring.",
+                                         "Sources disagree on the NLTH pattern: one guide says aptitude plus an essay and two coding questions, another says aptitude (about 20 questions, 60 minutes) plus an essay with coding only in the technical interview. Coding rounds are therefore labeled REPORTED.",
+                                         "The Unstop article (updated 2026-03-06) and the JobRise guide (2026-02-11) are editorial lists; their questions are not attributed to individual candidates, so most items here are original practice questions (class D) using those lists as topic context.",
+                                         "Only two items come from explicitly attributed candidate anecdotes inside the JobRise guide (a HashMap question and a Java memory-model question); each is a single report.",
+                                         "The 15-month service agreement, package figures, cutoffs and the Turbo role title (Senior Project Engineer) come from secondary sources and were not confirmed on Wipro\u0027s own pages.",
+                                         "Turbo hiring is restricted to named institutes, so Turbo content may not apply to all candidates.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "NLTH Aptitude Test",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Coding Round",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "WIPRO-TURBO-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Time and work",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A can complete a job in 15 days and B in 20 days. They work together for 4 days, then A leaves. How many more days does B need to finish the job?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "10 2/3 days",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Work rates",
+                                               "Fractions"
+                                           ],
+                          "follow_ups":  [
+                                             "How long would A alone need for the remaining work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding the days instead of the rates"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "aptitude",
+                                       "time-work"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "9",
+                                                      "10 2/3",
+                                                      "11",
+                                                      "12"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Together they do 4 x (1/15 + 1/20) = 7/15 of the job. Remaining 8/15 at B\u0027s rate of 1/20 per day = 32/3 = 10 2/3 days.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Probability",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Two cards are drawn without replacement from a standard 52-card deck. What is the probability that both are aces?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "1/221",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Conditional probability",
+                                               "Without replacement"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the card is replaced?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using 4/52 twice (1/169)"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "aptitude",
+                                       "probability"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1/169",
+                                                      "1/221",
+                                                      "1/204",
+                                                      "2/221"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "P = (4/52) x (3/51) = 12/2652 = 1/221.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Syllogisms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Statements: Some cats are dogs. All dogs are birds. Conclusions: I. Some cats are birds. II. All birds are dogs. Which conclusion(s) follow?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Only I",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Syllogisms",
+                                               "Direction of \u0027all\u0027"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make II follow?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reversing \u0027all dogs are birds\u0027"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "reasoning",
+                                       "syllogism"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Only I",
+                                                      "Only II",
+                                                      "Both I and II",
+                                                      "Neither I nor II"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "The cats that are dogs are birds, so I follows. Nothing implies all birds are dogs, so II does not.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Grammar",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which sentence is grammatically correct?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "He doesn\u0027t know the answer.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Auxiliary verbs",
+                                               "Base form"
+                                           ],
+                          "follow_ups":  [
+                                             "Correct: \u0027She ___ (not/like) tea.\u0027"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding -s after doesn\u0027t"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal",
+                                       "grammar"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "He don\u0027t know the answer.",
+                                                      "He doesn\u0027t knows the answer.",
+                                                      "He doesn\u0027t know the answer.",
+                                                      "He not know the answer."
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "With \u0027doesn\u0027t\u0027 the main verb stays in base form: \u0027He doesn\u0027t know the answer.\u0027",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Longest substring without repeating characters",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the length of the longest substring that has no repeated characters.",
+                          "relevance_to_role":  "Strings and arrays are listed coding topics for Wipro tests by a secondary guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Move the left pointer past the previous occurrence of the current character.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Sliding window",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct left update",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Linear time",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sliding window",
+                                               "Hash map"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the substring itself."
+                                         ],
+                          "common_mistakes":  [
+                                                  "O(n^2) brute force",
+                                                  "Moving left backwards"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "strings",
+                                       "sliding-window"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string, print the length of the longest substring in which all characters are distinct.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcabcbb",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "bbbbb",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All same",
+                                                            "All distinct",
+                                                            "Repeats at distance"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with last-seen index.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "All same",
+                                                                        "All distinct",
+                                                                        "Long",
+                                                                        "Repeated far apart"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Stacks",
+                          "subtopic":  "Balanced brackets",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether a string of brackets (), [] and {} is balanced.",
+                          "relevance_to_role":  "Basic data structures are listed coding topics for Wipro tests by a secondary guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Push openers; on a closer, pop and compare.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Stack",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Handles empty stack",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Final emptiness check",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stack",
+                                               "Matching"
+                                           ],
+                          "follow_ups":  [
+                                             "Add support for angle brackets."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not checking an empty stack",
+                                                  "Ignoring leftover openers"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "stack"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string of brackets, print Yes if every opener has the correct closer in the right order, otherwise No.",
+                                         "input_format":  "One line: the bracket string.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "{[()]}",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "([)]",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Odd length",
+                                                            "Starts with a closer",
+                                                            "Leftover opener"
+                                                        ],
+                                         "expected_algorithm":  "Stack of openers.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Empty-stack closer",
+                                                                        "Leftover opener",
+                                                                        "Nested",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Merge two sorted arrays",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Merge two sorted arrays into one sorted array.",
+                          "relevance_to_role":  "Arrays are listed coding topics for Wipro tests by a secondary guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compare heads and append the smaller.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Two pointers",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Leftover handling",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Stable",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers",
+                                               "Merging"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it in place."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Concatenate and sort (O(n log n))",
+                                                  "Dropping leftovers"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given two non-decreasing arrays, print the merged non-decreasing array.",
+                                         "input_format":  "Line 1: n and m. Line 2: first array. Line 3: second array.",
+                                         "output_format":  "Merged array separated by spaces.",
+                                         "constraints":  "1 \u003c= n, m \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 3\n1 3 5\n2 4 6",
+                                                             "output":  "1 2 3 4 5 6",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 2\n1 1\n1 2",
+                                                             "output":  "1 1 1 2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Duplicates",
+                                                            "One array exhausted early",
+                                                            "Negative numbers"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers.",
+                                         "time_complexity":  "O(n+m)",
+                                         "space_complexity":  "O(n+m)",
+                                         "hidden_test_categories":  [
+                                                                        "Duplicates",
+                                                                        "Unequal sizes",
+                                                                        "Negatives",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Arrays and DP",
+                          "subtopic":  "Maximum subarray sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the maximum sum of a contiguous subarray.",
+                          "relevance_to_role":  "Arrays and recursion are listed coding topics for Wipro tests by a secondary guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "cur = max(x, cur + x); best = max(best, cur).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Kadane",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "All-negative case",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Linear time",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DP",
+                                               "Kadane"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the start and end indexes."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Initialising best to 0",
+                                                  "O(n^2)"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays",
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers (possibly negative), print the largest sum of any non-empty contiguous subarray.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "8\n-2 1 -3 4 -1 2 1 -5",
+                                                             "output":  "6",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n-4 -2 -7",
+                                                             "output":  "-2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All negative",
+                                                            "Single element",
+                                                            "Mixed"
+                                                        ],
+                                         "expected_algorithm":  "Kadane\u0027s algorithm.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "All negative",
+                                                                        "n = 1",
+                                                                        "Mixed",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Pair with target sum in a sorted array",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find two positions in a sorted array whose values add up to a target.",
+                          "relevance_to_role":  "Arrays are listed coding topics for Wipro tests by a secondary guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Move left up if the sum is small, right down if large.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Two pointers",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct output",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "Count all pairs."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Nested loops",
+                                                  "Reusing an element"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays",
+                                       "two-pointers"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a sorted array and a target, print the 1-based positions i \u003c j of a pair with sum equal to the target, or -1 if none exists.",
+                                         "input_format":  "Line 1: n. Line 2: n sorted integers. Line 3: target.",
+                                         "output_format":  "\u0027i j\u0027 or -1.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n2 7 11 15\n9",
+                                                             "output":  "1 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 2 3\n10",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No pair",
+                                                            "Negative values",
+                                                            "Pair at ends"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers from both ends.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "No pair",
+                                                                        "Negatives",
+                                                                        "Ends",
+                                                                        "Duplicates"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Java",
+                          "subtopic":  "synchronized vs volatile",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the difference between synchronized and volatile in Java.",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "volatile guarantees visibility of a variable across threads (and ordering) but not atomicity of compound actions. synchronized gives mutual exclusion and visibility for a block; use it (or atomics) for read-modify-write operations.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Visibility vs atomicity",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Correct use",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Visibility",
+                                               "Atomicity",
+                                               "Locks"
+                                           ],
+                          "follow_ups":  [
+                                             "Is count++ safe on a volatile int?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying volatile makes increments safe"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java",
+                                       "concurrency"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "What happens when you type a URL",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What happens, step by step, when you type a URL into a browser and press Enter?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DNS lookup, TCP connection (and TLS handshake for HTTPS), HTTP request, server processing, HTTP response, browser parses HTML and loads CSS, JS and images, then renders the page.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct sequence",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "TLS and HTTP",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Rendering",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DNS",
+                                               "TCP",
+                                               "HTTP",
+                                               "TLS"
+                                           ],
+                          "follow_ups":  [
+                                             "Where do caches help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping DNS or TCP",
+                                                  "Mixing up order"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "networks",
+                                       "http"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "OSI model",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Name the layers of the OSI model and give one protocol for three of them.",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Physical, Data Link, Network, Transport, Session, Presentation, Application. Examples: IP (network), TCP (transport), HTTP (application).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "All seven layers",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Protocol examples",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Order",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OSI",
+                                               "Protocols"
+                                           ],
+                          "follow_ups":  [
+                                             "Which layer does a router work at?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong order",
+                                                  "Mixing TCP/IP model"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "networks",
+                                       "osi"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "DBMS",
+                          "subtopic":  "ACID and isolation levels",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the ACID properties and name the common transaction isolation levels.",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Atomicity, Consistency, Isolation, Durability. Isolation levels: read uncommitted, read committed, repeatable read, serializable, which trade performance against anomalies such as dirty, non-repeatable and phantom reads.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "ACID correct",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Isolation levels",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Anomalies",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "ACID",
+                                               "Isolation"
+                                           ],
+                          "follow_ups":  [
+                                             "Which level prevents phantom reads?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing consistency and isolation"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "dbms",
+                                       "transactions"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "DBMS",
+                          "subtopic":  "Clustered vs non-clustered index",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the difference between a clustered and a non-clustered index?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A clustered index defines the physical order of rows (one per table). A non-clustered index is a separate structure with pointers to rows (many per table). Clustered is faster for range scans on the key; non-clustered needs lookups.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct difference",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Counts per table",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Indexes",
+                                               "Clustering"
+                                           ],
+                          "follow_ups":  [
+                                             "Why can only one clustered index exist?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying both store rows in order"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "indexing"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Software Architecture",
+                          "subtopic":  "Monolith vs microservices",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Compare a monolithic application with microservices. When would you avoid microservices?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A monolith is one deployable unit: simple to build and test but scales and changes together. Microservices split by business capability for independent deployment and scaling but add network, data-consistency and operational complexity. Avoid them for small teams or early-stage products.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Trade-offs",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "When to avoid",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Monolith",
+                                               "Microservices",
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "How do services communicate?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying microservices are always better"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "architecture"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "DevOps",
+                          "subtopic":  "Containers and images",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between a Docker image and a container?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An image is a read-only template with the app and dependencies; a container is a running instance of an image with a writable layer. Many containers can run from one image.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct difference",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Docker",
+                                               "Images",
+                                               "Containers"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you persist data?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using the terms as synonyms"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "docker"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "Software Engineering",
+                          "subtopic":  "Agile and Scrum",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain Agile and the main roles and events in Scrum.",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Agile favours iterative delivery and feedback. Scrum roles: Product Owner, Scrum Master, Developers. Events: sprint, sprint planning, daily scrum, review and retrospective; the product backlog feeds the sprint backlog.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Agile idea",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Roles",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Events",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Agile",
+                                               "Scrum"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a sprint goal?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing Scrum Master with a manager"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "agile"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Wipro compared with other IT companies",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How would you compare Wipro with other large IT services companies, and why choose Wipro?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Give a balanced, researched view (domains, training, programmes) without disparaging others, and link your choice to your goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Balanced",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Researched",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Goal link",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Company research"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make you decline an offer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Criticising other companies",
+                                                  "Generic answer"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Salary expectations",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are your salary expectations?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Show awareness of the company\u0027s fresher band, say you are flexible within a fair range for the role, and focus on growth and learning.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Realistic",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Flexible",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Negotiation",
+                                               "Research"
+                                           ],
+                          "follow_ups":  [
+                                             "What matters more, pay or learning?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Quoting an unrealistic number",
+                                                  "Refusing to answer"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "salary"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-TURBO-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Stress Management",
+                          "subtopic":  "Working under pressure",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you worked under tight pressure or a deadline. How did you manage it?",
+                          "relevance_to_role":  "A secondary source says Wipro Turbo uses the same online test with a higher cutoff and a harder technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific deadline handled by prioritisation and early communication.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stress management"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do differently?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "Only working longer hours"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "pressure"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Stress management",
+                                             "star_guidance":  "Situation: the deadline. Action: how you prioritised and communicated. Result: outcome and learning.",
+                                             "positive_signals":  [
+                                                                      "Prioritises",
+                                                                      "Communicates early",
+                                                                      "Stays calm"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Panics",
+                                                                      "Blames others",
+                                                                      "No outcome"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

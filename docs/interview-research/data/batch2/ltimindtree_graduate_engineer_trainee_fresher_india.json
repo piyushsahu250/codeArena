@@ -1,0 +1,2842 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "LTIMindtree",
+                     "role":  "Graduate Engineer Trainee",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.ltimindtree.com/",
+                     "job_description_summary":  "LTIMindtree hires freshers mainly as Graduate Engineer Trainees (GET), with higher-paid tracks mentioned in secondary sources. A 2026 on-campus account and guides describe an online assessment of about three hours (aptitude, pseudocode and output prediction, OOP, language, DBMS, OS, networks and a voice assessment), a technical interview and an HR interview. The official careers site was not fetched for process details.",
+                     "required_skills":  [
+                                             "Quantitative and logical aptitude",
+                                             "Pseudocode and output prediction",
+                                             "OOP and one programming language",
+                                             "Data structures and algorithms basics",
+                                             "DBMS and SQL",
+                                             "Web fundamentals (HTML, CSS, JavaScript, React)",
+                                             "Operating systems and networking basics",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official LTIMindtree careers site was not fetched, so no round is marked DOCUMENTED; rounds come from a 2026 LeetCode Discuss account (a secondhand account written by another person on behalf of a candidate, with no date visible) and two guides.",
+                                         "All class B items trace to that one account and carry times_reported 1 and low confidence.",
+                                         "The placementpreparation.io page says \u0027recent candidate reports\u0027 but attributes nothing to individuals, and its title says 2026 while a heading says 2025; its items (including the rice mixture, probability and relation puzzles) are treated as topic context and rebuilt as original practice items (class D).",
+                                         "Only the Graduate Engineer Trainee role is supported by sources; higher-band tracks are named only as \u0027up to 6.5 LPA\u0027 by a guide, so no separate track bank was created.",
+                                         "The reported 24 selected out of 600 candidates is a single-account figure and was not used.",
+                                         "Online-assessment length (about 3 hours versus 130 minutes and about 111 MCQs) differs between sources.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.placementpreparation.io/ltimindtree/interview-experience/",
+                        "title":  "",
+                        "publisher":  "www.placementpreparation.io",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://leetcode.com/discuss/interview-experience/7459349/",
+                        "title":  "",
+                        "publisher":  "leetcode.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S1",
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "LTM-GET-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Mixtures",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In what ratio must rice at Rs. 20/kg be mixed with rice at Rs. 30/kg to get a mixture worth Rs. 26/kg?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "2:3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Alligation"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the target were Rs. 25?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reversing the ratio"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "1:2",
+                                                      "2:3",
+                                                      "3:2",
+                                                      "3:4"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "By alligation: (30-26):(26-20) = 4:6 = 2:3 for cheaper to dearer.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Probability",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "The probability that an event does not occur is 0.7. What is the probability that it occurs?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "0.3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Complement rule"
+                                           ],
+                          "follow_ups":  [
+                                             "What if two independent events are both required?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing 0.7"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "0.2",
+                                                      "0.3",
+                                                      "0.7",
+                                                      "0.4"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "P(occurs) = 1 - 0.7 = 0.3.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Work and time",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Ten workers build a wall in 12 days. How many days will 15 workers need?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "8",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Inverse proportion"
+                                           ],
+                          "follow_ups":  [
+                                             "How many workers are needed to finish in 5 days?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Direct proportion"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "6",
+                                                      "8",
+                                                      "9",
+                                                      "10"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Work = 120 worker-days; 120 / 15 = 8 days.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Odd one out",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the odd one out: 15, 21, 27, 31, 39",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "31",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Number properties"
+                                           ],
+                          "follow_ups":  [
+                                             "Replace 31 so the set fits."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looking for a pattern in digits"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "15",
+                                                      "21",
+                                                      "31",
+                                                      "39"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "All others are multiples of 3; 31 is not.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Blood relations",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A man says, \u0027She is the daughter of my father\u0027s only brother.\u0027 How is she related to him?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Cousin",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Family tree"
+                                           ],
+                          "follow_ups":  [
+                                             "How is she related to his sister?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing sister"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Sister",
+                                                      "Cousin",
+                                                      "Niece",
+                                                      "Aunt"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "His father\u0027s brother\u0027s daughter is his cousin.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Number series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the next term: 1, 4, 9, 16, 25, ?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "36",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Squares"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 12th term?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 9"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "30",
+                                                      "34",
+                                                      "36",
+                                                      "49"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "These are squares; the next is 6^2 = 36.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Sentence correction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the correct option: Neither of the answers ___ correct.",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "is",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "Correct: \u0027Each of the boys are here.\u0027"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing \u0027are\u0027"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal-ability"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "are",
+                                                      "is",
+                                                      "were",
+                                                      "have been"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "\u0027Neither\u0027 takes a singular verb.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "HR",
+                          "subtopic":  "Voice assessment",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Voice assessment: read this aloud and then speak for one minute about your favourite subject: \u0027Technology helps teams deliver reliable software faster.\u0027",
+                          "relevance_to_role":  "A 2026 account lists a voice assessment in the online test.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Read clearly at a steady pace, then give a structured one-minute answer: the subject, why you like it, one example.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you explain it to a non-technical friend?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rushing",
+                                                  "Long pauses"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The voice assessment is reported; the prompt is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Pseudocode",
+                          "subtopic":  "Output prediction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\nx = 10\ny = 0\nwhile x \u003e 0:\n    y = y + x % 3\n    x = x - 3\nprint y",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loop tracing"
+                                           ],
+                          "follow_ups":  [
+                                             "What if x started at 11?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting one iteration too many"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "pseudocode"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3",
+                                                      "4",
+                                                      "5",
+                                                      "6"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "x goes 10, 7, 4, 1; each x % 3 equals 1, so y = 4. Then x becomes -2 and the loop ends.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Final keyword",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "In Java, what does declaring a method final do?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Prevents overriding in subclasses",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "final"
+                                           ],
+                          "follow_ups":  [
+                                             "What does a final variable do?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing final with static"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "object-oriented-programming"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Makes it static",
+                                                      "Prevents overriding in subclasses",
+                                                      "Prevents overloading",
+                                                      "Makes it private"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A final method cannot be overridden; a final class cannot be extended; a final variable cannot be reassigned.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-011",
+                          "round_id":  "R1",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Binary search complexity",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the worst-case time complexity of binary search on a sorted array?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "O(log n)",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the array is unsorted?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing O(n)"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "data-structures"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "O(1)",
+                                                      "O(log n)",
+                                                      "O(n)",
+                                                      "O(n^2)"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The range halves each step: O(log n).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-012",
+                          "round_id":  "R1",
+                          "topic":  "DBMS",
+                          "subtopic":  "DELETE, DROP, TRUNCATE",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which command removes a table\u0027s structure as well as its data?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DROP",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DDL",
+                                               "DML"
+                                           ],
+                          "follow_ups":  [
+                                             "Which can use WHERE?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing TRUNCATE"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "DELETE",
+                                                      "TRUNCATE",
+                                                      "DROP",
+                                                      "UPDATE"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "DROP removes the table definition and data; TRUNCATE removes all rows; DELETE removes selected rows.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-013",
+                          "round_id":  "R1",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Paging",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What problem does paging solve in memory management?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "External fragmentation by allowing non-contiguous allocation",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Paging"
+                                           ],
+                          "follow_ups":  [
+                                             "What is internal fragmentation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing with segmentation"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "operating-systems"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Internal cache misses",
+                                                      "External fragmentation by allowing non-contiguous allocation",
+                                                      "CPU scheduling",
+                                                      "Disk errors"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Paging splits memory into fixed-size frames so a process need not be contiguous.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-014",
+                          "round_id":  "R1",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "Protocols",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which protocol automatically assigns IP addresses to devices on a network?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DHCP",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DHCP"
+                                           ],
+                          "follow_ups":  [
+                                             "What does ARP do?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing DNS"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "DNS",
+                                                      "DHCP",
+                                                      "ARP",
+                                                      "FTP"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "DHCP leases IP addresses automatically.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-015",
+                          "round_id":  "R1",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Languages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which statement about JavaScript\u0027s let and var is correct?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "let is block scoped and var is function scoped",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Scope"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the temporal dead zone?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating them as identical"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "programming-fundamentals"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Both are block scoped",
+                                                      "let is block scoped and var is function scoped",
+                                                      "var is block scoped",
+                                                      "They are identical"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "let is block scoped; var is function scoped and hoisted.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-016",
+                          "round_id":  "R1",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Overriding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which concept lets a subclass provide its own implementation of a method defined in its parent class?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Overriding",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Overriding"
+                                           ],
+                          "follow_ups":  [
+                                             "Can a private method be overridden?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing overloading"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "object-oriented-programming"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Overloading",
+                                                      "Overriding",
+                                                      "Encapsulation",
+                                                      "Abstraction"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Overriding redefines a parent method in the child with the same signature.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-017",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Remove duplicates",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Remove duplicates from an array and explain the brute-force and optimized approaches.",
+                          "relevance_to_role":  "A 2026 on-campus account lists remove duplicates from an array, with brute force versus optimized discussion, in the technical interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Brute force compares every pair (O(n^2)); a hash set gives O(n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Hash set",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Order",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it for a sorted array in O(1) space."
+                                         ],
+                          "common_mistakes":  [
+                                                  "O(n^2) only",
+                                                  "Losing order"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Reported once in a secondhand account; the problem wording is original.",
+                          "coding":  {
+                                         "problem_statement":  "Given n tokens, print them with later duplicates removed, keeping the first occurrence order.",
+                                         "input_format":  "Line 1: n. Line 2: n tokens.",
+                                         "output_format":  "Tokens separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n4 5 4 6 5 7",
+                                                             "output":  "4 5 6 7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\na a a",
+                                                             "output":  "a",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All same",
+                                                            "All distinct",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "Hash set.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "All same",
+                                                                        "Distinct",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R1-018",
+                          "round_id":  "R1",
+                          "topic":  "Searching",
+                          "subtopic":  "Binary search",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Search for a value in a sorted array.",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Halve the range each step.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Binary search",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Boundaries",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the first occurrence."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Linear scan",
+                                                  "Boundary bugs"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "searching"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a sorted array and a target, print the 0-based index of the target or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n sorted integers. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 3 5 7 9\n7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n2 4 6\n5",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Absent",
+                                                            "Ends",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Binary search.",
+                                         "time_complexity":  "O(log n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Absent",
+                                                                        "Ends",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "React",
+                          "subtopic":  "Hooks",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are React hooks? Explain useState and useEffect with a small example.",
+                          "relevance_to_role":  "A 2026 on-campus account lists React hooks in the technical interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Hooks let function components use state and lifecycle features. useState returns a value and setter; useEffect runs side effects after render, with a dependency array controlling when, and a cleanup function.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hooks",
+                                               "State",
+                                               "Effects"
+                                           ],
+                          "follow_ups":  [
+                                             "What happens with an empty dependency array?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing the dependency array"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "react"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "React",
+                          "subtopic":  "Lifting state up",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What does \u0027lifting state up\u0027 mean in React and when do you use it?",
+                          "relevance_to_role":  "A 2026 on-campus account lists lifting state up in the technical interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "When siblings need the same data, move the state to their closest common parent and pass it down as props with callbacks to update it.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "State",
+                                               "Props"
+                                           ],
+                          "follow_ups":  [
+                                             "When would context be better?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Keeping duplicated state"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "react"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "React",
+                          "subtopic":  "Virtual DOM and Fiber",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the virtual DOM, and what is React Fiber?",
+                          "relevance_to_role":  "A 2026 on-campus account lists the virtual DOM and Fiber in the technical interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "The virtual DOM is an in-memory tree React diffs against the previous one to apply minimal real DOM updates. Fiber is React\u0027s reconciliation engine that splits rendering into units of work so it can pause, prioritise and resume.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Virtual DOM",
+                                               "Reconciliation"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does using keys in lists matter?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying the virtual DOM is always faster"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "react"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Algorithms",
+                          "subtopic":  "Linear vs binary search",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare linear search and binary search. When is each suitable?",
+                          "relevance_to_role":  "A 2026 on-campus account lists linear versus binary search in the technical interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Linear search scans in O(n) and works on unsorted data; binary search needs sorted data and takes O(log n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "What if data changes often?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using binary search on unsorted data"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "algorithms"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Algorithms",
+                          "subtopic":  "Asymptotic notation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain Big O, Omega and Theta notation with an example.",
+                          "relevance_to_role":  "A 2026 on-campus account lists asymptotic notation in the technical interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Big O is an upper bound, Omega a lower bound, Theta a tight bound. Example: linear search is O(n) in the worst case and Omega(1) in the best case (target is the first element); a loop that always runs n times is Theta(n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Notation"
+                                           ],
+                          "follow_ups":  [
+                                             "Is O(n) also O(n^2)?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using Big O for exact time"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "algorithms"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "SQL",
+                          "subtopic":  "Reverse-order query",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given a Students table, write a query to list names in reverse alphabetical order, then show how to fetch the top three using a subquery.",
+                          "relevance_to_role":  "A 2026 on-campus account lists a SQL query returning rows in reverse order with subqueries or joins.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "SELECT name FROM Students ORDER BY name DESC; Top three: SELECT name FROM (SELECT name FROM Students ORDER BY name DESC) t LIMIT 3; (syntax depends on the database).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "ORDER BY",
+                                               "Subqueries"
+                                           ],
+                          "follow_ups":  [
+                                             "Write it with a join to a Marks table."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing ORDER BY direction"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Reported once in a secondhand account; the schema here is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Brute force vs optimized",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You are asked to find duplicates in an array. Explain a brute-force approach, an optimized approach and their complexity.",
+                          "relevance_to_role":  "A 2026 on-campus account lists brute versus optimized discussion for a duplicate-removal task.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Brute force compares every pair: O(n^2) time, O(1) space. Sort then scan: O(n log n). Hash set: O(n) time, O(n) space.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "Which would you use for very large data?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not stating space cost"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "algorithms"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Web Fundamentals",
+                          "subtopic":  "HTML, CSS and JavaScript",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the roles of HTML, CSS and JavaScript in a web page.",
+                          "relevance_to_role":  "A 2026 on-campus account describes a technical interview covering web fundamentals, DSA and SQL.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "HTML structures content, CSS styles it, JavaScript adds behaviour and interactivity.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Web basics"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the DOM?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing roles"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "web"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Polymorphism",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain compile-time and runtime polymorphism with examples.",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compile-time: method overloading. Runtime: method overriding resolved by the actual object type through dynamic dispatch.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Polymorphism"
+                                           ],
+                          "follow_ups":  [
+                                             "Can static methods be overridden?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing overloading and overriding"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalization",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is normalization and why is it used?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "It organises tables to reduce redundancy and anomalies: 1NF atomic values, 2NF no partial dependencies, 3NF no transitive dependencies.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normal forms"
+                                           ],
+                          "follow_ups":  [
+                                             "When is denormalization useful?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing forms"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Process vs thread",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Differentiate a process from a thread.",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A process has its own address space; threads share the process memory but have their own stack and registers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Concurrency"
+                                           ],
+                          "follow_ups":  [
+                                             "What is context switching?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying threads do not share memory"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-012",
+                          "round_id":  "R2",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "OSI vs TCP/IP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare the OSI and TCP/IP models.",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "OSI has 7 layers, TCP/IP 4 (or 5). OSI is a reference model; TCP/IP is the practical protocol suite.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Layered models"
+                                           ],
+                          "follow_ups":  [
+                                             "Where does HTTP sit?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong layer counts"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-013",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Abstract class vs interface",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the difference between an abstract class and an interface in Java?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Abstract classes can have state and constructors, single inheritance; interfaces define contracts, multiple implementation, default methods.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Abstraction"
+                                           ],
+                          "follow_ups":  [
+                                             "Can an interface extend another?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying interfaces hold instance state"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-014",
+                          "round_id":  "R2",
+                          "topic":  "JavaScript",
+                          "subtopic":  "Closures",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a closure in JavaScript? Give a short example.",
+                          "relevance_to_role":  "A 2026 on-campus account describes a technical interview covering web fundamentals, DSA and SQL.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A closure is a function that remembers variables from its outer scope after the outer function returns, e.g. a counter factory returning an increment function.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Scope",
+                                               "Closures"
+                                           ],
+                          "follow_ups":  [
+                                             "Where do closures cause memory issues?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with callbacks"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "javascript"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-015",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Stack and queue",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare a stack with a queue. Show how to check for balanced brackets with a stack.",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Stack LIFO, queue FIFO. Push openings, pop on closings and compare; balanced if empty at the end.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stack"
+                                           ],
+                          "follow_ups":  [
+                                             "What if there are several bracket types?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not checking empty stack"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-016",
+                          "round_id":  "R2",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain your project and the technology choices you made.",
+                          "relevance_to_role":  "A 2026 on-campus account describes a technical interview covering web fundamentals, DSA and SQL.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, your role, stack and why, a challenge and a result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership",
+                                               "Depth"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you change?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-017",
+                          "round_id":  "R2",
+                          "topic":  "Software Engineering",
+                          "subtopic":  "Version control",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is Git and how do branching and merging work?",
+                          "relevance_to_role":  "A 2026 on-campus account describes a technical interview covering web fundamentals, DSA and SQL.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Git tracks changes in a repository. Branches isolate work; merging combines them, possibly with conflicts you resolve manually.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Git"
+                                           ],
+                          "follow_ups":  [
+                                             "Merge vs rebase?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing Git with GitHub"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "git"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-018",
+                          "round_id":  "R2",
+                          "topic":  "Artificial Intelligence",
+                          "subtopic":  "Views on AI",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is your view on AI tools in software development? How will you use them responsibly?",
+                          "relevance_to_role":  "A 2026 on-campus account lists a question on views about AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "AI speeds routine work but outputs need review, testing and security awareness; use it to learn and automate while owning correctness.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "AI",
+                                               "Responsibility"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you verify generated code?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Blind trust or blanket rejection"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ai"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-019",
+                          "round_id":  "R2",
+                          "topic":  "Debugging",
+                          "subtopic":  "Find the bug",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A function to find the largest of an array returns 0 for all-negative arrays. Why, and how do you fix it?",
+                          "relevance_to_role":  "A 2026 on-campus account and a guide describe a roughly three-hour online assessment with aptitude, pseudocode, OOP, language, DBMS, OS, networks and a voice assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "It initialises max to 0. Initialise to the first element (or negative infinity).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Initialisation",
+                                               "Edge cases"
+                                           ],
+                          "follow_ups":  [
+                                             "What other edge cases would you test?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Initialising with zero"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R2-020",
+                          "round_id":  "R2",
+                          "topic":  "Core vs IT",
+                          "subtopic":  "Why software over core",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "You studied a core branch. Why choose software engineering?",
+                          "relevance_to_role":  "A 2026 on-campus account lists \u0027why software engineering vs core\u0027 in the HR round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Give a genuine reason, show relevant skills or projects, and link them to the role.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you bridge gaps?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Disparaging your branch"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Tell me about yourself",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about yourself.",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A concise summary of education, skills, a project and your interest in the role.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which part best fits LTIMindtree?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Why LTIMindtree",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join LTIMindtree?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Mention its services and industries, training, and how they match your goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about its recent work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your strengths and weaknesses?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A relevant strength with proof, a genuine weakness and steps to improve.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would your friends say?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Favourite subject",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which was your favourite subject in college and why?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Name a real subject, give a reason and an example project or lab.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How could it help in the job?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No example"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Questions for the interviewer",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have any questions for us?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Ask thoughtful questions about training, projects and growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you expect in year one?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No questions"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Pros and cons of your degree",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are the pros and cons of your B.Tech degree?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name real pros (fundamentals, projects) and honest cons with how you are addressing them.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How are you closing the gaps?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only praising"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Three weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me three weaknesses and how you handle them.",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Choose real but manageable ones, each with a concrete step.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which one affects teamwork?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weaknesses"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your short-term and long-term goals?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Short term: learn the stack and deliver. Long term: grow into broader technical or leadership responsibility.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you measure it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-009",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation and shifts",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate and work in shifts?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest, flexible, and mention any real constraint calmly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which city do you prefer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid answers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-010",
+                          "round_id":  "R3",
+                          "topic":  "Problem Solving",
+                          "subtopic":  "Hardest problem",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What was the hardest problem you faced, and how did you solve it?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A specific problem solved step by step.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Problem solving"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Reported once in a secondhand account.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Problem solving",
+                                             "star_guidance":  "Situation, approach, outcome, learning.",
+                                             "positive_signals":  [
+                                                                      "Breaks down",
+                                                                      "Tests",
+                                                                      "Learns"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "No result"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-011",
+                          "round_id":  "R3",
+                          "topic":  "Situational",
+                          "subtopic":  "Handling a difficult situation",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe a difficult situation in a team or project and what you did.",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific situation handled calmly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Resilience"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/ltimindtree/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Resilience",
+                                             "star_guidance":  "Situation, action, result.",
+                                             "positive_signals":  [
+                                                                      "Stays calm",
+                                                                      "Acts",
+                                                                      "Learns"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "LTM-GET-R3-012",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Career expectations",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What do you expect from your first year at LTIMindtree?",
+                          "relevance_to_role":  "A 2026 on-campus account lists HR questions on motivation, strengths and weaknesses, and views on AI.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Structured training, real project exposure and feedback; commit to learn quickly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What will you do in your first 30 days?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Focus only on pay"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/ltimindtree-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

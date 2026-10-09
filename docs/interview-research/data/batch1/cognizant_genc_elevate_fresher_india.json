@@ -1,0 +1,1047 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Cognizant",
+                     "role":  "GenC Elevate",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.cognizant.com/india-en/pathways-to-cognizant/genc-program/",
+                     "job_description_summary":  "Cognizant\u0027s official GenC page describes Generation Cognizant as its hiring and development programme for entry-level talent in India, with campus and off-campus drives, assessments that test communication, aptitude and/or technical skills depending on the role, interviews, and no service bond. The page names no job titles, tracks or eligibility criteria. Secondary sources describe GenC, GenC Next and GenC Elevate tracks assigned by assessment score.",
+                     "required_skills":  [
+                                             "Quantitative, logical and verbal aptitude",
+                                             "Communication in English",
+                                             "Code debugging (Automata Fix style)",
+                                             "Programming in Java or Python",
+                                             "SQL",
+                                             "OOP and data structures",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official GenC page lists the process in general terms only; it names no roles, tracks, eligibility, assessment patterns or cutoffs. The GenC Next and GenC Elevate track names and pay bands come from secondary sources (JobRise 2026-02-11, unsourced cutoffs).",
+                                         "The only candidate-attributed material found is two short accounts in a 2023 article (updated 2024) on placementpreparation.io, which are generic about rounds and name no specific questions beyond SQL basics and joins; those items are marked low confidence.",
+                                         "The JobRise guide says it spoke with 30+ candidates but does not attribute its lists of most-asked questions to individuals, so those lists were used only as topic context (class D).",
+                                         "A second placementpreparation.io page is partly behind a login wall; its visible sample problems are editorial and not candidate-attributed.",
+                                         "That page\u0027s meta description mentions another company, suggesting a copy error; its cluster descriptions (Java/SQL/web and SQL/Python/cloud) are unconfirmed.",
+                                         "Aptitude, communication and debugging items are original practice items.",
+                                         "Because the track names are secondary-sourced, track-specific question allocation is a proposed structure, not documented.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.placementpreparation.io/cognizant-genc/interview-experience/",
+                        "title":  "",
+                        "publisher":  "www.placementpreparation.io",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://placementpreparation.io/blog/cognizant-genc-elevate-interview-experience",
+                        "title":  "",
+                        "publisher":  "placementpreparation.io",
+                        "published_on":  "2023-10-17",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Coding Assessment",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Assessment",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical and HR Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "COG-ELEVATE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Matrices",
+                          "subtopic":  "Largest row sum plus largest column sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given a matrix, add the largest row sum and the largest column sum.",
+                          "relevance_to_role":  "A matrix problem about the largest row and column is shown as a sample in a secondary source; the exact definition here is original.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Accumulate row sums and column sums in one pass.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct sums",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Single pass",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Matrices"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the indexes of the row and column."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing rows and columns",
+                                                  "Initialising max to 0"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "matrix"
+                                   ],
+                          "notes":  "The source\u0027s problem was not attributed to a candidate; this definition is original. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  {
+                                         "problem_statement":  "Given an R x C integer matrix, print (largest row sum) + (largest column sum).",
+                                         "input_format":  "Line 1: R and C. Next R lines: C integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= R, C \u003c= 500",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "2 3\n1 2 3\n4 5 6",
+                                                             "output":  "24",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 2\n-1 -2\n-3 -4",
+                                                             "output":  "-7",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Negative values",
+                                                            "Single row",
+                                                            "Single column"
+                                                        ],
+                                         "expected_algorithm":  "Compute row and column sums.",
+                                         "time_complexity":  "O(R*C)",
+                                         "space_complexity":  "O(C)",
+                                         "hidden_test_categories":  [
+                                                                        "Negatives",
+                                                                        "1xN",
+                                                                        "Nx1",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Combinatorics",
+                          "subtopic":  "Count derangements",
+                          "question_type":  "CODING",
+                          "difficulty":  "HARD",
+                          "prompt":  "Count the permutations of n items in which no item stays in its original position.",
+                          "relevance_to_role":  "A derangement-counting problem is shown as a sample in a secondary source; limits here are original.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Use the recurrence with D(0)=1 and D(1)=0.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Recurrence",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Base cases",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Overflow awareness",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Combinatorics",
+                                               "DP"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you derive the recurrence?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Computing n! brute force",
+                                                  "Wrong base cases"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "combinatorics",
+                                       "dp"
+                                   ],
+                          "notes":  "The source\u0027s problem was not attributed to a candidate; limits are original. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print the number of derangements of n distinct items.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c= 20",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4",
+                                                             "output":  "9",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "5",
+                                                             "output":  "44",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 0",
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "n = 20"
+                                                        ],
+                                         "expected_algorithm":  "Recurrence D(n) = (n-1) * (D(n-1) + D(n-2)).",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "0",
+                                                                        "1",
+                                                                        "2",
+                                                                        "Small",
+                                                                        "20"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Matrices",
+                          "subtopic":  "Spiral order traversal",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print the elements of a matrix in spiral order.",
+                          "relevance_to_role":  "A secondary source describes Elevate as the top-scoring track with cluster-based technical assessments (Java/SQL/web or SQL/Python/cloud).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Maintain top, bottom, left, right bounds and shrink after each side.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Boundary handling",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Non-square",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Matrix traversal"
+                                           ],
+                          "follow_ups":  [
+                                             "Fill an NxN matrix in spiral order."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Double-printing the middle row",
+                                                  "Wrong bounds"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "matrix"
+                                   ],
+                          "notes":  "Original practice item. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given an R x C matrix, print its elements in clockwise spiral order starting from the top-left.",
+                                         "input_format":  "Line 1: R and C. Next R lines: C integers.",
+                                         "output_format":  "All elements separated by spaces.",
+                                         "constraints":  "1 \u003c= R, C \u003c= 200",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3 3\n1 2 3\n4 5 6\n7 8 9",
+                                                             "output":  "1 2 3 6 9 8 7 4 5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2 3\n1 2 3\n4 5 6",
+                                                             "output":  "1 2 3 6 5 4",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single row",
+                                                            "Single column",
+                                                            "Non-square"
+                                                        ],
+                                         "expected_algorithm":  "Layer-by-layer with four boundaries.",
+                                         "time_complexity":  "O(R*C)",
+                                         "space_complexity":  "O(1) extra",
+                                         "hidden_test_categories":  [
+                                                                        "1xN",
+                                                                        "Nx1",
+                                                                        "Square",
+                                                                        "Non-square"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Sorting",
+                          "subtopic":  "Sort by frequency",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Sort an array by decreasing frequency; break ties by smaller value first.",
+                          "relevance_to_role":  "A secondary source describes Elevate as the top-scoring track with cluster-based technical assessments (Java/SQL/web or SQL/Python/cloud).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Use a frequency map and sort by (-freq, value).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Frequency map",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct key",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Custom sort"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you do it in O(n)?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Ignoring tie-break",
+                                                  "Sorting by value only"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "sorting",
+                                       "hashing"
+                                   ],
+                          "notes":  "Original practice item. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print them sorted by decreasing frequency; elements with equal frequency are ordered by increasing value.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "n integers separated by spaces.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n4 4 5 6 6 6",
+                                                             "output":  "6 6 6 4 4 5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "5\n3 1 2 2 1",
+                                                             "output":  "1 1 2 2 3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All distinct",
+                                                            "All same",
+                                                            "Tied frequencies"
+                                                        ],
+                                         "expected_algorithm":  "Count then custom sort.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "All distinct",
+                                                                        "All same",
+                                                                        "Ties",
+                                                                        "Negatives",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Longest common prefix",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the longest common prefix of a list of words.",
+                          "relevance_to_role":  "A secondary source describes Elevate as the top-scoring track with cluster-based technical assessments (Java/SQL/web or SQL/Python/cloud).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Start with the first word and trim until each word starts with it.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct trimming",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "-1 case",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings"
+                                           ],
+                          "follow_ups":  [
+                                             "Solve with a trie."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Comparing only the first two words",
+                                                  "Not handling no-prefix"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "strings",
+                                       "prefix"
+                                   ],
+                          "notes":  "Original practice item. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n words, print the longest common prefix, or -1 if there is none.",
+                                         "input_format":  "Line 1: n. Next n lines: one word each.",
+                                         "output_format":  "The prefix or -1.",
+                                         "constraints":  "1 \u003c= n \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\nflower\nflow\nflight",
+                                                             "output":  "fl",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\ndog\ncar",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No common prefix",
+                                                            "One word",
+                                                            "Identical words"
+                                                        ],
+                                         "expected_algorithm":  "Compare and shorten the prefix.",
+                                         "time_complexity":  "O(total length)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "None",
+                                                                        "One word",
+                                                                        "Identical",
+                                                                        "One empty-like short word"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "SQL",
+                          "subtopic":  "GROUP BY, HAVING and window functions",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to show departments with an average salary above 60,000, and explain how a window function like RANK differs from GROUP BY.",
+                          "relevance_to_role":  "ANSI SQL is part of both Elevate technical clusters per a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT dept_id, AVG(salary) FROM Employee GROUP BY dept_id HAVING AVG(salary) \u003e 60000; GROUP BY collapses rows into groups, while window functions like RANK() OVER (PARTITION BY ... ORDER BY ...) compute per-row values without collapsing.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct query",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Window explanation",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "GROUP BY",
+                                               "HAVING",
+                                               "Window functions"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you get the top earner per department?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using WHERE instead of HAVING"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "sql",
+                                       "windows"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "JavaScript",
+                          "subtopic":  "Closures",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a closure in JavaScript? Give an example and one practical use.",
+                          "relevance_to_role":  "JavaScript is part of Elevate cluster 1 per a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A closure is a function that remembers variables from its defining scope even after that scope has finished. Example: a counter factory returning an increment function. Uses: data privacy, callbacks, memoization.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Definition",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Use",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Closures",
+                                               "Scope"
+                                           ],
+                          "follow_ups":  [
+                                             "What goes wrong with var in a loop callback?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing with scope only",
+                                                  "No example"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "javascript"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Web Basics",
+                          "subtopic":  "CSS box model",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the CSS box model and the difference between content-box and border-box.",
+                          "relevance_to_role":  "HTML and CSS are part of Elevate cluster 1 per a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Each element is content plus padding, border and margin. With content-box, width excludes padding and border; with border-box, width includes them, which makes layout sizing easier.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Four parts",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Box-sizing",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Box model",
+                                               "box-sizing"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is border-box popular?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing margin with padding"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "css"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Cloud Fundamentals",
+                          "subtopic":  "Regions and availability zones",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are cloud regions and availability zones, and why do they matter for reliability?",
+                          "relevance_to_role":  "Cloud fundamentals are part of Elevate cluster 2 per a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A region is a geographic area with several isolated availability zones (data-centre groups). Deploying across zones survives a single-zone failure; regions help latency and data-residency rules.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Definitions",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Reliability",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Latency/compliance",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Regions",
+                                               "Availability zones",
+                                               "High availability"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you design for region failure?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling a zone a single server"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "cloud"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Python",
+                          "subtopic":  "Generators and decorators",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a generator in Python and what is a decorator? Give a use for each.",
+                          "relevance_to_role":  "Python is part of Elevate cluster 2 per a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A generator yields values lazily, saving memory for large sequences. A decorator wraps a function to add behaviour (logging, caching, auth) without changing its code.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Both defined",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Uses",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "yield",
+                                               "Decorators"
+                                           ],
+                          "follow_ups":  [
+                                             "Difference between a list and a generator?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying generators store all values"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "python"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Web Basics",
+                          "subtopic":  "HTTP methods and status codes",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain GET vs POST and what status codes 200, 201, 404 and 500 mean.",
+                          "relevance_to_role":  "Web technologies are part of Elevate cluster 1 per a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "GET reads data (safe, idempotent, params in the URL); POST sends data to create or process (body, not idempotent). 200 OK, 201 Created, 404 Not Found, 500 Internal Server Error.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Methods",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Status codes",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "HTTP",
+                                               "Status codes"
+                                           ],
+                          "follow_ups":  [
+                                             "Which method is idempotent: PUT or POST?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using GET for changes"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "http"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/cognizant-genc/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Software Design",
+                          "subtopic":  "SOLID principles",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the SOLID principles with a one-line example for each.",
+                          "relevance_to_role":  "SOLID is listed in a 2026 Cognizant guide\u0027s technical topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "S: one reason to change per class. O: open for extension, closed for modification. L: subclasses must be usable as the base type. I: small, specific interfaces. D: depend on abstractions, not concrete classes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "All five",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SOLID",
+                                               "Design"
+                                           ],
+                          "follow_ups":  [
+                                             "Which one do you apply most?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing names only"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "design",
+                                       "solid"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Software Design",
+                          "subtopic":  "Singleton pattern",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the Singleton pattern, and how do you implement it thread-safely?",
+                          "relevance_to_role":  "Design patterns are listed in a 2026 Cognizant guide\u0027s technical topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Singleton ensures one instance with a global access point. Make the constructor private; use eager initialisation, double-checked locking with volatile, or a holder class/enum for thread safety.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Concept",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Thread safety",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Drawbacks",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Singleton",
+                                               "Thread safety"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is Singleton sometimes criticised?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Non-thread-safe lazy init"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "design",
+                                       "singleton"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Technical Ownership",
+                          "subtopic":  "Biggest project challenge",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What was the hardest technical challenge in your project, and what would you change today?",
+                          "relevance_to_role":  "Biggest challenge and what you would change are listed project questions in a 2026 Cognizant guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete challenge, reasoning, outcome and honest reflection.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Technical ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you validate the fix?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No detail",
+                                                  "Blaming tools"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "behavioral",
+                                       "project"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/cognizant-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Technical ownership",
+                                             "star_guidance":  "Situation: the challenge. Action: options considered and chosen. Result: outcome and the improvement you would make.",
+                                             "positive_signals":  [
+                                                                      "Specific challenge",
+                                                                      "Explains trade-offs",
+                                                                      "Reflects"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Vague",
+                                                                      "Takes undue credit"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "COG-ELEVATE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Career goals and cultural fit",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see your career going, and how do you work with people who think differently from you?",
+                          "relevance_to_role":  "HR rounds cover career goals and cultural fit per a candidate account (older, 2023) and a 2026 guide.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3",
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Show realistic growth goals tied to learning, and give an example of working with different views respectfully.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Realistic goals",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Collaboration example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Clear",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Career planning",
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "Which skill will you build first?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic goals",
+                                                  "Dismissing other views"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "hr",
+                                       "goals"
+                                   ],
+                          "notes":  "One named candidate mentioned career goals and fit in a 2023 article; low confidence.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

@@ -1,0 +1,1897 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Wipro",
+                     "role":  "Project Engineer (Wipro Elite)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.wipro.com/content/Early-Careers/?locale=en_US",
+                     "job_description_summary":  "Wipro\u0027s official early-careers page lists the Elite programme (newly graduated engineers) and the Turbo programme (engineering talent from 46 named institutes, including IIITs and NITs), among others, but gives no selection stages or skills. Secondary sources describe the National Level Talent Hunt (NLTH) online test (aptitude, essay, and per one source a coding section), followed by a technical and an HR interview. Elite is described as the Project Engineer track (about 3.5 LPA) and Turbo as a higher track.",
+                     "required_skills":  [
+                                             "Quantitative, logical and verbal aptitude",
+                                             "Essay writing",
+                                             "Programming fundamentals (C, C++, Java or Python)",
+                                             "OOP",
+                                             "DBMS and SQL",
+                                             "Operating systems and networking basics",
+                                             "Data structures",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official Wipro early-careers page names the programmes but describes no selection stages, exam pattern or required skills; a sample official Project Engineer posting (2025) is for a mechanical design role and is not relevant to fresher software hiring.",
+                                         "Sources disagree on the NLTH pattern: one guide says aptitude plus an essay and two coding questions, another says aptitude (about 20 questions, 60 minutes) plus an essay with coding only in the technical interview. Coding rounds are therefore labeled REPORTED.",
+                                         "The Unstop article (updated 2026-03-06) and the JobRise guide (2026-02-11) are editorial lists; their questions are not attributed to individual candidates, so most items here are original practice questions (class D) using those lists as topic context.",
+                                         "Only two items come from explicitly attributed candidate anecdotes inside the JobRise guide (a HashMap question and a Java memory-model question); each is a single report.",
+                                         "The 15-month service agreement, package figures, cutoffs and the Turbo role title (Senior Project Engineer) come from secondary sources and were not confirmed on Wipro\u0027s own pages.",
+                                         "Turbo hiring is restricted to named institutes, so Turbo content may not apply to all candidates.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/",
+                        "title":  "",
+                        "publisher":  "faceprep.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "OTHER",
+                        "url":  "https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp",
+                        "title":  "",
+                        "publisher":  "unstop.com",
+                        "published_on":  "2026-03-06",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "NLTH Aptitude Test",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Essay Writing",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Coding Round",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R5",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  5,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S2",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "WIPRO-ELITE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Profit and loss",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A shopkeeper sells an article for Rs. 900 at a loss of 10%. At what price should he sell it to gain 10%?",
+                          "relevance_to_role":  "Secondary sources describe an aptitude section (quantitative, logical, verbal) in the Wipro NLTH online test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 1,100",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cost price",
+                                               "Percentage change"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the marked price if a 10% discount still gives that 10% gain?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Taking 10% of 900",
+                                                  "Treating the loss base as selling price"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "aptitude",
+                                       "profit-loss"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 1,000",
+                                                      "Rs. 1,100",
+                                                      "Rs. 1,210",
+                                                      "Rs. 990"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Cost = 900 / 0.9 = 1000. Selling price for 10% gain = 1000 x 1.1 = 1100.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Ratios",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Two numbers are in the ratio 3:5. If 10 is added to each, the ratio becomes 5:7. What is the smaller number?",
+                          "relevance_to_role":  "Secondary sources describe an aptitude section (quantitative, logical, verbal) in the Wipro NLTH online test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "15",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ratios",
+                                               "Linear equations"
+                                           ],
+                          "follow_ups":  [
+                                             "Find the larger number."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 10 to only one number",
+                                                  "Cross-multiplication slip"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "aptitude",
+                                       "ratios"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "12",
+                                                      "15",
+                                                      "18",
+                                                      "20"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Let the numbers be 3x and 5x. (3x+10)/(5x+10) = 5/7 gives 21x + 70 = 25x + 50, so x = 5. Smaller number = 15.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Coding-decoding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "In a certain code, MANGO is written as NBOHP. How is APPLE written in that code?",
+                          "relevance_to_role":  "Secondary sources describe an aptitude section (quantitative, logical, verbal) in the Wipro NLTH online test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "BQQMF",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Letter shifting"
+                                           ],
+                          "follow_ups":  [
+                                             "How would DOG be coded?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Shifting by 2",
+                                                  "Wrapping errors"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning",
+                                       "coding"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "BQQMF",
+                                                      "BQQLF",
+                                                      "CQQMF",
+                                                      "ARRMF"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Each letter moves one place forward (M to N, A to B, ...). APPLE becomes BQQMF.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Number series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the next term: 2, 6, 12, 20, 30, ?",
+                          "relevance_to_role":  "Secondary sources describe an aptitude section (quantitative, logical, verbal) in the Wipro NLTH online test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "42",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pattern spotting",
+                                               "Products of consecutive numbers"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 10th term?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming constant difference"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning",
+                                       "series"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "40",
+                                                      "42",
+                                                      "44",
+                                                      "46"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The terms are n(n+1): 1x2, 2x3, 3x4, 4x5, 5x6, so the next is 6x7 = 42.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Spelling",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Select the correctly spelled word.",
+                          "relevance_to_role":  "Secondary sources describe an aptitude section (quantitative, logical, verbal) in the Wipro NLTH online test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Accommodation",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Spelling"
+                                           ],
+                          "follow_ups":  [
+                                             "Spell \u0027recommend\u0027."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Single m",
+                                                  "Single c"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal",
+                                       "spelling"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Accomodation",
+                                                      "Accommodation",
+                                                      "Acommodation",
+                                                      "Accomadation"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The correct spelling is \u0027accommodation\u0027 with double c and double m.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Prepositions",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the correct preposition: She is very good ___ mathematics.",
+                          "relevance_to_role":  "Secondary sources describe an aptitude section (quantitative, logical, verbal) in the Wipro NLTH online test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "at",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collocations"
+                                           ],
+                          "follow_ups":  [
+                                             "Which preposition follows \u0027interested\u0027?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using \u0027in\u0027 by habit"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal",
+                                       "prepositions"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "at",
+                                                      "in",
+                                                      "on",
+                                                      "with"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "The standard collocation is \u0027good at\u0027 a subject.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Essay",
+                          "subtopic":  "Technology and careers",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a 250-word essay on: \u0027Will AI coding tools make entry-level engineers more or less valuable?\u0027",
+                          "relevance_to_role":  "An essay round is reported for the Wipro NLTH; essay topics are said to be reported by candidates but are not listed.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A clear introduction with a position, two or three supported points (productivity, learning, quality and review skills), a counter-argument, and a conclusion. Within the word limit with correct grammar.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Clear structure",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Balanced argument",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Grammar and clarity",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Word limit",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Structure",
+                                               "Argument",
+                                               "Grammar"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you shorten it to 150 words?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No conclusion",
+                                                  "Copy-paste generic text",
+                                                  "Exceeding the limit"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "essay",
+                                       "communication"
+                                   ],
+                          "notes":  "The source says candidates reported essay topics but lists none; this topic is original. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Essay",
+                          "subtopic":  "Continuous learning",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a 250-word essay on: \u0027Why should software engineers keep learning new technologies throughout their careers?\u0027",
+                          "relevance_to_role":  "An essay round is reported for the Wipro NLTH; the topic here is original practice.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Introduction, reasons (technology changes, career growth, problem solving), an example, a counterpoint about depth versus breadth, and a conclusion.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Structure",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Grammar",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Word limit",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Structure",
+                                               "Examples"
+                                           ],
+                          "follow_ups":  [
+                                             "What is one skill you are learning now?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only listing buzzwords",
+                                                  "Poor grammar"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "essay",
+                                       "learning"
+                                   ],
+                          "notes":  "Original topic; the source gives no topic list. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Recursion and Math",
+                          "subtopic":  "Factorial",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compute n! for n up to 20 and explain a recursive and an iterative version.",
+                          "relevance_to_role":  "A factorial program is listed among Wipro Elite technical questions by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Multiply 1..n; define 0! = 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Base case",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct result",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Overflow awareness",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recursion",
+                                               "Base case"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the largest n for 64-bit?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "0! = 0",
+                                                  "Overflow beyond 20"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "recursion",
+                                       "math"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print n! (n factorial).",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c= 20 (fits in 64-bit)",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5",
+                                                             "output":  "120",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "20",
+                                                             "output":  "2432902008176640000",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 0",
+                                                            "n = 1",
+                                                            "n = 20"
+                                                        ],
+                                         "expected_algorithm":  "Iterative product or recursion.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "0",
+                                                                        "1",
+                                                                        "Small",
+                                                                        "20"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Number Theory",
+                          "subtopic":  "Count primes up to n",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count how many prime numbers are there from 1 to n.",
+                          "relevance_to_role":  "A prime-number check program is listed among Wipro Elite technical questions by an editorial source; this extends it to counting.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mark multiples of each prime starting from p*p.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Sieve",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Starts at p*p",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sieve",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you do this for a range [L, R]?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Trial division per number (too slow)",
+                                                  "Counting 1 as prime"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "primes",
+                                       "sieve"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print the number of primes less than or equal to n.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 10^7",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "10",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "Large n"
+                                                        ],
+                                         "expected_algorithm":  "Sieve of Eratosthenes.",
+                                         "time_complexity":  "O(n log log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "2",
+                                                                        "Small",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Linked Lists",
+                          "subtopic":  "Insert a node at a position",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Insert a new value into a linked list at a given 1-based position.",
+                          "relevance_to_role":  "Inserting a node into a linked list is listed among Wipro Elite technical questions by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Find predecessor at pos-1, set new.next = pred.next, pred.next = new.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct relinking",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Head and tail cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pointers",
+                                               "Linked lists"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you insert in O(1) given the node?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Losing the rest of the list",
+                                                  "Off-by-one on position"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "linked-list"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  {
+                                         "problem_statement":  "A singly linked list is given by its values. Insert val at 1-based position pos (1 \u003c= pos \u003c= n+1) and print the resulting list.",
+                                         "input_format":  "Line 1: n. Line 2: n values. Line 3: pos and val.",
+                                         "output_format":  "The list values separated by spaces.",
+                                         "constraints":  "0 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3\n10 20 30\n2 15",
+                                                             "output":  "10 15 20 30",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n5 6\n3 7",
+                                                             "output":  "5 6 7",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Insert at head",
+                                                            "Insert at tail",
+                                                            "Empty list"
+                                                        ],
+                                         "expected_algorithm":  "Traverse to the node before pos and relink.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Head",
+                                                                        "Middle",
+                                                                        "Tail",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Loops and Patterns",
+                          "subtopic":  "Number triangle",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print a right-angled triangle of numbers with n rows.",
+                          "relevance_to_role":  "Pattern printing is listed among coding topics (strings, arrays, patterns, number theory, recursion) by a Wipro guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Outer loop for rows, inner loop for numbers 1..i.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct nesting",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Formatting",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Nested loops"
+                                           ],
+                          "follow_ups":  [
+                                             "Print the triangle upside down."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Trailing spaces",
+                                                  "Off-by-one rows"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "patterns"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print n lines; line i contains the numbers 1 to i separated by spaces.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "n lines.",
+                                         "constraints":  "1 \u003c= n \u003c= 20",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "3",
+                                                             "output":  "1\n1 2\n1 2 3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "5",
+                                                             "output":  "1\n1 2\n1 2 3\n1 2 3 4\n1 2 3 4 5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "Trailing spaces"
+                                                        ],
+                                         "expected_algorithm":  "Nested loops.",
+                                         "time_complexity":  "O(n^2)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "Small",
+                                                                        "n = 20"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Java",
+                          "subtopic":  "HashMap internals",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How does a HashMap work internally? What happens on a collision?",
+                          "relevance_to_role":  "A Manipal candidate account in a 2026 guide says a HashMap question caused the candidate to freeze.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Keys are hashed to bucket indexes; each bucket holds a list (or tree after many collisions in modern Java). On collision, entries are chained and equals() picks the right key. Resizing rehashes when the load factor is exceeded. Average get/put is O(1).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Hashing and buckets",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Collision handling",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Load factor",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Buckets",
+                                               "Resizing"
+                                           ],
+                          "follow_ups":  [
+                                             "Why must you override hashCode when you override equals?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying HashMap keeps insertion order",
+                                                  "Ignoring equals/hashCode"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "java",
+                                       "collections"
+                                   ],
+                          "notes":  "Single anecdotal candidate account inside an editorial guide.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Java",
+                          "subtopic":  "Java memory model",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain how memory is allocated in Java: stack, heap and where objects and variables live.",
+                          "relevance_to_role":  "An SRM candidate account in a 2026 guide mentions a Java memory-model question.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Local variables and method calls live on the stack (one per thread); objects live on the heap, which the garbage collector manages. References on the stack point to heap objects; static data lives in the method area/metaspace.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Stack vs heap",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "GC",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Where objects live",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stack",
+                                               "Heap",
+                                               "Garbage collection"
+                                           ],
+                          "follow_ups":  [
+                                             "What causes OutOfMemoryError?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying objects live on the stack",
+                                                  "Ignoring garbage collection"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java",
+                                       "memory"
+                                   ],
+                          "notes":  "Single anecdotal candidate account inside an editorial guide.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Polymorphism with Animal, Dog and Cat",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain polymorphism using classes Animal, Dog and Cat. Show run-time polymorphism.",
+                          "relevance_to_role":  "Polymorphism with a C++ Animal/Dog/Cat example is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Animal declares a virtual speak(); Dog and Cat override it. An Animal pointer or reference to a Dog calls Dog::speak at run time through dynamic dispatch.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Virtual function",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Override",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Dynamic dispatch",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Virtual functions",
+                                               "Overriding"
+                                           ],
+                          "follow_ups":  [
+                                             "What happens without the virtual keyword?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting virtual",
+                                                  "Confusing with overloading"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop",
+                                       "polymorphism"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Encapsulation vs abstraction",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between encapsulation and abstraction?",
+                          "relevance_to_role":  "Encapsulation versus abstraction is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Encapsulation bundles data with methods and restricts access (private fields, getters). Abstraction exposes only essential behaviour and hides complexity (interfaces, abstract classes). Encapsulation is about protection; abstraction about simplification.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct contrast",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Encapsulation",
+                                               "Abstraction"
+                                           ],
+                          "follow_ups":  [
+                                             "Give a real-life example of each."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating them as synonyms"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalization",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is normalization? Explain 1NF, 2NF and 3NF with a short example.",
+                          "relevance_to_role":  "Normalization is listed by editorial sources for the Wipro technical interview.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Normalization reduces redundancy and anomalies. 1NF: atomic values. 2NF: 1NF and no partial dependence on part of a composite key. 3NF: 2NF and no transitive dependence of non-key attributes. Example: split an Orders table into Customers and Orders.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Definitions of each form",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Anomalies",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "1NF",
+                                               "2NF",
+                                               "3NF",
+                                               "Anomalies"
+                                           ],
+                          "follow_ups":  [
+                                             "When would you denormalize?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing 2NF and 3NF",
+                                                  "No example"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "dbms",
+                                       "normalization"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp, https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "DBMS",
+                          "subtopic":  "DDL vs DML",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between DDL and DML commands? Give examples.",
+                          "relevance_to_role":  "DDL versus DML is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DDL defines structure (CREATE, ALTER, DROP, TRUNCATE); DML manipulates data (INSERT, UPDATE, DELETE, SELECT is often grouped with DQL). DDL is generally auto-committed; DML can be rolled back in a transaction.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct classification",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Transaction behaviour",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DDL",
+                                               "DML",
+                                               "Transactions"
+                                           ],
+                          "follow_ups":  [
+                                             "Is TRUNCATE DDL or DML?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling TRUNCATE DML",
+                                                  "Forgetting auto-commit"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "dbms",
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp, https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "SQL",
+                          "subtopic":  "Third-highest salary",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to find the third-highest salary in an Employee table.",
+                          "relevance_to_role":  "A third-highest-salary query is listed in a Wipro guide.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT DISTINCT salary FROM Employee ORDER BY salary DESC LIMIT 1 OFFSET 2, or use DENSE_RANK() = 3 in a subquery. Mention duplicates and the case of fewer than three distinct salaries.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct query",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Ties handled",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Alternative",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "LIMIT/OFFSET",
+                                               "Window functions"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you generalise to N?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing DISTINCT",
+                                                  "Wrong offset"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Paging in virtual memory",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is paging, and how does it support virtual memory?",
+                          "relevance_to_role":  "Paging in virtual memory is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Memory is divided into fixed-size pages and frames. A page table maps virtual pages to physical frames. Pages not in RAM trigger a page fault and are loaded from disk. Paging avoids external fragmentation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Pages and frames",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Page table and faults",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Benefit",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Paging",
+                                               "Page faults",
+                                               "Virtual memory"
+                                           ],
+                          "follow_ups":  [
+                                             "What is thrashing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing paging with segmentation",
+                                                  "Ignoring page faults"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os",
+                                       "memory"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-009",
+                          "round_id":  "R4",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "DNS",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is DNS and how does it work when you type a website address?",
+                          "relevance_to_role":  "DNS is listed by an editorial source for Wipro technical interviews.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DNS translates domain names to IP addresses. The resolver checks its cache, then asks root, TLD and authoritative servers in turn, and returns the IP to the browser, which then connects to the server.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Purpose",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Resolution steps",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Caching",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DNS",
+                                               "Resolver",
+                                               "Caching"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a TTL?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying DNS stores web pages"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "networks",
+                                       "dns"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-010",
+                          "round_id":  "R4",
+                          "topic":  "Artificial Intelligence",
+                          "subtopic":  "AI vs machine learning",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between artificial intelligence and machine learning?",
+                          "relevance_to_role":  "AI versus machine learning is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "AI is the broad goal of machines doing tasks that need intelligence; machine learning is a subset where systems learn patterns from data instead of being explicitly programmed. Deep learning is a subset of machine learning.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct hierarchy",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "AI",
+                                               "ML",
+                                               "Deep learning"
+                                           ],
+                          "follow_ups":  [
+                                             "Give an AI example that is not ML."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using the terms as synonyms"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "ai",
+                                       "ml"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-011",
+                          "round_id":  "R4",
+                          "topic":  "System Design",
+                          "subtopic":  "Vending machine design",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Design a simple vending machine: which classes and states would you model?",
+                          "relevance_to_role":  "A vending-machine design question is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Classes: Machine, Inventory/Slot, Product, Payment. States: Idle, HasMoney, Dispensing, OutOfStock. Transitions follow user actions (insert money, select, cancel). A state pattern keeps behaviour per state. Handle refunds and low stock.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Identifies classes",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "State handling",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP design",
+                                               "State pattern"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you add card payment?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "One giant class",
+                                                  "Ignoring edge cases"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "design",
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R4-012",
+                          "round_id":  "R4",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Insert into a binary search tree",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain how to insert a value into a binary search tree and its time complexity.",
+                          "relevance_to_role":  "Binary search tree implementation is listed by an editorial source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compare with the root and go left if smaller, right if larger until an empty spot is found, then place the node. Average O(log n); worst case O(n) for a skewed tree, avoided by balancing (AVL, red-black).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct procedure",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Complexity",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Balancing",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "BST",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "What does an in-order traversal give?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming always O(log n)",
+                                                  "Allowing duplicates silently"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ds",
+                                       "bst"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R5-001",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Why Wipro",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join Wipro?",
+                          "relevance_to_role":  "\u0027Why Wipro\u0027 is listed in editorial HR lists.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link specific facts about Wipro (training, domains, early-career programmes) to your skills and goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific reasons",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Skills link",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Concise",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about Wipro\u0027s recent work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic praise",
+                                                  "Only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp, https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R5-002",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation and service agreement",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate, and are you comfortable with the 15-month service agreement?",
+                          "relevance_to_role":  "An editorial HR list mentions a 15-month agreement and relocation; the term is not confirmed by Wipro here.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Give an honest answer, ask for the exact terms, and state any constraints calmly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Direct",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Asks about terms",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Honesty",
+                                               "Flexibility"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make relocation hard?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Agreeing without reading terms",
+                                                  "Evasive reply"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "relocation"
+                                   ],
+                          "notes":  "The 15-month figure appears only in an editorial list and should be verified with Wipro. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R5-003",
+                          "round_id":  "R5",
+                          "topic":  "Conflict Resolution",
+                          "subtopic":  "Conflict with a teammate",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a conflict with a teammate and how you resolved it.",
+                          "relevance_to_role":  "Team-conflict questions are listed in editorial HR lists for Wipro.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A calm, fact-based resolution that preserved the relationship.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Conflict resolution"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do if it happened again?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Blaming",
+                                                  "No resolution"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "conflict"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Conflict resolution",
+                                             "star_guidance":  "Situation: the conflict. Action: listened, clarified goals, proposed a fair solution. Result: outcome and relationship.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Uses facts",
+                                                                      "Keeps relationship"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames others",
+                                                                      "Avoids conflict"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R5-004",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Non-CS branch motivation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "You are not from a computer science branch. Why do you want a career in IT?",
+                          "relevance_to_role":  "Wipro hires from all branches (per a secondary source) and an editorial list asks this to non-CS students.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Show genuine interest with evidence (projects, courses, certifications), explain how your branch skills help, and show a learning plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Evidence of interest",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Transferable skills",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Plan",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation",
+                                               "Self-learning"
+                                           ],
+                          "follow_ups":  [
+                                             "Which language have you learned?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying \u0027IT pays more\u0027",
+                                                  "No evidence"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp, https://faceprep.in/article/wipro-recruitment-process-2025-complete-guide-to-placement-rounds/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R5-005",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Study gaps and backlogs",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have any study gaps or backlogs? How did you handle them?",
+                          "relevance_to_role":  "Study gaps and backlogs are listed in editorial HR lists; eligibility rules also require no active backlogs.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest and brief, explain the cause and what changed, and show recovery.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Honest",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Recovery",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Brief",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Honesty",
+                                               "Accountability"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Hiding or blaming",
+                                                  "Long excuses"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "academics"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp, https://jobrise.io/en/blog/wipro-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "WIPRO-ELITE-R5-006",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Dream company and role model",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is your dream company, and which business leader inspires you and why?",
+                          "relevance_to_role":  "Dream company and inspiring leader are listed in editorial HR lists.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest about aspirations while showing why this role fits now; name a leader with specific traits and how you apply them.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Honest",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific traits",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Values"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you apply that trait?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Insulting Wipro",
+                                                  "Generic names without reasons"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "aspiration"
+                                   ],
+                          "notes":  "Topic comes from an editorial list that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://unstop.com/blog/wipro-elite-national-talent-hunt-interview-questions/amp.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

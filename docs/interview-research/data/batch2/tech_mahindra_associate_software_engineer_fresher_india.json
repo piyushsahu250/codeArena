@@ -1,0 +1,2932 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Tech Mahindra",
+                     "role":  "Associate Software Engineer",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://careers.techmahindra.com/",
+                     "job_description_summary":  "Tech Mahindra hires freshers as Associate Software Engineers. A 2026 GeeksforGeeks write-up describes a first phase of an online aptitude, reasoning and verbal test, an essay and a two-question coding test, followed (after an interview call) by an offline technical interview and an HR interview. A 2025 Glassdoor review describes aptitude, communication, technical discussion and HR rounds. The official careers site was located but not fetched for process details.",
+                     "required_skills":  [
+                                             "Quantitative aptitude, reasoning and verbal ability",
+                                             "Essay writing",
+                                             "Programming fundamentals and coding",
+                                             "OOP",
+                                             "SQL and DBMS",
+                                             "Networking basics",
+                                             "Agile and SDLC",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official Tech Mahindra careers site was not fetched, so no round is marked DOCUMENTED; rounds are REPORTED from a 2026 GeeksforGeeks write-up and a 2025 Glassdoor review, which differ slightly (the review lists a communication round instead of an essay).",
+                                         "The GeeksforGeeks write-up (2026-01-16) names no candidate, role or exact questions, only topics; it is used as topic context (class D).",
+                                         "The only dated candidate-attributed question is \u0027explain OOP\u0027 from one Glassdoor review (2025-10-09), recorded as class B, one report, unverified.",
+                                         "The placementpreparation.io interview-questions page carries no publication date and attributes nothing to individual candidates, despite saying questions were reported; it is used as topic context only.",
+                                         "Only the Associate Software Engineer role is supported by sources; no separate track banks were created.",
+                                         "This bank is therefore almost entirely original practice (48 of 50). Treat it as topic-aligned practice, not as \u0027what they asked\u0027.",
+                                         "Package figures and the 15-day interview-call gap were not used.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/",
+                        "title":  "",
+                        "publisher":  "www.geeksforgeeks.org",
+                        "published_on":  "2026-01-16",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://www.placementpreparation.io/tech-mahindra/interview-questions/",
+                        "title":  "",
+                        "publisher":  "www.placementpreparation.io",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://www.glassdoor.fr/Entretien/Tech-Mahindra-Entretien-E135932-RVW100539498.htm",
+                        "title":  "",
+                        "publisher":  "www.glassdoor.fr",
+                        "published_on":  "2025-10-09",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Aptitude, Reasoning and Verbal Test",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Essay Writing",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Coding Test",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R5",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  5,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2",
+                                          "S3"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "TEM-ASE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Percentages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A number is increased by 25% and then decreased by 20%. The result compared with the original is:",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Same",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Successive percentages"
+                                           ],
+                          "follow_ups":  [
+                                             "What if +30% then -20%?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 25 - 20"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Lower by 5%",
+                                                      "Same",
+                                                      "Higher by 5%",
+                                                      "Higher by 2%"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "1.25 x 0.8 = 1.0, so it is unchanged.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Speed and distance",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A car covers 180 km in 3 hours. At the same speed, how long will 300 km take?",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "5 h",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Speed"
+                                           ],
+                          "follow_ups":  [
+                                             "How far in 2.5 hours?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using ratio wrongly"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "4 h",
+                                                      "4.5 h",
+                                                      "5 h",
+                                                      "5.5 h"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Speed = 60 km/h; 300 / 60 = 5 hours.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Compound interest",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the compound interest on Rs. 5,000 at 10% per annum for 2 years?",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 1,050",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Compound interest"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the difference from simple interest?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using simple interest"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 1,000",
+                                                      "Rs. 1,050",
+                                                      "Rs. 1,100",
+                                                      "Rs. 1,200"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Amount = 5000 x 1.1^2 = 6050; CI = 1,050.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Averages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "The average of 6 numbers is 15. A seventh number is added and the average becomes 16. What is the seventh number?",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "22",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Averages"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the average dropped to 14?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Dividing by 6"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "18",
+                                                      "20",
+                                                      "22",
+                                                      "24"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Total after = 7 x 16 = 112; before = 90; seventh = 22.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Coding-decoding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "If TEAM is coded as UFBN, how is CODE coded?",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DPEF",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Letter shifting"
+                                           ],
+                          "follow_ups":  [
+                                             "Code RAIN."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Shifting backwards"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "DPEF",
+                                                      "DPFE",
+                                                      "BNCD",
+                                                      "EQFG"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Each letter moves one step forward: C-D, O-P, D-E, E-F.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Ranking",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In a class of 40, Rahul ranks 12th from the top. What is his rank from the bottom?",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "29",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ranking"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the rank from the top of the student who is 5th from the bottom?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting the +1"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "27",
+                                                      "28",
+                                                      "29",
+                                                      "30"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Rank from bottom = 40 - 12 + 1 = 29.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Syllogisms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "All engineers are graduates. Some graduates are athletes. Conclusion: Some athletes are engineers.",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Cannot be determined",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Syllogism"
+                                           ],
+                          "follow_ups":  [
+                                             "What if all athletes were graduates?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming the transitive link"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Definitely true",
+                                                      "Definitely false",
+                                                      "Cannot be determined",
+                                                      "True only for engineers"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "The link between athletes and engineers is not established, so it cannot be determined.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Synonyms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the word closest in meaning to \u0027diligent\u0027.",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hardworking",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Vocabulary"
+                                           ],
+                          "follow_ups":  [
+                                             "Give an antonym."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing \u0027clever\u0027"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal-ability"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Lazy",
+                                                      "Hardworking",
+                                                      "Careless",
+                                                      "Clever"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "\u0027Diligent\u0027 means hardworking and careful.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Sentence correction",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the correct sentence.",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "She has completed the work.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "Make it past perfect."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using \u0027have\u0027"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal-ability"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "She have completed the work.",
+                                                      "She has completed the work.",
+                                                      "She having completed the work.",
+                                                      "She completed the works."
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A singular subject takes \u0027has\u0027 in the present perfect.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Reading comprehension",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "\u0027The meeting was moved from Monday to Wednesday because the manager travelled.\u0027 Why was the meeting moved?",
+                          "relevance_to_role":  "A 2026 guide says the first phase starts with an online test of quantitative aptitude, logical reasoning and verbal ability.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "The manager travelled",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Comprehension"
+                                           ],
+                          "follow_ups":  [
+                                             "Which day was it originally?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Guessing"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal-ability"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Poor attendance",
+                                                      "The manager travelled",
+                                                      "A holiday",
+                                                      "A system outage"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The passage gives the manager\u0027s travel as the reason.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Essay",
+                          "subtopic":  "Technology and society",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a 250-word essay on: \u0027How has artificial intelligence changed the way students learn?\u0027",
+                          "relevance_to_role":  "A 2026 guide says candidates write an essay judged on clarity, grammar and vocabulary.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Introduction with a position; two or three supported points (personalised learning, access to information, risks of over-reliance); a counter-argument; a conclusion. Correct grammar and the word limit.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Structure",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Argument",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Grammar and vocabulary",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Word limit",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Structure",
+                                               "Argument",
+                                               "Grammar"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you shorten it to 150 words?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No conclusion",
+                                                  "Generic text",
+                                                  "Exceeding the limit"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "essay",
+                                       "communication"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Essay",
+                          "subtopic":  "Work culture",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a 250-word essay on: \u0027Is working from office or from home better for new graduates?\u0027",
+                          "relevance_to_role":  "A 2026 guide says candidates write an essay judged on clarity, grammar and vocabulary.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "State a view; discuss learning from colleagues, flexibility, cost and focus; acknowledge the other side; conclude with a balanced recommendation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Structure",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Balanced argument",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Grammar",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Word limit",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Structure",
+                                               "Balance"
+                                           ],
+                          "follow_ups":  [
+                                             "What is your own preference?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "One-sided",
+                                                  "Poor grammar"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "essay",
+                                       "communication"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "Reverse a string",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse a string without using a built-in reverse function.",
+                          "relevance_to_role":  "A 2026 guide says the first phase includes a technical coding test with two coding questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Swap from both ends or build backwards.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct output",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "No built-in",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Strings"
+                                           ],
+                          "follow_ups":  [
+                                             "Reverse the words instead."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mutating immutable strings",
+                                                  "Off-by-one"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string, print its reverse.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "The reversed string.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "hello",
+                                                             "output":  "olleh",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "TechM 2026",
+                                                             "output":  "6202 MhceT",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single character",
+                                                            "Palindrome",
+                                                            "Spaces"
+                                                        ],
+                                         "expected_algorithm":  "Two pointers or iterate backwards.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Single",
+                                                                        "Palindrome",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Number Theory",
+                          "subtopic":  "Prime check",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether a number is prime.",
+                          "relevance_to_role":  "A 2026 guide says the first phase includes a technical coding test with two coding questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Test divisors up to sqrt(n); handle n \u003c 2.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "sqrt bound",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Primes"
+                                           ],
+                          "follow_ups":  [
+                                             "Print all primes up to n."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping to n",
+                                                  "Treating 1 as prime"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "primes"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print Yes if n is prime, otherwise No.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= n \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "29",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "100",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "Large prime"
+                                                        ],
+                                         "expected_algorithm":  "Trial division to sqrt(n).",
+                                         "time_complexity":  "O(sqrt n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "1",
+                                                                        "2",
+                                                                        "Large prime",
+                                                                        "Square"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Even and odd counts",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Count the even and odd numbers in an array.",
+                          "relevance_to_role":  "A 2026 guide says the first phase includes a technical coding test with two coding questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "x % 2 == 0 is even; negative odd numbers still give non-zero remainders.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct counts",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Negatives",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the sum of each group."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating 0 as odd"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print the count of even numbers and the count of odd numbers separated by a space.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "\u0027even odd\u0027",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 2 3 4 6",
+                                                             "output":  "3 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n-3 -2 0",
+                                                             "output":  "2 1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Negatives",
+                                                            "Zero",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Single pass with modulo.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Negatives",
+                                                                        "Zero",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "Character frequency",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Print the frequency of each character in a string.",
+                          "relevance_to_role":  "A 2026 guide says the first phase includes a technical coding test with two coding questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Count with a dictionary and sort the keys.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Counting",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Output order",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Print in order of first appearance."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong order",
+                                                  "Missing characters"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string, print each distinct character with its count, in alphabetical (code point) order, as char followed by count, separated by spaces.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "Tokens such as a2 b1.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "banana",
+                                                             "output":  "a3 b1 n2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "aabbc",
+                                                             "output":  "a2 b2 c1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single character",
+                                                            "All distinct",
+                                                            "Long"
+                                                        ],
+                                         "expected_algorithm":  "Hash map or counting array.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Single",
+                                                                        "Distinct",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Second largest",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the second largest distinct element.",
+                          "relevance_to_role":  "A 2026 guide says the first phase includes a technical coding test with two coding questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Track first and second distinct maxima.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Single pass",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Duplicates",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays"
+                                           ],
+                          "follow_ups":  [
+                                             "Find the kth largest."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting duplicates as second",
+                                                  "Sorting only"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print the second largest distinct value, or -1.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n10 20 20 5 15",
+                                                             "output":  "15",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n7 7 7",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All equal",
+                                                            "Negatives",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Single pass tracking two values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "All equal",
+                                                                        "Negatives",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Explain OOP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain object-oriented programming.",
+                          "relevance_to_role":  "A 2025 candidate review for the Associate Software Engineer role lists \u0027explain OOP\u0027 in the technical discussion.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "OOP models software as objects combining data and behaviour; pillars are encapsulation, abstraction, inheritance and polymorphism, supporting reuse and maintainability.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "Give a real-time example."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reciting terms without examples"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "One Glassdoor review (2025-10-09); the wording here is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Real-time OOP examples",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Take a real-life system such as an ATM and model it with classes, showing encapsulation, inheritance and polymorphism.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Classes: Account (private balance), SavingsAccount and CurrentAccount (inheritance), withdraw() overridden for rules (polymorphism), a Transaction class. Getters and setters enforce encapsulation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modelling",
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "Where would an interface help?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing terms without mapping them"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Overloading vs overriding",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between method overloading and method overriding?",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Overloading: same name, different parameters, in one class (compile-time). Overriding: subclass redefines a parent method with the same signature (runtime).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Polymorphism"
+                                           ],
+                          "follow_ups":  [
+                                             "Can the return type change?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing the two"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-004",
+                          "round_id":  "R4",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Constructors and destructors",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are constructors and destructors?",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A constructor initialises a new object; a destructor (C++) cleans up before an object is destroyed. Java uses garbage collection and finalizers are discouraged.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Lifecycle"
+                                           ],
+                          "follow_ups":  [
+                                             "Can constructors be overloaded?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying Java has destructors"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-005",
+                          "round_id":  "R4",
+                          "topic":  "SQL",
+                          "subtopic":  "Inner and outer joins",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain inner join and the left, right and full outer joins with an example.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Inner returns matches; left keeps all left rows; right keeps all right rows; full outer keeps all rows from both. Example: Employees and Departments on dept_id.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Joins"
+                                           ],
+                          "follow_ups":  [
+                                             "Which join finds unmatched rows?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing left and right"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql",
+                                       "joins"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-006",
+                          "round_id":  "R4",
+                          "topic":  "SQL",
+                          "subtopic":  "Second highest salary",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to find the second highest salary.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT MAX(salary) FROM Employee WHERE salary \u003c (SELECT MAX(salary) FROM Employee); or DENSE_RANK() = 2.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subqueries",
+                                               "Window functions"
+                                           ],
+                          "follow_ups":  [
+                                             "Find the nth highest."
+                                         ],
+                          "common_mistakes":  [
+                                                  "LIMIT with duplicates"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-007",
+                          "round_id":  "R4",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalization and ACID",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain normalization and the ACID properties.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Normalization reduces redundancy through 1NF to 3NF. ACID: atomicity, consistency, isolation, durability.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normal forms",
+                                               "ACID"
+                                           ],
+                          "follow_ups":  [
+                                             "When would you denormalize?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing consistency and isolation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-008",
+                          "round_id":  "R4",
+                          "topic":  "DBMS",
+                          "subtopic":  "DELETE, TRUNCATE, DROP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Differentiate DELETE, TRUNCATE and DROP.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "DELETE removes selected rows and is rollbackable; TRUNCATE removes all rows quickly; DROP removes the table itself.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SQL commands"
+                                           ],
+                          "follow_ups":  [
+                                             "Which can have WHERE?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing TRUNCATE and DROP"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-009",
+                          "round_id":  "R4",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "Networking basics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the OSI model and the difference between TCP and UDP.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Seven layers from physical to application. TCP is reliable, ordered and connection-oriented; UDP is connectionless and light.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OSI",
+                                               "TCP",
+                                               "UDP"
+                                           ],
+                          "follow_ups":  [
+                                             "Where does DNS fit?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Wrong order of layers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/, https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-010",
+                          "round_id":  "R4",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "Hub, switch, router",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Differentiate a hub, a switch and a router.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A hub broadcasts to all ports; a switch forwards frames by MAC address; a router forwards packets between networks by IP.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Devices"
+                                           ],
+                          "follow_ups":  [
+                                             "What does NAT do?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Treating hub and switch as the same"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-011",
+                          "round_id":  "R4",
+                          "topic":  "Software Engineering",
+                          "subtopic":  "Agile",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is Agile? How does it differ from Waterfall?",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Agile delivers in short iterations with continuous feedback; Waterfall is sequential. Scrum has sprints, daily stand-ups, reviews and retrospectives.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Agile",
+                                               "Scrum"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a sprint backlog?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying Agile has no planning"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "agile"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-012",
+                          "round_id":  "R4",
+                          "topic":  "Software Engineering",
+                          "subtopic":  "SDLC",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the phases of the SDLC.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Requirements, design, development, testing, deployment, maintenance.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SDLC"
+                                           ],
+                          "follow_ups":  [
+                                             "Which phase is most costly to fix late?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping testing"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sdlc"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-013",
+                          "round_id":  "R4",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock and threads",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a deadlock, and how do threads differ from processes?",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Deadlock needs mutual exclusion, hold and wait, no preemption and circular wait. Threads share memory in a process; processes have separate address spaces.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock",
+                                               "Threads"
+                                           ],
+                          "follow_ups":  [
+                                             "How to prevent deadlock?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing a condition"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-014",
+                          "round_id":  "R4",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Arrays vs linked lists",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare arrays with linked lists, and stacks with queues.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Arrays: O(1) access; lists: cheap inserts. Stack LIFO; queue FIFO.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Data structures"
+                                           ],
+                          "follow_ups":  [
+                                             "Where is a stack used in compilers?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reversing LIFO and FIFO"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-015",
+                          "round_id":  "R4",
+                          "topic":  "Algorithms",
+                          "subtopic":  "Recursion and Big O",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain recursion and the time complexity of a recursive Fibonacci.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A function calling itself with a base case. Naive Fibonacci is O(2^n); memoisation makes it O(n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recursion",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you avoid recomputation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No base case"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "algorithms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-016",
+                          "round_id":  "R4",
+                          "topic":  "Web Development",
+                          "subtopic":  "REST and HTTP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is REST? Compare GET and POST and name common status codes.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "REST uses resources with HTTP verbs. GET reads (idempotent); POST creates. Codes: 200, 201, 301, 400, 401, 404, 500.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "REST",
+                                               "HTTP"
+                                           ],
+                          "follow_ups":  [
+                                             "What is idempotency?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using GET to modify data"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "web"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-017",
+                          "round_id":  "R4",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain your final-year project, your role and your technology choices.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, your role, stack and why, challenge and result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership",
+                                               "Depth"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you improve?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-018",
+                          "round_id":  "R4",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "C vs C++ vs Java",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare C, C++ and Java.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "C is procedural; C++ adds OOP and manual memory control; Java is OOP with a JVM and garbage collection.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Languages"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is Java platform independent?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying Java has pointers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "programming"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-019",
+                          "round_id":  "R4",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Reverse a number logic",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the logic to check whether a number is a palindrome.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Reverse the digits using % 10 and / 10, then compare with the original.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loops",
+                                               "Arithmetic"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you do it with strings?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not saving the original"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "logic"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R4-020",
+                          "round_id":  "R4",
+                          "topic":  "Cloud and Security",
+                          "subtopic":  "Authentication vs authorization",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Differentiate authentication from authorization.",
+                          "relevance_to_role":  "A 2026 guide and a candidate review describe a resume-based technical interview with OOP, SQL, networks, Agile and SDLC.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Authentication verifies who you are; authorization decides what you may do.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Security"
+                                           ],
+                          "follow_ups":  [
+                                             "Give an example of each."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using them as synonyms"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "security"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-001",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Self-introduction",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about yourself.",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Education, skills, a project, and interest in the role in about 90 seconds.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which part fits best?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-002",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Why Tech Mahindra",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join Tech Mahindra?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mention telecom and enterprise services, training and learning, linked to your goals.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about its work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-003",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate or work in shifts?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Be honest, flexible and calm about real constraints.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which location do you prefer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid answers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-004",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your strengths and weaknesses?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A relevant strength with proof and a genuine weakness with a plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you track progress?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-005",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Hobbies",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your hobbies?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name real hobbies and link them to a useful skill.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you find time?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing many without detail"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/tech-mahindra-on-campus-recruitment-process-detailed-experience-rounds-explained/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-006",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Five-year plan",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see yourself in five years?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link learning goals to growth in the company.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you get there?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-007",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Salary expectations",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are your salary expectations?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Show awareness of the fresher band; stay flexible.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What matters more, pay or learning?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic number"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-008",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Questions for the interviewer",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you have any questions for us?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Ask about training, teams and growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you expect in year one?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No questions"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-009",
+                          "round_id":  "R5",
+                          "topic":  "Pressure",
+                          "subtopic":  "Working under pressure",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you handle pressure? Give an example.",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific deadline handled calmly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stress management"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Stress management",
+                                             "star_guidance":  "Situation, action, result.",
+                                             "positive_signals":  [
+                                                                      "Prioritises",
+                                                                      "Communicates",
+                                                                      "Stays calm"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Panics",
+                                                                      "Vague"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-010",
+                          "round_id":  "R5",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Resolving team conflict",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you resolved a conflict in a team.",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete conflict resolved respectfully.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, action, result.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Seeks facts",
+                                                                      "Resolves"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "Avoids"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-011",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Company knowledge",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What do you know about Tech Mahindra?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Mention the Mahindra Group, telecom and enterprise services, and a recent initiative you read about.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "Which of its services interests you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic or wrong facts"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-012",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Communication check",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Describe your college in two minutes.",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Clear structure: location, courses, facilities, your experiences, and what you learned.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What is one thing you would change?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rambling"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "A review mentions a communication round; this prompt is an original practice prompt. Topic context only (no candidate attribution): https://www.glassdoor.fr/Entretien/Tech-Mahindra-Entretien-E135932-RVW100539498.htm.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TEM-ASE-R5-013",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Willingness to learn",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to learn a new technology if the project demands it?",
+                          "relevance_to_role":  "A 2026 guide lists HR topics: relocation, strengths and weaknesses, hobbies and self-introduction.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Yes, with an example of learning something quickly and a plan.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "No example"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/tech-mahindra/interview-questions/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

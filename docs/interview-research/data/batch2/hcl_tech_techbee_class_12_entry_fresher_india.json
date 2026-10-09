@@ -1,0 +1,910 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "HCL Tech",
+                     "role":  "TechBee (Class 12 Entry)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://freshershunt.in/hcl-fresher-guide/",
+                     "job_description_summary":  "HCLTech hires freshers through graduate hiring (B.E./B.Tech/MCA/B.Sc., Graduate Engineer Trainee and similar roles) and through the TechBee programme for Class 12 pass-outs. A 2026 guide describes graduate hiring as an online assessment (aptitude, reasoning, verbal, technical MCQs and often one or two coding problems), a technical interview and an HR round; TechBee as an entrance test (aptitude, basic English, computer awareness) followed by an interview. The official HCLTech careers pages were located but not fetched.",
+                     "required_skills":  [
+                                             "Aptitude and reasoning",
+                                             "Verbal ability",
+                                             "Programming fundamentals (Java or similar)",
+                                             "OOP",
+                                             "DBMS and SQL",
+                                             "Data structures",
+                                             "Operating systems and networking basics",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "Official HCLTech careers and fresher pages were located but not fetched, so no round is marked DOCUMENTED; rounds are REPORTED from a 2026 freshershunt guide and a GeeksforGeeks guide (published 2023-11-22, last updated 2026-07-31).",
+                                         "The only dated candidate-attributed account found is a single Glassdoor review (2025-12-20, Java GET, easy): HR screening, Java technical (OOP, collections, exception handling, simple logic) and HR (self-introduction, email writing, location). Those items are class B, unverified, one report each.",
+                                         "The GeeksforGeeks page is a general guide, not a candidate experience; its sample questions are editorial and used as topic context (class D).",
+                                         "No source gives per-question counts. Freshershunt says frequently asked questions are collected on a separate page that was not found.",
+                                         "The \u0027HCL\u0027 (1) and \u0027HCL Tech\u0027 (6) entries in the CodeArena company list look like duplicates; this bank is delivered as \u0027HCL Tech\u0027 and the two should be merged on your side.",
+                                         "TechBee content is a proposed structure from a single guide; no TechBee candidate reports were found.",
+                                         "Package figures and the service-agreement terms differ between sources and were not used.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://freshershunt.in/hcl-fresher-guide/",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Entrance Test (Aptitude, English, Computer Awareness)",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical and HR Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "HCL-TB-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Percentages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is 15% of 240?",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "36",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Percentages"
+                                           ],
+                          "follow_ups":  [
+                                             "What is 7.5% of 240?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing up 15 and 1.5"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "32",
+                                                      "34",
+                                                      "36",
+                                                      "38"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "0.15 x 240 = 36.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Ratio",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Divide Rs. 600 in the ratio 2:3.",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 240 and Rs. 360",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ratios"
+                                           ],
+                          "follow_ups":  [
+                                             "Divide in ratio 1:2:3."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Splitting equally"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 200 and Rs. 400",
+                                                      "Rs. 240 and Rs. 360",
+                                                      "Rs. 250 and Rs. 350",
+                                                      "Rs. 300 and Rs. 300"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Total parts = 5; one part = 120; shares = 240 and 360.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the missing term: 2, 4, 8, 16, ?",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "32",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Series"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 8th term?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 8"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "24",
+                                                      "30",
+                                                      "32",
+                                                      "64"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Each term doubles, so the next is 32.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Odd one out",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the odd one out.",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Python",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Classification"
+                                           ],
+                          "follow_ups":  [
+                                             "Add another hardware item."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Skipping the category"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Mouse",
+                                                      "Keyboard",
+                                                      "Monitor",
+                                                      "Python"
+                                                  ],
+                                      "correct_options":  [
+                                                              3
+                                                          ],
+                                      "explanation":  "Mouse, keyboard and monitor are hardware; Python is software.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "English",
+                          "subtopic":  "Fill in the blank",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Fill in the blank: She ___ to school every day.",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "goes",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subject-verb agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "Change to past."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using \u0027go\u0027"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "english"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "go",
+                                                      "goes",
+                                                      "going",
+                                                      "gone"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Singular third-person present takes \u0027goes\u0027.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "English",
+                          "subtopic":  "Reading comprehension",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "\u0027The library opens at 9 am and closes at 6 pm on weekdays.\u0027 At what time does it close on a Tuesday?",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "6 pm",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Comprehension"
+                                           ],
+                          "follow_ups":  [
+                                             "What about Sunday?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing opening and closing"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "english"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "9 am",
+                                                      "6 pm",
+                                                      "6 am",
+                                                      "Closed"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Tuesday is a weekday, so it closes at 6 pm.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "Computer Awareness",
+                          "subtopic":  "Basics",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which of these is an input device?",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Scanner",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "I/O devices"
+                                           ],
+                          "follow_ups":  [
+                                             "Name another input device."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing the monitor"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-awareness"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Printer",
+                                                      "Scanner",
+                                                      "Monitor",
+                                                      "Speaker"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A scanner feeds data into a computer; the others output.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Computer Awareness",
+                          "subtopic":  "Memory",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which memory loses its contents when the computer is switched off?",
+                          "relevance_to_role":  "A 2026 guide describes the TechBee entrance test as aptitude, basic English and computer awareness.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "RAM",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Volatile memory"
+                                           ],
+                          "follow_ups":  [
+                                             "What is cache memory?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing ROM"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-awareness"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "ROM",
+                                                      "RAM",
+                                                      "Hard disk",
+                                                      "SSD"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "RAM is volatile; the others retain data.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "HR",
+                          "subtopic":  "Self-introduction",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Please introduce yourself and tell us why you want to join the TechBee programme.",
+                          "relevance_to_role":  "A 2026 guide describes an interview after the entrance test.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name, school, interests (maths, computers), and a clear reason: learn on the job and build a career early.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What have you done to learn computers so far?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Memorised script",
+                                                  "Unclear reason"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "HR",
+                          "subtopic":  "Subject interest",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which subject did you enjoy most in Class 12 and why?",
+                          "relevance_to_role":  "A 2026 guide describes a TechBee interview after the entrance test, with parents or guardians often invited to counselling.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Pick a real subject, give a concrete reason or example, and connect it to technology.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you use it at work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Naming a subject without reasons"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "HR",
+                          "subtopic":  "Commitment to training",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "The programme includes 6 to 12 months of training with a stipend and then placement into a role. Are you comfortable with that?",
+                          "relevance_to_role":  "A 2026 guide describes a TechBee interview after the entrance test, with parents or guardians often invited to counselling.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Show you understand the structure, accept the training and stipend, and express commitment to learning.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you manage studies alongside training?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Focusing only on pay"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "HR",
+                          "subtopic":  "Family support",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Will your family support you in relocating for training?",
+                          "relevance_to_role":  "A 2026 guide describes a TechBee interview after the entrance test, with parents or guardians often invited to counselling.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Answer honestly; parents or guardians are often invited to counselling.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What worries you about relocating?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Overconfident claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Computer Basics",
+                          "subtopic":  "Hardware and software",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between hardware and software? Give two examples of each.",
+                          "relevance_to_role":  "A 2026 guide describes a TechBee interview after the entrance test, with parents or guardians often invited to counselling.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Hardware is the physical parts (keyboard, CPU); software is the programs (Windows, a browser) that tell hardware what to do.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hardware",
+                                               "Software"
+                                           ],
+                          "follow_ups":  [
+                                             "Is an operating system hardware or software?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing categories"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "basics"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Programming Basics",
+                          "subtopic":  "What is a program?",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is a program and what is an algorithm? How are they different?",
+                          "relevance_to_role":  "A 2026 guide describes a TechBee interview after the entrance test, with parents or guardians often invited to counselling.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An algorithm is a step-by-step method to solve a problem; a program is that method written in a programming language so a computer can run it.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Algorithm",
+                                               "Program"
+                                           ],
+                          "follow_ups":  [
+                                             "Write the steps to find the largest of three numbers."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using them as synonyms"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "basics"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-TB-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Responsibility",
+                          "subtopic":  "Handling a difficult task",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell us about a time you had a difficult task at school and how you completed it.",
+                          "relevance_to_role":  "A 2026 guide describes a TechBee interview after the entrance test, with parents or guardians often invited to counselling.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific school task completed with effort and help from others.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Perseverance"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Perseverance",
+                                             "star_guidance":  "Situation, what you did, result.",
+                                             "positive_signals":  [
+                                                                      "Persists",
+                                                                      "Seeks help",
+                                                                      "Completes"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Gives up",
+                                                                      "Blames others"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

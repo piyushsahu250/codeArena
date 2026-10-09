@@ -1,0 +1,2096 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "HCL Tech",
+                     "role":  "Graduate Engineer Trainee",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://freshershunt.in/hcl-fresher-guide/",
+                     "job_description_summary":  "HCLTech hires freshers through graduate hiring (B.E./B.Tech/MCA/B.Sc., Graduate Engineer Trainee and similar roles) and through the TechBee programme for Class 12 pass-outs. A 2026 guide describes graduate hiring as an online assessment (aptitude, reasoning, verbal, technical MCQs and often one or two coding problems), a technical interview and an HR round; TechBee as an entrance test (aptitude, basic English, computer awareness) followed by an interview. The official HCLTech careers pages were located but not fetched.",
+                     "required_skills":  [
+                                             "Aptitude and reasoning",
+                                             "Verbal ability",
+                                             "Programming fundamentals (Java or similar)",
+                                             "OOP",
+                                             "DBMS and SQL",
+                                             "Data structures",
+                                             "Operating systems and networking basics",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "Official HCLTech careers and fresher pages were located but not fetched, so no round is marked DOCUMENTED; rounds are REPORTED from a 2026 freshershunt guide and a GeeksforGeeks guide (published 2023-11-22, last updated 2026-07-31).",
+                                         "The only dated candidate-attributed account found is a single Glassdoor review (2025-12-20, Java GET, easy): HR screening, Java technical (OOP, collections, exception handling, simple logic) and HR (self-introduction, email writing, location). Those items are class B, unverified, one report each.",
+                                         "The GeeksforGeeks page is a general guide, not a candidate experience; its sample questions are editorial and used as topic context (class D).",
+                                         "No source gives per-question counts. Freshershunt says frequently asked questions are collected on a separate page that was not found.",
+                                         "The \u0027HCL\u0027 (1) and \u0027HCL Tech\u0027 (6) entries in the CodeArena company list look like duplicates; this bank is delivered as \u0027HCL Tech\u0027 and the two should be merged on your side.",
+                                         "TechBee content is a proposed structure from a single guide; no TechBee candidate reports were found.",
+                                         "Package figures and the service-agreement terms differ between sources and were not used.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://freshershunt.in/hcl-fresher-guide/",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/",
+                        "title":  "",
+                        "publisher":  "www.geeksforgeeks.org",
+                        "published_on":  "2026-07-31",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://static-pc.glassdoor.de/Interview/HCLTech-Interview-E553909-RVW101912820.htm",
+                        "title":  "",
+                        "publisher":  "static-pc.glassdoor.de",
+                        "published_on":  "2025-12-20",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "HCL-GET-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Averages",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "The average of five numbers is 24. If one number is removed, the average becomes 22. What number was removed?",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "32",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Averages"
+                                           ],
+                          "follow_ups":  [
+                                             "What if two numbers were removed?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Dividing by 5 again"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "28",
+                                                      "30",
+                                                      "32",
+                                                      "34"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "Total = 120; remaining total = 4 x 22 = 88; removed = 32.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Simple interest",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the simple interest on Rs. 8,000 at 5% per annum for 3 years?",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 1,200",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SI formula"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the amount?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using compound interest"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 1,000",
+                                                      "Rs. 1,200",
+                                                      "Rs. 1,500",
+                                                      "Rs. 1,600"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "SI = 8000 x 5 x 3 / 100 = 1,200.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Direction sense",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Ravi walks 4 km north, then 3 km east. How far is he from the start in a straight line?",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "5 km",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Pythagoras"
+                                           ],
+                          "follow_ups":  [
+                                             "In which direction is he from the start?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding 4 and 3"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3 km",
+                                                      "4 km",
+                                                      "5 km",
+                                                      "7 km"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "By Pythagoras, sqrt(16 + 9) = 5 km.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Error spotting",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the correct sentence.",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "He doesn\u0027t like tea.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subject-verb agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "Correct: \u0027She have a pen.\u0027"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using \u0027likes\u0027 after doesn\u0027t"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal-ability"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "He don\u0027t like tea.",
+                                                      "He doesn\u0027t likes tea.",
+                                                      "He doesn\u0027t like tea.",
+                                                      "He not like tea."
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "With a singular subject, \u0027doesn\u0027t\u0027 takes the base verb \u0027like\u0027.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Pseudocode",
+                          "subtopic":  "Output tracing",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is printed?\n\na = 5, b = 3\nwhile b \u003e 0:\n    a = a + b\n    b = b - 1\nprint a",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "11",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Loop tracing"
+                                           ],
+                          "follow_ups":  [
+                                             "What if b started at 4?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding b only once"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "pseudocode"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "8",
+                                                      "9",
+                                                      "11",
+                                                      "14"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "a: 5 -\u003e 8 -\u003e 10 -\u003e 11 as b goes 3, 2, 1. Output 11.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-006",
+                          "round_id":  "R1",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Operators",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the value of 7 / 2 in Java with both operands int?",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Integer division"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you get 3.5?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing 3.5"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "programming-fundamentals"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3.5",
+                                                      "3",
+                                                      "4",
+                                                      "2"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Integer division discards the fractional part, giving 3.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-007",
+                          "round_id":  "R1",
+                          "topic":  "DBMS",
+                          "subtopic":  "SQL commands",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which command removes all rows from a table quickly without logging individual row deletions and cannot be rolled back in many systems?",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "TRUNCATE",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DDL",
+                                               "DML"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you use WHERE with TRUNCATE?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing DROP"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "DELETE",
+                                                      "TRUNCATE",
+                                                      "DROP",
+                                                      "UPDATE"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "TRUNCATE removes all rows quickly; DROP removes the table itself.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-008",
+                          "round_id":  "R1",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "Layers",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which OSI layer is responsible for routing packets between networks?",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Network",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OSI"
+                                           ],
+                          "follow_ups":  [
+                                             "Which layer does TCP work at?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing Data Link"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Data Link",
+                                                      "Network",
+                                                      "Transport",
+                                                      "Session"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "The Network layer (IP) handles logical addressing and routing.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-009",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "First non-repeating character",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the first character in a string that does not repeat.",
+                          "relevance_to_role":  "A general HCLTech guide lists \u0027find the first non-repeating character\u0027 as a sample technical coding question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Two passes: count, then find first with count 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Counting",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Second scan",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Strings"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the character instead."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Nested loops O(n^2)",
+                                                  "Returning 1-based index"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "strings"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string, print the 0-based index of its first non-repeating character, or -1 if every character repeats.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "leetcode",
+                                                             "output":  "0",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "aabb",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All repeat",
+                                                            "Single character",
+                                                            "Long string"
+                                                        ],
+                                         "expected_algorithm":  "Count frequencies, then scan.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "All repeat",
+                                                                        "Single",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-010",
+                          "round_id":  "R1",
+                          "topic":  "Arrays",
+                          "subtopic":  "Maximum subarray sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the maximum sum of a contiguous subarray.",
+                          "relevance_to_role":  "A general HCLTech guide lists \u0027find the maximum subarray sum\u0027 as a sample technical coding question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "cur = max(x, cur + x); best = max(best, cur).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Kadane",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "All-negative",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Linear",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "DP"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the subarray bounds."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Initialising best to 0",
+                                                  "O(n^2)"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays",
+                                       "dp"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print the largest sum of any non-empty contiguous subarray.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "8\n-2 1 -3 4 -1 2 1 -5",
+                                                             "output":  "6",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n-4 -2 -7",
+                                                             "output":  "-2",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All negative",
+                                                            "Single element",
+                                                            "Mixed"
+                                                        ],
+                                         "expected_algorithm":  "Kadane\u0027s algorithm.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "All negative",
+                                                                        "n = 1",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-011",
+                          "round_id":  "R1",
+                          "topic":  "Searching",
+                          "subtopic":  "Binary search",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Search for a value in a sorted array using binary search.",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Compare with mid; halve the range.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Binary search",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Boundaries",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Searching"
+                                           ],
+                          "follow_ups":  [
+                                             "Find the first occurrence with duplicates."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Linear scan",
+                                                  "Infinite loop on boundaries"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "searching"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  {
+                                         "problem_statement":  "Given a sorted array and a target, print the 0-based index of the target or -1 if absent.",
+                                         "input_format":  "Line 1: n. Line 2: n sorted integers. Line 3: target.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5\n1 3 5 7 9\n7",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n2 4 6\n5",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Absent",
+                                                            "First or last element",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Binary search.",
+                                         "time_complexity":  "O(log n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Absent",
+                                                                        "Ends",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R1-012",
+                          "round_id":  "R1",
+                          "topic":  "Math",
+                          "subtopic":  "Check a power of two",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether a number is a power of two.",
+                          "relevance_to_role":  "Guides describe an online assessment with aptitude, reasoning, verbal, technical MCQs and often one or two coding problems for graduate hiring.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A positive power of two has exactly one set bit.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Bit trick",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Zero case",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bit manipulation"
+                                           ],
+                          "follow_ups":  [
+                                             "Count set bits."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Forgetting n = 0"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "bits"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print Yes if n is a power of two, otherwise No.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "0 \u003c= n \u003c= 10^18",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "16",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "18",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 0",
+                                                            "n = 1",
+                                                            "Large"
+                                                        ],
+                                         "expected_algorithm":  "Bit trick n \u0026 (n-1) == 0.",
+                                         "time_complexity":  "O(1)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "0",
+                                                                        "1",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Reverse a linked list",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain how to reverse a singly linked list and its complexity.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Keep prev, curr and next; for each node save next, point curr.next to prev, advance prev and curr. At the end prev is the new head. O(n) time, O(1) space.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linked lists",
+                                               "Pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "Do it recursively."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Losing the next pointer"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Detect a loop in a linked list",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you detect a cycle in a linked list?",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Floyd\u0027s algorithm: a slow pointer moves one step, a fast pointer two; if they meet there is a cycle. A hash set of visited nodes also works in O(n) space.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers",
+                                               "Cycle detection"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you find the start of the loop?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using extra space only"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "OOP concepts in Java",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the four OOP concepts in Java with short examples.",
+                          "relevance_to_role":  "A candidate review for a Java Graduate Engineer Trainee describes a Java technical round covering OOP.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Encapsulation (private fields with getters), abstraction (abstract classes and interfaces), inheritance (extends), polymorphism (overloading and overriding).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "OOP"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the difference between overloading and overriding?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only reciting names"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java",
+                                       "oop"
+                                   ],
+                          "notes":  "One review (2025-12-20) names OOP as a topic; the wording here is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Collections framework",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the Java Collections framework. When would you use ArrayList, LinkedList, HashSet and HashMap?",
+                          "relevance_to_role":  "A candidate review for a Java Graduate Engineer Trainee describes a Java technical round covering collections.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "List: ordered, duplicates allowed (ArrayList for random access, LinkedList for frequent inserts); Set: unique elements (HashSet unordered, TreeSet sorted); Map: key to value (HashMap). Choose by access pattern.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collections",
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "How does HashMap handle collisions?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing List and Set"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java",
+                                       "collections"
+                                   ],
+                          "notes":  "One review (2025-12-20) names collections as a topic; the wording here is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Exception handling",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How does exception handling work in Java? What is the difference between checked and unchecked exceptions?",
+                          "relevance_to_role":  "A candidate review for a Java Graduate Engineer Trainee describes a Java technical round covering exception handling.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "try/catch/finally handles errors; checked exceptions (IOException) must be caught or declared; unchecked (RuntimeException) need not be. finally runs for cleanup.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Exceptions"
+                                           ],
+                          "follow_ups":  [
+                                             "What does try-with-resources do?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Catching Exception everywhere"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Simple logic problem",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write the logic to check if a number is prime and explain how to make it faster.",
+                          "relevance_to_role":  "A candidate review describes simple logic questions in the technical round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Check divisors up to sqrt(n); handle n \u003c 2; skip even numbers; for many queries use a sieve.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Primes",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you list all primes below n?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping to n"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "logic"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normalization",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is normalization? Explain 1NF, 2NF and 3NF.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Normalization removes redundancy. 1NF: atomic values; 2NF: no partial dependencies; 3NF: no transitive dependencies.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normal forms"
+                                           ],
+                          "follow_ups":  [
+                                             "When would you denormalize?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing 2NF and 3NF"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "SQL",
+                          "subtopic":  "Second highest salary",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to find the second highest salary in an Employee table.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT MAX(salary) FROM Employee WHERE salary \u003c (SELECT MAX(salary) FROM Employee); or use DENSE_RANK() = 2.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subqueries",
+                                               "Window functions"
+                                           ],
+                          "follow_ups":  [
+                                             "Find the nth highest salary."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using LIMIT without handling duplicates"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a deadlock? What are the four conditions and how can it be prevented?",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Processes wait for each other forever. Conditions: mutual exclusion, hold and wait, no preemption, circular wait. Prevent by breaking one, e.g. ordering resources.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Deadlock"
+                                           ],
+                          "follow_ups":  [
+                                             "Deadlock vs starvation?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing a condition"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-010",
+                          "round_id":  "R2",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "TCP vs UDP",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare TCP and UDP and give one use case for each.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "TCP: connection-oriented, reliable, ordered (web, email). UDP: connectionless, low overhead (streaming, DNS, gaming).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Transport"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the TCP three-way handshake?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Crediting UDP with reliability"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "networks"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-011",
+                          "round_id":  "R2",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain your main project and justify your technology choices.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Problem, your role, stack and why, a challenge and result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership",
+                                               "Depth"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you change?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-012",
+                          "round_id":  "R2",
+                          "topic":  "Software Engineering",
+                          "subtopic":  "SDLC and Agile",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the software development life cycle and how Agile differs from Waterfall.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SDLC: requirements, design, development, testing, deployment, maintenance. Waterfall is sequential; Agile is iterative with continuous feedback.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "SDLC",
+                                               "Agile"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a sprint?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying Agile has no planning"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sdlc"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-013",
+                          "round_id":  "R2",
+                          "topic":  "Cloud Computing",
+                          "subtopic":  "Cloud basics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is cloud computing? Name the service models with an example each.",
+                          "relevance_to_role":  "A 2026 guide lists cloud concepts in the later technical rounds.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "On-demand computing over the internet. IaaS (virtual machines), PaaS (managed runtime), SaaS (hosted applications).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "IaaS",
+                                               "PaaS",
+                                               "SaaS"
+                                           ],
+                          "follow_ups":  [
+                                             "Public vs private cloud?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing IaaS and PaaS"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cloud"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-014",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Stack vs queue",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare a stack and a queue. Give a real use for each.",
+                          "relevance_to_role":  "Guides describe a technical interview covering projects, one language in depth, SQL, OOP and occasionally live coding.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Stack: LIFO (undo, function calls). Queue: FIFO (task scheduling, printing).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "LIFO",
+                                               "FIFO"
+                                           ],
+                          "follow_ups":  [
+                                             "Implement a queue using two stacks."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reversing the orders"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dsa"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-015",
+                          "round_id":  "R2",
+                          "topic":  "Debugging",
+                          "subtopic":  "Find the bug",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A loop meant to sum 1 to n prints a total that is always off by n. What could be wrong and how would you debug it?",
+                          "relevance_to_role":  "A 2026 guide lists debugging and optimisation among the later technical topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Likely an off-by-one: the loop stops at n-1 (i \u003c n instead of i \u003c= n). Debug by tracing a small input, printing the loop bounds, and adding a unit test.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Off-by-one",
+                                               "Debugging"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you prevent this in future?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Changing code without testing"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R2-016",
+                          "round_id":  "R2",
+                          "topic":  "Java",
+                          "subtopic":  "Multithreading",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is multithreading in Java? How do you create a thread and avoid race conditions?",
+                          "relevance_to_role":  "A 2026 guide lists multithreading and concurrency among the later technical topics.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Multithreading runs tasks concurrently within a process. Create threads by extending Thread or implementing Runnable (or using an executor). Avoid races with synchronized blocks, locks or atomic classes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Threads",
+                                               "Synchronisation"
+                                           ],
+                          "follow_ups":  [
+                                             "Runnable vs Callable?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling run() instead of start()"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "java",
+                                       "concurrency"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.geeksforgeeks.org/interview-experiences/hcl-recruitment-process/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Self-introduction",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Introduce yourself.",
+                          "relevance_to_role":  "A candidate review lists self-introduction in the HR round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A concise summary of education, skills, a project and interest in the role.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What makes you a good fit?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reading the resume"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Email writing",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a short professional email to your manager asking for a day off for a family function.",
+                          "relevance_to_role":  "A candidate review lists an email-writing task in the HR round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Subject, greeting, request with date, short reason, offer to hand over work, closing.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you ask for an urgent leave?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Casual tone",
+                                                  "No subject"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Location and relocation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Which location do you prefer, and are you willing to relocate or work in shifts?",
+                          "relevance_to_role":  "A candidate review lists a location question in the HR round; the guides list relocation and shifts.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3",
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Be honest, flexible, and mention any real constraint calmly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do if posted elsewhere?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Rigid answers"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Candidate-reported topic, paraphrased; not verified. Count shown is what the source states, or 1 where it gives none.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Service agreement",
+                          "question_type":  "HR",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Are you comfortable with a service agreement during your initial period?",
+                          "relevance_to_role":  "Guides describe an HR round on resume, relocation, shifts, service agreement and behavioural questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Ask for the terms politely, show commitment, and note you will read them carefully.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do if you disagreed with a clause?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Dismissing the terms"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Career goals",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Where do you see yourself in five years?",
+                          "relevance_to_role":  "Guides describe an HR round on resume, relocation, shifts, service agreement and behavioural questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link learning goals to the role and the company\u0027s growth paths.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How will you get there?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Unrealistic claims"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Team conflict",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you worked in a team and faced a disagreement.",
+                          "relevance_to_role":  "Guides describe an HR round on resume, relocation, shifts, service agreement and behavioural questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A concrete conflict resolved with evidence and respect.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation, your action, result.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Seeks facts",
+                                                                      "Resolves"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "Avoids"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "HCL-GET-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "Adaptability",
+                          "subtopic":  "Learning something new quickly",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe a time you had to learn a new tool or language quickly. How did you manage?",
+                          "relevance_to_role":  "Guides describe an HR round on resume, relocation, shifts, service agreement and behavioural questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific example of structured learning that delivered.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Adaptability"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/hcl-fresher-guide/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Adaptability",
+                                             "star_guidance":  "Situation, plan to learn, outcome.",
+                                             "positive_signals":  [
+                                                                      "Plans",
+                                                                      "Practises",
+                                                                      "Delivers"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Excuses",
+                                                                      "No result"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

@@ -1,0 +1,959 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Infosys",
+                     "role":  "Digital Specialist Engineer",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://freshershunt.in/infosys-system-engineer-specialist-2026/",
+                     "job_description_summary":  "Infosys hires freshers (BE/B.Tech/ME/M.Tech/MCA/MSc, 2024-2026 batches, 60% or 6.0 CGPA, no active backlogs) as Systems Engineer, Specialist Programmer and Digital Specialist Engineer. Secondary sources describe an online test (aptitude, reasoning, pseudocode, and DSA coding for Specialist Programmer; Automata Fix for Digital Specialist Engineer), a technical interview (programming, DBMS, OS, project) and an HR interview. Training is at the Mysuru campus.",
+                     "required_skills":  [
+                                             "Java, Python or C++",
+                                             "Data structures and algorithms",
+                                             "DBMS and SQL",
+                                             "Operating systems basics",
+                                             "OOP",
+                                             "Aptitude and pseudocode tracing",
+                                             "Project explanation",
+                                             "Communication"
+                                         ],
+                     "limitations":  [
+                                         "The official Infosys pages that could be fetched (infosys.com careers and graduates pages, last modified 2026-05-05) name programmes such as HackWithInfy, InfyTQ and Power Programmers but list no fresher roles, rounds or eligibility; the role and process description comes from a secondary aggregator (freshershunt.in, 2026-06-23), which also says the drive had closed.",
+                                         "The largest candidate-reported source is an anonymous aggregate on freshershunt.in (published 2026-08-19, 220 questions, 1,097 citations). Counts are user-submitted estimates; some entries are garbled, and several listed questions show no count (recorded as at least one report).",
+                                         "placementpreparation.io content is labelled \u0027sample questions\u0027 and is not attributed to candidates; it was used only as topic context.",
+                                         "No question reports specific to Specialist Programmer or Digital Specialist Engineer were found; those tracks use original practice questions (class D) mapped to the described focus areas.",
+                                         "The 2026 aptitude, pseudocode and debugging items are original practice items, not reported questions.",
+                                         "Package figures differ between sources and were not used.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://www.placementpreparation.io/infosys/interview-experience/",
+                        "title":  "",
+                        "publisher":  "www.placementpreparation.io",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://freshershunt.in/?p=54914",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://freshershunt.in/infosys-system-engineer-specialist-2026/",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Online Assessment (Pseudocode and Automata Fix)",
+                       "category":  "ONLINE_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "INFY-DSE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Debugging",
+                          "subtopic":  "Off-by-one in a loop",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "This function should return the sum of the first n natural numbers but gives the wrong answer. Find and fix the bug. def total(n): s = 0; for i in range(1, n): s += i; return s",
+                          "relevance_to_role":  "A secondary source lists pseudocode and Automata Fix debugging for Digital Specialist Engineer assessments.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "range(1, n) stops at n-1, so n is never added. Fix: range(1, n + 1), or use n*(n+1)//2.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Finds the bug",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct fix",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Mentions formula",
+                                             "weight":  1
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Range bounds",
+                                               "Debugging"
+                                           ],
+                          "follow_ups":  [
+                                             "What does total(0) return after the fix?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Changing the start value",
+                                                  "Fixing the return statement instead"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging",
+                                       "python"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Debugging",
+                          "subtopic":  "Index error in palindrome check",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find and fix the bug: def is_pal(s): i = 0; j = len(s); while i \u003c j: if s[i] != s[j]: return False; i += 1; j -= 1; return True",
+                          "relevance_to_role":  "A secondary source lists pseudocode and Automata Fix debugging for Digital Specialist Engineer assessments.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "j starts at len(s), which is out of range and raises IndexError. Fix: j = len(s) - 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Finds the bug",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct fix",
+                                             "weight":  5
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Zero-based indexing",
+                                               "Two pointers"
+                                           ],
+                          "follow_ups":  [
+                                             "How does your fix behave for an empty string?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Changing the loop condition instead",
+                                                  "Fixing only one pointer"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "debugging",
+                                       "strings"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Pseudocode",
+                          "subtopic":  "Swap by arithmetic",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Pseudocode: a = 3; b = 4; repeat 3 times { a = a + b; b = a - b; a = a - b }; print a, b. What is printed?",
+                          "relevance_to_role":  "A secondary source lists pseudocode and Automata Fix debugging for Digital Specialist Engineer assessments.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "4 3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Tracing",
+                                               "Swap without a temp"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the loop ran 4 times?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming the values never change",
+                                                  "Counting only one swap"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "pseudocode",
+                                       "loops"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://www.placementpreparation.io/infosys/interview-experience/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3 4",
+                                                      "4 3",
+                                                      "7 3",
+                                                      "4 7"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Each iteration swaps a and b. Three swaps (an odd number) leave them swapped, so a = 4 and b = 3.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Second largest value and its position",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the second largest distinct value in an array and the 1-based position of its first occurrence.",
+                          "relevance_to_role":  "Second-largest-element programs are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Track max and second max; then locate the first occurrence.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Distinct handling",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct index",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Single pass",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Single pass",
+                                               "Distinct values"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you find the k-th largest?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Counting duplicate maximum as second",
+                                                  "Wrong index base"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "The source reports \u0027second-largest element\u0027; the index requirement is an original extension.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print the second largest distinct value and the 1-based index of its first occurrence, separated by a space. Print -1 if no second distinct value exists.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "\u0027value index\u0027 or -1.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n4 9 9 2 7 7",
+                                                             "output":  "7 5",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n5 5 5",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All equal",
+                                                            "n = 1",
+                                                            "Duplicates of the maximum"
+                                                        ],
+                                         "expected_algorithm":  "Single pass tracking top two distinct values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "All equal",
+                                                                        "n = 1",
+                                                                        "Duplicate maximum",
+                                                                        "Negatives"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Number Theory",
+                          "subtopic":  "Perfect number",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Check whether a number is a perfect number, meaning it equals the sum of its proper divisors.",
+                          "relevance_to_role":  "Perfect-number programs are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Loop i up to sqrt(n), adding i and n/i when i divides n (avoid double counting squares).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Divisors up to sqrt(n)",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Excludes n",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Avoids double count",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Divisors",
+                                               "Optimization"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you list all perfect numbers below 10^4?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping to n",
+                                                  "Including n itself in the sum"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "number-theory"
+                                   ],
+                          "notes":  "",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print Yes if the sum of its proper divisors (excluding n) equals n, otherwise No.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= n \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "28",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "12",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 6",
+                                                            "Large perfect number 33550336",
+                                                            "Prime numbers"
+                                                        ],
+                                         "expected_algorithm":  "Enumerate divisors up to sqrt(n).",
+                                         "time_complexity":  "O(sqrt(n))",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "6",
+                                                                        "28",
+                                                                        "Large perfect",
+                                                                        "Primes"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Numbers",
+                          "subtopic":  "Reverse the digits of an integer",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse the digits of an integer, keeping its sign and dropping leading zeros in the result.",
+                          "relevance_to_role":  "Reverse-a-digit programs are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Build the reversed number using rev = rev*10 + n%10 on the absolute value.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct digit loop",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Sign",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Trailing zeros",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modulo and division"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you detect overflow in a 32-bit integer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Losing the sign",
+                                                  "Printing leading zeros"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "numbers"
+                                   ],
+                          "notes":  "",
+                          "coding":  {
+                                         "problem_statement":  "Given an integer n, print the number formed by reversing its digits. Keep the sign. Leading zeros of the result are dropped.",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "-10^9 \u003c= n \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "1200",
+                                                             "output":  "21",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "-450",
+                                                             "output":  "-54",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Trailing zeros",
+                                                            "Negative numbers",
+                                                            "n = 0"
+                                                        ],
+                                         "expected_algorithm":  "Digit extraction with % and //.",
+                                         "time_complexity":  "O(d)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Trailing zeros",
+                                                                        "Negative",
+                                                                        "0",
+                                                                        "Single digit",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Constructors",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is a constructor? Can constructors be overloaded or private?",
+                          "relevance_to_role":  "Constructors are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A constructor initialises a new object and shares the class name (no return type). Constructors can be overloaded; a private constructor prevents outside instantiation, used by singletons and utility classes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Definition",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Overloading",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Private constructor use",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Constructors",
+                                               "Singleton"
+                                           ],
+                          "follow_ups":  [
+                                             "Can a constructor be inherited or abstract?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying constructors return values",
+                                                  "Confusing with methods"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "oop",
+                                       "constructors"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Exception handling",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How does exception handling work? Explain try, catch, finally and when you would throw your own exception.",
+                          "relevance_to_role":  "Exception handling is reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Code that may fail goes in try; catch handles specific exception types; finally runs cleanup in all cases. Throw custom exceptions to signal domain errors that callers should handle.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Blocks explained",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Custom exception use",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Best practice",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "try-catch-finally",
+                                               "Custom exceptions"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the difference between throw and throws?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Catching generic Exception everywhere",
+                                                  "Swallowing errors"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "exceptions",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "C Programming",
+                          "subtopic":  "Pointers",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a pointer? Explain a null pointer, a dangling pointer and a pointer to a pointer.",
+                          "relevance_to_role":  "Pointers are reported in the aggregated 2026 Infosys data.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A pointer stores a memory address. A null pointer points to nothing; a dangling pointer refers to memory that has been freed or gone out of scope; a pointer to a pointer stores the address of another pointer, used for dynamic 2D arrays or modifying a pointer inside a function.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Definition",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Null and dangling",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Pointer to pointer",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Addresses",
+                                               "Dereferencing",
+                                               "Memory safety"
+                                           ],
+                          "follow_ups":  [
+                                             "How can you avoid a dangling pointer?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying a null pointer is uninitialised garbage",
+                                                  "Confusing \u0026 and *"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "c",
+                                       "pointers"
+                                   ],
+                          "notes":  "At least one report on the source page.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Machine Learning",
+                          "subtopic":  "Supervised vs unsupervised, overfitting",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain supervised and unsupervised learning, and how you would detect and reduce overfitting.",
+                          "relevance_to_role":  "The Digital Specialist Engineer track is described as AI/ML, cloud and data science by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Supervised learning trains on labelled data (classification, regression); unsupervised finds structure in unlabelled data (clustering). Overfitting shows as low training error but high validation error; reduce it with more data, regularisation, simpler models, dropout and cross-validation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct definitions",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Detects overfitting",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Remedies",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Supervised",
+                                               "Unsupervised",
+                                               "Generalisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What metric would you use for an imbalanced classification problem?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying more training always helps",
+                                                  "Mixing up the learning types"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ml",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-008",
+                          "round_id":  "R2",
+                          "topic":  "Cloud Computing",
+                          "subtopic":  "Service models",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain IaaS, PaaS and SaaS with an example of each.",
+                          "relevance_to_role":  "Cloud is listed as a Digital Specialist Engineer focus area by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "IaaS provides virtual infrastructure (virtual machines); PaaS provides a managed platform for deploying code; SaaS delivers complete applications over the web. Example: a virtual machine, a managed app platform, and a web email service.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Three models correct",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Examples",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Responsibility split",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "IaaS",
+                                               "PaaS",
+                                               "SaaS"
+                                           ],
+                          "follow_ups":  [
+                                             "Who manages the operating system in each model?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing PaaS and SaaS",
+                                                  "No examples"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "cloud",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R2-009",
+                          "round_id":  "R2",
+                          "topic":  "Data Science",
+                          "subtopic":  "Handling missing values",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A dataset has missing values in several columns. How would you decide what to do about them?",
+                          "relevance_to_role":  "Data science is listed as a Digital Specialist Engineer focus area by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Check the pattern and amount of missingness. Drop rows or columns only if few or irrelevant; otherwise impute (mean or median for numerics, mode for categories, or model-based) and add a missing-indicator when missingness is informative. Validate that imputation does not leak test data.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Investigates missingness",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Compares strategies",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Avoids leakage",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Imputation",
+                                               "Data leakage"
+                                           ],
+                          "follow_ups":  [
+                                             "When is the median better than the mean?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Always dropping rows",
+                                                  "Imputing before the train-test split"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "data-science",
+                                       "cleaning"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Learning Agility",
+                          "subtopic":  "Staying current in AI and cloud",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "How do you keep your skills current in a fast-changing area like AI or cloud? Give a recent example.",
+                          "relevance_to_role":  "The Digital Specialist Engineer track is described as AI/ML, cloud and data science by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific recent learning with a hands-on result.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Learning agility"
+                                           ],
+                          "follow_ups":  [
+                                             "What will you learn next?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Naming courses without applying them"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "behavioral",
+                                       "learning"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Learning agility",
+                                             "star_guidance":  "Situation: a topic you wanted to learn. Action: courses, projects, reading. Result: what you built or understood.",
+                                             "positive_signals":  [
+                                                                      "Specific recent example",
+                                                                      "Hands-on practice",
+                                                                      "Shares what they learned"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Only lists buzzwords",
+                                                                      "No project",
+                                                                      "Passive learning"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "INFY-DSE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "HR",
+                          "subtopic":  "Why Digital Specialist Engineer",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want the Digital Specialist Engineer role rather than a standard Systems Engineer role?",
+                          "relevance_to_role":  "Role motivation matters for a specialist track described by a secondary source.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Link specific interests (for example machine learning projects or cloud certifications) to the role\u0027s focus and show readiness for a harder assessment.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific interests",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Evidence of effort",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Honest",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation",
+                                               "Role fit"
+                                           ],
+                          "follow_ups":  [
+                                             "Which project shows your interest?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Chasing only the higher package",
+                                                  "No evidence"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Topic area comes from a secondary description of the Infosys process; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/infosys-system-engineer-specialist-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}

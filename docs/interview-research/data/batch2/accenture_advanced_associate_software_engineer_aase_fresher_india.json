@@ -1,0 +1,1598 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "Accenture",
+                     "role":  "Advanced Associate Software Engineer (AASE)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://www.accenture.com/in-en/careers/life-at-accenture/entry-level",
+                     "job_description_summary":  "Accenture India hires fresh graduates as Associate Software Engineer (ASE) and, in a higher-paid track, Advanced Associate Software Engineer (AASE). A 2026 candidate account and secondary guides describe a gamified cognitive and behavioral assessment, a technical MCQ test (DSA, DBMS, cloud, networks, MS Office, pseudocode), a coding test, an AI-assisted communication assessment (spoken and written) and a combined technical and HR interview. The official entry-level page was not fetched for exact stage details.",
+                     "required_skills":  [
+                                             "Cognitive and logical reasoning",
+                                             "Programming fundamentals and pseudocode",
+                                             "Data structures",
+                                             "DBMS and SQL",
+                                             "Cloud and networking basics",
+                                             "HTML and CSS basics",
+                                             "MS Office",
+                                             "Written and spoken communication",
+                                             "Project explanation"
+                                         ],
+                     "limitations":  [
+                                         "The official Accenture entry-level pages were located but not fetched, so no round is marked DOCUMENTED; all rounds are REPORTED from a 2026 LeetCode Discuss account (single candidate, AASE) and two 2026 guides.",
+                                         "The LeetCode account does not show a publication date in the extracted text, so its date is blank; the title and content place it in the 2025-26 hiring cycle.",
+                                         "The candidate account is from one AASE candidate. ASE content is therefore mostly original practice aligned to the same stages.",
+                                         "JobRise (2026-02-11) lists about 20 technical questions without attributing them to individuals; those are used only as topic context. Its few attributed anecdotes (a basic HTTP status code question) are single reports.",
+                                         "Freshershunt (2026-08-19) gives no per-question counts; times_reported is recorded as 1 where a question is reported at all.",
+                                         "Package figures (ASE about 4.5 LPA, AASE about 6.5 LPA) differ between sources and were not used in the questions.",
+                                         "The gamified cognitive games cannot be reproduced as text; the R1 items are conventional aptitude proxies.",
+                                         "Spoken-response prompts are original practice prompts; the actual AI-evaluated prompts are not published.",
+                                         "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "OTHER",
+                        "url":  "https://freshershunt.in/?p=54935",
+                        "title":  "Aggregated fresher interview questions with report counts",
+                        "publisher":  "freshershunt.in",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "OTHER",
+                        "url":  "https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/",
+                        "title":  "",
+                        "publisher":  "leetcode.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "OTHER",
+                        "url":  "https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/",
+                        "title":  "",
+                        "publisher":  "jobrise.io",
+                        "published_on":  "2026-02-11",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  ""
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "Gamified Cognitive and Aptitude Assessment",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Assessment (MCQ)",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Coding Assessment",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "Communication Assessment",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R5",
+                       "name":  "Technical and HR Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  5,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S3",
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "ACN-AASE-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Logical Reasoning",
+                          "subtopic":  "Coding-decoding",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In a certain code, CLOUD is written as DNRYI. How is SKY written in that code?",
+                          "relevance_to_role":  "Accounts describe a gamified cognitive and behavioral assessment as the first stage; this item is a conventional aptitude-style proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "TMB",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Positional shifts"
+                                           ],
+                          "follow_ups":  [
+                                             "How would DOG be coded?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using a constant shift"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "logical-reasoning"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/?p=54935.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "TMB",
+                                                      "TMD",
+                                                      "UMD",
+                                                      "TLB"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "The shifts are +1, +2, +3, +4, +5 by position (C to D, L to N, O to R, U to Y, D to I). For SKY: S+1 = T, K+2 = M, Y+3 = B, giving TMB.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Quantitative Aptitude",
+                          "subtopic":  "Time and work",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A can finish a task in 12 days and B in 18 days. Working together, how many days do they need?",
+                          "relevance_to_role":  "Accounts describe a gamified cognitive and behavioral assessment as the first stage; this item is a conventional aptitude-style proxy.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "7.2",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Work rates"
+                                           ],
+                          "follow_ups":  [
+                                             "If A leaves after 3 days, how long does B need?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Averaging the days"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "quantitative-aptitude"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/?p=54935.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "6.8",
+                                                      "7.2",
+                                                      "7.5",
+                                                      "8"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Combined rate = 1/12 + 1/18 = 5/36 per day, so the time is 36/5 = 7.2 days.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Pseudocode",
+                          "subtopic":  "Recursion",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What does f(5) return?\n\nf(n):\n    if n \u003c= 1 return 1\n    return n + f(n - 2)",
+                          "relevance_to_role":  "A 2026 candidate account describes a technical MCQ stage (DSA, DBMS, cloud, networks, MS Office, pseudocode).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "9",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Recursion tracing"
+                                           ],
+                          "follow_ups":  [
+                                             "What does f(6) return?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Stepping by 1"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "pseudocode"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "9",
+                                                      "8",
+                                                      "7",
+                                                      "10"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "f(5) = 5 + f(3) = 5 + 3 + f(1) = 5 + 3 + 1 = 9.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Complexity",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the time complexity of searching for a key in a balanced binary search tree with n nodes?",
+                          "relevance_to_role":  "A 2026 candidate account describes a technical MCQ stage (DSA, DBMS, cloud, networks, MS Office, pseudocode).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "O(log n)",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "BST",
+                                               "Height"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the tree is skewed?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing O(n)"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "data-structures"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "O(1)",
+                                                      "O(log n)",
+                                                      "O(n)",
+                                                      "O(n log n)"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "A balanced BST has height O(log n), so a search takes O(log n). An unbalanced tree can degrade to O(n).",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Normal forms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "A table is in 2NF when it is in 1NF and:",
+                          "relevance_to_role":  "A 2026 candidate account describes a technical MCQ stage (DSA, DBMS, cloud, networks, MS Office, pseudocode).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "It has no partial dependency of a non-key attribute on part of a composite key",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normalisation"
+                                           ],
+                          "follow_ups":  [
+                                             "What does 3NF add?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing 2NF and 3NF"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "dbms"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "It has no transitive dependency",
+                                                      "It has no partial dependency of a non-key attribute on part of a composite key",
+                                                      "It has no multivalued dependency",
+                                                      "It has only one candidate key"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "2NF removes partial dependencies on part of a composite key; 3NF removes transitive dependencies.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Cloud Computing",
+                          "subtopic":  "Scaling",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Adding more instances behind a load balancer to handle growing traffic is called:",
+                          "relevance_to_role":  "A 2026 candidate account describes a technical MCQ stage (DSA, DBMS, cloud, networks, MS Office, pseudocode).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Horizontal scaling",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Scaling"
+                                           ],
+                          "follow_ups":  [
+                                             "Name a drawback of vertical scaling."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling it vertical"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "cloud-computing"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Vertical scaling",
+                                                      "Horizontal scaling",
+                                                      "Caching",
+                                                      "Sharding"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Horizontal scaling adds more machines; vertical scaling makes a single machine bigger.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Computer Networks",
+                          "subtopic":  "TCP vs UDP",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which statement is true of UDP compared with TCP?",
+                          "relevance_to_role":  "A 2026 candidate account describes a technical MCQ stage (DSA, DBMS, cloud, networks, MS Office, pseudocode).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "It is connectionless and has lower overhead",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "TCP",
+                                               "UDP"
+                                           ],
+                          "follow_ups":  [
+                                             "Give two UDP use cases."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Crediting UDP with reliability"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "computer-networks"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "It guarantees ordered delivery",
+                                                      "It is connectionless and has lower overhead",
+                                                      "It uses a three-way handshake",
+                                                      "It retransmits lost packets"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "UDP is connectionless, with no handshake, ordering or retransmission, so overhead is lower.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which of the following is NOT a necessary condition for deadlock?",
+                          "relevance_to_role":  "A 2026 candidate account describes a technical MCQ stage (DSA, DBMS, cloud, networks, MS Office, pseudocode).",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Preemption",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Coffman conditions"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you prevent circular wait?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing the \u0027no\u0027 in no preemption"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "operating-systems"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Mutual exclusion",
+                                                      "Hold and wait",
+                                                      "Preemption",
+                                                      "Circular wait"
+                                                  ],
+                                      "correct_options":  [
+                                                              2
+                                                          ],
+                                      "explanation":  "The four conditions are mutual exclusion, hold and wait, no preemption and circular wait. Preemption being allowed prevents deadlock.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Leader elements",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Print all leader elements of an array: elements that are strictly greater than every element to their right.",
+                          "relevance_to_role":  "A 2026 candidate account lists a leader-element array problem in the coding stage.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Scan from the right; an element is a leader if it exceeds the maximum seen so far; reverse the collected list.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Right-to-left scan",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Strictness",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Order",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Arrays",
+                                               "Scanning"
+                                           ],
+                          "follow_ups":  [
+                                             "What changes if \u0027greater or equal\u0027 is used?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "O(n^2) nested loops",
+                                                  "Wrong order of output"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays"
+                                   ],
+                          "notes":  "Topic reported by one candidate; the problem statement is paraphrased and original in wording.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers, print all leaders in their original left-to-right order. The last element is always a leader.",
+                                         "input_format":  "Line 1: n. Line 2: n integers.",
+                                         "output_format":  "Space-separated leaders.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n16 17 4 3 5 2",
+                                                             "output":  "17 5 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4\n1 2 3 4",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Descending array",
+                                                            "Equal values",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Scan right to left tracking the running maximum.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Descending",
+                                                                        "Ascending",
+                                                                        "Equal",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Web Development",
+                          "subtopic":  "HTML and CSS modification",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "You are given an HTML page with a plain list of cards. Using only CSS, lay the cards out in a responsive three-column grid with equal gaps, and highlight a card on hover.",
+                          "relevance_to_role":  "A 2026 candidate account lists a task of modifying a web UI with HTML/CSS in the coding stage.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Use a container with display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; add a media query to reduce columns on small screens; style .card:hover with a box-shadow or background change. Flexbox with wrap is an alternative.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "CSS grid",
+                                               "Flexbox",
+                                               "Media queries",
+                                               "Hover"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you make it two columns on tablets?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using fixed pixel widths",
+                                                  "Forgetting gap"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "html-css"
+                                   ],
+                          "notes":  "Task type reported by one candidate; the specific brief is an original example.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "SQL",
+                          "subtopic":  "Join across three tables",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tables: Students(id, name), Courses(id, title), Enrollments(student_id, course_id, grade). Write a query listing each student\u0027s name, the course title and grade for all enrollments.",
+                          "relevance_to_role":  "A 2026 candidate account lists a SQL query joining three tables in the coding stage.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "SELECT s.name, c.title, e.grade FROM Enrollments e JOIN Students s ON s.id = e.student_id JOIN Courses c ON c.id = e.course_id; Use LEFT JOIN from Students if students with no enrollment must also appear.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Joins",
+                                               "Foreign keys"
+                                           ],
+                          "follow_ups":  [
+                                             "Show students with no enrollment."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing a join condition (cartesian product)",
+                                                  "Joining on the wrong column"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "sql",
+                                       "joins"
+                                   ],
+                          "notes":  "Task type reported by one candidate; the schema is an original example.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "Arrays",
+                          "subtopic":  "Pair with given sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find two positions whose values add up to a target.",
+                          "relevance_to_role":  "A 2026 aggregated guide says the coding stage has two problems; a candidate account lists three coding-style tasks.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "For each x check whether target - x was seen earlier.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Hash map",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct indexes",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing"
+                                           ],
+                          "follow_ups":  [
+                                             "Return all pairs."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Nested loops",
+                                                  "Reusing the same element"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays",
+                                       "hashing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/?p=54935.",
+                          "coding":  {
+                                         "problem_statement":  "Given n integers and a target, print the 1-based positions i \u003c j of the first pair (scanning left to right by j) whose sum equals the target, or -1 if none.",
+                                         "input_format":  "Line 1: n. Line 2: n integers. Line 3: target.",
+                                         "output_format":  "\u0027i j\u0027 or -1.",
+                                         "constraints":  "2 \u003c= n \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n2 7 11 15\n9",
+                                                             "output":  "1 2",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n1 2 3\n10",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "No pair",
+                                                            "Duplicates",
+                                                            "Negatives"
+                                                        ],
+                                         "expected_algorithm":  "Hash map of seen values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "No pair",
+                                                                        "Duplicates",
+                                                                        "Negatives",
+                                                                        "Large"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Strings",
+                          "subtopic":  "Longest substring without repeating characters",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Find the length of the longest substring without repeating characters.",
+                          "relevance_to_role":  "A 2026 aggregated guide says the coding stage has two problems; a candidate account lists three coding-style tasks.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Move the left edge past the previous occurrence.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Window",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correctness",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Edges",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sliding window"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the substring itself."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute force O(n^2)",
+                                                  "Not moving left correctly"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "strings",
+                                       "sliding-window"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://freshershunt.in/?p=54935.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string, print the length of the longest substring in which no character repeats.",
+                                         "input_format":  "One line: the string.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "abcabcbb",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "bbbbb",
+                                                             "output":  "1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All same",
+                                                            "All distinct",
+                                                            "Empty-like short"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with last-seen index.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "Same",
+                                                                        "Distinct",
+                                                                        "Long"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "Communication",
+                          "subtopic":  "Email tone",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "You must tell a client that a delivery will be two days late. Which sentence is most professional?",
+                          "relevance_to_role":  "Accounts describe an AI-assisted spoken and written communication assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "I regret to inform you that delivery will be two days late; the revised date is 14 March, and I will update you daily.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Tone",
+                                               "Ownership"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you apologise without over-apologising?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Blaming others"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "communication"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "It\u0027s late, sorry.",
+                                                      "I regret to inform you that delivery will be two days late; the revised date is 14 March, and I will update you daily.",
+                                                      "Delivery will be late because the team failed.",
+                                                      "Please wait."
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "State the news clearly, give the new date, and show ownership and next steps without blaming.",
+                                      "distractor_notes":  ""
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Written email task",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Write a short professional email to your manager reporting that your part of a project is delayed and proposing a revised plan.",
+                          "relevance_to_role":  "Accounts describe an AI-assisted spoken and written communication assessment.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Subject line, greeting, one-line summary, reason without blame, impact, revised date and ask, polite close.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you adapt it for a client?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Missing subject",
+                                                  "Blame",
+                                                  "No action plan"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "A written professional email is reported in the communication stage; the scenario is original.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Spoken response",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Speak for one minute on: \u0027Describe a technology you learned recently and how you used it.\u0027",
+                          "relevance_to_role":  "Accounts describe an AI-assisted spoken and written communication assessment.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name the technology, why you learned it, what you built, what went wrong and what you learned. Keep a steady pace.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you teach it to a beginner?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Too general",
+                                                  "Fillers",
+                                                  "No example"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-001",
+                          "round_id":  "R5",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Abstract class vs interface",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the difference between an abstract class and an interface? When would you pick each?",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An abstract class can hold state and partial implementation and supports single inheritance; an interface defines a contract (and default methods in modern languages) and a class can implement several. Use abstract classes for shared base behaviour, interfaces for capabilities.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Abstract class",
+                                               "Interface",
+                                               "Multiple inheritance"
+                                           ],
+                          "follow_ups":  [
+                                             "Can an interface have a constructor?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying interfaces can hold instance state"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-002",
+                          "round_id":  "R5",
+                          "topic":  "DBMS",
+                          "subtopic":  "ACID properties",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain the ACID properties with a bank-transfer example.",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Atomicity: both debit and credit happen or neither. Consistency: totals remain valid. Isolation: concurrent transfers do not interfere. Durability: committed changes survive failures.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Transactions",
+                                               "ACID"
+                                           ],
+                          "follow_ups":  [
+                                             "What is a dirty read?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing consistency and isolation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "transactions"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-003",
+                          "round_id":  "R5",
+                          "topic":  "DBMS",
+                          "subtopic":  "Indexing",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is an index? What are the trade-offs of adding one?",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "An index is a data structure (often a B-tree) that speeds up lookups on columns. It makes reads faster but uses space and slows inserts, updates and deletes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Indexes",
+                                               "Trade-offs"
+                                           ],
+                          "follow_ups":  [
+                                             "Which columns should you index?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Indexing every column"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "indexing"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-004",
+                          "round_id":  "R5",
+                          "topic":  "SQL",
+                          "subtopic":  "Employees above department average",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a query to list employees whose salary is above the average salary of their department.",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "SELECT e.* FROM Employees e WHERE e.salary \u003e (SELECT AVG(salary) FROM Employees WHERE dept_id = e.dept_id); or join with a grouped subquery.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Correlated subquery",
+                                               "Aggregates"
+                                           ],
+                          "follow_ups":  [
+                                             "Return the department average as a column as well."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Comparing to the global average"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "sql"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-005",
+                          "round_id":  "R5",
+                          "topic":  "System Design",
+                          "subtopic":  "Scale to 10,000 users",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Your web application must now serve 10,000 concurrent users. What would you change?",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Add a load balancer with several stateless app instances, cache hot data, index and tune the database, use read replicas, offload static assets to a CDN, and monitor.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Scaling",
+                                               "Caching",
+                                               "Load balancing"
+                                           ],
+                          "follow_ups":  [
+                                             "Where would you expect the first bottleneck?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Only adding hardware"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "design"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-006",
+                          "round_id":  "R5",
+                          "topic":  "Cloud Computing",
+                          "subtopic":  "Cloud basics",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is cloud computing and what are its advantages?",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "On-demand delivery of compute, storage and services over the internet. Advantages: pay-as-you-go cost, elasticity, quick provisioning, reliability and global reach. Models: IaaS, PaaS, SaaS.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Cloud",
+                                               "Elasticity"
+                                           ],
+                          "follow_ups":  [
+                                             "Name one risk."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing cloud with hosting"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cloud"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/, https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-007",
+                          "round_id":  "R5",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Your project",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Pick one project on your resume: explain the architecture, your part, and one design decision you would change.",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Describe components, data flow, your ownership and a trade-off made, then a realistic improvement.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct and complete",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Clear example",
+                                             "weight":  2
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs or edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ownership",
+                                               "Architecture"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you test it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Cannot explain own code"
+                                              ],
+                          "suggested_time_min":  7,
+                          "tags":  [
+                                       "project"
+                                   ],
+                          "notes":  "Resume and project questions are reported in the interview round.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-008",
+                          "round_id":  "R5",
+                          "topic":  "HR",
+                          "subtopic":  "Strengths and weaknesses",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "What are your strengths and one weakness you are working on?",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Name a relevant strength with proof, a real weakness with concrete steps to improve.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Relevant",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Professional",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How do others describe you?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Fake weakness",
+                                                  "No evidence"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr"
+                                   ],
+                          "notes":  "The topic is reported for this stage in candidate or editorial accounts; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/post/8381531/accenture-interview-experience-2026-fres-wj1a/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "ACN-AASE-R5-009",
+                          "round_id":  "R5",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Disagreement in a team",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Tell me about a time you disagreed with a teammate about how to do something. What happened?",
+                          "relevance_to_role":  "Accounts describe a roughly 30-minute interview mixing introduction, projects, technical basics and HR questions.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A specific disagreement resolved with data and respect.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collaboration"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you learn?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague story",
+                                                  "No outcome"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral"
+                                   ],
+                          "notes":  "Topic comes from an editorial source that does not attribute the question to a candidate; the item itself is an original practice question. Topic context only (no candidate attribution): https://jobrise.io/en/blog/accenture-interview-questions-freshers-2026/.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Collaboration",
+                                             "star_guidance":  "Situation: the disagreement. Action: how you listened and proposed evidence. Result: the outcome.",
+                                             "positive_signals":  [
+                                                                      "Listens",
+                                                                      "Uses data",
+                                                                      "Reaches a decision"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames",
+                                                                      "Avoids the topic"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}
