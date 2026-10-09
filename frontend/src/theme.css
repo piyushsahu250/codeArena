@@ -879,3 +879,7 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   /* a wide table scrolls inside its own box (rule above); the container around it must not grow to the table's width and drag the page with it */
   *:has(> table), *:has(> div > table) { min-width: 0; max-width: 100%; }
 }
+
+/* Recharts draws its SVG at an explicit pixel width and only re-measures after the container resizes: when the window narrows (a phone rotating from
+   landscape to portrait) the old, wider chart briefly -- or, inside a grid, persistently -- kept the page scrolling sideways. Clip it to its container. */
+.recharts-responsive-container, .recharts-wrapper { max-width: 100% !important; overflow: hidden; }
