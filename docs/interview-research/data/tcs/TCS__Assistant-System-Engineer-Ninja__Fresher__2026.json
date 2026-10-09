@@ -1,0 +1,1276 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "TCS",
+                     "role":  "Assistant System Engineer (TCS Ninja)",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://tcs.com/careers/india/tcs-fresher-hiring-nqt-2025",
+                     "job_description_summary":  "TCS hires fresh graduates (B.E./B.Tech., M.E./M.Tech., MCA, M.Sc./M.S.) through one integrated National Qualifier Test (NQT) held on TCS iON. Part A (Foundation, 75 min) covers numerical, verbal and reasoning ability; Part B (Advanced, 115 min) covers advanced quantitative and reasoning ability and 90 minutes of advanced coding. Performance in the test routes candidates to the Prime, Digital or Ninja track (listed fresher CTC: Prime 9.0 LPA, Digital 7.0 LPA, Ninja 3.36 LPA for UG), followed by interviews.",
+                     "required_skills":  [
+                                             "Numerical, verbal and reasoning aptitude",
+                                             "Advanced coding in C, C++, Java, Python or C#",
+                                             "Programming fundamentals and OOP",
+                                             "Data structures and algorithms",
+                                             "DBMS and SQL",
+                                             "Operating system basics",
+                                             "Project explanation",
+                                             "Communication and willingness to relocate"
+                                         ],
+                     "limitations":  [
+                                         "The official TCS NQT page lists the test structure and CTC but names no job roles, no interview rounds and no 2026 dates; interview-round details come from secondary sources and candidate reports.",
+                                         "Sources disagree on whether Ninja candidates face a coding section and on whether the coding section has 2 or 3 problems; coding rounds are therefore labeled REPORTED, not DOCUMENTED.",
+                                         "Candidate reports are anonymous public summaries (careerforfreshers.com, prepinsta.com) and cannot be independently verified; they are marked UNVERIFIED. Report months (April to August 2026) come from the source text, but the article publication dates are not shown.",
+                                         "The \u0027real questions\u0027 lists on jobrise.io and hirist.tech cite no candidate reports, so they were used only as topic context, not as evidence that TCS asked a question.",
+                                         "Several items come from a 2023 GeeksforGeeks Digital-track report and are labeled low confidence.",
+                                         "Ninja, Digital and Prime are hiring tracks, not official job titles; the title Assistant System Engineer comes from a candidate report.",
+                                         "Aptitude MCQs and the two Prime coding problems marked D are original practice items, not reported questions.",
+                                         "Cutoff percentiles and track-wise round counts quoted by secondary guides are unofficial and were not used as facts.",
+                                         "Evidence from other tracks: a few questions rest on reports from a different TCS track or on a 2023 report; they are marked NEEDS_REVIEW or low confidence and noted in each question.",
+                                         "Coverage gaps: aptitude has only a handful of practice items against a much larger real test; graphs, trees, dynamic programming and system design are not covered because no 2026 report in the sources mentions them for freshers."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://tcs.com/careers/india/tcs-fresher-hiring-nqt-2025",
+                        "title":  "TCS fresher hiring: National Qualifier Test",
+                        "publisher":  "tcs.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Official TCS page; undated. Documents test sections and pay bands, not interview questions. Could not be re-opened on 2026-10-09 (HTTP 403 to the audit tool)."
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://prepinsta.com/interview-preparation/tcs-interview-experience/",
+                        "title":  "TCS interview experience (Prepinsta)",
+                        "publisher":  "prepinsta.com",
+                        "published_on":  "2026-02-25",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Page dated 2026-02-25; individual reports are undated."
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://careerforfreshers.com/companies/tcs-careers/tcs-interview-experiences-2026-real-candidate-experiences-questions-preparation-tips/",
+                        "title":  "TCS Interview Experiences 2026: real candidate experiences, questions, preparation tips",
+                        "publisher":  "careerforfreshers.com",
+                        "published_on":  "2026-09-07",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated anonymous candidate accounts; cannot be independently verified. Publication date read from the page on 2026-10-09."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "NQT Foundation Aptitude",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "DOCUMENTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "NQT Coding",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "TCS-NINJA-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Numerical Ability",
+                          "subtopic":  "Profit and discount",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "A retailer marks a product 25% above its cost price and then gives a 10% discount on the marked price. What is the retailer\u0027s profit percentage?",
+                          "relevance_to_role":  "The official TCS NQT page lists Numerical, Verbal and Reasoning ability as the Foundation section taken by every fresher.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "12.5%",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Successive percentages",
+                                               "Marked price vs cost price"
+                                           ],
+                          "follow_ups":  [
+                                             "What discount would make the profit exactly 10%?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Adding +25% and -10% to get 15%",
+                                                  "Applying the discount to the cost price"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "numerical",
+                                       "percentages"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "10%",
+                                                      "12.5%",
+                                                      "15%",
+                                                      "17.5%"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Take cost = 100. Marked price = 125. Selling price = 125 x 0.90 = 112.5. Profit = 12.5%.",
+                                      "distractor_notes":  "Adding +25% and -10% gives 15%, the most common trap. 10% ignores the markup. 17.5% is a plausible-looking miscalculation."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Verbal Ability",
+                          "subtopic":  "Subject-verb agreement",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Choose the option that correctly completes the sentence: \u0027The team of engineers ___ presenting its design to the client tomorrow.\u0027",
+                          "relevance_to_role":  "The official TCS NQT page lists Numerical, Verbal and Reasoning ability as the Foundation section taken by every fresher.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "is",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Collective nouns",
+                                               "Subject-verb agreement"
+                                           ],
+                          "follow_ups":  [
+                                             "How would the verb change in \u0027The engineers on the team ___ presenting\u0027?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Matching the verb to \u0027engineers\u0027 instead of \u0027team\u0027",
+                                                  "Ignoring the pronoun clue"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "verbal",
+                                       "grammar"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "is",
+                                                      "are",
+                                                      "were",
+                                                      "have"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "\u0027Team\u0027 is a collective noun treated as a single unit here, and the pronoun \u0027its\u0027 confirms a singular subject, so \u0027is\u0027 fits.",
+                                      "distractor_notes":  "\"are\" agrees with \"engineers\" instead of the singular subject \"team\". \"were\" is the wrong tense for \"tomorrow\". \"have\" does not fit with \"presenting\"."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Reasoning Ability",
+                          "subtopic":  "Number series",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Find the next number in the series: 3, 6, 11, 18, 27, ?",
+                          "relevance_to_role":  "The official TCS NQT page lists Numerical, Verbal and Reasoning ability as the Foundation section taken by every fresher.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "38",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Second-order differences",
+                                               "Pattern spotting"
+                                           ],
+                          "follow_ups":  [
+                                             "What is the 10th term of this series?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming a constant difference",
+                                                  "Arithmetic slips with odd differences"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning",
+                                       "series"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "36",
+                                                      "38",
+                                                      "39",
+                                                      "40"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Differences are 3, 5, 7, 9, so the next difference is 11 and 27 + 11 = 38.",
+                                      "distractor_notes":  "36 repeats the last difference of 9 instead of continuing the pattern 3, 5, 7, 9, 11. 39 and 40 are arithmetic slips."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Numerical Ability",
+                          "subtopic":  "Time and work",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Worker A can finish a job in 12 days and worker B can finish the same job in 18 days. Working together, how many days do they need?",
+                          "relevance_to_role":  "The official TCS NQT page lists Numerical, Verbal and Reasoning ability as the Foundation section taken by every fresher.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "7.2 days",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Work rate",
+                                               "Reciprocal addition"
+                                           ],
+                          "follow_ups":  [
+                                             "If B leaves after 4 days of joint work, how long does A need to finish alone?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Averaging 12 and 18",
+                                                  "Adding the days instead of the rates"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "numerical",
+                                       "time-work"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "6",
+                                                      "7.2",
+                                                      "7.5",
+                                                      "8"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Combined rate = 1/12 + 1/18 = 5/36 of the job per day, so the time is 36/5 = 7.2 days.",
+                                      "distractor_notes":  "Averaging 12 and 18 gives 15, which is not offered; 6, 7.5 and 8 are estimates that ignore adding the work rates."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R1-005",
+                          "round_id":  "R1",
+                          "topic":  "Reasoning Ability",
+                          "subtopic":  "Direction sense",
+                          "question_type":  "MCQ",
+                          "difficulty":  "EASY",
+                          "prompt":  "Riya walks 5 km north, turns right and walks 3 km, then turns right again and walks 5 km. How far, and in which direction, is she from her starting point?",
+                          "relevance_to_role":  "The official TCS NQT page lists Numerical, Verbal and Reasoning ability as the Foundation section taken by every fresher.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "3 km east",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Direction sense",
+                                               "Coordinate tracking"
+                                           ],
+                          "follow_ups":  [
+                                             "What if the last turn had been to the left?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Confusing which way a right turn points",
+                                                  "Adding all distances"
+                                              ],
+                          "suggested_time_min":  2,
+                          "tags":  [
+                                       "reasoning",
+                                       "directions"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "3 km west",
+                                                      "3 km east",
+                                                      "5 km north",
+                                                      "8 km east"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "North 5, then east 3, then south 5 brings her back to the starting latitude, 3 km east of the start.",
+                                      "distractor_notes":  "3 km west reverses east and west. 5 km north ignores the last leg. 8 km east adds the distances instead of tracking position."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Strings and Numbers",
+                          "subtopic":  "Positional digit sums",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "A number is given as a string of up to 100 digits. Number its positions from the left starting at 1. Return the sum of digits at odd positions minus the sum of digits at even positions.",
+                          "relevance_to_role":  "A candidate-reported NQT coding problem; checks careful string handling when the number does not fit in a normal integer type.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Iterate over characters, add digits at even 0-based indexes and subtract digits at odd 0-based indexes.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct parity handling",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Reads input as string, not integer",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Handles edge cases",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "String indexing",
+                                               "Parity",
+                                               "Avoiding integer overflow"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you solve it if the number was a stream of unknown length?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Converting to int and overflowing",
+                                                  "Off-by-one on the position parity"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "strings",
+                                       "easy"
+                                   ],
+                          "notes":  "Reported by one candidate on the Prepinsta page (page dated 2026-02-25, candidate report undated). Wording, limits and samples are original.",
+                          "coding":  {
+                                         "problem_statement":  "Given a non-negative number as a string of at most 100 digits, return (sum of digits at odd positions) - (sum of digits at even positions), counting positions from the left starting at 1.",
+                                         "input_format":  "One line: the digit string.",
+                                         "output_format":  "One integer (may be negative).",
+                                         "constraints":  "1 \u003c= length \u003c= 100; digits only.",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "12345",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "1999",
+                                                             "output":  "-8",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single digit",
+                                                            "Result is negative",
+                                                            "All zeros",
+                                                            "Maximum length 100"
+                                                        ],
+                                         "expected_algorithm":  "Read as a string and add or subtract each digit by index parity.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "Single digit",
+                                                                        "Negative result",
+                                                                        "All zeros",
+                                                                        "Length 100",
+                                                                        "Alternating 9 and 0"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Number Theory",
+                          "subtopic":  "Primality test",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given an integer n, decide whether it is prime. Your solution must run fast for n up to one billion.",
+                          "relevance_to_role":  "Prime-number programs are a frequent fresher coding and interview request in 2026 candidate reports.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Handle n \u003c 2, then test divisors from 2 while i*i \u003c= n.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Handles n \u003c 2",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Stops at sqrt(n)",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct output format",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Trial division",
+                                               "Loop bound sqrt(n)"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you list all primes below 10^7?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping up to n",
+                                                  "Treating 1 as prime"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "number-theory",
+                                       "easy"
+                                   ],
+                          "notes":  "Reported in at least two 2026 candidate reports summarized by the source; exact limits are original.",
+                          "coding":  {
+                                         "problem_statement":  "Given an integer n, print Yes if n is prime, otherwise print No.",
+                                         "input_format":  "One line: the integer n.",
+                                         "output_format":  "Yes or No.",
+                                         "constraints":  "1 \u003c= n \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "29",
+                                                             "output":  "Yes",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "91",
+                                                             "output":  "No",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 1",
+                                                            "n = 2",
+                                                            "Perfect squares of primes",
+                                                            "Large prime near 10^9"
+                                                        ],
+                                         "expected_algorithm":  "Trial division up to sqrt(n), skipping even numbers after 2.",
+                                         "time_complexity":  "O(sqrt(n))",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "n = 2",
+                                                                        "Even numbers",
+                                                                        "Square of a prime",
+                                                                        "Large prime"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Second largest distinct element",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Given an array of integers, find its second largest distinct value, or report that none exists.",
+                          "relevance_to_role":  "Reported in a 2026 candidate account; tests single-pass reasoning and duplicate handling.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Keep two variables; update the second only when a value is strictly between the two.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Handles duplicate maximum",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Single pass",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Handles no-answer case",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Single pass",
+                                               "Distinct values"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you find the k-th largest distinct value?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Returning the maximum twice for duplicates",
+                                                  "Sorting without removing duplicates"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "arrays",
+                                       "easy"
+                                   ],
+                          "notes":  "Reported by one candidate (April 2026) in a public report summarized by the source.",
+                          "coding":  {
+                                         "problem_statement":  "Given an array of n integers, print the second largest distinct value. Print -1 if there is no such value.",
+                                         "input_format":  "Line 1: n. Line 2: n space-separated integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000; -10^9 \u003c= a[i] \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "6\n4 9 9 2 7 1",
+                                                             "output":  "7",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3\n5 5 5",
+                                                             "output":  "-1",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All elements equal",
+                                                            "n = 1",
+                                                            "Duplicates of the maximum",
+                                                            "Negative numbers"
+                                                        ],
+                                         "expected_algorithm":  "Single pass tracking the largest and second largest distinct values.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 1",
+                                                                        "All equal",
+                                                                        "Duplicate maximum",
+                                                                        "Negatives",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Reverse a string manually",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Reverse a given line of text without relying on a built-in reverse helper.",
+                          "relevance_to_role":  "String reversal appears in several 2026 candidate reports for both the test and the interview.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Swap characters from both ends moving inward until the pointers cross.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct output",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Two-pointer or equivalent",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Handles spaces",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Two pointers",
+                                               "In-place swap"
+                                           ],
+                          "follow_ups":  [
+                                             "Reverse the order of words instead of characters."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using slicing when the interviewer asked for a manual approach",
+                                                  "Off-by-one at the middle"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "strings",
+                                       "easy"
+                                   ],
+                          "notes":  "Reported in at least two 2026 candidate accounts summarized by the source.",
+                          "coding":  {
+                                         "problem_statement":  "Given a line of printable ASCII text (spaces allowed), print it reversed character by character.",
+                                         "input_format":  "One line of text.",
+                                         "output_format":  "The reversed text.",
+                                         "constraints":  "1 \u003c= length \u003c= 1000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "TCS Ninja",
+                                                             "output":  "ajniN SCT",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "a",
+                                                             "output":  "a",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single character",
+                                                            "Spaces inside the text",
+                                                            "Palindrome",
+                                                            "Maximum length"
+                                                        ],
+                                         "expected_algorithm":  "Two-pointer swap on a character array.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1) extra",
+                                         "hidden_test_categories":  [
+                                                                        "Single character",
+                                                                        "Spaces",
+                                                                        "Palindrome",
+                                                                        "Length 1000",
+                                                                        "Digits and symbols"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Python",
+                          "subtopic":  "Lists and tuples",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compare a list and a tuple in Python. When would you pick each?",
+                          "relevance_to_role":  "Reported in a candidate account where Python was the preferred language; checks language fundamentals.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Lists are mutable and tuples are immutable. Tuples whose elements are hashable can be dictionary keys or set members, and they signal fixed data. Lists suit collections that change; tuples suit records and return values.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "States mutability difference",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Mentions hashability or use cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Gives a clear example",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Mutability",
+                                               "Hashability",
+                                               "Use cases"
+                                           ],
+                          "follow_ups":  [
+                                             "Can a tuple contain a list? What happens if you modify that list?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying tuples are always faster without caveats",
+                                                  "Forgetting a tuple can hold mutable items"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "python",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Reported by two sources; the exact interview year of one report is not given.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Programming Fundamentals",
+                          "subtopic":  "Call by value and call by reference",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain call by value and call by reference. How does your preferred language handle argument passing?",
+                          "relevance_to_role":  "Reported in a technical-interview account; tests how the candidate reasons about function arguments.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Call by value copies the argument, so changes inside the function do not affect the caller. Call by reference passes an alias, so changes are visible to the caller. C++ supports both through references and pointers; Java always passes values, and for objects the value is a copy of the reference; Python passes object references.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Defines both correctly",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Language-specific detail",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Argument passing",
+                                               "References",
+                                               "Aliasing"
+                                           ],
+                          "follow_ups":  [
+                                             "Does swapping two ints inside a function change them in the caller? In C, C++ and Java?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying Java passes objects by reference",
+                                                  "Mixing up pointers and references"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "functions",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Overloading and overriding",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between method overloading and method overriding?",
+                          "relevance_to_role":  "Reported in a technical-interview account; polymorphism is a core entry-level topic.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Overloading is multiple methods with the same name and different parameter lists in the same scope, resolved at compile time. Overriding redefines an inherited method with the same signature in a subclass, resolved at run time. Static, private and final methods cannot be overridden.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct definitions",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Compile-time vs run-time",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Polymorphism",
+                                               "Binding",
+                                               "Method signature"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you overload by return type alone?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Claiming return type alone distinguishes overloads",
+                                                  "Calling both run-time polymorphism"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "oop",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "DBMS",
+                          "subtopic":  "Primary key and unique key",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between a primary key and a unique key?",
+                          "relevance_to_role":  "Reported in two candidate accounts; key constraints are a standard DBMS screening question.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A table has one primary key and it cannot be NULL; it uniquely identifies each row. A table can have several unique keys, and most databases allow NULLs in them (how many NULLs differs by vendor). Both enforce uniqueness and are backed by an index.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "One primary key per table",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "NULL behavior",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Indexes or use cases",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Constraints",
+                                               "Entity integrity",
+                                               "Indexes"
+                                           ],
+                          "follow_ups":  [
+                                             "Can a foreign key reference a unique key?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying a unique key can never hold NULL",
+                                                  "Saying a table can have many primary keys"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "dbms",
+                                       "keys"
+                                   ],
+                          "notes":  "Reported by two sources.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "Operating Systems",
+                          "subtopic":  "Deadlock",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What are the necessary conditions for a deadlock, and how can a system prevent one?",
+                          "relevance_to_role":  "Reported in a Ninja-track candidate account; OS concepts are tested at fresher level.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Four conditions must hold together: mutual exclusion, hold and wait, no preemption, and circular wait. Prevention breaks one of them, for example by acquiring all resources at once or imposing a global resource ordering. Avoidance (banker\u0027s algorithm) and detection plus recovery are alternatives.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Names all four conditions",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Gives a prevention method",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Mentions avoidance or detection",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Coffman conditions",
+                                               "Resource ordering",
+                                               "Banker\u0027s algorithm"
+                                           ],
+                          "follow_ups":  [
+                                             "Give a small two-thread example of a deadlock."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing only three conditions",
+                                                  "Confusing deadlock with starvation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "os",
+                                       "deadlock"
+                                   ],
+                          "notes":  "Reported by one candidate (2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Project Discussion",
+                          "subtopic":  "Final-year project walkthrough",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Walk me through your final-year or best project: the problem, your role, the technologies you chose and why, and one challenge you solved.",
+                          "relevance_to_role":  "Candidates across several 2026 accounts were asked to explain a project and its technologies.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S3"
+                                         ],
+                          "times_reported":  5,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A clear problem statement, the candidate\u0027s own contribution, justified technology choices, the output or result, and one concrete technical challenge with how it was solved. The interviewer will probe any detail on the resume.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Clear problem and own role",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Justified technology choices",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Specific challenge and result",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Communication",
+                                               "Ownership",
+                                               "Technical depth"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you redesign if you rebuilt it today?",
+                                             "How did you test it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Describing only team output",
+                                                  "Unable to explain the code they list",
+                                                  "Naming tools without reasons"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "project",
+                                       "resume"
+                                   ],
+                          "notes":  "Reported repeatedly across the sources; counted as five report mentions.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Relocation",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Are you willing to relocate to any TCS location in India? If you have constraints, how would you explain them?",
+                          "relevance_to_role":  "Relocation came up in several candidate-reported HR rounds.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S3"
+                                         ],
+                          "times_reported":  3,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A direct, honest answer. If willing, say so and briefly explain why; if there are constraints, state them calmly rather than hiding them, and ask clarifying questions about the terms.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Direct and honest answer",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Professional tone",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Asks relevant clarifying question",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Honesty",
+                                               "Flexibility",
+                                               "Commitment"
+                                           ],
+                          "follow_ups":  [
+                                             "What would make you hesitate about relocating?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Vague or evasive replies",
+                                                  "Giving a yes you do not mean"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "relocation"
+                                   ],
+                          "notes":  "Relocation confirmed in three accounts on careerforfreshers.com. The service-agreement part was removed because it was not found in that source.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Service-based vs product-based",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "How is working at a service-based company different from a product-based company, and why does a service company appeal to you?",
+                          "relevance_to_role":  "Reported in an HR-round account; tests career awareness and motivation.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Service companies build and run solutions for client businesses across many domains and technologies; product companies build and own a single product line. A good answer is balanced, names real benefits such as domain variety and structured training, and avoids disparaging either.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Accurate contrast",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Genuine motivation",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Balanced tone",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Industry awareness",
+                                               "Motivation"
+                                           ],
+                          "follow_ups":  [
+                                             "Where do you see yourself in five years?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Criticizing product or service companies",
+                                                  "Memorized generic answer"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-NINJA-R4-003",
+                          "round_id":  "R4",
+                          "topic":  "Resilience",
+                          "subtopic":  "Learning from failure",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about a time you failed at something. What did you learn?",
+                          "relevance_to_role":  "Reported in two candidate accounts; entry-level interviews check maturity and learning attitude.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2",
+                                             "S3"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A real, specific failure, owned honestly, followed by the behavior change it caused.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Resilience and learning"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you apply that lesson later?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing a failure with no learning",
+                                                  "Blaming circumstances"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "behavioral",
+                                       "failure"
+                                   ],
+                          "notes":  "Reported by two sources.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Resilience and learning",
+                                             "star_guidance":  "Situation: what you attempted. Task: your goal. Action: what you did and how you responded to the setback. Result: what changed and what you do differently now.",
+                                             "positive_signals":  [
+                                                                      "Takes ownership",
+                                                                      "Names a concrete lesson",
+                                                                      "Shows later improvement"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames others",
+                                                                      "Picks a trivial or fake failure",
+                                                                      "No lesson"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

@@ -1,0 +1,1019 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "TCS",
+                     "role":  "TCS Prime",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://tcs.com/careers/india/tcs-fresher-hiring-nqt-2025",
+                     "job_description_summary":  "TCS hires fresh graduates (B.E./B.Tech., M.E./M.Tech., MCA, M.Sc./M.S.) through one integrated National Qualifier Test (NQT) held on TCS iON. Part A (Foundation, 75 min) covers numerical, verbal and reasoning ability; Part B (Advanced, 115 min) covers advanced quantitative and reasoning ability and 90 minutes of advanced coding. Performance in the test routes candidates to the Prime, Digital or Ninja track (listed fresher CTC: Prime 9.0 LPA, Digital 7.0 LPA, Ninja 3.36 LPA for UG), followed by interviews.",
+                     "required_skills":  [
+                                             "Numerical, verbal and reasoning aptitude",
+                                             "Advanced coding in C, C++, Java, Python or C#",
+                                             "Programming fundamentals and OOP",
+                                             "Data structures and algorithms",
+                                             "DBMS and SQL",
+                                             "Operating system basics",
+                                             "Project explanation",
+                                             "Communication and willingness to relocate"
+                                         ],
+                     "limitations":  [
+                                         "The official TCS NQT page lists the test structure and CTC but names no job roles, no interview rounds and no 2026 dates; interview-round details come from secondary sources and candidate reports.",
+                                         "Sources disagree on whether Ninja candidates face a coding section and on whether the coding section has 2 or 3 problems; coding rounds are therefore labeled REPORTED, not DOCUMENTED.",
+                                         "Candidate reports are anonymous public summaries (careerforfreshers.com, prepinsta.com) and cannot be independently verified; they are marked UNVERIFIED. Report months (April to August 2026) come from the source text, but the article publication dates are not shown.",
+                                         "The \u0027real questions\u0027 lists on jobrise.io and hirist.tech cite no candidate reports, so they were used only as topic context, not as evidence that TCS asked a question.",
+                                         "Several items come from a 2023 GeeksforGeeks Digital-track report and are labeled low confidence.",
+                                         "Ninja, Digital and Prime are hiring tracks, not official job titles; the title Assistant System Engineer comes from a candidate report.",
+                                         "Aptitude MCQs and the two Prime coding problems marked D are original practice items, not reported questions.",
+                                         "Cutoff percentiles and track-wise round counts quoted by secondary guides are unofficial and were not used as facts.",
+                                         "Evidence from other tracks: a few questions rest on reports from a different TCS track or on a 2023 report; they are marked NEEDS_REVIEW or low confidence and noted in each question.",
+                                         "Coverage gaps: aptitude has only a handful of practice items against a much larger real test; graphs, trees, dynamic programming and system design are not covered because no 2026 report in the sources mentions them for freshers."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://www.geeksforgeeks.org/?p=1046245",
+                        "title":  "TCS Digital interview experience (2023)",
+                        "publisher":  "www.geeksforgeeks.org",
+                        "published_on":  "2023-08-09",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Older 2023 Digital-track report; used only at low confidence."
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://careerforfreshers.com/companies/tcs-careers/tcs-interview-experiences-2026-real-candidate-experiences-questions-preparation-tips/",
+                        "title":  "TCS Interview Experiences 2026: real candidate experiences, questions, preparation tips",
+                        "publisher":  "careerforfreshers.com",
+                        "published_on":  "2026-09-07",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated anonymous candidate accounts; cannot be independently verified. Publication date read from the page on 2026-10-09."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "NQT Advanced Coding",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  1,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1",
+                                          "S2"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "Technical Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Managerial Interview",
+                       "category":  "BEHAVIORAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S1"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "TCS-PRIME-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Strings and Sliding Window",
+                          "subtopic":  "Longest substring with at most K distinct characters",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Given a string and an integer k, find the length of the longest substring that contains at most k distinct characters.",
+                          "relevance_to_role":  "An older (2023) Digital-track report included a K-distinct-characters substring problem; sliding-window reasoning matches the Prime coding bar.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "NEEDS_REVIEW",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Expand the right pointer; while the window has more than k distinct characters, shrink from the left.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Sliding window",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Correct shrink logic",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Linear time",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sliding window",
+                                               "Frequency map"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you return the substring itself?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Brute-force O(n^2)",
+                                                  "Not removing zero-count entries when shrinking"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "strings",
+                                       "sliding-window"
+                                   ],
+                          "notes":  "Source is a 2023 report; low confidence. Wording and limits are original, and \u0027at most k\u0027 is used instead of the reported exact phrasing. Track unconfirmed: the evidence is a 2023 Digital-track report, not a Prime report.",
+                          "coding":  {
+                                         "problem_statement":  "Given a string s and an integer k, print the length of the longest substring of s that has at most k distinct characters.",
+                                         "input_format":  "Line 1: the string. Line 2: k.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= |s| \u003c= 100000; 1 \u003c= k \u003c= 26; lowercase letters",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "eceba\n2",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "aaaa\n1",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 1",
+                                                            "k larger than distinct characters in s",
+                                                            "All characters identical",
+                                                            "Maximum length"
+                                                        ],
+                                         "expected_algorithm":  "Sliding window with a frequency map.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k)",
+                                         "hidden_test_categories":  [
+                                                                        "k = 1",
+                                                                        "k \u003e= distinct count",
+                                                                        "All identical",
+                                                                        "All distinct",
+                                                                        "Maximum length"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Strings",
+                          "subtopic":  "Remove duplicate words",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Remove repeated words from a sentence, keeping the first occurrence of each word.",
+                          "relevance_to_role":  "Reported in a May 2026 Prime-track account; checks hashing and tokenization.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Iterate through words; output a word only if it has not been seen.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Preserves order",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Uses a hash set",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Handles edge cases",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hash set",
+                                               "Tokenization"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you ignore case?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Sorting and losing the original order",
+                                                  "Splitting on a single space only"
+                                              ],
+                          "suggested_time_min":  10,
+                          "tags":  [
+                                       "strings",
+                                       "hashing"
+                                   ],
+                          "notes":  "Reported by one candidate (May 2026).",
+                          "coding":  {
+                                         "problem_statement":  "Given a sentence, print it with every repeated word removed, keeping the first occurrence of each word in order. Matching is case-sensitive.",
+                                         "input_format":  "One line: words separated by single spaces.",
+                                         "output_format":  "The resulting sentence.",
+                                         "constraints":  "1 \u003c= number of words \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "to be or not to be",
+                                                             "output":  "to be or not",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "a a a a",
+                                                             "output":  "a",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All words identical",
+                                                            "No duplicates",
+                                                            "Different cases of the same word",
+                                                            "One word"
+                                                        ],
+                                         "expected_algorithm":  "Split into words and keep a hash set of words already seen.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "All identical",
+                                                                        "No duplicates",
+                                                                        "Case difference",
+                                                                        "Single word",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Arrays and Sorting",
+                          "subtopic":  "Merge overlapping intervals",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Merge all overlapping intervals into the smallest set of non-overlapping intervals. Intervals that touch at an endpoint are considered overlapping.",
+                          "relevance_to_role":  "Original Prime-level practice problem; sorting plus a linear sweep is typical of the advanced coding section.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Sort by start, then merge when the next start \u003c= current end.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Sorts first",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Correct merge condition",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Handles nested ranges",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Sorting",
+                                               "Interval merging"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you insert one new interval into an already merged list?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not sorting",
+                                                  "Using \u003c instead of \u003c= for touching intervals",
+                                                  "Not taking max of ends"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "arrays",
+                                       "intervals"
+                                   ],
+                          "notes":  "Original practice question; samples verified by running a reference solution.",
+                          "coding":  {
+                                         "problem_statement":  "Given n closed intervals [l, r], print the merged non-overlapping intervals sorted by start. Intervals that share an endpoint are merged.",
+                                         "input_format":  "Line 1: n. Next n lines: l and r.",
+                                         "output_format":  "One merged interval per line as \u0027l r\u0027.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000; -10^9 \u003c= l \u003c= r \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "4\n1 3\n2 6\n8 10\n15 18",
+                                                             "output":  "1 6\n8 10\n15 18",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "2\n1 4\n4 5",
+                                                             "output":  "1 5",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Single interval",
+                                                            "Touching endpoints",
+                                                            "Nested intervals",
+                                                            "Unsorted input"
+                                                        ],
+                                         "expected_algorithm":  "Sort by start and sweep, extending the current interval.",
+                                         "time_complexity":  "O(n log n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Single",
+                                                                        "Touching",
+                                                                        "Nested",
+                                                                        "Disjoint",
+                                                                        "Unsorted",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R1-004",
+                          "round_id":  "R1",
+                          "topic":  "Arrays and Hashing",
+                          "subtopic":  "Subarrays with a given sum",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Count the contiguous subarrays whose elements add up to exactly k. The array may contain negative numbers.",
+                          "relevance_to_role":  "Original Prime-level practice problem on prefix sums; negative values rule out a simple sliding window.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "For each prefix sum, add the count of earlier prefixes equal to prefix - k.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Prefix-sum insight",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Hash-map counting",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Initializes {0:1}",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Prefix sums",
+                                               "Hash map"
+                                           ],
+                          "follow_ups":  [
+                                             "Why does a sliding window fail here?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "O(n^2) brute force",
+                                                  "Sliding window with negatives",
+                                                  "Forgetting the empty prefix"
+                                              ],
+                          "suggested_time_min":  20,
+                          "tags":  [
+                                       "arrays",
+                                       "prefix-sum"
+                                   ],
+                          "notes":  "Original practice question; samples verified by running a reference solution.",
+                          "coding":  {
+                                         "problem_statement":  "Given an array of n integers and an integer k, print the number of contiguous subarrays whose sum equals k.",
+                                         "input_format":  "Line 1: n and k. Line 2: n integers.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000; -1000 \u003c= a[i] \u003c= 1000; |k| \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 3\n1 2 1 2 1",
+                                                             "output":  "4",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "3 0\n1 -1 0",
+                                                             "output":  "3",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "Negative numbers",
+                                                            "Zeros",
+                                                            "k = 0",
+                                                            "No valid subarray"
+                                                        ],
+                                         "expected_algorithm":  "Prefix sums with a hash map of prefix frequencies.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(n)",
+                                         "hidden_test_categories":  [
+                                                                        "Negatives",
+                                                                        "Zeros",
+                                                                        "k = 0",
+                                                                        "None valid",
+                                                                        "Maximum size",
+                                                                        "Many equal prefixes"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Web Security",
+                          "subtopic":  "JSON Web Token structure",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe the structure of a JSON Web Token and how a server verifies one.",
+                          "relevance_to_role":  "JWT structure was asked in a May 2026 Prime-track account.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A JWT has three Base64URL-encoded parts: header (algorithm, type), payload (claims such as subject and expiry) and signature. The signature is computed over header.payload with a secret (HMAC) or private key (RSA/ECDSA). The server recomputes or verifies the signature and checks exp, issuer and audience. The payload is encoded, not encrypted, so no secrets belong in it.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Three parts explained",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Verification steps",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Not encrypted",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "JWT",
+                                               "Signatures",
+                                               "Claims"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you revoke a JWT before it expires?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Calling the payload encrypted",
+                                                  "Skipping expiry and audience checks"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "security",
+                                       "jwt"
+                                   ],
+                          "notes":  "Reported by one candidate (May 2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "DBMS",
+                          "subtopic":  "Transactions and write-ahead logging",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which SQL commands control a transaction, and what does write-ahead logging guarantee?",
+                          "relevance_to_role":  "Transaction commands and WAL appeared in a May 2026 Prime-track account.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "BEGIN or START TRANSACTION, COMMIT, ROLLBACK and SAVEPOINT control a transaction, supporting ACID properties. With write-ahead logging, changes are recorded in a durable log before data pages are written, so after a crash the database can redo committed work and undo uncommitted work, giving durability and atomicity.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct commands",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "ACID link",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "WAL idea",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Transactions",
+                                               "ACID",
+                                               "WAL"
+                                           ],
+                          "follow_ups":  [
+                                             "What are isolation levels?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing up COMMIT and SAVEPOINT",
+                                                  "Saying WAL stores only successful writes"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "transactions"
+                                   ],
+                          "notes":  "Reported by one candidate (May 2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "AI Systems",
+                          "subtopic":  "LLM agent architecture",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "HARD",
+                          "prompt":  "Sketch the architecture of a simple LLM-based agent that answers customer queries by calling internal tools. What are the main components and failure modes?",
+                          "relevance_to_role":  "An August 2026 Prime-track AI/ML account was asked to design an AI-agent architecture.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Main parts: a language model as planner, a tool registry with typed schemas, state and memory (conversation plus retrieved knowledge), an orchestration loop (observe, decide, act), guardrails and logging. Failure modes: wrong or invented tool calls, loops, prompt injection, stale data, cost and latency. Mitigate with validation, step limits, evaluation sets and human escalation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Core components",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Orchestration loop",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Failure modes and mitigations",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Agents",
+                                               "Tool calling",
+                                               "Guardrails",
+                                               "Evaluation"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you test the agent before launch?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Naming frameworks without explaining the loop",
+                                                  "Ignoring security and cost"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "ai",
+                                       "agents"
+                                   ],
+                          "notes":  "Reported by one candidate (August 2026); the report also mentioned a graph-based agent framework.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-004",
+                          "round_id":  "R2",
+                          "topic":  "Machine Learning",
+                          "subtopic":  "Bias, variance and underfitting",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Explain the bias-variance trade-off and how you recognise underfitting.",
+                          "relevance_to_role":  "Bias, variance and underfitting were part of a Prime-track AI/ML account in August 2026.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "High bias means the model is too simple and underfits: both training and validation errors are high. High variance means it overfits: low training error but high validation error. Balance with model capacity, regularization, more data and cross-validation.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Defines both clearly",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Symptoms in errors",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Remedies",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Bias",
+                                               "Variance",
+                                               "Regularization"
+                                           ],
+                          "follow_ups":  [
+                                             "How would a learning curve show underfitting?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Mixing up bias and variance",
+                                                  "Saying more data always fixes underfitting"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ml",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Reported by one candidate (August 2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-005",
+                          "round_id":  "R2",
+                          "topic":  "Generative AI",
+                          "subtopic":  "Reducing hallucinations with RAG",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How would you reduce hallucinations in an LLM application that answers questions from company documents?",
+                          "relevance_to_role":  "Hallucination and retrieval topics appeared in two 2026 AI/ML-track accounts.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Use retrieval-augmented generation: chunk and embed documents, retrieve the most relevant passages (optionally re-ranked), and instruct the model to answer only from them with citations and to abstain when evidence is missing. Lower the temperature, evaluate with test questions, and add human review for high-risk answers.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Grounding with retrieval",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Abstention and citations",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Evaluation",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "RAG",
+                                               "Embeddings",
+                                               "Evaluation"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you decide chunk size?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying prompts alone remove hallucinations",
+                                                  "Ignoring retrieval quality"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "ai",
+                                       "rag"
+                                   ],
+                          "notes":  "Reported in two accounts (July and August 2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-006",
+                          "round_id":  "R2",
+                          "topic":  "Data Structures",
+                          "subtopic":  "Browser tab navigation",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Which data structure would you use to let a user move forward and backward between open browser tabs, and what are the operation costs?",
+                          "relevance_to_role":  "An older (2023) TCS Digital report included this data-structure choice question.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "NEEDS_REVIEW",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A doubly linked list lets you move to the next or previous node in O(1) and insert or remove at a known node in O(1). An array with a current index also works for navigation but makes middle insertions O(n).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Chooses a suitable structure",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "States complexities",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Compares an alternative",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Linked lists",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you implement back/forward history?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing a singly linked list without noting backward cost",
+                                                  "No complexity justification"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "ds",
+                                       "linked-list"
+                                   ],
+                          "notes":  "Source is a 2023 report; low confidence. Track unconfirmed: the evidence is a 2023 Digital-track report, not a Prime report.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R2-007",
+                          "round_id":  "R2",
+                          "topic":  "Algorithms",
+                          "subtopic":  "Dijkstra and Floyd-Warshall use cases",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Give a real-world use for Dijkstra\u0027s algorithm and one for Floyd-Warshall, and explain when you would choose each.",
+                          "relevance_to_role":  "An older (2023) TCS Digital report asked for real-life uses of both algorithms.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "NEEDS_REVIEW",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Dijkstra finds shortest paths from one source with non-negative weights in about O((V+E) log V), such as navigation. Floyd-Warshall finds all-pairs shortest paths in O(V^3) and tolerates negative edges without negative cycles, such as a precomputed distance table for a small network. Choose Dijkstra for a single source on large sparse graphs, Floyd-Warshall for small dense graphs needing all pairs.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct use cases",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Complexities",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Negative-edge note",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Shortest paths",
+                                               "Graphs",
+                                               "Complexity"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you use if edges can be negative and you need a single source?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying Dijkstra handles negative edges",
+                                                  "Mixing up single-source and all-pairs"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "graphs",
+                                       "algorithms"
+                                   ],
+                          "notes":  "Source is a 2023 report; low confidence. Track unconfirmed: the evidence is a 2023 Digital-track report, not a Prime report.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Adaptability",
+                          "subtopic":  "Rotation, relocation and role flexibility",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "TCS may rotate you across technologies or locations, or place you in a different role than you hoped for. How would you respond?",
+                          "relevance_to_role":  "Rotational work, relocation and accepting a different role came up in two 2026 Prime/NQT accounts.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A willing but honest answer, backed by a time you adapted to change.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Adaptability"
+                                           ],
+                          "follow_ups":  [
+                                             "Which technology would you least like to work on, and how would you handle it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying yes to everything without any substance"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "adaptability"
+                                   ],
+                          "notes":  "Reported in two accounts; one report also mentioned an unspecified abbreviation (MCP) whose meaning the source did not give.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Adaptability",
+                                             "star_guidance":  "Situation: a time you had to change plans or learn something new quickly. Action: how you adapted. Result: what you gained. Link it to your readiness here.",
+                                             "positive_signals":  [
+                                                                      "Shows openness with a real example",
+                                                                      "Asks about learning support",
+                                                                      "Honest about limits"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Rigid refusal",
+                                                                      "Pretends to have no preferences",
+                                                                      "No example"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "Initiative",
+                          "subtopic":  "Student activities and leadership",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me about a student activity beyond academics where you took initiative, and what you gained from it.",
+                          "relevance_to_role":  "Student activities were discussed in a May 2026 Prime-track account.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A specific activity where the candidate acted first, with a clear outcome and a lesson.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Initiative and leadership"
+                                           ],
+                          "follow_ups":  [
+                                             "How did you get others to join?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Listing activities without detail"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "leadership"
+                                   ],
+                          "notes":  "Reported by one candidate (May 2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Initiative and leadership",
+                                             "star_guidance":  "Situation: the activity or club. Task: the problem or goal. Action: what you started or led. Result: impact and learning.",
+                                             "positive_signals":  [
+                                                                      "Specific initiative",
+                                                                      "Measurable impact",
+                                                                      "Reflects on growth"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Only lists memberships",
+                                                                      "Takes credit for team results",
+                                                                      "No outcome"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TCS-PRIME-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Growth Mindset",
+                          "subtopic":  "Stepping out of your comfort zone",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Describe a time you stepped out of your comfort zone. What happened?",
+                          "relevance_to_role":  "An older (2023) TCS Digital report included this question; confidence is lower.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "NEEDS_REVIEW",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A concrete challenge, how it was approached, and the resulting growth.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Growth mindset"
+                                           ],
+                          "follow_ups":  [
+                                             "What did you do to prepare?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Choosing an example with no real challenge"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "behavioral",
+                                       "growth"
+                                   ],
+                          "notes":  "Source is a 2023 report; used as older context. Track unconfirmed: the evidence is a 2023 Digital-track report, not a Prime report.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Growth mindset",
+                                             "star_guidance":  "Situation: what was uncomfortable. Action: the step you took and how you prepared. Result: the outcome and what you do now.",
+                                             "positive_signals":  [
+                                                                      "Real risk taken",
+                                                                      "Prepared and learned",
+                                                                      "Applies lesson later"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Trivial example",
+                                                                      "No reflection",
+                                                                      "Blames others"
+                                                                  ]
+                                         }
+                      }
+                  ]
+}

@@ -1,0 +1,1256 @@
+{
+    "schema_version":  "codearena-interview-import/1",
+    "research":  {
+                     "company":  "TCS",
+                     "role":  "TCS Digital",
+                     "experience_level":  "FRESHER",
+                     "hiring_region":  "India",
+                     "target_year":  2026,
+                     "researched_on":  "2026-10-09",
+                     "researcher":  "Claude (research run 2026-10-09)",
+                     "job_description_url":  "https://tcs.com/careers/india/tcs-fresher-hiring-nqt-2025",
+                     "job_description_summary":  "TCS hires fresh graduates (B.E./B.Tech., M.E./M.Tech., MCA, M.Sc./M.S.) through one integrated National Qualifier Test (NQT) held on TCS iON. Part A (Foundation, 75 min) covers numerical, verbal and reasoning ability; Part B (Advanced, 115 min) covers advanced quantitative and reasoning ability and 90 minutes of advanced coding. Performance in the test routes candidates to the Prime, Digital or Ninja track (listed fresher CTC: Prime 9.0 LPA, Digital 7.0 LPA, Ninja 3.36 LPA for UG), followed by interviews.",
+                     "required_skills":  [
+                                             "Numerical, verbal and reasoning aptitude",
+                                             "Advanced coding in C, C++, Java, Python or C#",
+                                             "Programming fundamentals and OOP",
+                                             "Data structures and algorithms",
+                                             "DBMS and SQL",
+                                             "Operating system basics",
+                                             "Project explanation",
+                                             "Communication and willingness to relocate"
+                                         ],
+                     "limitations":  [
+                                         "The official TCS NQT page lists the test structure and CTC but names no job roles, no interview rounds and no 2026 dates; interview-round details come from secondary sources and candidate reports.",
+                                         "Sources disagree on whether Ninja candidates face a coding section and on whether the coding section has 2 or 3 problems; coding rounds are therefore labeled REPORTED, not DOCUMENTED.",
+                                         "Candidate reports are anonymous public summaries (careerforfreshers.com, prepinsta.com) and cannot be independently verified; they are marked UNVERIFIED. Report months (April to August 2026) come from the source text, but the article publication dates are not shown.",
+                                         "The \u0027real questions\u0027 lists on jobrise.io and hirist.tech cite no candidate reports, so they were used only as topic context, not as evidence that TCS asked a question.",
+                                         "Several items come from a 2023 GeeksforGeeks Digital-track report and are labeled low confidence.",
+                                         "Ninja, Digital and Prime are hiring tracks, not official job titles; the title Assistant System Engineer comes from a candidate report.",
+                                         "Aptitude MCQs and the two Prime coding problems marked D are original practice items, not reported questions.",
+                                         "Cutoff percentiles and track-wise round counts quoted by secondary guides are unofficial and were not used as facts.",
+                                         "Evidence from other tracks: a few questions rest on reports from a different TCS track or on a 2023 report; they are marked NEEDS_REVIEW or low confidence and noted in each question.",
+                                         "Coverage gaps: aptitude has only a handful of practice items against a much larger real test; graphs, trees, dynamic programming and system design are not covered because no 2026 report in the sources mentions them for freshers."
+                                     ]
+                 },
+    "sources":  [
+                    {
+                        "source_id":  "S1",
+                        "kind":  "JOB_DESCRIPTION",
+                        "url":  "https://tcs.com/careers/india/tcs-fresher-hiring-nqt-2025",
+                        "title":  "TCS fresher hiring: National Qualifier Test",
+                        "publisher":  "tcs.com",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Official TCS page; undated. Documents test sections and pay bands, not interview questions. Could not be re-opened on 2026-10-09 (HTTP 403 to the audit tool)."
+                    },
+                    {
+                        "source_id":  "S2",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://careerforfreshers.com/companies/tcs-careers/tcs-interview-experiences-2026-real-candidate-experiences-questions-preparation-tips/",
+                        "title":  "TCS Interview Experiences 2026: real candidate experiences, questions, preparation tips",
+                        "publisher":  "careerforfreshers.com",
+                        "published_on":  "2026-09-07",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Aggregated anonymous candidate accounts; cannot be independently verified. Publication date read from the page on 2026-10-09."
+                    },
+                    {
+                        "source_id":  "S3",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://www.geeksforgeeks.org/?p=1046245",
+                        "title":  "TCS Digital interview experience (2023)",
+                        "publisher":  "www.geeksforgeeks.org",
+                        "published_on":  "2023-08-09",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "Older 2023 Digital-track report; used only at low confidence."
+                    },
+                    {
+                        "source_id":  "S5",
+                        "kind":  "CANDIDATE_REPORT",
+                        "url":  "https://www.techprep.app/blog/tcs-interview-process",
+                        "title":  "",
+                        "publisher":  "www.techprep.app",
+                        "published_on":  "",
+                        "accessed_on":  "2026-10-09",
+                        "reliability_note":  "General interview-process guide; used for one low-confidence topic only."
+                    }
+                ],
+    "rounds":  [
+                   {
+                       "round_id":  "R1",
+                       "name":  "NQT Advanced Aptitude",
+                       "category":  "APTITUDE",
+                       "order":  1,
+                       "evidence":  "DOCUMENTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S1"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R2",
+                       "name":  "NQT Advanced Coding",
+                       "category":  "CODING_ASSESSMENT",
+                       "order":  2,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R3",
+                       "name":  "Technical and Managerial Interview",
+                       "category":  "CORE_TECHNICAL",
+                       "order":  3,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2",
+                                          "S5",
+                                          "S3"
+                                      ]
+                   },
+                   {
+                       "round_id":  "R4",
+                       "name":  "HR Interview",
+                       "category":  "HR",
+                       "order":  4,
+                       "evidence":  "REPORTED",
+                       "duration_min":  null,
+                       "description":  "",
+                       "source_ids":  [
+                                          "S2"
+                                      ]
+                   }
+               ],
+    "questions":  [
+                      {
+                          "question_id":  "TCS-DIGITAL-R1-001",
+                          "round_id":  "R1",
+                          "topic":  "Advanced Quantitative",
+                          "subtopic":  "Compound interest",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is the compound interest on Rs. 10,000 for 2 years at 10% per annum, compounded annually?",
+                          "relevance_to_role":  "The official TCS NQT page lists Advanced Quantitative and Reasoning Ability as part of the Advanced section used for the higher tracks.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Rs. 2,100",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Compound interest",
+                                               "Annual compounding"
+                                           ],
+                          "follow_ups":  [
+                                             "How much is the simple interest for the same period?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using simple interest (Rs. 2,000)",
+                                                  "Forgetting to subtract the principal"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "quant",
+                                       "interest"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Rs. 2,000",
+                                                      "Rs. 2,100",
+                                                      "Rs. 2,200",
+                                                      "Rs. 2,310"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "Amount = 10,000 x 1.1 x 1.1 = 12,100. Compound interest = 12,100 - 10,000 = Rs. 2,100.",
+                                      "distractor_notes":  "Rs. 2,000 is the simple interest, the most common trap. Rs. 2,200 and Rs. 2,310 are plausible-looking miscalculations."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R1-002",
+                          "round_id":  "R1",
+                          "topic":  "Advanced Quantitative",
+                          "subtopic":  "Mixtures and ratios",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Alloy A contains copper and zinc in the ratio 3:2 and alloy B in the ratio 1:4. Equal weights of A and B are melted together. What is the ratio of copper to zinc in the new alloy?",
+                          "relevance_to_role":  "The official TCS NQT page lists Advanced Quantitative and Reasoning Ability as part of the Advanced section used for the higher tracks.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "2:3",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Ratios",
+                                               "Weighted mixtures"
+                                           ],
+                          "follow_ups":  [
+                                             "If the mixed weights were in the ratio 2:1, what would the ratio be?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Not reducing 4:6 to lowest terms",
+                                                  "Averaging the two ratios without converting to fractions of each alloy"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "quant",
+                                       "mixtures"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "2:3",
+                                                      "3:2",
+                                                      "1:1",
+                                                      "5:7"
+                                                  ],
+                                      "correct_options":  [
+                                                              0
+                                                          ],
+                                      "explanation":  "Take 1 unit of each. Copper = 3/5 + 1/5 = 4/5; zinc = 2/5 + 4/5 = 6/5. Ratio = 4:6 = 2:3.",
+                                      "distractor_notes":  "3:2 is the inverted ratio. 1:1 would need equal copper and zinc. 5:7 is a plausible-looking miscalculation from adding the ratio parts."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R1-003",
+                          "round_id":  "R1",
+                          "topic":  "Advanced Reasoning",
+                          "subtopic":  "Syllogisms",
+                          "question_type":  "MCQ",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Statements: All engineers are analysts. Some analysts are managers. Conclusions: I. Some engineers are managers. II. Some managers are analysts. Which conclusion(s) must follow?",
+                          "relevance_to_role":  "The official TCS NQT page lists Advanced Quantitative and Reasoning Ability as part of the Advanced section used for the higher tracks.",
+                          "evidence_class":  "C_INFERRED_FROM_JD",
+                          "source_ids":  [
+                                             "S1"
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "Only II",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Selects the correct option",
+                                             "weight":  6
+                                         },
+                                         {
+                                             "criterion":  "Shows the working or reasoning method",
+                                             "weight":  4
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Syllogisms",
+                                               "Converse of particular statements"
+                                           ],
+                          "follow_ups":  [
+                                             "What extra statement would make conclusion I follow?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Assuming transitivity from \u0027some\u0027",
+                                                  "Rejecting valid converses"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "reasoning",
+                                       "syllogism"
+                                   ],
+                          "notes":  "Section names and durations come from the official TCS NQT page; the item itself is an original practice question.",
+                          "coding":  null,
+                          "mcq":  {
+                                      "options":  [
+                                                      "Only I",
+                                                      "Only II",
+                                                      "Both I and II",
+                                                      "Neither I nor II"
+                                                  ],
+                                      "correct_options":  [
+                                                              1
+                                                          ],
+                                      "explanation":  "\u0027Some analysts are managers\u0027 implies its converse \u0027some managers are analysts\u0027, so II follows. The engineers who are analysts might not be the managers, so I does not necessarily follow.",
+                                      "distractor_notes":  "\"Only I\" and \"Both I and II\" assume transitivity through \"some\". \"Neither\" rejects the valid converse of a particular statement."
+                                  },
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R2-001",
+                          "round_id":  "R2",
+                          "topic":  "Recursion and Math",
+                          "subtopic":  "Fibonacci number",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Compute the n-th Fibonacci number, where F(0) = 0 and F(1) = 1, for n up to 90.",
+                          "relevance_to_role":  "Fibonacci programs appear in two 2026 Digital-track accounts, in both the test and the technical round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Iterate n times keeping the last two values; plain recursion is exponential.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct base cases",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Iterative or memoized",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Uses 64-bit integers",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Iteration",
+                                               "Memoization",
+                                               "Overflow"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you compute F(10^18) modulo 10^9+7?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Naive recursion",
+                                                  "32-bit overflow",
+                                                  "Off-by-one in indexing"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "math",
+                                       "easy"
+                                   ],
+                          "notes":  "Reported in two 2026 candidate accounts summarized by the source; limits are original.",
+                          "coding":  {
+                                         "problem_statement":  "Given n, print F(n) with F(0)=0, F(1)=1 and F(n)=F(n-1)+F(n-2).",
+                                         "input_format":  "One line: n.",
+                                         "output_format":  "One integer.",
+                                         "constraints":  "0 \u003c= n \u003c= 90 (fits in a signed 64-bit integer)",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "10",
+                                                             "output":  "55",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "90",
+                                                             "output":  "2880067194370816120",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "n = 0",
+                                                            "n = 1",
+                                                            "n = 90",
+                                                            "Overflow with 32-bit ints"
+                                                        ],
+                                         "expected_algorithm":  "Iterative loop with two variables.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1)",
+                                         "hidden_test_categories":  [
+                                                                        "n = 0",
+                                                                        "n = 1",
+                                                                        "Small n",
+                                                                        "n = 90",
+                                                                        "Overflow check"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R2-002",
+                          "round_id":  "R2",
+                          "topic":  "Strings",
+                          "subtopic":  "Remove duplicate characters",
+                          "question_type":  "CODING",
+                          "difficulty":  "EASY",
+                          "prompt":  "Remove repeated characters from a string while keeping the first occurrence of each, in order.",
+                          "relevance_to_role":  "Reported in a 2026 Digital/MERN candidate account; checks hashing and string building.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Scan left to right; append a character only if not seen yet.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Preserves order",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Uses a set or array",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Handles edge cases",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Hashing",
+                                               "Order preservation"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you do it with O(1) extra space for lowercase letters only?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Sorting first and losing order",
+                                                  "Treating upper and lower case as the same"
+                                              ],
+                          "suggested_time_min":  12,
+                          "tags":  [
+                                       "strings",
+                                       "hashing"
+                                   ],
+                          "notes":  "Reported by one candidate (2026).",
+                          "coding":  {
+                                         "problem_statement":  "Given a string, print it with every repeated character removed, keeping only the first occurrence of each character in its original order. Matching is case-sensitive.",
+                                         "input_format":  "One line: the string (no spaces).",
+                                         "output_format":  "The resulting string.",
+                                         "constraints":  "1 \u003c= length \u003c= 100000",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "programming",
+                                                             "output":  "progamin",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "aabbcc",
+                                                             "output":  "abc",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "All same characters",
+                                                            "No duplicates",
+                                                            "Mixed case",
+                                                            "Length 100000"
+                                                        ],
+                                         "expected_algorithm":  "One pass with a set of seen characters.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(k) where k is the alphabet size",
+                                         "hidden_test_categories":  [
+                                                                        "All identical",
+                                                                        "No duplicates",
+                                                                        "Mixed case",
+                                                                        "Maximum length",
+                                                                        "Digits and symbols"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R2-003",
+                          "round_id":  "R2",
+                          "topic":  "Arrays",
+                          "subtopic":  "Array rotation",
+                          "question_type":  "CODING",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Rotate an array to the right by k positions, where k can be much larger than the array length.",
+                          "relevance_to_role":  "An older (2023) TCS Digital coding report included array rotation; kept as lower-confidence context.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Take k %= n; reverse the whole array, then reverse the first k and the remaining n-k elements.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Uses k mod n",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Correct direction",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Linear time",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Modulo",
+                                               "Three-reversal trick"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you rotate left instead?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Looping k times (too slow)",
+                                                  "Not reducing k",
+                                                  "Rotating the wrong direction"
+                                              ],
+                          "suggested_time_min":  15,
+                          "tags":  [
+                                       "arrays",
+                                       "rotation"
+                                   ],
+                          "notes":  "Source is a 2023 report; confidence is low. Problem wording and limits are original.",
+                          "coding":  {
+                                         "problem_statement":  "Given an array of n integers and an integer k, print the array after rotating it to the right by k positions.",
+                                         "input_format":  "Line 1: n and k. Line 2: n integers.",
+                                         "output_format":  "n space-separated integers.",
+                                         "constraints":  "1 \u003c= n \u003c= 100000; 0 \u003c= k \u003c= 10^9",
+                                         "samples":  [
+                                                         {
+                                                             "input":  "5 2\n1 2 3 4 5",
+                                                             "output":  "4 5 1 2 3",
+                                                             "explanation":  ""
+                                                         },
+                                                         {
+                                                             "input":  "4 6\n7 8 9 10",
+                                                             "output":  "9 10 7 8",
+                                                             "explanation":  ""
+                                                         }
+                                                     ],
+                                         "edge_cases":  [
+                                                            "k = 0",
+                                                            "k a multiple of n",
+                                                            "k larger than n",
+                                                            "n = 1"
+                                                        ],
+                                         "expected_algorithm":  "Reduce k modulo n, then slice or reverse in three steps.",
+                                         "time_complexity":  "O(n)",
+                                         "space_complexity":  "O(1) with in-place reversals",
+                                         "hidden_test_categories":  [
+                                                                        "k = 0",
+                                                                        "k = n",
+                                                                        "k \u003e n",
+                                                                        "n = 1",
+                                                                        "Maximum size"
+                                                                    ]
+                                     },
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-001",
+                          "round_id":  "R3",
+                          "topic":  "Object-Oriented Programming",
+                          "subtopic":  "Four pillars with an example",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain encapsulation, inheritance, polymorphism and abstraction using one real-world example.",
+                          "relevance_to_role":  "OOP pillars were asked in a 2026 Digital-track technical round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Use one running example, such as a payment system: data and methods bundled with access control (encapsulation), specialized payment types extending a base (inheritance), one pay() call behaving differently per type (polymorphism), and exposing only essential operations through an interface (abstraction).",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "All four correct",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Single coherent example",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Code-level detail",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Encapsulation",
+                                               "Inheritance",
+                                               "Polymorphism",
+                                               "Abstraction"
+                                           ],
+                          "follow_ups":  [
+                                             "Abstract class vs interface?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reciting definitions without an example",
+                                                  "Confusing abstraction with encapsulation"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "oop",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Partial match: candidate accounts report polymorphism and encapsulation questions; the four-pillars form appears in the source preparation section.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-002",
+                          "round_id":  "R3",
+                          "topic":  "C++",
+                          "subtopic":  "Stack vs heap memory",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "In C++, what is the difference between stack and heap memory, and when do you use each?",
+                          "relevance_to_role":  "C++ memory questions were reported in a 2026 Digital-track round.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Stack memory holds local variables with automatic, scope-based lifetime and fast allocation but limited size. Heap memory is allocated at run time with new/malloc, lives until freed, and risks leaks and fragmentation. Prefer stack or smart pointers; use heap for large or dynamically sized data.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Lifetime and size contrast",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Leaks and ownership",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Smart pointers or RAII",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Stack",
+                                               "Heap",
+                                               "RAII"
+                                           ],
+                          "follow_ups":  [
+                                             "What happens on a stack overflow, and how can recursion cause it?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying the heap is always slower for every case",
+                                                  "Forgetting delete or smart pointers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "cpp",
+                                       "memory"
+                                   ],
+                          "notes":  "",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-003",
+                          "round_id":  "R3",
+                          "topic":  "Java",
+                          "subtopic":  "JDK, JRE and JVM",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "What is the difference between the JDK and the JRE, and what does the JVM do?",
+                          "relevance_to_role":  "Reported in a 2026 Digital-track account with Java and MERN topics.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "The JVM executes bytecode. The JRE bundles the JVM with the standard libraries needed to run programs. The JDK includes the JRE plus development tools such as the compiler (javac) and debugger.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct hierarchy",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Mentions bytecode and compiler",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Example",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "JVM",
+                                               "JRE",
+                                               "JDK",
+                                               "Bytecode"
+                                           ],
+                          "follow_ups":  [
+                                             "Why is Java called platform independent?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Reversing the hierarchy",
+                                                  "Saying the JVM compiles source code"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "java",
+                                       "fundamentals"
+                                   ],
+                          "notes":  "Partial match: the source reports JDK versus JRE; the JVM part was added by CodeArena.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-004",
+                          "round_id":  "R3",
+                          "topic":  "SQL",
+                          "subtopic":  "Second-highest salary",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Write a SQL query to find the second-highest salary from an Employee table. How does your query behave when there is no second value?",
+                          "relevance_to_role":  "A second-highest salary query was reported in a 2026 account; it is a very common SQL screening task.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "SELECT MAX(salary) FROM Employee WHERE salary \u003c (SELECT MAX(salary) FROM Employee); this returns NULL if no second value exists. Alternatives: DENSE_RANK() = 2, or SELECT DISTINCT salary ORDER BY salary DESC LIMIT 1 OFFSET 1.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct query",
+                                             "weight":  5
+                                         },
+                                         {
+                                             "criterion":  "Handles ties and missing value",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Offers an alternative",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Subqueries",
+                                               "Window functions",
+                                               "DISTINCT"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you get the N-th highest salary?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Using plain ORDER BY LIMIT 1 OFFSET 1 without DISTINCT",
+                                                  "Ignoring duplicate top salaries"
+                                              ],
+                          "suggested_time_min":  6,
+                          "tags":  [
+                                       "sql",
+                                       "query"
+                                   ],
+                          "notes":  "Reported by one candidate (April 2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-005",
+                          "round_id":  "R3",
+                          "topic":  "DBMS",
+                          "subtopic":  "Views and triggers",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "What is a database view and what is a trigger? Give one practical use of each.",
+                          "relevance_to_role":  "Reported by a Ninja-track candidate; equally relevant to Digital database discussions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "NEEDS_REVIEW",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A view is a stored query presented as a virtual table, used to simplify queries or restrict column access. A trigger is code that runs automatically on INSERT, UPDATE or DELETE, used for auditing or enforcing rules. Triggers add hidden logic and cost, so use them sparingly.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct definitions",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Practical use for each",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Trade-offs",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Views",
+                                               "Triggers",
+                                               "Access control"
+                                           ],
+                          "follow_ups":  [
+                                             "Can you update data through a view?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Saying a view stores its own copy of data (unless materialized)",
+                                                  "Overusing triggers"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "dbms",
+                                       "views"
+                                   ],
+                          "notes":  "Reported by a Ninja-track candidate; track fit for Digital not confirmed.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-006",
+                          "round_id":  "R3",
+                          "topic":  "Backend and Database Design",
+                          "subtopic":  "Orders data model",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "For a simple online-order backend (for example in Spring Boot), design the tables, keys and relationships for customers, products and orders, and explain how an order total is computed.",
+                          "relevance_to_role":  "A 2026 Digital account described a Spring Boot project plus backend and database design questions.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Tables: Customer, Product, Order (customer_id FK) and OrderItem (order_id, product_id, quantity, unit_price) to resolve the many-to-many link. Store the unit price at order time. Total = SUM(quantity * unit_price) per order. Add primary keys, foreign keys and indexes on foreign keys.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct entities and relationships",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Resolves many-to-many",
+                                             "weight":  3
+                                         },
+                                         {
+                                             "criterion":  "Price snapshot and total",
+                                             "weight":  3
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Normalization",
+                                               "Foreign keys",
+                                               "Join tables"
+                                           ],
+                          "follow_ups":  [
+                                             "How would you handle discounts or taxes?",
+                                             "How would you paginate the order list API?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Storing products in the order table as a list",
+                                                  "Reading the live product price for old orders"
+                                              ],
+                          "suggested_time_min":  8,
+                          "tags":  [
+                                       "design",
+                                       "backend"
+                                   ],
+                          "notes":  "The source mentions a Spring Boot project and database design; the orders scenario is a generalisation by CodeArena.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-007",
+                          "round_id":  "R3",
+                          "topic":  "Java",
+                          "subtopic":  "Exception handling",
+                          "question_type":  "TECHNICAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Explain try, catch and finally in Java, and the difference between checked and unchecked exceptions.",
+                          "relevance_to_role":  "Exception handling is a standard Java fundamentals topic for freshers; written as a practice question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "try holds code that may throw; catch handles specific exceptions; finally runs for cleanup regardless of outcome. Checked exceptions (such as IOException) must be declared or handled at compile time; unchecked exceptions (RuntimeException subclasses) need not be. try-with-resources closes resources automatically.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Correct blocks",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Checked vs unchecked",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "try-with-resources",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Exceptions",
+                                               "Checked vs unchecked",
+                                               "Cleanup"
+                                           ],
+                          "follow_ups":  [
+                                             "Does finally run if there is a return in try?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Catching Exception everywhere",
+                                                  "Swallowing exceptions silently"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "java",
+                                       "exceptions"
+                                   ],
+                          "notes":  "Original practice question. The topic is listed in a 2026 preparation guide (hirist.tech) that attributes no questions to candidates, so no source is cited.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-008",
+                          "round_id":  "R3",
+                          "topic":  "Professional Judgement",
+                          "subtopic":  "Responsible use of AI coding tools",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "How do you use AI coding assistants such as GitHub Copilot in your own work, and how do you make sure the code you ship is correct and secure?",
+                          "relevance_to_role":  "Responsible use of AI coding tools is a current professional-judgement topic; a general interview guide says some candidates may be asked. Written as a practice question.",
+                          "evidence_class":  "D_PRACTICE",
+                          "source_ids":  [
+
+                                         ],
+                          "times_reported":  0,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "ORIGINAL",
+                          "expected_answer":  "A candid account of using assistants as a helper, with human review, tests and data-privacy care.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Professional judgement with AI tools"
+                                           ],
+                          "follow_ups":  [
+                                             "Describe a time an assistant gave you a wrong answer."
+                                         ],
+                          "common_mistakes":  [
+                                                  "Over-trusting generated code",
+                                                  "Giving no verification steps"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "ai"
+                                   ],
+                          "notes":  "Downgraded from candidate-reported: the source is a guide, not a candidate account, so this is practice material.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Professional judgement with AI tools",
+                                             "star_guidance":  "Situation: where you used an assistant. Action: how you reviewed, tested and attributed its output. Result: what you caught or learned.",
+                                             "positive_signals":  [
+                                                                      "Reviews and tests generated code",
+                                                                      "Understands what it ships",
+                                                                      "Protects sensitive data"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Pastes output without reading",
+                                                                      "Shares confidential code with tools",
+                                                                      "Claims tools replace understanding"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-009",
+                          "round_id":  "R3",
+                          "topic":  "Teamwork",
+                          "subtopic":  "Working alone vs in a team",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "EASY",
+                          "prompt":  "Do you prefer working alone or in a team? Give an example of each from your own experience.",
+                          "relevance_to_role":  "A 2026 Digital account included a managerial question about working alone versus in a team.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A balanced answer with one solo example and one team example, and the lesson from each.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Teamwork and self-reliance"
+                                           ],
+                          "follow_ups":  [
+                                             "How do you handle a teammate who is not contributing?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic answer without examples"
+                                              ],
+                          "suggested_time_min":  4,
+                          "tags":  [
+                                       "behavioral",
+                                       "teamwork"
+                                   ],
+                          "notes":  "",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Teamwork and self-reliance",
+                                             "star_guidance":  "Situation: one solo task and one team task. Action: your role in each. Result: what each taught you and where you do your best work.",
+                                             "positive_signals":  [
+                                                                      "Balanced answer",
+                                                                      "Concrete examples",
+                                                                      "Shows collaboration skills"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Only says \u0027team\u0027 without proof",
+                                                                      "Dismisses either style"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R3-010",
+                          "round_id":  "R3",
+                          "topic":  "Conflict Resolution",
+                          "subtopic":  "Disagreement with a teammate",
+                          "question_type":  "BEHAVIORAL",
+                          "difficulty":  "MEDIUM",
+                          "prompt":  "Describe a time you disagreed with a teammate about how to approach a task. How did you resolve it?",
+                          "relevance_to_role":  "An older (2023) TCS Digital report included team-conflict questions; confidence is lower.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S3"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "A calm, fact-based resolution that preserved the working relationship.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific, real example",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Own actions and reasoning are clear",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Outcome and learning stated",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Conflict resolution"
+                                           ],
+                          "follow_ups":  [
+                                             "What would you do if the senior member insisted on their way?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Describing only the disagreement without a resolution"
+                                              ],
+                          "suggested_time_min":  5,
+                          "tags":  [
+                                       "behavioral",
+                                       "conflict"
+                                   ],
+                          "notes":  "Source is a 2023 report; used as older context.",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  {
+                                             "competency":  "Conflict resolution",
+                                             "star_guidance":  "Situation: the project and the disagreement. Action: how you listened, compared options with facts, and reached a decision. Result: outcome and relationship afterwards.",
+                                             "positive_signals":  [
+                                                                      "Listens to the other side",
+                                                                      "Uses data or a trial to decide",
+                                                                      "Keeps the relationship intact"
+                                                                  ],
+                                             "negative_signals":  [
+                                                                      "Blames the teammate",
+                                                                      "Avoids the conflict",
+                                                                      "No resolution"
+                                                                  ]
+                                         }
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R4-001",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Why TCS",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Why do you want to join TCS, and why the Digital track in particular?",
+                          "relevance_to_role":  "\u0027Why TCS\u0027 was reported in several 2026 Digital and NQT accounts.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  2,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Link specific facts about TCS (scale, training, client domains, technology focus) to your own skills and goals, and explain what the Digital track\u0027s work (modern technologies) means for you. Avoid reciting generic praise.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Specific reasons about TCS",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Links to own skills",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Honest and concise",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Motivation",
+                                               "Company research"
+                                           ],
+                          "follow_ups":  [
+                                             "What do you know about TCS\u0027s recent work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Generic flattery",
+                                                  "Mentioning only salary"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "motivation"
+                                   ],
+                          "notes":  "Reported in at least two accounts (2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      },
+                      {
+                          "question_id":  "TCS-DIGITAL-R4-002",
+                          "round_id":  "R4",
+                          "topic":  "HR",
+                          "subtopic":  "Something not on your resume",
+                          "question_type":  "HR",
+                          "difficulty":  "EASY",
+                          "prompt":  "Tell me something about yourself that is not on your resume.",
+                          "relevance_to_role":  "A 2026 NQT-track account began the interview with this kind of open question.",
+                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "source_ids":  [
+                                             "S2"
+                                         ],
+                          "times_reported":  1,
+                          "verification_status":  "UNVERIFIED",
+                          "confidence":  "LOW",
+                          "originality_status":  "PARAPHRASED",
+                          "expected_answer":  "Share one authentic point such as a hobby, a self-taught skill or a community activity, and connect it to a strength like discipline or curiosity. Keep it short and positive.",
+                          "rubric":  [
+                                         {
+                                             "criterion":  "Authentic and specific",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Links to a strength",
+                                             "weight":  4
+                                         },
+                                         {
+                                             "criterion":  "Concise",
+                                             "weight":  2
+                                         }
+                                     ],
+                          "key_concepts":  [
+                                               "Self-awareness",
+                                               "Communication"
+                                           ],
+                          "follow_ups":  [
+                                             "How has that interest shaped how you work?"
+                                         ],
+                          "common_mistakes":  [
+                                                  "Repeating the resume",
+                                                  "Sharing something irrelevant or negative"
+                                              ],
+                          "suggested_time_min":  3,
+                          "tags":  [
+                                       "hr",
+                                       "intro"
+                                   ],
+                          "notes":  "Reported by one candidate (2026).",
+                          "coding":  null,
+                          "mcq":  null,
+                          "behavioral":  null
+                      }
+                  ]
+}
