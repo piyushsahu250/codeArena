@@ -13,7 +13,6 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import { CODE_LANGUAGES as ALL_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
-import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 import { createEventReporter, watchCodeInsertion } from "../utils/examSecurityClient";
 
@@ -211,7 +210,7 @@ export default function ModuleCodingAssessment() {
         setAutoSubmitted(true);
         setAutoSubmitReasonMsg(VIOLATION_LABEL[type] || "a proctoring violation");
         proctor.stopMedia();
-        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+        proctor.releaseFullscreen();
       } else if (data.penalized) {
         const msg = `Warning ${data.violationCount}/${data.maxViolations}: ${VIOLATION_LABEL[type] || type}. The assessment will auto-submit if this continues.`;
         setViolationWarning(msg);
@@ -638,7 +637,7 @@ export default function ModuleCodingAssessment() {
     if (!data) {
       finalizingRef.current = false;
       setFinalizing(false);
-      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      proctor.releaseFullscreen();
       console.error("[finalize] failed after 3 attempts:", lastErr);
       setPhase("finalize-failed");
       return;
@@ -654,7 +653,7 @@ export default function ModuleCodingAssessment() {
       return;
     }
     finalizedRef.current = true;
-    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+    proctor.releaseFullscreen();
     proctor.stopMedia();
     setResult(data);
     notify(data.gamification);

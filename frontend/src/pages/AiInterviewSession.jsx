@@ -6,7 +6,11 @@ import Button from "../components/Button";
 import { useMicCapture } from "../hooks/useMicCapture";
 import { playPcm16, stopPlayback, closePcmPlayer } from "../utils/pcmPlayer";
 import { aiInterviewVoiceWsUrl } from "../utils/wsUrl";
-import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
+import { getFullscreenElement, onFullscreenChange, supportsFullscreen } from "../utils/fullscreenCompat";
+import { enterFullscreen, releaseFullscreen, isReleasingFullscreen } from "../utils/fullscreenSession";
+
+// identity of this page for the fullscreen manager (only the owner that entered fullscreen can release it)
+const AI_FS_OWNER = "ai-interview-session";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import { useExamSession } from "../hooks/useExamSession";
 import { runSecurityCheck, createFocusLossSignal, createSplitScreenWatch } from "../utils/secureAssessment";
@@ -220,7 +224,7 @@ export default function AiInterviewSession() {
             stopListening();
             mic.release();
             ws.close();
-            if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+            releaseFullscreen(AI_FS_OWNER);
             setPhase(PHASES.COMPLETED);
             setTimeout(() => navigate(`/ai-interview/report/${id}`), 1200);
             break;
@@ -268,7 +272,7 @@ export default function AiInterviewSession() {
     // whether it succeeded, and this is intentionally never a blocking requirement (iOS Safari has
     // no Fullscreen API for arbitrary elements at all — see fullscreenCompat.js — so treating this
     // as mandatory would lock those candidates out of starting an interview entirely).
-    if (supportsFullscreen()) requestFullscreenCompat().catch(() => {});
+    if (supportsFullscreen()) enterFullscreen(AI_FS_OWNER);
     if (!(await claimSession())) return;
     const granted = await mic.requestPermission();
     if (granted) connect();
@@ -279,7 +283,7 @@ export default function AiInterviewSession() {
   // the voice transport FIRST so the backend's one open turn is never raced by both a WS-driven
   // voice answer and a REST-driven typed answer for the same question.
   async function switchToText() {
-    if (supportsFullscreen() && !getFullscreenElement()) requestFullscreenCompat().catch(() => {});
+    if (supportsFullscreen() && !getFullscreenElement()) enterFullscreen(AI_FS_OWNER);
     stopListening();
     mic.release();
     wsRef.current?.close();
@@ -317,7 +321,7 @@ export default function AiInterviewSession() {
           setCurrentQuestionText(data.currentQuestion.questionText);
           setPhase(PHASES.ACTIVE);
         } else if (data.status === "COMPLETED" || data.status === "ABANDONED" || data.status === "REPORT_READY") {
-          if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+          releaseFullscreen(AI_FS_OWNER);
           setPhase(PHASES.COMPLETED);
           navigate(`/ai-interview/report/${id}`);
         } else {
@@ -346,7 +350,7 @@ export default function AiInterviewSession() {
       setTextAnswer("");
       setLastEvaluation(data.evaluation || null);
       if (data.status === "COMPLETED" || !data.nextQuestion) {
-        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+        releaseFullscreen(AI_FS_OWNER);
         setPhase(PHASES.COMPLETED);
         setTimeout(() => navigate(`/ai-interview/report/${id}`), 1200);
       } else {
@@ -381,7 +385,7 @@ export default function AiInterviewSession() {
     stopListening();
     mic.release();
     wsRef.current?.close();
-    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+    releaseFullscreen(AI_FS_OWNER);
     navigate(`/ai-interview/report/${id}`);
   }
 
@@ -447,7 +451,7 @@ export default function AiInterviewSession() {
       stopListening();
       mic.release();
       wsRef.current?.close();
-      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      releaseFullscreen(AI_FS_OWNER);
       setTerminatedNotice(true);
       setPhase(PHASES.COMPLETED);
       setTimeout(() => navigate(`/ai-interview/report/${id}`), 4000);
@@ -470,7 +474,7 @@ export default function AiInterviewSession() {
     reporter.start();
     const startedAt = Date.now();
     const urgent = (t) => { reporter.report(t); reporter.flush(); }; // strike-bearing signals reach the server at once instead of waiting for the 10 s batch
-    const stopFs = onFullscreenChange(() => { if (!getFullscreenElement() && Date.now() - startedAt > 2000) urgent("FULLSCREEN_EXIT"); });
+    const stopFs = onFullscreenChange(() => { if (!getFullscreenElement() && !isReleasingFullscreen() && Date.now() - startedAt > 2000) urgent("FULLSCREEN_EXIT"); });
     const tab = createTabSwitchSignal({ onBrief: () => urgent("TAB_SWITCH_BRIEF"), onSwitch: () => urgent("TAB_SWITCH") });
     const focus = createFocusLossSignal({ onLoss: () => urgent("POSSIBLE_EXTERNAL_ASSISTANT") });
     const split = createSplitScreenWatch({ onSuspected: () => urgent("SPLIT_SCREEN_SUSPECTED") });
@@ -502,7 +506,7 @@ export default function AiInterviewSession() {
       mic.release();
       wsRef.current?.close();
       closePcmPlayer();
-      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      releaseFullscreen(AI_FS_OWNER);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -610,7 +614,7 @@ export default function AiInterviewSession() {
         <div className="ai-int-banner warning">
           <span>{integrityNotice.text}</span>
           {integrityNotice.sustained && !fullscreenOk && supportsFullscreen() && (
-            <Button variant="ghost" onClick={() => requestFullscreenCompat().catch(() => {})}>Return to fullscreen</Button>
+            <Button variant="ghost" onClick={() => enterFullscreen(AI_FS_OWNER)}>Return to fullscreen</Button>
           )}
         </div>
       )}

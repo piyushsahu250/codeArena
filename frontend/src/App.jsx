@@ -14,6 +14,7 @@ import LoadingScreen from "./components/LoadingScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Sidebar from "./components/Sidebar";
 import ReportProblemWidget from "./components/ReportProblemWidget";
+import FullscreenExitNotice from "./components/FullscreenExitNotice";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 const About = lazy(() => import("./pages/marketing/About"));
@@ -508,6 +509,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        <FullscreenExitNotice />
       </BrowserRouter>
       </GamificationProvider>
       </FeatureProvider>

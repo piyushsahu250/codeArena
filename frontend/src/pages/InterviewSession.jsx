@@ -17,7 +17,6 @@ import MathText from "../components/MathText";
 import ReadinessChecklist from "../components/ReadinessChecklist";
 import "./interviewPrep.css";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
-import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
 
 const AUTOSAVE_DEBOUNCE_MS = 2000;
@@ -302,7 +301,7 @@ export default function InterviewSession() {
         finalizedRef.current = true;
         setPhase("terminated");
         proctor.stopMedia();
-        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+        proctor.releaseFullscreen();
       } else if (res.penalized) {
         const msg = `Warning ${res.violationCount}/${res.maxViolations}: ${VIOLATION_LABEL[type] || type}. The interview will be terminated if this continues.`;
         setViolationWarning(msg);
@@ -324,6 +323,13 @@ export default function InterviewSession() {
     requireMicrophone: true,
     onViolation,
   });
+
+  // Leaving mid-interview (the session stays resumable): fullscreen is released first, and the camera/microphone stop with the page. If the browser refuses
+  // to leave fullscreen, FullscreenExitNotice (mounted in App) tells the student and offers Retry; navigation is never blocked on it.
+  async function exitInterview() {
+    await proctor.releaseFullscreen();
+    navigate("/interview");
+  }
 
   async function begin() {
     // Routed through proctor.requestFullscreen() (fullscreenCompat.js) -- vendor-prefixed
@@ -567,7 +573,7 @@ export default function InterviewSession() {
       if (res.completed) {
         finalizedRef.current = true;
         proctor.stopMedia();
-        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+        proctor.releaseFullscreen();
         navigate(`/interview/report/${id}`, { state: { report: res.report } });
         return;
       }
@@ -604,7 +610,7 @@ export default function InterviewSession() {
         return;
       }
       proctor.stopMedia();
-      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      proctor.releaseFullscreen();
       navigate(`/interview/report/${id}`, { state: { report: res.report, recommendedLearning: res.recommendedLearning } });
     } catch (err) {
       finalizedRef.current = false;
@@ -688,7 +694,7 @@ export default function InterviewSession() {
               ⚠ {violationCount}/{maxViolations}
             </span>
             {secondsLeft != null && <span className="mono ip-glass" style={{ padding: "6px 12px", fontWeight: 700 }}>⏱ {mm}:{ss}</span>}
-            <Link to="/interview" className="btn btn-ghost">Exit</Link>
+            <button type="button" className="btn btn-ghost" onClick={exitInterview}>Exit</button>
           </div>
         </div>
 
