@@ -89,3 +89,17 @@ The other four were test problems, not product bugs:
 ### Read-only analysis tools added
 
 `analyzeRequestLogs.js`, `analyzeRouteByDay.js`, `analyzeBadPaths.js`, `auditStuckSessions.js`, `auditStuckModuleCoding.js`.
+
+## Update: fourth audit pass (AI reliability, mobile layout)
+
+### AI features (`scripts/auditAiReliability.js`, read-only, from `AiUsageLog`)
+- Very little use: 131 calls in 14 days. Everything except admin question generation succeeds 87-100% of the time.
+- `question_bank_generate`: 44% success over the window. The parse failures (`INVALID_RESPONSE`: 5 on Sep 11, 13 of 13 on Sep 30) predate the 2026-10-05 fix that normalises the model's answer format. Since the fix: 2 on Oct 5 and 2 of 4 calls on Oct 8, a sample too small to conclude from. The rest is quota or rate limiting (10 daily-quota and 11 rate-limited errors, mostly Oct 5).
+- Gap found and fixed: a rejected reply recorded no reason, so the next failure could not be diagnosed. `aiService.js` now logs `ai_invalid_response` with the reason and reply length (never the content).
+
+### Mobile layout (`e2e/tests/pages.spec.js`: every page without URL parameters for four roles, 75 pages, at 375, 320 and 1280 px)
+- No page crashed, rendered blank, or showed "undefined"/"NaN". All findings were pages scrolling sideways on a phone: 34 problem lines on about 22 pages (Resume 758 px on a 375 px screen, Mock Interview hub 602 px, test creation 561 px, audit log 458 px).
+- Causes: (1) a long `<option>` or intrinsic input width sets a control's width; (2) a wide child stretches a grid or flex track past the screen; (3) rows of buttons or tabs with inline `display:flex` that do not wrap; (4) four grids demanding 260-420 px minimum columns; (5) a chart that keeps its old pixel width when the window narrows.
+- Fixes: shared rules in `theme.css` at 640 px and below (controls and their containers shrink, grid/flex children shrink, inline flex rows wrap, tables' containers shrink, file inputs shrink), four grids made adaptive (`minmax(min(Npx, 100%), 1fr)`), and charts clipped to their container.
+- Result on the final run: 63 browser tests passed (every page, accessibility, dark-mode contrast, dashboards, login, exam journeys, fullscreen, resilience, role access). Two admin pages still scroll slightly at 320 px only (`/admin/users`, `/admin/staff-clerk`); the overflow is not attributable to any element and four rounds of fixes did not clear it. They are named as accepted residuals in the test.
+- Not checked: how the wrapped rows look (the tests prove no sideways scroll, not that the wrapped layout is attractive), real phones, iOS Safari, pages that need a URL parameter (a lesson, a test, an exam result).
