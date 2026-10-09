@@ -3,6 +3,11 @@ const { users, login } = require("./helpers");
 
 // Diagnostic only: for pages that scroll sideways on a phone, list the elements that stick out past the viewport (outermost offenders first).
 const TARGETS = [
+  ["staff", ["/staff/tests", "/staff/questions/new"]],
+  ["platform", ["/admin/users", "/admin/bulk-upload", "/admin/staff-clerk"]],
+  ["clerk", ["/clerk/placement-analytics"]],
+];
+const OLD = [
   ["student", ["/resume", "/interview"]],
   ["staff", ["/staff/tests/new", "/staff/questions", "/staff/students", "/staff/tests"]],
   ["platform", ["/admin/audit-log", "/admin/course-assignments", "/admin/institutes", "/admin/students"]],
@@ -12,7 +17,7 @@ const TARGETS = [
 for (const [who, paths] of TARGETS) {
   test(`overflow offenders: ${who}`, async ({ page }) => {
     test.setTimeout(3 * 60 * 1000);
-    await page.setViewportSize({ width: 375, height: 800 });
+    await page.setViewportSize({ width: 320, height: 800 });
     await login(page, users[who]);
     for (const path of paths) {
       await page.goto(path);
