@@ -28,3 +28,12 @@ createRoot(document.getElementById("root")).render(
     <App />
   </StrictMode>
 );
+
+// An API call that failed and that no page handled (api.get(...).then(...) with no catch) reaches here as an unhandled rejection. Tell the person once,
+// in plain words, instead of leaving an empty screen. Cancelled requests and session-expiry (already redirecting to login) are not reported.
+window.addEventListener("unhandledrejection", (event) => {
+  const err = event.reason;
+  if (!err || !err.isAxiosError || err.code === "ERR_CANCELED") return;
+  if (err.response?.data?.authExpired) return;
+  window.dispatchEvent(new CustomEvent("app:request-failed", { detail: { status: err.response?.status || 0, message: err.response?.data?.error } }));
+});

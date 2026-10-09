@@ -15,6 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Sidebar from "./components/Sidebar";
 import ReportProblemWidget from "./components/ReportProblemWidget";
 import FullscreenExitNotice from "./components/FullscreenExitNotice";
+import RequestFailedNotice from "./components/RequestFailedNotice";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 const About = lazy(() => import("./pages/marketing/About"));
@@ -510,6 +511,7 @@ export default function App() {
         </Routes>
         </Suspense>
         <FullscreenExitNotice />
+        <RequestFailedNotice />
       </BrowserRouter>
       </GamificationProvider>
       </FeatureProvider>

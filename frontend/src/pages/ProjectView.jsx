@@ -25,22 +25,13 @@ const STATUS_COLOR = { COMPLETED: "var(--mint)", IN_PROGRESS: "var(--amber-dark)
 // PracticeQuestionCard in LessonView.jsx, and ProblemStatement's own built-in progressive-hint
 // reveal — no new judge, no new hint UI, per the standing "reuse, don't duplicate" rule.
 export default function ProjectView() {
-  const { slug, moduleId, projectId } = useParams();
+  const { slug, projectId } = useParams();
   const { notify } = useGamification();
   const { isFeatureEnabled } = useFeatures();
-  const isMobile = useIsMobile();
   const [project, setProject] = useState(null);
   const [error, setError] = useState("");
   const [activeTaskId, setActiveTaskId] = useState(null);
   const [resumeStatus, setResumeStatus] = useState(null); // null (unknown) | { addedToResume } | "adding"
-  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
-  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
-
-  function handleEditorMount(editor) {
-    monacoEditorRef.current = editor;
-    applyPlainTextInputHints(editor);
-    watchForNonAsciiInput(editor, () => setImeWarning(true));
-  }
 
   async function checkResumeStatus(title) {
     if (!isFeatureEnabled("resume_builder")) return;
@@ -198,6 +189,15 @@ export default function ProjectView() {
 
 function ProjectTaskCard({ task, onProgress }) {
   const aiAvailable = useAiStatus();
+  const isMobile = useIsMobile();
+  const monacoEditorRef = useRef(null); // lets the mobile Indent/Outdent buttons drive the editor directly, since a touch keyboard has no physical Tab key
+  const [imeWarning, setImeWarning] = useState(false); // see watchForNonAsciiInput's own comment — no webpage can force off a student's IME; this catches the moment it actually miscomposed something
+
+  function handleEditorMount(editor) {
+    monacoEditorRef.current = editor;
+    applyPlainTextInputHints(editor);
+    watchForNonAsciiInput(editor, () => setImeWarning(true));
+  }
   const [language, setLanguage] = useState(task.language || "python"); // platform-wide default compiler
   const [code, setCode] = useState(task.starterCode || defaultStarter(task.language || "python"));
   const [runResult, setRunResult] = useState(null);

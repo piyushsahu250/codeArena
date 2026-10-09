@@ -11,6 +11,10 @@ RUN=/root/e2e-run
 PW_IMAGE=mcr.microsoft.com/playwright:v1.49.1-jammy
 cd "$REPO"
 
+echo "== lint gate (undefined variables fail the run)"
+bash scripts/lint-frontend-host.sh > /tmp/lint-gate.out 2>&1
+if grep -q "no-undef" /tmp/oxlint.txt; then echo "lint gate FAILED: undefined variables found"; grep "no-undef" /tmp/oxlint.txt | head -20; exit 5; fi
+
 echo "== build SPA"
 rm -rf "$BUILD/src" && cp -r frontend/src "$BUILD/src" && cp frontend/index.html frontend/package.json frontend/vite.config.js "$BUILD/" 2>/dev/null
 rm -rf "$BUILD/public" && cp -r frontend/public "$BUILD/public" 2>/dev/null || true
