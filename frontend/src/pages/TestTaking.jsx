@@ -215,6 +215,9 @@ export default function TestTaking() {
   const autoSaveTimeoutRef = useRef(null);
   // Saves already sent but not yet answered: finalize waits for these too, otherwise an answer saved on navigating away could still be in flight when the test is graded.
   const inflightSavesRef = useRef(new Set());
+  const failedSavesRef = useRef(new Map()); // questionId -> answer whose save failed and still has to be re-sent
+  const saveChainRef = useRef(new Map()); // questionId -> the last save request sent for it (saves per question go out in order)
+  const failedRetryTimeoutRef = useRef(null);
   const pendingAutoSaveRef = useRef(null); // MCQ: { questionId, selected }
   const codeAutoSaveTimeoutRef = useRef(null);
   const pendingCodeAutoSaveRef = useRef(null); // Coding: { questionId, language, code }
@@ -1258,19 +1261,49 @@ export default function TestTaking() {
     pendingAutoSaveRef.current = null;
     setSavingAnswer(true);
     try {
-      const body = pending.numericResponse !== undefined
-        ? { attemptId, questionId: pending.questionId, numericResponse: pending.numericResponse }
-        : { attemptId, questionId: pending.questionId, selectedOptions: pending.selected };
-      await trackSave(api.post("/submissions/submit", body));
+      await sendAnswerSave(pending);
       flashSaved();
     } catch {
-      // The selection stays in local state and gets retried on the next change, or flushed again
-      // right before the final Submit Test -- but the student should know a save didn't go
-      // through in the meantime, not see a blank indicator that looks identical to "nothing to save".
+      // A failed save is remembered (failedSavesRef) and retried -- on a timer, on the next change, and again right before the final submit -- so a
+      // dropped request can never silently turn an answered question into an unanswered one. The student sees "Not saved" in the meantime.
+      failedSavesRef.current.set(pending.questionId, pending);
       setSaveFailed(true);
+      scheduleFailedSaveRetry();
     } finally {
       setSavingAnswer(false);
     }
+  }
+
+  // Saves for the same question are sent strictly one after another, so a slow earlier request can never land after (and overwrite) a newer answer.
+  function sendAnswerSave(pending) {
+    const body = pending.numericResponse !== undefined
+      ? { attemptId, questionId: pending.questionId, numericResponse: pending.numericResponse }
+      : { attemptId, questionId: pending.questionId, selectedOptions: pending.selected };
+    const previous = saveChainRef.current.get(pending.questionId) || Promise.resolve();
+    const run = previous.catch(() => {}).then(() => api.post("/submissions/submit", body));
+    saveChainRef.current.set(pending.questionId, run);
+    const tracked = trackSave(run);
+    return tracked.then((res) => {
+      // only forget the failure if no newer answer for this question has been queued since
+      if (failedSavesRef.current.get(pending.questionId) === pending) failedSavesRef.current.delete(pending.questionId);
+      return res;
+    });
+  }
+
+  function scheduleFailedSaveRetry() {
+    clearTimeout(failedRetryTimeoutRef.current);
+    failedRetryTimeoutRef.current = setTimeout(() => { retryFailedSaves(); }, 4000);
+  }
+
+  // Re-sends every answer whose save failed. Returns how many are still unsaved afterwards.
+  async function retryFailedSaves() {
+    for (const pending of [...failedSavesRef.current.values()]) {
+      // a newer answer for the same question already replaced it
+      if (pendingAutoSaveRef.current?.questionId === pending.questionId) { failedSavesRef.current.delete(pending.questionId); continue; }
+      try { await sendAnswerSave(pending); } catch { /* stays queued */ }
+    }
+    if (failedSavesRef.current.size === 0) { flashSaved(); } else { setSaveFailed(true); scheduleFailedSaveRetry(); }
+    return failedSavesRef.current.size;
   }
 
   // Debounced background save for coding drafts — longer debounce than MCQ since typing is
@@ -1492,6 +1525,13 @@ export default function TestTaking() {
     if (pendingAutoSaveRef.current) await flushAutoSave();
     if (pendingCodeAutoSaveRef.current) await flushCodeAutoSave();
     await Promise.allSettled([...inflightSavesRef.current]);
+    // Answers whose earlier save failed get one more attempt now; if any still cannot be saved, a manual submit asks before continuing (an automatic
+    // submit, e.g. time up, always goes ahead -- the exam must end).
+    if (failedSavesRef.current.size > 0) await retryFailedSaves();
+    if (!auto && failedSavesRef.current.size > 0
+      && !confirm(`${failedSavesRef.current.size} of your answers could not be saved (check your connection). Submitting now would leave them unanswered. Press Cancel to try saving again, or OK to submit anyway.`)) {
+      return;
+    }
     finalizingRef.current = true;
     setFinalizing(true);
     setFinalizeFailed(false);

@@ -24,6 +24,14 @@ const execLimiter = rateLimit({
   keyGenerator: (req) => req.user.id,
 });
 
+// Multiple-choice / numerical answer saves are exact-match DB writes with no compute cost, so they must not share the 20/min code-execution budget: a fast
+// student answering a 30-question quiz (or the client retrying) would otherwise get 429s and silently lose answers. Still per student, still bounded.
+const quizSaveLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 240,
+  keyGenerator: (req) => req.user.id,
+});
+
 // Any authenticated user: how busy the judge is right now. Polled by the frontend while a
 // Run/Submit is pending so a slow response under heavy concurrent load reads as "N students
 // ahead of you" instead of a silent, seemingly-frozen spinner.
@@ -308,7 +316,7 @@ router.post("/submit-code", authenticate, requireRole("STUDENT"), execLimiter, a
 // exact-match grading is free (no compiler involved), but the response withholds correctness
 // until results are published. A resubmission replaces the prior one for this question, so the
 // most recently selected option is always what counts.
-router.post("/submit", authenticate, requireRole("STUDENT"), execLimiter, async (req, res) => {
+router.post("/submit", authenticate, requireRole("STUDENT"), quizSaveLimiter, async (req, res) => {
   try {
     const { attemptId, questionId, selectedOptions, numericResponse } = req.body;
 
