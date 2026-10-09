@@ -883,3 +883,10 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 /* Recharts draws its SVG at an explicit pixel width and only re-measures after the container resizes: when the window narrows (a phone rotating from
    landscape to portrait) the old, wider chart briefly -- or, inside a grid, persistently -- kept the page scrolling sideways. Clip it to its container. */
 .recharts-responsive-container, .recharts-wrapper { max-width: 100% !important; overflow: hidden; }
+
+/* Long unbroken strings (an email address, a URL, an id) cannot wrap at spaces, so on a 320px phone one such string in a list row forced the whole page wider than
+   the screen (/admin/users and /admin/staff-clerk, found by bisecting the page: hiding that one row removed the sideways scroll). Let them break anywhere instead
+   of overflowing; nothing is hidden or truncated. */
+@media (max-width: 640px) {
+  main, .card { overflow-wrap: anywhere; }
+}
