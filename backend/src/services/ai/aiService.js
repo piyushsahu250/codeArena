@@ -115,6 +115,8 @@ async function generateJson({ feature, userId, instituteId, system, prompt, maxT
       return parsed;
     } catch (err) {
       lastErr = err;
+      // Why it failed (parse error vs which validation rule) and how long the reply was, never the reply itself: without this an INVALID_RESPONSE in the usage log cannot be diagnosed.
+      require("../../utils/logger").warn("ai_invalid_response", { feature, attempt: attempt + 1, reason: String(err?.message || err).slice(0, 200), responseChars: typeof result?.text === "string" ? result.text.length : null });
       await logUsage({ feature, userId, instituteId, success: false, errorType: "INVALID_RESPONSE", latencyMs: 0 });
     }
   }
