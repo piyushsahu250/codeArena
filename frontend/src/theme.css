@@ -867,3 +867,8 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
   [style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="flex-wrap"]):not([style*="overflow"]),
   [style*="display:flex"]:not([style*="flex-direction:column"]):not([style*="flex-wrap"]):not([style*="overflow"]) { flex-wrap: wrap; }
 }
+@media (max-width: 640px) {
+  /* the box that holds a form control (label+select, a filter cell) is a flex/grid item whose minimum width is the control's own width: let it shrink too */
+  *:has(> select), *:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="range"])), *:has(> textarea) { min-width: 0; max-width: 100%; }
+  [style*="display: flex"] > *, [style*="display:flex"] > * { min-width: 0; }
+}
