@@ -875,3 +875,7 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 @media (max-width: 640px) {
   input[type="file"] { max-width: 100%; min-width: 0; }
 }
+@media (max-width: 640px) {
+  /* a wide table scrolls inside its own box (rule above); the container around it must not grow to the table's width and drag the page with it */
+  *:has(> table), *:has(> div > table) { min-width: 0; max-width: 100%; }
+}
