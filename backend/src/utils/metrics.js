@@ -40,6 +40,38 @@ function percentile(sorted, p) {
   return sorted[idx];
 }
 
+// Per-route breakdown (added in the 2026-10 platform audit: the overall percentiles above cannot say WHICH endpoint is slow or failing). Keyed by
+// "METHOD /mounted/path/:pattern" (the route pattern, never the real URL, so ids and query strings do not create new keys). Memory is bounded: at most
+// MAX_ROUTE_KEYS keys, each holding counters and a 50-sample ring. Costs a map lookup and a few additions per request.
+const MAX_ROUTE_KEYS = 400;
+const ROUTE_RING = 50;
+const routeStats = new Map();
+function recordRoute(req, res, ms) {
+  const pattern = req.route ? `${req.baseUrl || ""}${req.route.path === "/" ? "" : req.route.path}` || "/" : "(unmatched)";
+  const key = `${req.method} ${pattern}`;
+  let s = routeStats.get(key);
+  if (!s) {
+    if (routeStats.size >= MAX_ROUTE_KEYS) return;
+    s = { count: 0, totalMs: 0, maxMs: 0, over1s: 0, errors5xx: 0, ring: [] };
+    routeStats.set(key, s);
+  }
+  s.count++; s.totalMs += ms; if (ms > s.maxMs) s.maxMs = ms;
+  if (ms > 1000) s.over1s++;
+  if (res.statusCode >= 500) s.errors5xx++;
+  s.ring.push(ms); if (s.ring.length > ROUTE_RING) s.ring.shift();
+}
+function routeTimingSnapshot() {
+  const rows = [...routeStats.entries()].map(([route, s]) => {
+    const sorted = [...s.ring].sort((a, b) => a - b);
+    return { route, count: s.count, avgMs: Math.round(s.totalMs / s.count), p95Ms: percentile(sorted, 95) === null ? null : Math.round(percentile(sorted, 95)), maxMs: Math.round(s.maxMs), over1s: s.over1s, errors5xx: s.errors5xx };
+  });
+  return {
+    trackedRoutes: rows.length,
+    slowest: rows.filter((r) => r.count >= 5).sort((a, b) => (b.p95Ms ?? 0) - (a.p95Ms ?? 0)).slice(0, 15),
+    failing: rows.filter((r) => r.errors5xx > 0).sort((a, b) => b.errors5xx - a.errors5xx).slice(0, 15),
+  };
+}
+
 function getSnapshot() {
   const sorted = [...responseTimes].sort((a, b) => a - b);
   const avg = sorted.length ? Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length) : null;
@@ -53,6 +85,7 @@ function getSnapshot() {
     },
     eventLoopLagMs: lastEventLoopLagMs,
     recentErrors: [...recentErrors].reverse(),
+    routeTiming: routeTimingSnapshot(),
   };
 }
 
@@ -62,6 +95,7 @@ function timingMiddleware(req, res, next) {
   res.on("finish", () => {
     const ms = Number(process.hrtime.bigint() - start) / 1e6;
     recordRequestTime(ms);
+    try { recordRoute(req, res, ms); } catch { /* metrics must never affect a request */ }
   });
   next();
 }

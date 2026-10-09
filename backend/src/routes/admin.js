@@ -483,6 +483,7 @@ router.get("/monitoring", authenticate, requireRole("ADMIN", "SUPER_ADMIN"), asy
       },
       storage,
       requestTiming: snapshot.requestTimingMs,
+      routeTiming: snapshot.routeTiming,
       judgeQueue: getQueueStatus(),
       aiQueue: getAiQueueStatus(),
       activeSessions: {
