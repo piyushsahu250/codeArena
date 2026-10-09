@@ -4,8 +4,8 @@
     "status": 200,
     "body": {
       "active": "<n>",
-      "maxConcurrent": 64,
-      "maxQueueSize": 400,
+      "maxConcurrent": "<n>",
+      "maxQueueSize": "<n>",
       "waiting": "<n>"
     }
   },
@@ -127,9 +127,9 @@
   },
   {
     "name": "autosave: missing attemptId",
-    "status": 500,
+    "status": 400,
     "body": {
-      "error": "Failed to save your code — your latest changes may not be saved. Please try again."
+      "error": "attemptId and questionId are required"
     }
   },
   {
@@ -256,9 +256,9 @@
   },
   {
     "name": "submit: missing attemptId",
-    "status": 500,
+    "status": 400,
     "body": {
-      "error": "Failed to save your answer. Please try again."
+      "error": "attemptId and questionId are required"
     }
   },
   {
@@ -314,21 +314,18 @@
   },
   {
     "name": "submit: an MCQ that is NOT part of this student's test",
-    "status": 200,
+    "status": 403,
     "body": {
-      "execution": {
-        "status": "SUBMITTED"
-      },
-      "submissionId": "<id>"
+      "error": "This question is not part of your test"
     }
   },
   {
     "name": "score change caused by answering a question that is not on the student's test",
-    "db": 4
+    "db": 0
   },
   {
     "name": "rows saved for the unassigned MCQ",
-    "db": 1
+    "db": 0
   },
   {
     "name": "finalize: another student's attempt",
@@ -367,7 +364,7 @@
       "submittedAt": "<time>",
       "tabSwitchCount": 0,
       "testId": "<id>",
-      "totalScore": 18
+      "totalScore": 14
     }
   },
   {
@@ -395,7 +392,7 @@
         "securityPolicy": null
       },
       "testId": "<id>",
-      "totalScore": 18
+      "totalScore": 14
     }
   },
   {
@@ -423,7 +420,7 @@
     "name": "final attempt row",
     "db": {
       "status": "SUBMITTED",
-      "totalScore": 18
+      "totalScore": 14
     }
   },
   {
