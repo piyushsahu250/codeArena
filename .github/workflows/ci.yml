@@ -141,7 +141,7 @@ jobs:
           fail=0
           for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract; do
             echo "=== $s"
-            node scripts/$s.js > "/tmp/$s.out" 2>&1; code=$?
+            code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
             cat "/tmp/$s.out"
             if [ "$code" -ne 0 ]; then
               # also published as a check annotation so the reason is readable from the run's summary without opening the raw log
