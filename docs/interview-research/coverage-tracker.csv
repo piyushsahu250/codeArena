@@ -1,0 +1,2 @@
+company,role,experience_level,hiring_region,job_description_url,research_status (NOT_STARTED / RESEARCHED / AUDITED / SENT_TO_CODEARENA / IMPORTED_AS_DRAFT / APPROVED),file_name,researched_on,questions_total,class_A_documented,class_B_reported,class_C_inferred,class_D_practice,verified_count,known_gaps,notes
+ExampleCorp,Software Engineer,FRESHER,"Pune, India",https://example.com/careers/software-engineer,NOT_STARTED,ExampleCorp__Software-Engineer__Fresher__2026.json,,0,0,0,0,0,0,EXAMPLE ROW - delete it,

@@ -19,7 +19,7 @@ const record = process.argv.includes("--record");
 const log = [];
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const ISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/g;
-const VOLATILE_NUM = new Set(["timeMs", "memoryKb", "maxTimeMs", "maxMemoryKb", "serverNow", "deadline", "active", "waiting"]);
+const VOLATILE_NUM = new Set(["timeMs", "memoryKb", "maxTimeMs", "maxMemoryKb", "serverNow", "deadline", "active", "waiting", "maxConcurrent", "maxQueueSize"]); // the last two are per-environment configuration
 function norm(v, key) {
   if (v === null || v === undefined) return v ?? null;
   if (typeof v === "string") return v.replace(UUID, "<id>").replace(ISO, "<time>");
