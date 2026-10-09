@@ -47,3 +47,18 @@ Evidence-based: every item below was found by running something (a scan, a test,
 ## Rollback
 
 Frontend: revert the merge commit on `main` (Vercel redeploys). Backend: the deploy script keeps `codearena-backend:rollback-*` images and rolls back automatically if the health check fails; to roll back by hand, run the previous image with the same arguments. No database change was made in this audit pass.
+
+## Update: second audit pass (same day)
+
+Full browser suite on `main` (`5c805c2`): **60 passed, 0 failed**; the lesson smoke test opened all 179 lessons, 0 broken.
+
+| # | Severity | Finding | Evidence | Action |
+|---|---|---|---|---|
+| 10 | Medium (data integrity) | Module coding attempts were never closed unless the student came back: 11 stuck in progress past their deadline, nine with every answer already saved, so their work was never graded. | `scripts/auditStuckSessions.js`, `auditStuckModuleCoding.js` (read-only) | **Fixed for recent ones:** `sweepExpiredModuleCodingAttempts()` in the existing auto-finalize scheduler closes attempts that expired within the last 48 h (`MODULE_CODING_SWEEP_MAX_AGE_HOURS`), grading them exactly as a late finalize does. `verifyModuleCodingSweep.js`: 6/6 on the live host. |
+| 11 | Needs your decision | The 10 older stuck attempts are 15 to 76 days overdue (`Introduction to Java` 9, `Java Basics` 1). Grading them applies the rules to old work and could change module access or issue certificates. | same | **Not touched.** Left for an approved one-off. |
+| 12 | Low | 86 mock-interview sessions are in progress past their deadline (all of them). The create route already abandons an expired one when the student starts a new one, so flows are unaffected, but counts and analytics include them. | `auditStuckSessions.js` | Not changed: needs a product decision (an "abandoned" status vs finalizing into a scored report). |
+| 13 | Low | 2 AI voice interview sessions past their expiry are still active. The expiry timer lives with the live connection, so a dropped connection leaves nothing to close it. | `auditStuckSessions.js` | Not changed: closing triggers AI evaluation, and AI quota is limited. |
+
+Formal tests and readiness assessments: 0 stuck (their sweeps work).
+
+The first run of the new sweep in production may close one real attempt that expired about 21 hours before the deploy (all three answers saved); that is the intended behaviour and equivalent to the student returning.
