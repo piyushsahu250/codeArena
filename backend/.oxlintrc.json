@@ -1,0 +1,5 @@
+{
+  "env": { "node": true, "es2022": true },
+  "globals": { "fetch": "readonly", "AbortSignal": "readonly", "URL": "readonly", "URLSearchParams": "readonly", "TextEncoder": "readonly", "TextDecoder": "readonly", "Blob": "readonly", "structuredClone": "readonly", "performance": "readonly" },
+  "rules": { "no-undef": "error" }
+}
