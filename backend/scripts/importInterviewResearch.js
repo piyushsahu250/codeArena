@@ -2,6 +2,7 @@
 //
 //   node scripts/importInterviewResearch.js <file-or-dir> [more...] [--json=/tmp/import-report.json]   DRY RUN (default): reads only, writes nothing
 //   node scripts/importInterviewResearch.js <file-or-dir> --apply --confirm=IMPORT-AS-PENDING-DRAFTS    creates PENDING drafts only
+//   add --include-duplicates=QUESTION_ID,QUESTION_ID to import held possible-duplicates a reviewer has cleared
 //
 // Apply never publishes a question and never touches an existing InterviewQuestion or an approved/
 // rejected draft. It creates one InterviewQuestionDraft (status PENDING) per new question, keyed by
@@ -60,6 +61,9 @@ async function loadExisting() {
   const companyId = (name) => (companies.find((c) => c.name.toLowerCase() === String(name).toLowerCase()) || {}).id || null;
   for (const r of rows) if (r.payload) r.companyId = companyId(r.payload.company);
 
+  // Reviewed-and-cleared false matches: --include-duplicates=ID,ID turns those POSSIBLE_DUPLICATE rows into creates.
+  const include = new Set((arg("include-duplicates", "") || "").split(",").map((s) => s.trim()).filter(Boolean));
+  for (const r of rows) if (r.action === "POSSIBLE_DUPLICATE" && include.has(r.questionId)) { r.action = "CREATE_PENDING_DRAFT"; r.flags.push("imported although similar to an existing question (cleared by reviewer)"); }
   const counts = summarize(rows);
   console.log(`\nMode: ${apply ? "APPLY (pending drafts only)" : "DRY RUN (nothing is written)"}   schema columns present: ${schemaReady}`);
   console.log(`Existing rows compared: ${existing.length} (${existing.filter((e) => e.kind === "question").length} questions, ${existing.filter((e) => e.kind === "draft").length} drafts)`);
