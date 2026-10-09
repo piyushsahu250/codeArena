@@ -26,6 +26,16 @@ git pull --ff-only origin main
 SHA=$(git rev-parse --short HEAD)
 echo "Deploying commit $SHA"
 
+# Pre-deploy gate: a variable that is used but never declared only fails when that line runs (a 500 for the one request that reaches it), so it is
+# caught here instead. If the linter itself cannot run (no network), the deploy is not blocked.
+echo "Pre-deploy gate: undefined variables in backend code..."
+bash "$REPO/scripts/lint-backend-host.sh" > /tmp/lint-backend-gate.out 2>&1 || true
+if grep -q 'no-undef' /tmp/oxlint-backend.txt 2>/dev/null; then
+  echo "ABORTING deploy: undefined variables found in backend code:" >&2
+  grep 'no-undef' /tmp/oxlint-backend.txt | head -20 >&2
+  exit 6
+fi
+
 PREV_IMAGE_ID=$(docker image inspect -f '{{.Id}}' "$NAME:latest" 2>/dev/null || true)
 if [ -n "$PREV_IMAGE_ID" ]; then
   docker tag "$PREV_IMAGE_ID" "$NAME:rollback-$STAMP"

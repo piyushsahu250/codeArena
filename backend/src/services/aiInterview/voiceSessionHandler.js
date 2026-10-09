@@ -135,7 +135,7 @@ async function handleVoiceConnection(ws, { sessionId, studentId, instituteId }) 
           answerText: finalText, skipped: !finalText, userId: studentId, instituteId,
         });
         send(ws, { type: "answer_processed", status: result.status, evaluation: result.evaluation });
-        console.log("[voiceSession] answer processed", { sessionId, turnIndex: turnBeingAnswered.turnIndex, resultStatus: result.status, skipped: !!skipped });
+        console.log("[voiceSession] answer processed", { sessionId, turnIndex: turnBeingAnswered.turnIndex, resultStatus: result.status, skipped: !finalText });
 
         if (result.status === "COMPLETED" || !result.nextQuestion) {
           console.log("[voiceSession] interview completed", { sessionId, terminationReason: "PLAN_COMPLETE_OR_TIME" });
