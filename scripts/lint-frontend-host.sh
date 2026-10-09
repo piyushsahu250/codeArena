@@ -6,7 +6,7 @@ REPO=/opt/codearena
 BUILD=/root/chk5/frontend
 cd "$REPO"
 rm -rf "$BUILD/src" && cp -r frontend/src "$BUILD/src"
-docker run --rm -v "$BUILD":/app -w /app node:22-slim sh -c "npx --yes oxlint@latest src --format=unix 2>&1" > /tmp/oxlint.txt 2>&1
+docker run --rm -v "$BUILD":/app -w /app node:22-slim sh -c "npx --yes oxlint@latest -D correctness -D no-undef -D react/jsx-no-undef src --format=unix 2>&1" > /tmp/oxlint.txt 2>&1
 echo "== last lines"; tail -4 /tmp/oxlint.txt
 echo "== findings by rule"
 grep -oE '\[(Error|Warning)/[a-z0-9_:-]+\]' /tmp/oxlint.txt | sort | uniq -c | sort -rn | head -20
