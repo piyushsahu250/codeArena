@@ -10,6 +10,11 @@ const API = "http://localhost:4000/api";
 const exitControl = (page) => page.locator('button:text-is("Exit"), a:text-is("Exit")');
 const inFullscreen = (page) => page.evaluate(() => !!(document.fullscreenElement || document.webkitFullscreenElement));
 
+// Client-side navigation through the router (history entry + popstate), as a link click would do.
+async function spaNavigate(page, path) {
+  await page.evaluate((p) => { history.pushState({}, "", p); window.dispatchEvent(new PopStateEvent("popstate")); }, path);
+}
+
 async function tokenOf(page) { return page.evaluate(() => localStorage.getItem("token")); }
 
 // Creates (or re-uses) the student's in-progress mock interview and makes sure it has one real answer, so it opens on the Resume screen.
@@ -52,7 +57,10 @@ test.describe("mock interview", () => {
 
   test("the browser Back button releases fullscreen too", async ({ page }) => {
     const id = await mockInterviewWithProgress(page);
-    await openAndResume(page, id);
+    // entered by in-app navigation, so Back is a client-side route change (a full page load would end fullscreen by itself and prove nothing)
+    await spaNavigate(page, `/interview/session/${id}`);
+    await page.getByRole("button", { name: /Resume Interview/ }).click();
+    await expect(exitControl(page)).toBeVisible({ timeout: 20000 });
     await expect.poll(() => inFullscreen(page), { timeout: 10000 }).toBe(true);
     await page.goBack();
     await expect(page).not.toHaveURL(/\/interview\/session\//);
@@ -134,7 +142,7 @@ test.describe("mock interview", () => {
 
 test("formal test: leaving the page by Back releases the fullscreen the test entered", async ({ page }) => {
   await login(page, users.student3);
-  await page.goto(`/test/${data.fullscreenTestId}`);
+  await spaNavigate(page, `/test/${data.fullscreenTestId}`); // in-app navigation: Back is then a client-side route change
   await page.getByLabel("I have read and understood the instructions.").check();
   await page.getByRole("button", { name: /Begin Assessment/ }).click();
   await expect(page.getByText(/E2E question [0-9]: pick option B/)).toBeVisible();
