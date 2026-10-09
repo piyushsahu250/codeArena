@@ -150,7 +150,9 @@ async function cleanup() {
   await call("submit: numeric answer (exact)", "POST", "/submissions/submit", tA, { attemptId: att, questionId: num1.id, numericResponse: "42" });
   await call("submit: numeric answer (wrong)", "POST", "/submissions/submit", tA, { attemptId: att, questionId: num1.id, numericResponse: "41" });
   // an MCQ that was never assigned to this attempt (the quiz route's assigned-question check)
-  await call("submit: an MCQ that is NOT part of this student's test", "POST", "/submissions/submit", tA, { attemptId: att, questionId: mcq2.id, selectedOptions: [0] });
+  const scoreBefore = (await prisma.testAttempt.findUnique({ where: { id: att }, select: { totalScore: true } })).totalScore;
+  await call("submit: an MCQ that is NOT part of this student's test", "POST", "/submissions/submit", tA, { attemptId: att, questionId: mcq2.id, selectedOptions: [0] }); // the correct answer for a 4-point question
+  note("score change caused by answering a question that is not on the student's test", (await prisma.testAttempt.findUnique({ where: { id: att }, select: { totalScore: true } })).totalScore - scoreBefore);
   note("rows saved for the unassigned MCQ", await prisma.submission.count({ where: { attemptId: att, questionId: mcq2.id } }));
 
   // ---------- /finalize ----------

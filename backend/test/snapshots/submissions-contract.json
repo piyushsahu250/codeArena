@@ -1,0 +1,471 @@
+[
+  {
+    "name": "queue-status: authenticated",
+    "status": 200,
+    "body": {
+      "active": "<n>",
+      "maxConcurrent": 64,
+      "maxQueueSize": 400,
+      "waiting": "<n>"
+    }
+  },
+  {
+    "name": "queue-status: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "submit: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "submit: staff role refused",
+    "status": 403,
+    "body": {
+      "error": "Insufficient permissions"
+    }
+  },
+  {
+    "name": "finalize: anonymous",
+    "status": 401,
+    "body": {
+      "authExpired": true,
+      "error": "Missing or invalid Authorization header"
+    }
+  },
+  {
+    "name": "run: unknown question",
+    "status": 404,
+    "body": {
+      "error": "Question not found"
+    }
+  },
+  {
+    "name": "run: not a coding question",
+    "status": 400,
+    "body": {
+      "error": "Run is only available for coding questions"
+    }
+  },
+  {
+    "name": "run: question of another institute",
+    "status": 403,
+    "body": {
+      "error": "You can only run questions under your own institute"
+    }
+  },
+  {
+    "name": "run: correct code on the sample case",
+    "status": 200,
+    "body": {
+      "details": [
+        {
+          "actual": "4",
+          "expected": "4",
+          "input": "2\n",
+          "memoryKb": "<n>",
+          "timeMs": "<n>",
+          "verdict": "PASSED"
+        }
+      ],
+      "errorSummary": null,
+      "maxMemoryKb": "<n>",
+      "maxTimeMs": "<n>",
+      "passedCases": 1,
+      "totalCases": 1,
+      "verdict": "ACCEPTED"
+    }
+  },
+  {
+    "name": "run result never lists the hidden cases",
+    "db": {
+      "hasDetails": true,
+      "totalCases": 1
+    }
+  },
+  {
+    "name": "autosave: unknown attempt",
+    "status": 403,
+    "body": {
+      "error": "Invalid attempt"
+    }
+  },
+  {
+    "name": "autosave: another student's attempt",
+    "status": 403,
+    "body": {
+      "error": "Invalid attempt"
+    }
+  },
+  {
+    "name": "autosave: question not on this test",
+    "status": 403,
+    "body": {
+      "error": "This question is not part of your test"
+    }
+  },
+  {
+    "name": "autosave: not a coding question",
+    "status": 400,
+    "body": {
+      "error": "Autosave is only for coding questions"
+    }
+  },
+  {
+    "name": "autosave: unknown question",
+    "status": 403,
+    "body": {
+      "error": "This question is not part of your test"
+    }
+  },
+  {
+    "name": "autosave: missing attemptId",
+    "status": 500,
+    "body": {
+      "error": "Failed to save your code — your latest changes may not be saved. Please try again."
+    }
+  },
+  {
+    "name": "autosave: saves a draft",
+    "status": 200,
+    "body": {
+      "status": "SAVED"
+    }
+  },
+  {
+    "name": "autosave: a stale (older) save is dropped",
+    "status": 200,
+    "body": {
+      "status": "SAVED"
+    }
+  },
+  {
+    "name": "draft after the stale save",
+    "db": {
+      "code": "print(1)\n",
+      "verdict": "PENDING"
+    }
+  },
+  {
+    "name": "autosave: a newer save wins",
+    "status": 200,
+    "body": {
+      "status": "SAVED"
+    }
+  },
+  {
+    "name": "draft after the newer save",
+    "db": {
+      "code": "n = int(input())\nprint(n * 2)\n",
+      "verdict": "PENDING"
+    }
+  },
+  {
+    "name": "submit-code: question not on this test",
+    "status": 403,
+    "body": {
+      "error": "This question is not part of your test"
+    }
+  },
+  {
+    "name": "submit-code: not a coding question",
+    "status": 400,
+    "body": {
+      "error": "Submit is only for coding questions"
+    }
+  },
+  {
+    "name": "submit-code: another student's attempt",
+    "status": 403,
+    "body": {
+      "error": "Invalid attempt"
+    }
+  },
+  {
+    "name": "submit-code: correct solution is judged on hidden cases",
+    "status": 200,
+    "body": {
+      "errorSummary": null,
+      "maxMemoryKb": "<n>",
+      "maxTimeMs": "<n>",
+      "passedCases": 2,
+      "totalCases": 2,
+      "verdict": "ACCEPTED"
+    }
+  },
+  {
+    "name": "submit-code response hides per-case details",
+    "db": {
+      "hasDetails": false
+    }
+  },
+  {
+    "name": "submit-code: a worse resubmission still reports its own verdict",
+    "status": 200,
+    "body": {
+      "errorSummary": null,
+      "maxMemoryKb": "<n>",
+      "maxTimeMs": "<n>",
+      "passedCases": 0,
+      "totalCases": 2,
+      "verdict": "WRONG_ANSWER"
+    }
+  },
+  {
+    "name": "stored best is kept after the worse resubmission",
+    "db": {
+      "code": "n = int(input())\nprint(n * 2)\n",
+      "score": 10,
+      "verdict": "ACCEPTED"
+    }
+  },
+  {
+    "name": "submit: unknown attempt",
+    "status": 403,
+    "body": {
+      "error": "Invalid attempt"
+    }
+  },
+  {
+    "name": "submit: another student's attempt",
+    "status": 403,
+    "body": {
+      "error": "Invalid attempt"
+    }
+  },
+  {
+    "name": "submit: unknown question",
+    "status": 404,
+    "body": {
+      "error": "Question not found"
+    }
+  },
+  {
+    "name": "submit: coding question refused",
+    "status": 400,
+    "body": {
+      "error": "Coding/SQL questions are auto-saved via /autosave, not /submit"
+    }
+  },
+  {
+    "name": "submit: missing attemptId",
+    "status": 500,
+    "body": {
+      "error": "Failed to save your answer. Please try again."
+    }
+  },
+  {
+    "name": "submit: wrong answer",
+    "status": 200,
+    "body": {
+      "execution": {
+        "status": "SUBMITTED"
+      },
+      "submissionId": "<id>"
+    }
+  },
+  {
+    "name": "score after a wrong MCQ answer",
+    "db": 10
+  },
+  {
+    "name": "submit: changing the answer replaces it",
+    "status": 200,
+    "body": {
+      "execution": {
+        "status": "SUBMITTED"
+      },
+      "submissionId": "<id>"
+    }
+  },
+  {
+    "name": "one row for the question, correct, and the score includes the coding best",
+    "db": {
+      "rows": 1,
+      "score": 14
+    }
+  },
+  {
+    "name": "submit: numeric answer (exact)",
+    "status": 200,
+    "body": {
+      "execution": {
+        "status": "SUBMITTED"
+      },
+      "submissionId": "<id>"
+    }
+  },
+  {
+    "name": "submit: numeric answer (wrong)",
+    "status": 200,
+    "body": {
+      "execution": {
+        "status": "SUBMITTED"
+      },
+      "submissionId": "<id>"
+    }
+  },
+  {
+    "name": "submit: an MCQ that is NOT part of this student's test",
+    "status": 200,
+    "body": {
+      "execution": {
+        "status": "SUBMITTED"
+      },
+      "submissionId": "<id>"
+    }
+  },
+  {
+    "name": "rows saved for the unassigned MCQ",
+    "db": 1
+  },
+  {
+    "name": "finalize: another student's attempt",
+    "status": 403,
+    "body": {
+      "error": "Invalid attempt"
+    }
+  },
+  {
+    "name": "finalize: automatic 'time' call before the deadline is not honoured",
+    "status": 200,
+    "body": {
+      "deadline": "<n>",
+      "premature": true,
+      "serverNow": "<n>"
+    }
+  },
+  {
+    "name": "finalize: manual submit",
+    "status": 200,
+    "body": {
+      "expectedQuestionCount": 3,
+      "gamification": "<gamification object>",
+      "id": "<id>",
+      "manifestVersion": 1,
+      "optionOrder": null,
+      "questionOrder": [
+        "<id>",
+        "<id>",
+        "<id>"
+      ],
+      "sessionId": "<session>",
+      "startedAt": "<time>",
+      "status": "SUBMITTED",
+      "studentId": "<id>",
+      "submittedAt": "<time>",
+      "tabSwitchCount": 0,
+      "testId": "<id>",
+      "totalScore": 18
+    }
+  },
+  {
+    "name": "finalize: repeating it returns the current state",
+    "status": 200,
+    "body": {
+      "expectedQuestionCount": 3,
+      "id": "<id>",
+      "manifestVersion": 1,
+      "optionOrder": null,
+      "questionOrder": [
+        "<id>",
+        "<id>",
+        "<id>"
+      ],
+      "sessionId": "<session>",
+      "startedAt": "<time>",
+      "status": "SUBMITTED",
+      "studentId": "<id>",
+      "submittedAt": "<time>",
+      "tabSwitchCount": 0,
+      "test": {
+        "durationMin": 30,
+        "securityLevel": "STANDARD",
+        "securityPolicy": null
+      },
+      "testId": "<id>",
+      "totalScore": 18
+    }
+  },
+  {
+    "name": "submit: after the attempt is finalized",
+    "status": 403,
+    "body": {
+      "error": "This test attempt is already finalized"
+    }
+  },
+  {
+    "name": "autosave: after the attempt is finalized",
+    "status": 403,
+    "body": {
+      "error": "This test attempt is already finalized"
+    }
+  },
+  {
+    "name": "submit-code: after the attempt is finalized",
+    "status": 403,
+    "body": {
+      "error": "This test attempt is already finalized"
+    }
+  },
+  {
+    "name": "final attempt row",
+    "db": {
+      "status": "SUBMITTED",
+      "totalScore": 18
+    }
+  },
+  {
+    "name": "submit: after the student's own deadline",
+    "status": 403,
+    "body": {
+      "error": "Time is up for this test"
+    }
+  },
+  {
+    "name": "autosave: after the student's own deadline",
+    "status": 403,
+    "body": {
+      "error": "Time is up for this test"
+    }
+  },
+  {
+    "name": "submit-code: after the student's own deadline",
+    "status": 403,
+    "body": {
+      "error": "Time is up for this test"
+    }
+  },
+  {
+    "name": "finalize: past the deadline closes it as auto-submitted",
+    "status": 200,
+    "body": {
+      "expectedQuestionCount": 3,
+      "gamification": "<gamification object>",
+      "id": "<id>",
+      "manifestVersion": 1,
+      "optionOrder": null,
+      "questionOrder": [
+        "<id>",
+        "<id>",
+        "<id>"
+      ],
+      "sessionId": "<session>",
+      "startedAt": "<time>",
+      "status": "AUTO_SUBMITTED",
+      "studentId": "<id>",
+      "submittedAt": "<time>",
+      "tabSwitchCount": 0,
+      "testId": "<id>",
+      "totalScore": 0
+    }
+  }
+]
+
