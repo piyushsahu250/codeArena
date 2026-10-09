@@ -47,7 +47,7 @@ const MAX_ROUTE_KEYS = 400;
 const ROUTE_RING = 50;
 const routeStats = new Map();
 function recordRoute(req, res, ms) {
-  const pattern = req.route ? `${req.baseUrl || ""}${req.route.path === "/" ? "" : req.route.path}` || "/" : "(unmatched)";
+  const pattern = req.__routePattern || "(unmatched)";
   const key = `${req.method} ${pattern}`;
   let s = routeStats.get(key);
   if (!s) {

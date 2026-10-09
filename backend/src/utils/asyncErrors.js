@@ -8,6 +8,8 @@ if (!Layer.prototype.__asyncErrorsPatched) {
   Layer.prototype.handle_request = function handleRequestWithAsyncErrors(req, res, next) {
     const fn = this.handle;
     if (fn.length > 3) return next(); // an error-handling middleware: not for normal requests
+    // Remember the matched route pattern while Express still knows the mount path (it resets baseUrl once an error unwinds the stack); used by metrics.js.
+    if (req.route && req.__routePattern === undefined) req.__routePattern = `${req.baseUrl || ""}${req.route.path === "/" ? "" : req.route.path}` || "/";
     try {
       const result = fn(req, res, next);
       if (result && typeof result.catch === "function") result.catch(next);
