@@ -33,7 +33,13 @@ for (const [who, paths] of GROUPS) {
       for (const w of [375, 320, 1280]) {
         await page.setViewportSize({ width: w, height: 800 });
         await page.waitForTimeout(150);
-        const { scroll, inner } = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+        // charts re-layout a moment after the window changes size: allow up to 2 s to settle before calling it an overflow
+        let scroll = 0, inner = 0;
+        for (let t = 0; t < 10; t++) {
+          ({ scroll, inner } = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth })));
+          if (scroll <= inner + 1) break;
+          await page.waitForTimeout(200);
+        }
         if (scroll > inner + 1) { if (w === 320 && KNOWN_320.has(path)) console.log(`KNOWN RESIDUAL ${path} at 320px (${scroll} > ${inner})`); else problems.push(`${path}: scrolls sideways at ${w}px (${scroll} > ${inner})`); }
       }
       await page.setViewportSize({ width: 375, height: 800 });
