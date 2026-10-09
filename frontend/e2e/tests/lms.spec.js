@@ -38,7 +38,7 @@ test("every lesson page renders without an uncaught error", async ({ page }) => 
   const broken = [];
   for (const t of targets) {
     let r = await visit(t);
-    if (r.problem) { await page.waitForTimeout(r.status === 429 ? 35000 : 4000); r = await visit(t); }
+    if (r.problem) { await page.waitForTimeout(r.status === 429 ? 70000 : 4000); r = await visit(t); }
     await page.waitForTimeout(300); // stay under the API rate limiter, as a real reader would
     if (r.problem) broken.push(`${t.course} / ${t.module} / ${t.title}${t.test ? " [module test]" : ""}: ${r.problem} (lesson API status ${r.status})`);
   }

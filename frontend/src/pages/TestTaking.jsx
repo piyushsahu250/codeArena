@@ -11,7 +11,11 @@ import RunSubmitButtons from "../components/RunSubmitButtons";
 import ProblemStatement from "../components/ProblemStatement";
 import MathText from "../components/MathText";
 import { CODE_LANGUAGES as LANGUAGES, defaultStarter, supportedLanguages } from "../utils/codeEditorDefaults";
-import { requestFullscreenCompat, exitFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { enterFullscreen, releaseFullscreen, isReleasingFullscreen } from "../utils/fullscreenSession";
+
+// identity of this page for the fullscreen manager (only the owner that entered fullscreen can release it)
+const TEST_FS_OWNER = "formal-test-session";
 import { checkOtherTabsOpen } from "../utils/tabPresence";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
@@ -558,7 +562,7 @@ export default function TestTaking() {
     // call alone silently no-ops on any browser that only exposes a prefixed version.
     if (testMeta?.requireFullscreen !== false) {
       try {
-        await requestFullscreenCompat();
+        { const entered = await enterFullscreen(TEST_FS_OWNER); if (!entered.ok) throw entered.error; }
       } catch (err) {
         // Fullscreen can be genuinely denied/unsupported (e.g. iOS Safari never supports it for
         // non-<video> elements) -- proceed with the test regardless, but log why so a rejection
@@ -675,6 +679,9 @@ export default function TestTaking() {
       setStarting(false);
     }
   }
+
+  // Leaving this page by any route (finish, Back, a link, unmount during a request) releases the fullscreen this test entered.
+  useEffect(() => () => { releaseFullscreen(TEST_FS_OWNER); }, []);
 
   const questions = test?.questions || [];
   const current = questions[activeIdx]?.question;
@@ -812,7 +819,7 @@ export default function TestTaking() {
         if (data.autoSubmitted) {
           finalizedRef.current = true;
           setAutoSubmitted(true);
-          if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+          releaseFullscreen(TEST_FS_OWNER);
           mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
           // No alert() here — a dedicated full-screen message is shown once `autoSubmitted`
           // is true, and native alert()/confirm() dialogs force the browser to exit
@@ -888,7 +895,7 @@ export default function TestTaking() {
       onSwitch: () => reportViolation("TAB_SWITCH", "switching tabs during a test is not allowed"),
       onVisible: () => {
         if (testMeta?.requireFullscreen !== false && !finalizedRef.current && !getFullscreenElement()) {
-          requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+          enterFullscreen(TEST_FS_OWNER).then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
         }
       },
     });
@@ -909,7 +916,7 @@ export default function TestTaking() {
         // Retried only once the keyboard has actually closed — attempting re-entry while it's
         // still open is both pointless (no fresh user gesture) and can visibly flicker.
         if (!finalizedRef.current && !getFullscreenElement()) {
-          requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+          enterFullscreen(TEST_FS_OWNER).then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
         }
       },
     });
@@ -931,6 +938,8 @@ export default function TestTaking() {
     function handleFullscreenChange() {
       const active = !!getFullscreenElement();
       setFullscreenOk(active);
+      // a deliberate release (submit finished, page left) is neither a violation nor a reason to re-enter fullscreen
+      if (!active && isReleasingFullscreen()) return;
       if (!active && !finalizedRef.current) {
         // On a touch device, a fullscreen exit while the tab is still visible (not `document.hidden`)
         // is the on-screen keyboard opening or an OS gesture — Android Chrome drops fullscreen the
@@ -942,11 +951,11 @@ export default function TestTaking() {
         // (and deferred to onKeyboardClose above once the keyboard closes).
         if (isTouchDevice() && !document.hidden) {
           console.info("[exam] fullscreen exit on a touch device with the tab still visible — attributed to the on-screen keyboard / an OS gesture, not counted as a violation");
-          requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch(() => {});
+          enterFullscreen(TEST_FS_OWNER).then(() => setFullscreenOk(!!getFullscreenElement())).catch(() => {});
           return;
         }
         reportViolation("FULLSCREEN_EXIT", "exiting fullscreen during a test is not allowed");
-        requestFullscreenCompat().then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
+        enterFullscreen(TEST_FS_OWNER).then(() => setFullscreenOk(!!getFullscreenElement())).catch((err) => console.warn("[exam] re-entry requestFullscreen failed:", err));
       } else if (active) {
         clearTimeout(tabWarningTimeoutRef.current);
         setTabWarning(null);
@@ -1561,7 +1570,7 @@ export default function TestTaking() {
       finalizingRef.current = false;
       setFinalizing(false);
       setFinalizeFailed(true);
-      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      releaseFullscreen(TEST_FS_OWNER);
       console.error("[finalize] failed after 3 attempts:", lastErr);
       return;
     }
@@ -1577,7 +1586,7 @@ export default function TestTaking() {
       return;
     }
     finalizedRef.current = true;
-    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+    releaseFullscreen(TEST_FS_OWNER);
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     notify(data.gamification);
     finalizingRef.current = false;
@@ -1593,7 +1602,7 @@ export default function TestTaking() {
 
   async function resumeFullscreen() {
     try {
-      await requestFullscreenCompat();
+      await enterFullscreen(TEST_FS_OWNER);
       setFullscreenOk(!!getFullscreenElement());
       setTabWarning(null);
     } catch (err) {

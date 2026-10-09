@@ -33,6 +33,7 @@ async function seed() {
   const users = {
     student: await mk("student", "Ela Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, program: "B.Tech", rollNumber: "101" }),
     student2: await mk("student2", "Ben Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "102" }),
+    student3: await mk("student3", "Cal Student", "STUDENT", A.id, { department: "E2E Computer Science", academicGroupId: group.id, rollNumber: "103" }),
     studentB: await mk("studentb", "Zed Other", "STUDENT", B.id),
     staff: await mk("staff", "Sam Staff", "STAFF", A.id, { department: "E2E Computer Science" }),
     clerk: await mk("clerk", "Cora Clerk", "CLERK", A.id),
@@ -51,7 +52,8 @@ async function seed() {
   });
   const test = await mkTest(`${TAG} Standard Test`);
   const proctored = await mkTest(`${TAG} Proctored Test`, { securityLevel: "PROCTORED" });
-  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, proctoredTestId: proctored.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
+  const fsTest = await mkTest(`${TAG} Fullscreen Test`, { requireFullscreen: true });
+  console.log(JSON.stringify({ users, institutes: { A: { id: A.id, name: A.name }, B: { id: B.id, name: B.name } }, testId: test.id, proctoredTestId: proctored.id, fullscreenTestId: fsTest.id, questionTexts: ["E2E question 1: pick option B", "E2E question 2: pick option B"] }));
 }
 
 (async () => {

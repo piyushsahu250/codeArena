@@ -10,6 +10,7 @@ module.exports = defineConfig({
   workers: 1,
   retries: 0,
   reporter: [["list"], ["json", { outputFile: "results.json" }]],
-  use: { baseURL: "http://localhost:5173", headless: true, viewport: { width: 1280, height: 800 }, trace: "off", screenshot: "only-on-failure" },
+  // Fake camera/microphone so the proctored interview screens can be exercised without hardware (no real media is captured).
+  use: { baseURL: "http://localhost:5173", headless: true, viewport: { width: 1280, height: 800 }, trace: "off", screenshot: "only-on-failure", permissions: ["camera", "microphone"], launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] } },
   outputDir: "./test-results",
 });

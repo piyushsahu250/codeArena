@@ -12,7 +12,6 @@ import { useExamSession, recallExamSession } from "../hooks/useExamSession";
 import { runSecurityCheck } from "../utils/secureAssessment";
 import { CODE_LANGUAGES, defaultStarter } from "../utils/codeEditorDefaults";
 import { applyPlainTextInputHints, watchForNonAsciiInput } from "../utils/monacoSetup";
-import { getFullscreenElement, exitFullscreenCompat } from "../utils/fullscreenCompat";
 import useIsMobile from "../hooks/useIsMobile";
 import api, { API_BASE_URL } from "../api";
 
@@ -123,7 +122,7 @@ export default function ReadinessAssessment() {
         finalizedRef.current = true;
         setTerminatedReason(VIOLATION_LABEL[type] || "a proctoring violation");
         proctor.stopMedia();
-        if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+        proctor.releaseFullscreen();
         setPhase("terminated");
       } else if (data.penalized) {
         const msg = `Warning ${data.violationCount}/${data.maxViolations}: ${VIOLATION_LABEL[type] || type}. The assessment will be terminated if this continues.`;
@@ -390,13 +389,13 @@ export default function ReadinessAssessment() {
     finalizingRef.current = false;
     if (!ok) {
       setSubmitting(false);
-      if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+      proctor.releaseFullscreen();
       setPhase("finalize-failed");
       return;
     }
     finalizedRef.current = true;
     proctor.stopMedia();
-    if (getFullscreenElement()) exitFullscreenCompat().catch(() => {});
+    proctor.releaseFullscreen();
     navigate(`/readiness/report/${assessmentId}`, { replace: true });
   }
 

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as tf from "@tensorflow/tfjs";
 import * as blazeface from "@tensorflow-models/blazeface";
-import { requestFullscreenCompat, getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { getFullscreenElement, onFullscreenChange } from "../utils/fullscreenCompat";
+import { enterFullscreen, releaseFullscreen as releaseFullscreenFor, isReleasingFullscreen } from "../utils/fullscreenSession";
 import { createKeyboardSignal, isTouchDevice } from "../utils/mobileKeyboard";
 import { createTabSwitchSignal } from "../utils/tabSwitchSignal";
 import { createOverlaySignal } from "../utils/viewportOverlaySignal";
@@ -87,10 +88,20 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   // restore fullscreen there with zero trace of why. Previously an entirely silent .catch(() =>
   // {}) — now logs the real rejection reason and updates fullscreenOk so it's visible, not just
   // diagnosable in the console.
+  // Identity of this session for the fullscreen manager: only the owner that entered fullscreen can release it, so ending this session never touches a
+  // fullscreen session that belongs to another feature.
+  const ownerIdRef = useRef(`proctoring-${Math.random().toString(36).slice(2)}`);
   const requestFullscreen = useCallback(() => {
-    return requestFullscreenCompat()
-      .catch((err) => console.warn("[proctoring] requestFullscreen failed:", err))
+    return enterFullscreen(ownerIdRef.current)
+      .then((r) => { if (!r.ok) console.warn("[proctoring] requestFullscreen failed:", r.error); return r; })
       .finally(() => setFullscreenOk(!!getFullscreenElement()));
+  }, []);
+  // Leaves fullscreen if this session entered it. Safe to call repeatedly or when not fullscreen. Call it from Exit / End / Cancel before navigating away.
+  const releaseFullscreen = useCallback(() => releaseFullscreenFor(ownerIdRef.current), []);
+  // Whatever way the page is left (Exit button, router link, browser Back, unmount during a pending request) fullscreen is released with it.
+  useEffect(() => {
+    const owner = ownerIdRef.current;
+    return () => { releaseFullscreenFor(owner); };
   }, []);
 
   // Mobile-keyboard signal — touch devices only. Android Chrome (and some other mobile browsers)
@@ -126,6 +137,8 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
     function handleChange() {
       const isFs = !!getFullscreenElement();
       setFullscreenOk(isFs);
+      // A deliberate release (Exit / End / unmount) is not a violation and must not be undone by re-entering fullscreen.
+      if (!isFs && isReleasingFullscreen()) return;
       if (!isFs) {
         // On a touch device, a fullscreen exit while the tab is still visible (not `document.hidden`)
         // is the on-screen keyboard opening or an OS gesture — Android Chrome drops fullscreen the
@@ -581,7 +594,7 @@ export function useProctoring({ active, requireFullscreen = true, requireWebcam 
   }, []);
 
   return {
-    requestFullscreen, fullscreenOk,
+    requestFullscreen, releaseFullscreen, fullscreenOk,
     mediaGranted, mediaError, requestingMedia, requestMedia, stopMedia, videoRef: setVideoNode,
     faceStatus, faceModelStatus, cameraStatus, micStatus, noiseWarning,
     // Purely informational -- true briefly right after a device rotation. Never a warning/
