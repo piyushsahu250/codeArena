@@ -853,3 +853,17 @@ input::placeholder, textarea::placeholder { color: var(--ink-dim); }
 @media (max-width: 640px) {
   input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px !important; }
 }
+
+/* ---- Mobile safeguards, part 2 (2026-10 audit): the four ways a page still scrolled sideways on a phone ----
+   Found by e2e/tests/pages.spec.js (every page of every role at 320/375px): 16 pages, e.g. Resume 758px on a 375px screen.
+   1. A long <option> sets a <select>'s width, and inputs keep their intrinsic width: both may now shrink to their container.
+   2. A grid/flex child cannot shrink below its content by default, so one wide child (a template preview, a long label) stretches the
+      whole track past the screen: children may now shrink.
+   3. A row of buttons/tabs with inline `display:flex` ran off the screen: it now wraps (rows that set their own flex-wrap, or that are
+      deliberate horizontal scrollers via overflow, are left alone). */
+@media (max-width: 640px) {
+  select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) { max-width: 100%; min-width: 0; box-sizing: border-box; }
+  [style*="display: grid"] > *, [style*="display:grid"] > * { min-width: 0; }
+  [style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="flex-wrap"]):not([style*="overflow"]),
+  [style*="display:flex"]:not([style*="flex-direction:column"]):not([style*="flex-wrap"]):not([style*="overflow"]) { flex-wrap: wrap; }
+}
