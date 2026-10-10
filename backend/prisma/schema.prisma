@@ -1210,6 +1210,8 @@ model AuditLog {
   // This is the fastest-growing table on the platform -- every login and failed login writes a row.
   @@index([instituteId, createdAt])
   @@index([action, createdAt])
+  // Staff analytics: one person's events over a period (adminId, then time). Additive; no data change.
+  @@index([adminId, createdAt])
 }
 
 // Real Export History (spec: "Queued/Processing/Completed/Failed/Expired" per past export), backed

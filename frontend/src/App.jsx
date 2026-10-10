@@ -84,6 +84,8 @@ const TalentPools = lazy(() => import("./pages/TalentPools"));
 const MyTalentPools = lazy(() => import("./pages/MyTalentPools"));
 const ResultManagement = lazy(() => import("./pages/ResultManagement"));
 const StaffClerkManagement = lazy(() => import("./pages/StaffClerkManagement"));
+const StaffAnalyticsDashboard = lazy(() => import("./pages/staffAnalytics/StaffAnalyticsDashboard"));
+const StaffAnalyticsPerson = lazy(() => import("./pages/staffAnalytics/StaffAnalyticsPerson"));
 const StaffClerkProfile = lazy(() => import("./pages/StaffClerkProfile"));
 const MyResults = lazy(() => import("./pages/MyResults"));
 const MarksheetView = lazy(() => import("./pages/MarksheetView"));
@@ -489,6 +491,9 @@ export default function App() {
           <Route path="/admin/students/:id" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StudentPerformance basePath="/admin" /></Suspense></Protected>} />
           <Route path="/admin/roll-number-conflicts" element={<Protected roles={["ADMIN"]}><RollNumberConflicts /></Protected>} />
           <Route path="/admin/staff-clerk" element={<Protected roles={["ADMIN"]}><StaffClerkManagement /></Protected>} />
+          <Route path="/admin/staff-analytics" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StaffAnalyticsDashboard /></Suspense></Protected>} />
+          <Route path="/admin/staff-analytics/:id" element={<Protected roles={["ADMIN"]}><Suspense fallback={<LoadingScreen />}><StaffAnalyticsPerson /></Suspense></Protected>} />
+          <Route path="/my-activity" element={<Protected roles={["STAFF", "CLERK"]}><Suspense fallback={<LoadingScreen />}><StaffAnalyticsPerson self /></Suspense></Protected>} />
           <Route path="/admin/staff-clerk/:id" element={<Protected roles={["ADMIN"]}><StaffClerkProfile /></Protected>} />
           <Route path="/admin/companies" element={<Protected roles={["ADMIN"]}><CompanyMaster /></Protected>} />
           <Route path="/admin/issue-reports" element={<Protected roles={["ADMIN"]}><IssueReports basePath="/admin" /></Protected>} />

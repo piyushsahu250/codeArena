@@ -74,6 +74,7 @@ export default function InstituteCommand() {
                 <Kpi label="Active students" value={d.activity.activeStudentPercent === null ? null : `${d.activity.activeStudentPercent}%`} foot={`${fmt(d.activity.activeStudents)} logged in`} />
                 <Kpi label="Staff" value={fmt(c.staff)} to="/admin/staff-clerk" />
                 <Kpi label="Clerks" value={fmt(c.clerks)} to="/admin/staff-clerk" />
+                <Kpi label="Staff & clerk analytics" value="Open" foot="Activity, workload, comparisons" to="/admin/staff-analytics" />
                 <Kpi label="Departments" value={fmt(c.departments)} foot={`${c.sections} sections`} to="/admin/academic-groups" />
                 <Kpi label="Courses assigned" value={fmt(c.courses)} to="/admin/course-assignments" />
                 <Kpi label="Assessments" value={fmt(c.assessments)} foot={`${c.liveAssessments} live · ${c.upcomingAssessments} upcoming`} to="/staff/tests" />

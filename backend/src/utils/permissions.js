@@ -19,6 +19,8 @@ const REGISTRY = {
   "institute.console": { description: "Institute administration", roles: [R.ADMIN, R.SUPER_ADMIN, R.INSTITUTE_ADMIN] },
   "platform.console": { description: "Platform-wide administration", roles: [R.ADMIN, R.SUPER_ADMIN] },
   "platform.owner": { description: "Super admin only", roles: [R.SUPER_ADMIN] },
+  "staffAnalytics.view": { description: "Staff and clerk performance analytics (institute scope is forced for institute-bound accounts)", roles: [R.ADMIN, R.SUPER_ADMIN, R.INSTITUTE_ADMIN] },
+  "staffAnalytics.self": { description: "A staff or clerk member viewing their own activity analytics", roles: [R.STAFF, R.CLERK] },
 };
 
 let cache = null; // { at, map: Map<key, Set<role>> }

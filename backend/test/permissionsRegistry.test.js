@@ -14,6 +14,8 @@ const ORIGINAL = {
   "institute.console": ["SUPER_ADMIN", "ADMIN", "INSTITUTE_ADMIN"],
   "platform.console": ["SUPER_ADMIN", "ADMIN"],
   "platform.owner": ["SUPER_ADMIN"],
+  "staffAnalytics.view": ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"],
+  "staffAnalytics.self": ["STAFF", "CLERK"],
 };
 
 test("every permission matches the role list it replaced, for every role", async () => {
