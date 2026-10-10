@@ -62,7 +62,7 @@ jobs:
           code=0; npm run test:unit > /tmp/unit.out 2>&1 || code=$?
           tail -n 40 /tmp/unit.out
           if [ "$code" != 0 ]; then
-            msg=$(grep -E "^not ok|^    not ok|error:|Error:|expected|actual|disagree|samples|generator" /tmp/unit.out | head -12 | tr -s '[:space:]' ' ' | cut -c1-1500)
+            msg=$(grep -E "^ *not ok|^ *error: |^ *message: " /tmp/unit.out | head -12 | tr -s '[:space:]' ' ' | cut -c1-1500)
             echo "::error title=unit tests failed::$msg"
           fi
           exit $code
