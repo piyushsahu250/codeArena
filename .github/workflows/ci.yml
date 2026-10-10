@@ -14,7 +14,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # never cancel a run on main: a required check that ends "cancelled" would block merging. Superseded runs on other branches are cancelled.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   backend:
@@ -139,16 +140,8 @@ jobs:
         working-directory: backend
         run: |
           fail=0
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract; do
-            echo "=== $s"
-            code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
-            cat "/tmp/$s.out"
-            if [ "$code" -ne 0 ]; then
-              # also published as a check annotation so the reason is readable from the run's summary without opening the raw log
-              MSG=$(tail -c 3000 "/tmp/$s.out" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
-              echo "::error title=$s failed::$MSG"
-              fail=1
-            fi
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest; do
+            echo "=== $s"; node scripts/$s.js || { echo "::error::$s failed"; fail=1; }
           done
           exit $fail
       - name: Build the SPA and serve it

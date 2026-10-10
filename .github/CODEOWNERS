@@ -1,0 +1,14 @@
+# Code owners: GitHub asks these people to review changes to the paths below when "Require review from Code Owners" is switched on for main
+# (see docs/BRANCH_PROTECTION.md). Sensitive areas only; everything else is reviewed under the general pull-request rule.
+/.github/                       @piyushsahu250
+/scripts/deploy-aws-host.sh     @piyushsahu250
+/scripts/check-ci-green.sh      @piyushsahu250
+/backend/prisma/schema.prisma   @piyushsahu250
+/backend/src/middleware/        @piyushsahu250
+/backend/src/routes/auth.js     @piyushsahu250
+/backend/src/utils/permissions.js @piyushsahu250
+/backend/src/utils/sessions.js  @piyushsahu250
+/backend/src/utils/examSecurity.js @piyushsahu250
+/backend/src/utils/testExamSecurity.js @piyushsahu250
+/backend/docker-entrypoint.sh   @piyushsahu250
+/backend/Dockerfile             @piyushsahu250
