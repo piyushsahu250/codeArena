@@ -50,6 +50,7 @@ const MENU = {
   CLERK: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/clerk", icon: LayoutDashboard },
+      { label: "My Activity", to: "/my-activity", icon: BarChart3 },
       { label: "Placement Analytics", to: "/clerk/placement-analytics", icon: BarChart3 },
       { label: "Student Search", to: "/clerk/students", icon: Users },
       { label: "Company Master", to: "/clerk/companies", icon: Building },
@@ -62,6 +63,7 @@ const MENU = {
   STAFF: [
     { group: "Main", items: [
       { label: "Dashboard", to: "/staff", icon: LayoutDashboard },
+      { label: "My Activity", to: "/my-activity", icon: BarChart3 },
       { label: "Tests & Analytics", to: "/staff/tests", icon: BarChart3 },
       { label: "Learning Management", to: "/staff/learning", icon: BookOpen },
       { label: "Question Bank", to: "/staff/questions", icon: FileQuestion, featureKey: "question_bank" },
@@ -99,6 +101,7 @@ const MENU = {
       { label: "Students", to: "/admin/students", icon: Users },
       { label: "Roll Number Conflicts", to: "/admin/roll-number-conflicts", icon: AlertTriangle },
       { label: "Staff & Clerk", to: "/admin/staff-clerk", icon: UserCog },
+      { label: "Staff Analytics", to: "/admin/staff-analytics", icon: BarChart3 },
       { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
     ] },
     { group: "Attendance", items: [
@@ -152,6 +155,7 @@ const MENU = {
       { label: "Students", to: "/admin/students", icon: Users },
       { label: "Roll Number Conflicts", to: "/admin/roll-number-conflicts", icon: AlertTriangle },
       { label: "Staff & Clerk", to: "/admin/staff-clerk", icon: UserCog },
+      { label: "Staff Analytics", to: "/admin/staff-analytics", icon: BarChart3 },
       { label: "Talent Pools", to: "/admin/talent-pools", icon: Star },
     ] },
     { group: "Attendance", items: [

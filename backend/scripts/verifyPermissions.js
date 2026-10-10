@@ -12,6 +12,8 @@ const ORIGINAL = {
   "institute.console": ["SUPER_ADMIN", "ADMIN", "INSTITUTE_ADMIN"],
   "platform.console": ["SUPER_ADMIN", "ADMIN"],
   "platform.owner": ["SUPER_ADMIN"],
+  "staffAnalytics.view": ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN"],
+  "staffAnalytics.self": ["STAFF", "CLERK"],
 };
 let failed = 0;
 const check = (name, ok) => { console.log(`${ok ? "PASS" : "FAIL"}  ${name}`); if (!ok) failed++; };

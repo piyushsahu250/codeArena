@@ -147,8 +147,16 @@ jobs:
         working-directory: backend
         run: |
           fail=0
-          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest; do
-            echo "=== $s"; node scripts/$s.js || { echo "::error::$s failed"; fail=1; }
+          for s in verifyPermissions verifyAsyncErrors verifyRouteMetrics verifyAttemptManifest verifySubmissionsContract verifyStaffAnalytics; do
+            echo "=== $s"
+            code=0; node scripts/$s.js > "/tmp/$s.out" 2>&1 || code=$?
+            cat "/tmp/$s.out"
+            if [ "$code" -ne 0 ]; then
+              # also published as a check annotation so the reason is readable from the run's summary without opening the raw log
+              MSG=$(tail -c 3000 "/tmp/$s.out" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
+              echo "::error title=$s failed::$MSG"
+              fail=1
+            fi
           done
           exit $fail
       - name: Build the SPA and serve it
@@ -168,7 +176,13 @@ jobs:
         run: |
           npm install
           npx playwright install --with-deps chromium
-          npx playwright test
+          code=0; npx playwright test --reporter=line,list > /tmp/pw.out 2>&1 || code=$?
+          tail -n 60 /tmp/pw.out
+          if [ "$code" != 0 ]; then
+            msg=$(grep -E "^ +[0-9]+\) |Error:|expect\(|Expected|Received|locator" /tmp/pw.out | head -16 | tr -s '[:space:]' ' ' | cut -c1-1800)
+            echo "::error title=browser suite failed::$msg"
+          fi
+          exit $code
       - name: Show API log tail on failure
         if: failure()
         run: tail -80 api.log || true

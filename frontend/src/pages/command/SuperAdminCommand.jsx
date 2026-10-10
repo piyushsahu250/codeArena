@@ -75,6 +75,7 @@ export default function SuperAdminCommand() {
                 <Kpi label="Students" value={fmt(t.students)} foot={<>{fmt(d.trends.newStudents.value)} new <Delta t={d.trends.newStudents} /></>} />
                 <Kpi label="Active users" value={fmt(t.activeUsers)} foot={`logged in, last ${days} d`} />
                 <Kpi label="Staff · Clerks · Admins" value={`${fmt(t.staff)} · ${fmt(t.clerks)} · ${fmt(t.instituteAdmins)}`} to="/admin/staff-clerk" />
+                <Kpi label="Staff & clerk analytics" value="Open" foot="All colleges: activity and comparisons" to="/admin/staff-analytics" />
                 <Kpi label="Tests completed" value={fmt(d.trends.testsCompleted.value)} foot={<Delta t={d.trends.testsCompleted} />} />
                 <Kpi label="Coding runs" value={fmt(t.codingInPeriod)} foot="accepted practice runs" />
                 <Kpi label="Students learning" value={fmt(t.learningStudentsInPeriod)} foot="completed a lesson" />
