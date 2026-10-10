@@ -128,7 +128,7 @@ export default function StaffAnalyticsDashboard() {
               <DateFilters range={range} onChange={resetPage(setRange)} />
               {platform && (
                 <label className="sa-field"><span>College</span>
-                  <select className="ad-input" value={instituteId} onChange={(e) => resetPage(setInstituteId)(e.target.value)}>
+                  <select className="ad-input" aria-label="College filter" value={instituteId} onChange={(e) => resetPage(setInstituteId)(e.target.value)}>
                     <option value="">All colleges</option>
                     {m.filters.institutes.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                   </select>
