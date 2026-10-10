@@ -355,3 +355,5 @@ router.get("/companies/:company/pattern", authenticate, attachRequesterInstitute
 });
 
 module.exports = router;
+// Exposed so the research-import approval script runs the exact same promotion rules as the review screen.
+module.exports.approveDraftQuestion = approveDraftQuestion;
