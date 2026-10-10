@@ -21,7 +21,7 @@ test("platform admin sees filters, KPIs, definitions and an export menu with thr
   await login(page, users.platform);
   await page.goto("/admin/staff-analytics");
   await expect(page.locator("h1")).toContainText("Staff & clerk analytics");
-  await expect(page.getByLabel("College")).toBeVisible();
+  await expect(page.getByLabel("College", { exact: true })).toBeVisible();
   await expect(page.getByText("People in scope")).toBeVisible();
   await expect(page.getByText("Counted events").first()).toBeVisible();
   await page.getByRole("button", { name: /Export people/ }).click();
@@ -35,8 +35,8 @@ test("institute admin gets no college picker and sees only their college", async
   await login(page, users.instAdmin);
   await page.goto("/admin/staff-analytics");
   await expect(page.locator("h1")).toContainText("Staff & clerk analytics");
-  await expect(page.getByLabel("College")).toHaveCount(0);
-  await expect(page.getByText("Your college")).toBeVisible();
+  await expect(page.getByLabel("College", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Your college", { exact: true })).toBeVisible();
 });
 
 test("the people table opens a person's detail with workload, ratios and a log", async ({ page }) => {
