@@ -156,8 +156,8 @@ const bruteFirstPair = (s, bySorted) => { const L = lines(s); const a = ints(L[1
 // a sorted distinct array with exactly one pair summing to t (or none)
 const uniquePairCase = (rng, n, wantPair) => {
   for (let attempt = 0; attempt < 500; attempt++) {
-    const a = sortedDistinct(rng, n, -2000, 2000); if (a.length < 2) continue;
-    const t = wantPair ? a[rint(rng, 0, a.length - 1)] + a[rint(rng, 0, a.length - 1)] : 100000;
+    const a = sortedDistinct(rng, n, -1000000000, 1000000000); if (a.length < 2) continue;
+    const t = wantPair ? a[rint(rng, 0, a.length - 1)] + a[rint(rng, 0, a.length - 1)] : 4000000000;
     const c = pairCount(a, t); if ((wantPair && c === 1) || (!wantPair && c === 0)) return J(String(a.length), arr(a), String(t));
   }
   throw new Error("could not build unique pair case");
@@ -168,8 +168,8 @@ def("pairSorted", pairSortedUnique, (s) => bruteFirstPair(s, true),
 const pairUnsortedFirst = (s) => { const L = lines(s); const a = ints(L[1]); const t = Number(L[2]); const seen = new Map(); for (let j = 0; j < a.length; j++) { if (seen.has(t - a[j])) return `${seen.get(t - a[j]) + 1} ${j + 1}`; if (!seen.has(a[j])) seen.set(a[j], j); } return "-1"; };
 const uniquePairUnsorted = (rng, n, wantPair) => {
   for (let attempt = 0; attempt < 500; attempt++) {
-    const a = randArr(rng, n, -2000, 2000);
-    const t = wantPair ? a[rint(rng, 0, n - 1)] + a[rint(rng, 0, n - 1)] : 100000;
+    const a = randArr(rng, n, -1000000000, 1000000000);
+    const t = wantPair ? a[rint(rng, 0, n - 1)] + a[rint(rng, 0, n - 1)] : 4000000000;
     const c = pairCount(a, t); if ((wantPair && c === 1) || (!wantPair && c === 0)) return J(String(n), arr(a), String(t));
   }
   throw new Error("could not build unique unsorted pair case");
