@@ -4253,35 +4253,37 @@
     {
         "name":  "results: institute B admin, platform-wide test",
         "status":  200,
-        "body":  {
-                     "expectedQuestionCount":  2,
-                     "id":  "\u003cid\u003e",
-                     "manifestVersion":  1,
-                     "optionOrder":  null,
-                     "questionOrder":  [
-                                           "\u003cid\u003e",
-                                           "\u003cid\u003e"
-                                       ],
-                     "sessionId":  "\u003csession\u003e",
-                     "startedAt":  "\u003ctime\u003e",
-                     "status":  "SUBMITTED",
-                     "student":  {
-                                     "email":  "zz-tc-stuB-\u003cts\u003e@example.invalid",
-                                     "name":  "ZZ TC stuB",
-                                     "registrationNumber":  null,
-                                     "rollNumber":  null
-                                 },
-                     "studentId":  "\u003cid\u003e",
-                     "submissions":  [
-                                         {
-                                             "questionId":  "\u003cid\u003e"
-                                         }
-                                     ],
-                     "submittedAt":  "\u003ctime\u003e",
-                     "tabSwitchCount":  0,
-                     "testId":  "\u003cid\u003e",
-                     "totalScore":  3
-                 }
+        "body":  [
+                     {
+                         "expectedQuestionCount":  2,
+                         "id":  "\u003cid\u003e",
+                         "manifestVersion":  1,
+                         "optionOrder":  null,
+                         "questionOrder":  [
+                                               "\u003cid\u003e",
+                                               "\u003cid\u003e"
+                                           ],
+                         "sessionId":  "\u003csession\u003e",
+                         "startedAt":  "\u003ctime\u003e",
+                         "status":  "SUBMITTED",
+                         "student":  {
+                                         "email":  "zz-tc-stuB-\u003cts\u003e@example.invalid",
+                                         "name":  "ZZ TC stuB",
+                                         "registrationNumber":  null,
+                                         "rollNumber":  null
+                                     },
+                         "studentId":  "\u003cid\u003e",
+                         "submissions":  [
+                                             {
+                                                 "questionId":  "\u003cid\u003e"
+                                             }
+                                         ],
+                         "submittedAt":  "\u003ctime\u003e",
+                         "tabSwitchCount":  0,
+                         "testId":  "\u003cid\u003e",
+                         "totalScore":  3
+                     }
+                 ]
     },
     {
         "name":  "results: the owner (institute A), platform-wide test",
