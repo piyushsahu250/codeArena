@@ -25,6 +25,9 @@ function loadQuestions(inputs) {
   }
   return out;
 }
+// jsonb does not keep key order, so values are compared with sorted keys.
+const canon = (v) => (Array.isArray(v) ? v.map(canon) : v && typeof v === "object" && !(v instanceof Date) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
+const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 const pick = (row) => Object.fromEntries(FIELDS.map((k) => [k, row[k] === undefined ? null : row[k]]));
 const brief = (v) => (v && typeof v === "object" ? { evidenceClass: v.evidenceClass, timesReported: v.timesReported, sources: (v.sources || []).length } : v);
 
@@ -46,7 +49,7 @@ const brief = (v) => (v && typeof v === "object" ? { evidenceClass: v.evidenceCl
     if (!question) { console.log(`  ${id}: no live question with that import key, skipped`); continue; }
     const after = pick(w.payload);
     const before = pick(question);
-    const diff = FIELDS.filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
+    const diff = FIELDS.filter((k) => !same(before[k], after[k]));
     if (!diff.length) { console.log(`  ${id}: already correct`); continue; }
     console.log(`  ${id}: ${diff.map((k) => `${k} ${JSON.stringify(brief(before[k]))} -> ${JSON.stringify(brief(after[k]))}`).join("; ")}`);
     changed++;
