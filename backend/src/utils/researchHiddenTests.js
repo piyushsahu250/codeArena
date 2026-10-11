@@ -348,6 +348,7 @@ const MAP = {
   "TCS-PRIME-R1-001": "kDistinct", "TCS-PRIME-R1-002": "removeDupWords", "TCS-PRIME-R1-003": "mergeIntervals", "TCS-PRIME-R1-004": "subarraySumK",
 };
 
+const EXCLUDE = {}; // inputs a question must not receive although its problem family produces them (they fall outside that question constraints)
 function problemFor(questionId) { return MAP[questionId] || null; }
 
 // Returns { inputs, tests } for a question's problem, running the ref (and brute) on every input.
@@ -356,7 +357,7 @@ function buildHiddenTests(questionId, seed = 20261010) {
   if (!key) throw new Error(`no hidden-test generator for ${questionId}`);
   const p = P[key];
   const rng = mulberry32(seed + [...key].reduce((a, c) => a + c.charCodeAt(0), 0));
-  const inputs = p.tests(rng);
+  const inputs = p.tests(rng).filter((i) => !(EXCLUDE[questionId] || []).includes(i));
   const tests = inputs.map((input) => {
     const expected = p.ref(input);
     if (p.brute) {
@@ -376,9 +377,17 @@ function checkSamples(questionId, samples) {
   const bad = [];
   for (const s of samples) {
     const got = p.ref(s.input);
-    if (got !== String(s.expected !== undefined ? s.expected : s.output).trim()) bad.push({ input: s.input, expected: s.expected !== undefined ? s.expected : s.output, got });
+    const want = String(s.expected !== undefined ? s.expected : s.output).trim();
+    if ((p.loose ? got.trim() : got) !== want) bad.push({ input: s.input, expected: s.expected !== undefined ? s.expected : s.output, got });
   }
   return bad;
 }
 
 module.exports = { buildHiddenTests, checkSamples, problemFor, MAP, PROBLEMS: P, mulberry32 };
+module.exports.EXCLUDE = EXCLUDE;
+// Some source samples lost their leading spaces (a centred pyramid); for those problems the visible samples are rewritten from the verified reference.
+module.exports.visibleSamples = function visibleSamples(questionId, samples) {
+  const p = P[MAP[questionId]];
+  return p && p.rewriteSamples ? samples.map((s) => ({ ...s, expected: p.ref(s.input) })) : samples;
+};
+require("./researchHiddenTests2");

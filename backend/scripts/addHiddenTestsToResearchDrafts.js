@@ -4,7 +4,7 @@
 //   node scripts/addHiddenTestsToResearchDrafts.js
 //   node scripts/addHiddenTestsToResearchDrafts.js --apply --confirm=ADD-HIDDEN-TESTS
 const prisma = require("../src/prisma");
-const { buildHiddenTests, checkSamples, problemFor } = require("../src/utils/researchHiddenTests");
+const { buildHiddenTests, checkSamples, problemFor, visibleSamples } = require("../src/utils/researchHiddenTests");
 
 (async () => {
   const apply = process.argv.includes("--apply");
@@ -15,7 +15,8 @@ const { buildHiddenTests, checkSamples, problemFor } = require("../src/utils/res
   for (const d of drafts) {
     const qid = d.researchMeta && d.researchMeta.questionId;
     if (!problemFor(qid)) { problems.push(`${qid}: no generator`); continue; }
-    const visible = (Array.isArray(d.testCases) ? d.testCases : []).filter((t) => !t.isHidden);
+    const visible0 = (Array.isArray(d.testCases) ? d.testCases : []).filter((t) => !t.isHidden);
+    const visible = visibleSamples(qid, visible0);
     if (visible.length < 2) { problems.push(`${qid}: fewer than 2 visible samples`); continue; }
     const bad = checkSamples(qid, visible);
     if (bad.length) { problems.push(`${qid}: reference does not reproduce sample ${JSON.stringify(bad[0])}`); continue; }
