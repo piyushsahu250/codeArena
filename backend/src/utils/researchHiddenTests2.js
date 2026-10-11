@@ -275,3 +275,24 @@ Object.assign(MAP, {
 });
 // Armstrong is defined here for 1 <= n; the shared family also probes 0, which this question excludes.
 base.EXCLUDE["ZOH-SD-R2-001"] = ["0"];
+
+// ---------- the last eight pending coding drafts ----------
+def("coinWays",
+  (s) => { const L = lines(s); const c = ints(L[1]); const amt = Number(L[2]); const dp = Array(amt + 1).fill(0); dp[0] = 1; for (const x of c) for (let a = x; a <= amt; a++) dp[a] += dp[a - x]; return String(dp[amt]); },
+  (s) => { const L = lines(s); const c = ints(L[1]); const amt = Number(L[2]); if (amt > 60) return null; const go = (i, rem) => (rem === 0 ? 1 : i === c.length || rem < 0 ? 0 : go(i, rem - c[i]) + go(i + 1, rem)); return String(go(0, amt)); },
+  (rng) => [J("1", "1", "1"), J("1", "2", "3"), J("1", "7", "14"), J("3", "1 2 5", "5"), J("3", "2 5 3", "10"), J("2", "3 5", "7"), J("4", "1 5 10 25", "50"), J("3", "1 2 5", "11"), J("5", "2 3 7 11 13", String(rint(rng, 20, 60))), J("4", "1 5 10 25", "400"), J("3", "5 10 20", "1000")]);
+
+def("kDistinct",
+  (s) => { const [t, ks] = lines(s); const k = Number(ks); const m = new Map(); let l = 0, best = 0; for (let r = 0; r < t.length; r++) { m.set(t[r], (m.get(t[r]) || 0) + 1); while (m.size > k) { const c = t[l++]; m.set(c, m.get(c) - 1); if (m.get(c) === 0) m.delete(c); } best = Math.max(best, r - l + 1); } return String(best); },
+  (s) => { const [t, ks] = lines(s); const k = Number(ks); if (t.length > 2500) return null; let best = 0; for (let i = 0; i < t.length; i++) { const set = new Set(); for (let j = i; j < t.length; j++) { set.add(t[j]); if (set.size > k) break; best = Math.max(best, j - i + 1); } } return String(best); },
+  (rng) => [J("a", "1"), J("abc", "5"), J("abc", "1"), J("aaaa", "1"), J("eceba", "2"), J("aabacbebebe", "3"), J("abcabcabc", "2"), J("abcdefghij", "10"), J(randStr(rng, 60, "abcd"), "2"), J(randStr(rng, 2000, "abcdefgh"), "3"), J(randStr(rng, 2000, "abcdefghijklmnopqrstuvwxyz"), "7")]);
+
+def("reverseString",
+  (s) => [...s.replace(/\r/g, "")].reverse().join(""),
+  (s) => { const t = s.replace(/\r/g, ""); let o = ""; for (let i = t.length - 1; i >= 0; i--) o += t[i]; return o; },
+  (rng) => ["a", "ab", "racecar", "Hello, World!", "a b c", "  inner  spaces  ".trim(), "12345 67890", "UPPER lower 123 !@#", randStr(rng, 50, "abcXYZ 019"), randStr(rng, 3000, "abcdefghijklmnopqrstuvwxyz").slice(0, 3000)].map((t) => t.trim()).filter((t) => t.length));
+
+Object.assign(MAP, {
+  "GS-SWE-R2-007": "coinWays", "GOO-STEP-R2-001": "kDistinct", "GOO-STEP-R3-001": "lca", "INT-GTI-R1-009": "reverseString",
+  "MSF-SDE-R1-006": "boundedRange", "ORA-ASD-R1-001": "sort012", "QCM-SWE-R3-001": "flipBit", "SAP-AD-R3-001": "secondLargestDistinct",
+});
