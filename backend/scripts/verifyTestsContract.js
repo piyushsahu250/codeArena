@@ -26,11 +26,11 @@ function norm(v) {
     // Lists the API returns without an ORDER BY (a test's questions) come back in storage order, which differs between databases: compare them by their own `order`.
     return items.every((x) => x && typeof x === "object" && typeof x.order === "number") ? [...items].sort((a, b) => a.order - b.order) : items;
   }
-  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = k === "questionNumber" ? "<n>" : norm(v[k]); return o; } // questionNumber is an auto-increment
+  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = k === "questionNumber" || k === "serverTime" ? "<n>" : k === "sessionId" ? (v[k] ? "<session>" : null) : norm(v[k]); return o; } // auto-increment, clock and random session values
   return v;
 }
-async function call(name, method, p, token, body) {
-  const res = await fetch(`${API}${p}`, { method, headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+async function call(name, method, p, token, body, headers = {}) {
+  const res = await fetch(`${API}${p}`, { method, headers: { "content-type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const text = await res.text();
   let json = null; try { json = JSON.parse(text); } catch { /* non-json */ }
   if (p === "/tests" && Array.isArray(json)) json = json.filter((t) => String(t.title || "").startsWith(TAG));
@@ -195,6 +195,107 @@ async function cleanup() {
   await call("delete: unknown test", "DELETE", `/tests/${bogusId}`, T.instA);
   await call("delete: institute admin deletes", "DELETE", `/tests/${dup.json && dup.json.id}`, T.instA);
   await call("delete: gone afterwards", "GET", `/tests/${dup.json && dup.json.id}`, T.instA);
+
+  // =====================================================================================================================
+  // Batch 2: the student attempt flow (start/resume, violations, AI help, own result), reading tests, the staff violation log.
+  // Tests are created directly in the database so their windows and flags are exact.
+  // =====================================================================================================================
+  const MOBILE = { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" };
+  const stuA2 = await mk("stuA2", "STUDENT", A.id, { academicGroupId: groupA.id });
+  const sA2 = await login(stuA2, "stuA2");
+  let tsq = 0;
+  const mkLive = (title, extra = {}) => prisma.test.create({
+    data: {
+      title: `${TAG} ${title}`, durationMin: 60, startTime: new Date(now - 10 * 60000 + ++tsq * 1000), endTime: new Date(now + 3 * 3600000), isPublished: true, showResults: true,
+      requireFullscreen: false, shuffleQuestions: false, createdById: staffA1.id, instituteId: A.id,
+      academicGroups: { create: [{ academicGroupId: groupA.id }] },
+      questions: { create: [q1, q2].map((qq, order) => ({ questionId: qq.id, order, timeLimitSec: 600 })) },
+      ...extra,
+    },
+  });
+  const tLive = await mkLive("live");
+  const tClosed = await mkLive("closed", { startTime: new Date(now - 5 * 3600000), endTime: new Date(now - 3600000) });
+  const tAttend = await mkLive("attendance required", { attendanceMandatory: true });
+  const tProctored = await mkLive("proctored", { securityLevel: "PROCTORED" });
+  const tDraft = await mkLive("draft", { isPublished: false });
+  const tHidden = await mkLive("results hidden", { showResults: false });
+  const tOther = await mkLive("other audience", { academicGroups: { create: [{ academicGroupId: groupB.id }] }, instituteId: B.id });
+
+  // ---------- start / resume ----------
+  await call("start: anonymous", "POST", `/tests/${tLive.id}/start`, null);
+  await call("start: staff refused", "POST", `/tests/${tLive.id}/start`, T.s1);
+  await call("start: unknown test", "POST", `/tests/${bogusId}/start`, T.stuA);
+  await call("start: an unpublished test is not available", "POST", `/tests/${tDraft.id}/start`, T.stuA);
+  await call("start: a student of another institute", "POST", `/tests/${tLive.id}/start`, T.stuB);
+  await call("start: a test meant for another audience", "POST", `/tests/${tOther.id}/start`, T.stuA);
+  await call("start: the window has closed", "POST", `/tests/${tClosed.id}/start`, T.stuA);
+  await call("start: the test has not started yet", "POST", `/tests/${testId}/start`, T.stuA);
+  await call("start: attendance not marked", "POST", `/tests/${tAttend.id}/start`, T.stuA);
+  await call("start: a phone is refused for a proctored test", "POST", `/tests/${tProctored.id}/start`, sA2, undefined, MOBILE);
+  const started = await call("start: a student begins the test", "POST", `/tests/${tLive.id}/start`, T.stuA);
+  const attemptId = started.json && started.json.id;
+  const resumed = await call("start: refreshing resumes the same attempt with a new session", "POST", `/tests/${tLive.id}/start`, T.stuA);
+  note("a resume keeps one attempt and one question order", { sameAttempt: resumed.json && resumed.json.id === attemptId, sessionChanged: !!(started.json && resumed.json && started.json.sessionId !== resumed.json.sessionId) });
+  note("attempts stored for the student", await prisma.testAttempt.count({ where: { testId: tLive.id, studentId: stuA.id } }));
+  const procStart = await call("start: a desktop browser can start the proctored test", "POST", `/tests/${tProctored.id}/start`, sA2);
+  await call("start: a second student starts the results-hidden test", "POST", `/tests/${tHidden.id}/start`, sA2);
+
+  // ---------- reading while attempting ----------
+  await call("get: a student with a running attempt receives the questions in their locked order", "GET", `/tests/${tLive.id}`, T.stuA);
+  await call("get: the attendance-required test reports the student's attendance status", "GET", `/tests/${tAttend.id}`, T.stuA);
+  await call("get: a student cannot open a draft by id", "GET", `/tests/${tDraft.id}`, T.stuA);
+  await call("get: a student of another audience cannot open it", "GET", `/tests/${tOther.id}`, T.stuA);
+  await call("get: staff may open a draft", "GET", `/tests/${tDraft.id}`, T.s1);
+  await call("list: the student sees their tests with their own status", "GET", "/tests", T.stuA);
+  await call("list: the second student", "GET", "/tests", sA2);
+
+  // ---------- violations ----------
+  await call("violation: anonymous", "POST", `/tests/attempts/${attemptId}/violation`, null, { type: "TAB_SWITCH" });
+  await call("violation: staff refused", "POST", `/tests/attempts/${attemptId}/violation`, T.s1, { type: "TAB_SWITCH" });
+  await call("violation: another student's attempt", "POST", `/tests/attempts/${attemptId}/violation`, sA2, { type: "TAB_SWITCH" });
+  await call("violation: unknown attempt", "POST", `/tests/attempts/${bogusId}/violation`, T.stuA, { type: "TAB_SWITCH" });
+  await call("violation: an interruption is logged but not penalised", "POST", `/tests/attempts/${attemptId}/violation`, T.stuA, { type: "face_missing" });
+  await call("violation: first tab switch", "POST", `/tests/attempts/${attemptId}/violation`, T.stuA, { type: "TAB_SWITCH" });
+  await call("violation: second tab switch", "POST", `/tests/attempts/${attemptId}/violation`, T.stuA, { type: "TAB_SWITCH" });
+  await call("violation: third penalised event submits the attempt", "POST", `/tests/attempts/${attemptId}/violation`, T.stuA, { type: "TAB_SWITCH" });
+  await call("violation: after the auto-submit nothing more is recorded", "POST", `/tests/attempts/${attemptId}/violation`, T.stuA, { type: "TAB_SWITCH" });
+  note("attempt state after the violations", await prisma.testAttempt.findUnique({ where: { id: attemptId }, select: { status: true, tabSwitchCount: true } }));
+  note("violation rows logged", await prisma.testViolation.groupBy({ by: ["type", "severity", "penalized"], where: { attemptId }, _count: true }).then((r) => r.map((x) => `${x.type}/${x.severity}/${x.penalized}:${x._count}`).sort()));
+
+  // ---------- staff view of the violation log ----------
+  await call("violation log: the test owner", "GET", `/tests/admin/attempts/${attemptId}/violations`, T.s1);
+  await call("violation log: an institute admin of the same institute", "GET", `/tests/admin/attempts/${attemptId}/violations`, T.instA);
+  await call("violation log: other staff (not owner, not shared)", "GET", `/tests/admin/attempts/${attemptId}/violations`, T.s2);
+  await call("violation log: another institute's admin", "GET", `/tests/admin/attempts/${attemptId}/violations`, T.instB);
+  await call("violation log: a student", "GET", `/tests/admin/attempts/${attemptId}/violations`, T.stuA);
+  await call("violation log: unknown attempt", "GET", `/tests/admin/attempts/${bogusId}/violations`, T.s1);
+
+  // ---------- AI help (the model is not called: every path here is refused before it) ----------
+  const procAttempt = procStart.json && procStart.json.id;
+  await call("ai-assist: anonymous", "POST", `/tests/attempts/${procAttempt}/ai-assist`, null, { questionId: q1.id, message: "hint" });
+  await call("ai-assist: another student's attempt", "POST", `/tests/attempts/${procAttempt}/ai-assist`, T.stuA, { questionId: q1.id, message: "hint" });
+  await call("ai-assist: unknown attempt", "POST", `/tests/attempts/${bogusId}/ai-assist`, sA2, { questionId: q1.id, message: "hint" });
+  await call("ai-assist: an attempt that is over", "POST", `/tests/attempts/${attemptId}/ai-assist`, T.stuA, { questionId: q1.id, message: "hint" });
+  await call("ai-assist: missing message", "POST", `/tests/attempts/${procAttempt}/ai-assist`, sA2, { questionId: q1.id, message: "  " });
+  await call("ai-assist: not enabled for this question", "POST", `/tests/attempts/${procAttempt}/ai-assist`, sA2, { questionId: q1.id, message: "give me a hint" });
+
+  // ---------- own result ----------
+  await call("my-result: anonymous", "GET", `/tests/${tLive.id}/my-result`, null);
+  await call("my-result: staff refused", "GET", `/tests/${tLive.id}/my-result`, T.s1);
+  await call("my-result: unknown test", "GET", `/tests/${bogusId}/my-result`, T.stuA);
+  await call("my-result: never attempted", "GET", `/tests/${tAttend.id}/my-result`, T.stuA);
+  await call("my-result: attempt still running", "GET", `/tests/${tProctored.id}/my-result`, sA2);
+  await call("my-result: the auto-submitted attempt", "GET", `/tests/${tLive.id}/my-result`, T.stuA);
+  await call("start: a completed assessment cannot be started again", "POST", `/tests/${tLive.id}/start`, T.stuA);
+  const hiddenAttempt = (await prisma.testAttempt.findFirst({ where: { testId: tHidden.id, studentId: stuA2.id }, select: { id: true } })).id;
+  await fetch(`${API}/submissions/finalize/${hiddenAttempt}`, { method: "POST", headers: { "content-type": "application/json", Authorization: `Bearer ${sA2}` }, body: "{}" }); // setup only: its body carries environment-specific badge text
+  await call("my-result: results hidden by the test", "GET", `/tests/${tHidden.id}/my-result`, sA2);
+
+  // ---------- an unpublished test with a running attempt stays reachable for that student only ----------
+  await prisma.test.update({ where: { id: tProctored.id }, data: { isPublished: false } });
+  await call("get: after unpublishing, the student mid-attempt keeps access", "GET", `/tests/${tProctored.id}`, sA2);
+  await call("get: after unpublishing, a student without an attempt loses it", "GET", `/tests/${tProctored.id}`, T.stuA);
+  await call("list: the unpublished test leaves the student's list", "GET", "/tests", T.stuA);
 
   // ---------- audit trail (what the routes record) ----------
   const audits = await prisma.auditLog.findMany({ where: { instituteId: A.id, action: { startsWith: "TEST_" } }, select: { action: true, adminRole: true, details: true }, orderBy: { createdAt: "asc" } });

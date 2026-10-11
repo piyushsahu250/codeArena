@@ -74,3 +74,101 @@ module.exports = {
   bankCodingQuestionIds, createTest, deleteTest, setPublished, updateTest, groupCountsForStudents, createNotificationSend, findNotificationSendByKey,
   listNotificationSends, emailLogsForBatch, listStaff, staffInScope, addShares, removeShare,
 };
+
+// ================= batch 2: reading tests and the student attempt flow =================
+
+const STAFF_LIST_INCLUDE = {
+  _count: { select: { questions: true, attempts: true } },
+  institute: { select: { id: true, name: true } },
+  classes: { include: { class: { select: { id: true, name: true, batchYear: true, instituteId: true, institute: { select: { id: true, name: true } }, _count: { select: { users: true } } } } } },
+  academicGroups: {
+    include: {
+      academicGroup: {
+        select: { id: true, batch: true, section: true, instituteId: true, institute: { select: { id: true, name: true } }, department: { select: { id: true, name: true } }, _count: { select: { users: true } } },
+      },
+    },
+  },
+  talentPools: { select: { poolId: true } },
+  createdBy: { select: { id: true, name: true } },
+  shares: { select: { staffId: true } },
+};
+const STUDENT_LIST_SELECT = {
+  id: true, title: true, company: true, startTime: true, endTime: true, durationMin: true, attendanceMandatory: true, _count: { select: { questions: true } },
+};
+
+const listTests = (where, forStaff, take) => prisma.test.findMany({ where, orderBy: { startTime: "asc" }, take, ...(forStaff ? { include: STAFF_LIST_INCLUDE } : { select: STUDENT_LIST_SELECT }) });
+const studentScope = (userId) => prisma.user.findUnique({ where: { id: userId }, select: { classId: true, academicGroupId: true, instituteId: true } });
+const attemptStatusesFor = (studentId, testIds) => prisma.testAttempt.findMany({ where: { studentId, testId: { in: testIds } }, select: { testId: true, status: true } });
+
+// The answer-key fields are selected for staff only; for a student the select drops them (allowlist), and hidden test cases are filtered out.
+function questionSelect(isStaff) {
+  return {
+    id: true, questionNumber: true, title: true, description: true, subject: true, topic: true, questionType: true, difficulty: true, points: true, timeLimitMs: true,
+    starterCode: true, starterCodeByLanguage: true, evaluationType: true, functionSignature: true, options: true,
+    correctAnswer: isStaff, numericAnswer: isStaff, numericTolerance: isStaff, numericAnswerDisplay: isStaff, explanation: isStaff,
+    imageKey: true,
+    testCases: { where: isStaff ? {} : { isHidden: false } },
+  };
+}
+const findDetail = (id, isStaff) => prisma.test.findUnique({
+  where: { id },
+  include: {
+    classes: { select: { classId: true } },
+    academicGroups: { select: { academicGroupId: true } },
+    talentPools: { select: { poolId: true } },
+    shares: { select: { staffId: true, staff: { select: { id: true, name: true } } } },
+    questions: { include: { question: { select: questionSelect(isStaff) } }, orderBy: { order: "asc" } },
+  },
+});
+const attemptLayout = (testId, studentId) => prisma.testAttempt.findUnique({
+  where: { testId_studentId: { testId, studentId } },
+  select: { questionOrder: true, optionOrder: true, status: true, id: true, expectedQuestionCount: true, manifestVersion: true },
+});
+const questionsByIds = (ids, isStaff) => prisma.question.findMany({ where: { id: { in: ids } }, select: questionSelect(isStaff) });
+const attendanceStatus = (studentId, testId) => prisma.attendanceRecord.findFirst({ where: { studentId, session: { testId } }, select: { status: true } });
+
+const findForStart = (id) => prisma.test.findUnique({
+  where: { id },
+  include: {
+    classes: { select: { classId: true } },
+    academicGroups: { select: { academicGroupId: true } },
+    talentPools: { select: { poolId: true } },
+    questions: { include: { question: { select: { id: true, questionType: true, options: true, difficulty: true } } } },
+  },
+});
+const findAttempt = (testId, studentId) => prisma.testAttempt.findUnique({ where: { testId_studentId: { testId, studentId } } });
+const findReattemptGrant = (testId, studentId) => prisma.testReattemptGrant.findUnique({ where: { testId_studentId: { testId, studentId } } });
+const consumeReattemptGrant = (id) => prisma.testReattemptGrant.delete({ where: { id } }).catch(() => {});
+const createAttempt = (data) => prisma.testAttempt.create({ data });
+const setSession = (attemptId, sessionId) => prisma.testAttempt.update({ where: { id: attemptId }, data: { sessionId } });
+const submissionsOf = (attemptId) => prisma.submission.findMany({ where: { attemptId } });
+
+const attemptById = (id) => prisma.testAttempt.findUnique({ where: { id } });
+const suspiciousCount = (attemptId) => prisma.testViolation.count({ where: { attemptId, severity: "SUSPICIOUS" } });
+const logViolation = (attemptId, type, severity, penalized) => prisma.testViolation.create({ data: { attemptId, type, severity, penalized } });
+// A penalized event and the strike-count update describe one event: written together so a partial write never leaves them out of sync.
+const logPenalizedViolation = (attemptId, type, severity, tabSwitchCount, autoSubmitted) => prisma.$transaction([
+  prisma.testViolation.create({ data: { attemptId, type, severity, penalized: true } }),
+  prisma.testAttempt.update({ where: { id: attemptId }, data: { tabSwitchCount, ...(autoSubmitted ? { status: "AUTO_SUBMITTED", submittedAt: new Date() } : {}) } }),
+]);
+const attemptForAdminReview = (id) => prisma.testAttempt.findUnique({
+  where: { id },
+  include: { test: { select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } } }, student: { select: { name: true, email: true } } },
+});
+const violationsOf = (attemptId) => prisma.testViolation.findMany({ where: { attemptId }, orderBy: { createdAt: "asc" } });
+
+const attemptForAi = (id) => prisma.testAttempt.findUnique({ where: { id }, select: { id: true, testId: true, studentId: true, status: true } });
+const testQuestionForAi = (testId, questionId) => prisma.testQuestion.findUnique({
+  where: { testId_questionId: { testId, questionId } },
+  select: { aiAllowed: true, question: { select: { title: true, description: true, questionType: true, subject: true, topic: true, options: true } } },
+});
+const studentInstitute = (userId) => prisma.user.findUnique({ where: { id: userId }, select: { instituteId: true } });
+
+const testForResult = (id) => prisma.test.findUnique({ where: { id }, select: { id: true, showResults: true, passingMarks: true } });
+const attemptWithSubmissions = (testId, studentId) => prisma.testAttempt.findUnique({ where: { testId_studentId: { testId, studentId } }, include: { submissions: true } });
+
+Object.assign(module.exports, {
+  listTests, studentScope, attemptStatusesFor, findDetail, attemptLayout, questionsByIds, attendanceStatus, findForStart, findAttempt, findReattemptGrant, consumeReattemptGrant,
+  createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, attemptForAi, testQuestionForAi,
+  studentInstitute, testForResult, attemptWithSubmissions,
+});

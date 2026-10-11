@@ -42,3 +42,26 @@ const unshare = handler("Failed to revoke access", (req) => service.unshareTest(
 const staffDirectory = handler("Failed to load staff directory", (req) => service.staffDirectory(actor(req)));
 
 module.exports = { create, update, duplicate, remove, publish, recipients, notify, notificationLog, share, unshare, staffDirectory };
+
+// ---- batch 2: reading tests and the student attempt flow ----
+const read = require("./tests.read.service");
+const attempts = require("./tests.attempts.service");
+const { sendAiError } = require("../../utils/aiErrors");
+
+const list = handler("Failed to load tests", (req) => read.listTests(actor(req)));
+const getOne = handler("Failed to load test", (req) => read.getTest(actor(req), req.params.id));
+const start = handler("Could not start test", (req) => attempts.startAttempt(actor(req), req.params.id));
+const violation = handler("Failed to record violation", (req) => attempts.recordViolation(actor(req), req.params.attemptId, req.body.type));
+const violationLog = handler("Failed to load violation log", (req) => attempts.violationLog(actor(req), req.params.attemptId));
+const myResult = handler("Failed to load result", (req) => attempts.myResult(actor(req), req.params.id));
+// AI errors keep their own mapping (quota, provider, safety) through the shared helper.
+async function aiAssist(req, res) {
+  try {
+    res.json(await attempts.aiAssist(actor(req), req.params.attemptId, req.body));
+  } catch (err) {
+    if (err instanceof ServiceError) return res.status(err.status).json({ error: err.message, ...(err.extra || {}) });
+    sendAiError(res, err, "Failed to get AI assistance");
+  }
+}
+
+Object.assign(module.exports, { list, getOne, start, violation, violationLog, myResult, aiAssist });

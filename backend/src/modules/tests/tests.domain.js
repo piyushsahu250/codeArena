@@ -230,3 +230,82 @@ module.exports = {
   SELECTION_MODES, questionCreateData, shuffledArray, pickRandomQuestions, buildAttemptOrder, validateRandomConfig, resolveScheduledPublishAt, selectionModeForUpdate,
   buildCreateData, buildUpdateData, buildDuplicateData, publishTransition, recipientBreakdown, outsideInstitute,
 };
+
+// ================= batch 2: reading tests and the student attempt flow =================
+
+const STAFF_ROLES = ["ADMIN", "SUPER_ADMIN", "INSTITUTE_ADMIN", "STAFF"];
+const isStaffRole = (role) => STAFF_ROLES.includes(role);
+const MAX_TAB_VIOLATIONS = 3;
+const TESTS_LIST_CAP = 2000;
+
+// Staff list filter: institute scope (a group/class of the institute, or an open-to-all test that belongs to it or to nobody) ANDed with the
+// creator-or-shared restriction that applies to STAFF only. `ownership` is staffTestAccessWhere(actor).
+function staffListWhere(requesterInstituteId, ownership) {
+  const instituteWhere = requesterInstituteId
+    ? {
+        OR: [
+          { classes: { some: { class: { instituteId: requesterInstituteId } } } },
+          { academicGroups: { some: { academicGroup: { instituteId: requesterInstituteId } } } },
+          { classes: { none: {} }, academicGroups: { none: {} }, OR: [{ instituteId: null }, { instituteId: requesterInstituteId }] },
+        ],
+      }
+    : {};
+  return { AND: [instituteWhere, ownership] };
+}
+
+// A student sees summary figures only until their attempt is running (or finished and the window has closed): no question content before that.
+function questionsVisible(attempt, test, now = new Date()) {
+  return attempt?.status === "IN_PROGRESS" || (!!attempt && now > test.endTime);
+}
+function questionSummaryOf(test) {
+  const pts = test.questions.map((tq) => tq.question?.points || 0);
+  const random = test.questionSelectionMode === "RANDOM";
+  return {
+    count: random && test.randomQuestionsPerStudent ? test.randomQuestionsPerStudent : test.questions.length,
+    maxMarks: random ? null : pts.reduce((a, b) => a + b, 0),
+    types: [...new Set(test.questions.map((tq) => tq.question?.questionType).filter(Boolean))],
+  };
+}
+
+// Applies one attempt's locked question order to the test's questions. Ids assigned to the attempt but no longer on the test are looked up through
+// `extraById` (questions the admin removed after the student started stay visible to them). Returns the ordered list and the ids that no longer exist.
+function orderForAttempt(testQuestions, questionOrder, extraById) {
+  const byId = new Map(testQuestions.map((tq) => [tq.questionId, tq]));
+  const missing = questionOrder.filter((qId) => !byId.has(qId));
+  for (const q of extraById || []) byId.set(q.id, { questionId: q.id, question: q });
+  const stillMissing = missing.filter((qId) => !byId.has(qId));
+  return { ordered: questionOrder.map((qId) => byId.get(qId)).filter(Boolean), missing, stillMissing };
+}
+function applyOptionOrder(questions, optionOrder) {
+  if (!optionOrder) return;
+  for (const tq of questions) {
+    const order = optionOrder[tq.questionId];
+    if (order && Array.isArray(tq.question.options)) tq.question.options = order.map((origIdx) => tq.question.options[origIdx]);
+  }
+}
+
+// Start window: a new attempt after the window closes needs a one-time reattempt grant; resuming an attempt after it closes is refused outright.
+function startWindow(now, test, existing) {
+  if (now < test.startTime) return { failure: "Test has not started yet" };
+  if (now > test.endTime) return existing ? { failure: "Test window has closed" } : { needsGrant: true };
+  return {};
+}
+
+// What a violation does to an attempt: severity and penalty from the shared classifier, the new strike count, and whether it forces a submit.
+function violationOutcome(attempt, classification) {
+  const { severity, penalized } = classification;
+  const tabSwitchCount = penalized ? attempt.tabSwitchCount + 1 : attempt.tabSwitchCount;
+  return { severity, penalized, tabSwitchCount, autoSubmitted: penalized && tabSwitchCount >= MAX_TAB_VIOLATIONS };
+}
+
+module.exports.STAFF_ROLES = STAFF_ROLES;
+module.exports.isStaffRole = isStaffRole;
+module.exports.MAX_TAB_VIOLATIONS = MAX_TAB_VIOLATIONS;
+module.exports.TESTS_LIST_CAP = TESTS_LIST_CAP;
+module.exports.staffListWhere = staffListWhere;
+module.exports.questionsVisible = questionsVisible;
+module.exports.questionSummaryOf = questionSummaryOf;
+module.exports.orderForAttempt = orderForAttempt;
+module.exports.applyOptionOrder = applyOptionOrder;
+module.exports.startWindow = startWindow;
+module.exports.violationOutcome = violationOutcome;
