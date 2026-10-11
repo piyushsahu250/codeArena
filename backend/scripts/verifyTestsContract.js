@@ -34,7 +34,8 @@ async function call(name, method, p, token, body, headers = {}) {
   const text = await res.text();
   let json = null; try { json = JSON.parse(text); } catch { /* non-json */ }
   if (p === "/tests" && Array.isArray(json)) json = json.filter((t) => String(t.title || "").startsWith(TAG));
-  log.push({ name, status: res.status, body: json === null ? `<non-json ${text.slice(0, 40)}>` : norm(json) });
+  const csvText = (res.headers.get("content-type") || "").includes("text/csv") ? norm(text.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/g, "<time>")) : null; // spreadsheet exports are compared as text
+  log.push({ name, status: res.status, body: json !== null ? norm(json) : csvText !== null ? csvText : `<non-json ${text.slice(0, 40)}>` });
   return { status: res.status, json };
 }
 const note = (name, value) => log.push({ name, db: norm(value) });
@@ -296,6 +297,88 @@ async function cleanup() {
   await call("get: after unpublishing, the student mid-attempt keeps access", "GET", `/tests/${tProctored.id}`, sA2);
   await call("get: after unpublishing, a student without an attempt loses it", "GET", `/tests/${tProctored.id}`, T.stuA);
   await call("list: the unpublished test leaves the student's list", "GET", "/tests", T.stuA);
+
+  // =====================================================================================================================
+  // Batch 3: staff-side results (leaderboard, export, question analytics) and granting a reattempt.
+  // A platform-wide test (no institute) attempted by students of two institutes shows who may see whose results.
+  // =====================================================================================================================
+  const tPlat = await mkLive("platform wide", { instituteId: null, academicGroups: undefined });
+  await call("setup: first student starts the platform-wide test", "POST", `/tests/${tPlat.id}/start`, T.stuA);
+  await call("setup: second student starts the platform-wide test", "POST", `/tests/${tPlat.id}/start`, sA2);
+  await call("setup: a student of another institute starts the platform-wide test", "POST", `/tests/${tPlat.id}/start`, T.stuB);
+  log.length -= 3; // the start responses are covered above; keep only what the results routes return
+  const finish = async (student, score, qScore) => {
+    const att = await prisma.testAttempt.findFirst({ where: { testId: tPlat.id, studentId: student.id }, select: { id: true } });
+    await prisma.testAttempt.update({ where: { id: att.id }, data: { status: "SUBMITTED", submittedAt: new Date(now + 60000), totalScore: score } });
+    await prisma.submission.create({ data: { attemptId: att.id, questionId: q1.id, studentId: student.id, language: "mcq", code: "[0]", score: qScore, verdict: qScore ? "ACCEPTED" : "WRONG_ANSWER" } });
+  };
+  await finish(stuA, 5, 2); await finish(stuA2, 7, 2); await finish(stuB, 3, 0);
+
+  // ---------- leaderboard ----------
+  await call("results: anonymous", "GET", `/tests/${tLive.id}/results`, null);
+  await call("results: a student", "GET", `/tests/${tLive.id}/results`, T.stuA);
+  await call("results: unknown test", "GET", `/tests/${bogusId}/results`, T.s1);
+  await call("results: other staff (not owner, not shared)", "GET", `/tests/${tLive.id}/results`, T.s2);
+  await call("results: another institute's admin", "GET", `/tests/${tLive.id}/results`, T.instB);
+  await call("results: the owner, institute test", "GET", `/tests/${tLive.id}/results`, T.s1);
+  await call("results: institute admin, institute test", "GET", `/tests/${tLive.id}/results`, T.instA);
+  await call("results: platform admin, platform-wide test (every institute)", "GET", `/tests/${tPlat.id}/results`, T.platform);
+  await call("results: institute A admin, platform-wide test", "GET", `/tests/${tPlat.id}/results`, T.instA);
+  await call("results: institute B admin, platform-wide test", "GET", `/tests/${tPlat.id}/results`, T.instB);
+  await call("results: the owner (institute A), platform-wide test", "GET", `/tests/${tPlat.id}/results`, T.s1);
+  await call("results: staff of institute B who does not own it", "GET", `/tests/${tPlat.id}/results`, T.sB);
+
+  // ---------- export ----------
+  await call("export: anonymous", "GET", `/tests/${tLive.id}/results/export?format=csv`, null);
+  await call("export: a student", "GET", `/tests/${tLive.id}/results/export?format=csv`, T.stuA);
+  await call("export: unknown test", "GET", `/tests/${bogusId}/results/export?format=csv`, T.s1);
+  await call("export: other staff", "GET", `/tests/${tLive.id}/results/export?format=csv`, T.s2);
+  await call("export: another institute's admin", "GET", `/tests/${tLive.id}/results/export?format=csv`, T.instB);
+  await call("export: the owner, institute test", "GET", `/tests/${tLive.id}/results/export?format=csv`, T.s1);
+  await call("export: platform admin, platform-wide test", "GET", `/tests/${tPlat.id}/results/export?format=csv`, T.platform);
+  await call("export: institute A admin, platform-wide test", "GET", `/tests/${tPlat.id}/results/export?format=csv`, T.instA);
+  await call("export: institute B admin, platform-wide test", "GET", `/tests/${tPlat.id}/results/export?format=csv`, T.instB);
+  await call("export: a roll-number filter that matches nobody", "GET", `/tests/${tPlat.id}/results/export?format=csv&roll=nomatch`, T.platform);
+  const xl = await fetch(`${API}/tests/${tPlat.id}/results/export`, { headers: { Authorization: `Bearer ${T.platform}` } });
+  const xlBuf = Buffer.from(await xl.arrayBuffer());
+  note("default export is a spreadsheet file", { status: xl.status, type: xl.headers.get("content-type"), zip: xlBuf.slice(0, 2).toString() });
+
+  // ---------- question analytics ----------
+  await call("analytics: anonymous", "GET", `/tests/${tLive.id}/question-analytics`, null);
+  await call("analytics: a student", "GET", `/tests/${tLive.id}/question-analytics`, T.stuA);
+  await call("analytics: unknown test", "GET", `/tests/${bogusId}/question-analytics`, T.s1);
+  await call("analytics: other staff", "GET", `/tests/${tLive.id}/question-analytics`, T.s2);
+  await call("analytics: another institute's admin", "GET", `/tests/${tLive.id}/question-analytics`, T.instB);
+  await call("analytics: the owner, institute test", "GET", `/tests/${tLive.id}/question-analytics`, T.s1);
+  await call("analytics: platform admin, platform-wide test", "GET", `/tests/${tPlat.id}/question-analytics`, T.platform);
+  await call("analytics: institute A admin, platform-wide test", "GET", `/tests/${tPlat.id}/question-analytics`, T.instA);
+  await call("analytics: institute B admin, platform-wide test", "GET", `/tests/${tPlat.id}/question-analytics`, T.instB);
+
+  // ---------- reattempt ----------
+  const closedAttempt = await prisma.testAttempt.create({ data: { testId: tClosed.id, studentId: stuA.id, status: "SUBMITTED", submittedAt: new Date(now - 3600000), totalScore: 3, tabSwitchCount: 1 } });
+  await call("reattempt: anonymous", "POST", `/tests/${tLive.id}/attempts/${stuA.id}/reattempt`, null);
+  await call("reattempt: a student", "POST", `/tests/${tLive.id}/attempts/${stuA.id}/reattempt`, T.stuA);
+  await call("reattempt: unknown test", "POST", `/tests/${bogusId}/attempts/${stuA.id}/reattempt`, T.s1);
+  await call("reattempt: unknown student", "POST", `/tests/${tLive.id}/attempts/${bogusId}/reattempt`, T.s1);
+  await call("reattempt: a student of another institute", "POST", `/tests/${tLive.id}/attempts/${stuA.id}/reattempt`, T.instB);
+  await call("reattempt: other staff (not owner, not shared)", "POST", `/tests/${tLive.id}/attempts/${stuA.id}/reattempt`, T.s2);
+  await call("reattempt: the student never attempted it", "POST", `/tests/${tLive.id}/attempts/${stuA2.id}/reattempt`, T.s1);
+  await call("reattempt: the attempt is still running", "POST", `/tests/${tProctored.id}/attempts/${stuA2.id}/reattempt`, T.s1);
+  await call("reattempt: the owner resets a finished attempt", "POST", `/tests/${tLive.id}/attempts/${stuA.id}/reattempt`, T.s1);
+  note("the old attempt is gone and a grant exists", {
+    attemptsLeft: await prisma.testAttempt.count({ where: { testId: tLive.id, studentId: stuA.id } }),
+    grants: await prisma.testReattemptGrant.count({ where: { testId: tLive.id, studentId: stuA.id } }),
+  });
+  await call("start: the student can begin again", "POST", `/tests/${tLive.id}/start`, T.stuA);
+  await call("reattempt: an institute admin resets an attempt on a closed test", "POST", `/tests/${tClosed.id}/attempts/${stuA.id}/reattempt`, T.instA);
+  await call("start: the grant lets the student in after the window closed", "POST", `/tests/${tClosed.id}/start`, T.stuA);
+  note("the grant was used up", await prisma.testReattemptGrant.count({ where: { testId: tClosed.id, studentId: stuA.id } }));
+  await call("start: without a grant a closed window still refuses", "POST", `/tests/${tClosed.id}/start`, sA2);
+  const sensitive = await prisma.auditLog.findMany({
+    where: { action: { in: ["REATTEMPT_GRANTED", "DATA_EXPORTED"] }, adminId: { in: [staffA1.id, instA.id, platform.id, instB.id, staffA2.id, staffB.id] } },
+    select: { action: true, adminRole: true, instituteId: true, studentId: true, details: true }, orderBy: { createdAt: "asc" },
+  });
+  note("audit rows for reattempts and exports", sensitive.map((a) => ({ action: a.action, role: a.adminRole, institute: a.instituteId ? "set" : null, student: a.studentId ? "set" : null, detailKeys: Object.keys(a.details || {}).sort() })));
 
   // ---------- audit trail (what the routes record) ----------
   const audits = await prisma.auditLog.findMany({ where: { instituteId: A.id, action: { startsWith: "TEST_" } }, select: { action: true, adminRole: true, details: true }, orderBy: { createdAt: "asc" } });

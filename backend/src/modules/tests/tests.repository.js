@@ -172,3 +172,52 @@ Object.assign(module.exports, {
   createAttempt, setSession, submissionsOf, attemptById, suspiciousCount, logViolation, logPenalizedViolation, attemptForAdminReview, violationsOf, attemptForAi, testQuestionForAi,
   studentInstitute, testForResult, attemptWithSubmissions,
 });
+
+// ================= batch 3: results, export, question analytics, reattempt =================
+
+const testForResults = (id) => prisma.test.findUnique({ where: { id }, select: { instituteId: true, createdById: true, shares: { select: { staffId: true } } } });
+const attemptsForResults = (testId, studentWhere) => prisma.testAttempt.findMany({
+  where: { testId, ...studentWhere },
+  include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, submissions: { select: { questionId: true } } },
+  orderBy: { totalScore: "desc" },
+  take: 20000,
+});
+const testForExport = (id) => prisma.test.findUnique({
+  where: { id },
+  select: { title: true, passingMarks: true, instituteId: true, createdById: true, shares: { select: { staffId: true } }, questions: { select: { questionId: true, question: { select: { points: true } } } } },
+});
+const attemptsForExport = (testId, studentWhere) => prisma.testAttempt.findMany({
+  where: { testId, ...studentWhere },
+  include: { student: { select: { name: true, email: true, rollNumber: true, registrationNumber: true } }, submissions: { select: { questionId: true } } },
+  orderBy: [{ totalScore: "desc" }, { startedAt: "asc" }],
+  take: 20000,
+});
+const testForAnalytics = (id) => prisma.test.findUnique({
+  where: { id },
+  select: {
+    instituteId: true, createdById: true, shares: { select: { staffId: true } },
+    questions: { orderBy: { order: "asc" }, select: { questionId: true, question: { select: { questionNumber: true, title: true, points: true, questionType: true } } } },
+  },
+});
+const submissionsForAnalytics = (testId, questionIds, studentWhere) => (questionIds.length
+  ? prisma.submission.findMany({ where: { attempt: { testId }, questionId: { in: questionIds }, ...(studentWhere.student ? { student: studentWhere.student } : {}) }, select: { questionId: true, score: true, studentId: true } })
+  : Promise.resolve([]));
+
+const reattemptInputs = (testId, studentId) => Promise.all([
+  prisma.test.findUnique({ where: { id: testId }, select: { id: true, title: true, createdById: true, shares: { select: { staffId: true } } } }),
+  prisma.user.findUnique({ where: { id: studentId }, select: { id: true, name: true, rollNumber: true, instituteId: true } }),
+  prisma.testAttempt.findUnique({ where: { testId_studentId: { testId, studentId } } }),
+]);
+const adminName = (userId) => prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+// Delete the old attempt (its submissions cascade), grant a one-time bypass of the closed window, and write the audit entry: all or nothing.
+const grantReattemptTx = ({ attemptId, testId, studentId, grantedByUserId, grantedByName, audit }) => prisma.$transaction([
+  prisma.testAttempt.delete({ where: { id: attemptId } }),
+  prisma.testReattemptGrant.upsert({
+    where: { testId_studentId: { testId, studentId } },
+    create: { testId, studentId, grantedByUserId, grantedByName },
+    update: { grantedByUserId, grantedByName, grantedAt: new Date() },
+  }),
+  prisma.auditLog.create({ data: audit }),
+]);
+
+Object.assign(module.exports, { testForResults, attemptsForResults, testForExport, attemptsForExport, testForAnalytics, submissionsForAnalytics, reattemptInputs, adminName, grantReattemptTx });

@@ -20,6 +20,8 @@ const anyone = [authenticate, attachRequesterInstitute];
 // to ~1 per 1.5s); AI help costs money, so it is tight.
 const violationLimiter = rateLimit({ windowMs: 60 * 1000, max: 40, keyGenerator: (req) => req.user.id });
 const examAiAssistLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, keyGenerator: (req) => req.user.id });
+// Exports carry student names, e-mails and PRNs and are built in memory: a modest per-user budget.
+const exportLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, keyGenerator: (req) => req.user.id });
 
 // authoring and management
 router.post("/", ...manage, c.create);
@@ -44,5 +46,11 @@ router.post("/attempts/:attemptId/violation", ...student, violationLimiter, c.vi
 router.get("/admin/attempts/:attemptId/violations", ...manage, c.violationLog);
 router.post("/attempts/:attemptId/ai-assist", ...student, examAiAssistLimiter, c.aiAssist);
 router.get("/:id/my-result", ...student, c.myResult);
+
+// results, export, question analytics and reattempt (staff side)
+router.post("/:testId/attempts/:studentId/reattempt", ...manage, c.reattempt);
+router.get("/:id/results", ...manage, c.leaderboard);
+router.get("/:id/results/export", ...manage, exportLimiter, c.exportResults);
+router.get("/:id/question-analytics", ...manage, c.questionAnalytics);
 
 module.exports = router;
