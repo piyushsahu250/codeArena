@@ -26,7 +26,7 @@ function norm(v) {
     // Lists the API returns without an ORDER BY (a test's questions) come back in storage order, which differs between databases: compare them by their own `order`.
     return items.every((x) => x && typeof x === "object" && typeof x.order === "number") ? [...items].sort((a, b) => a.order - b.order) : items;
   }
-  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = norm(v[k]); return o; }
+  if (typeof v === "object") { const o = {}; for (const k of Object.keys(v).sort()) o[k] = k === "questionNumber" ? "<n>" : norm(v[k]); return o; } // questionNumber is an auto-increment
   return v;
 }
 async function call(name, method, p, token, body) {
@@ -82,7 +82,8 @@ async function cleanup() {
   const q1 = await mkQ(1), q2 = await mkQ(2);
   const now = Date.now();
   const when = (offsetMin) => new Date(now + offsetMin * 60000).toISOString();
-  const base = (title, extra = {}) => ({ title, durationMin: 30, startTime: when(60), endTime: when(180), questionIds: [q1.id, q2.id], academicGroupIds: [groupA.id], ...extra });
+  let seq = 0; // distinct start times so the list order (by start time) is deterministic
+  const base = (title, extra = {}) => ({ title, durationMin: 30, startTime: when(60 + ++seq), endTime: when(180), questionIds: [q1.id, q2.id], academicGroupIds: [groupA.id], ...extra });
   const bogusId = crypto.randomUUID();
 
   // ---------- create ----------
