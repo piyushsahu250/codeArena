@@ -28,7 +28,8 @@
                                          "The reported 24 selected out of 600 candidates is a single-account figure and was not used.",
                                          "Online-assessment length (about 3 hours versus 130 minutes and about 111 MCQs) differs between sources.",
                                          "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
-                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
                                      ]
                  },
     "sources":  [
@@ -54,7 +55,7 @@
                     },
                     {
                         "source_id":  "S3",
-                        "kind":  "CANDIDATE_REPORT",
+                        "kind":  "OTHER",
                         "url":  "https://leetcode.com/discuss/interview-experience/7459349/",
                         "title":  "",
                         "publisher":  "leetcode.com",
@@ -522,14 +523,14 @@
                           "difficulty":  "EASY",
                           "prompt":  "Voice assessment: read this aloud and then speak for one minute about your favourite subject: \u0027Technology helps teams deliver reliable software faster.\u0027",
                           "relevance_to_role":  "A 2026 account lists a voice assessment in the online test.",
-                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "evidence_class":  "D_PRACTICE",
                           "source_ids":  [
-                                             "S3"
+
                                          ],
-                          "times_reported":  1,
+                          "times_reported":  0,
                           "verification_status":  "UNVERIFIED",
-                          "confidence":  "LOW",
-                          "originality_status":  "PARAPHRASED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
                           "expected_answer":  "Read clearly at a steady pace, then give a structured one-minute answer: the subject, why you like it, one example.",
                           "rubric":  [
                                          {
@@ -560,7 +561,7 @@
                           "tags":  [
                                        "hr"
                                    ],
-                          "notes":  "The voice assessment is reported; the prompt is original.",
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://leetcode.com/discuss/interview-experience/7459349/.",
                           "coding":  null,
                           "mcq":  null,
                           "behavioral":  null

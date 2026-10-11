@@ -30,7 +30,8 @@
                                          "TechBee content is a proposed structure from a single guide; no TechBee candidate reports were found.",
                                          "Package figures and the service-agreement terms differ between sources and were not used.",
                                          "Evidence handling: practice questions cite no sources; where a source only supplied topic context it is named in the question notes. Practice and job-description-inferred questions are UNVERIFIED and capped at LOW confidence on import.",
-                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them."
+                                         "Review status: answers, samples and cited counts come from the researcher and were not independently re-run; spot checks only. Source titles and some dates are blank because the sources did not show them.",
+                                         "Source pages on LeetCode Discuss and Glassdoor returned HTTP 403 to the CodeArena audit tool (2026-10-11), so the cited questions were not re-confirmed against those pages."
                                      ]
                  },
     "sources":  [
@@ -38,11 +39,11 @@
                         "source_id":  "S1",
                         "kind":  "JOB_DESCRIPTION",
                         "url":  "https://freshershunt.in/hcl-fresher-guide/",
-                        "title":  "Aggregated fresher interview questions with report counts",
+                        "title":  "",
                         "publisher":  "freshershunt.in",
-                        "published_on":  "",
+                        "published_on":  "2026-08-19",
                         "accessed_on":  "2026-10-09",
-                        "reliability_note":  "Aggregated list with counts; the page shows no publication date (it says it updates automatically) and is marked 2026. Counts checked on 2026-10-09."
+                        "reliability_note":  ""
                     },
                     {
                         "source_id":  "S2",
@@ -56,7 +57,7 @@
                     },
                     {
                         "source_id":  "S3",
-                        "kind":  "CANDIDATE_REPORT",
+                        "kind":  "OTHER",
                         "url":  "https://static-pc.glassdoor.de/Interview/HCLTech-Interview-E553909-RVW101912820.htm",
                         "title":  "",
                         "publisher":  "static-pc.glassdoor.de",
@@ -1005,14 +1006,14 @@
                           "difficulty":  "EASY",
                           "prompt":  "Explain the four OOP concepts in Java with short examples.",
                           "relevance_to_role":  "A candidate review for a Java Graduate Engineer Trainee describes a Java technical round covering OOP.",
-                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "evidence_class":  "D_PRACTICE",
                           "source_ids":  [
-                                             "S3"
+
                                          ],
-                          "times_reported":  1,
+                          "times_reported":  0,
                           "verification_status":  "UNVERIFIED",
-                          "confidence":  "LOW",
-                          "originality_status":  "PARAPHRASED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
                           "expected_answer":  "Encapsulation (private fields with getters), abstraction (abstract classes and interfaces), inheritance (extends), polymorphism (overloading and overriding).",
                           "rubric":  [
                                          {
@@ -1042,7 +1043,7 @@
                                        "java",
                                        "oop"
                                    ],
-                          "notes":  "One review (2025-12-20) names OOP as a topic; the wording here is original.",
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://static-pc.glassdoor.de/Interview/HCLTech-Interview-E553909-RVW101912820.htm.",
                           "coding":  null,
                           "mcq":  null,
                           "behavioral":  null
@@ -1056,14 +1057,14 @@
                           "difficulty":  "MEDIUM",
                           "prompt":  "Explain the Java Collections framework. When would you use ArrayList, LinkedList, HashSet and HashMap?",
                           "relevance_to_role":  "A candidate review for a Java Graduate Engineer Trainee describes a Java technical round covering collections.",
-                          "evidence_class":  "B_CANDIDATE_REPORTED",
+                          "evidence_class":  "D_PRACTICE",
                           "source_ids":  [
-                                             "S3"
+
                                          ],
-                          "times_reported":  1,
+                          "times_reported":  0,
                           "verification_status":  "UNVERIFIED",
-                          "confidence":  "LOW",
-                          "originality_status":  "PARAPHRASED",
+                          "confidence":  "MEDIUM",
+                          "originality_status":  "ORIGINAL",
                           "expected_answer":  "List: ordered, duplicates allowed (ArrayList for random access, LinkedList for frequent inserts); Set: unique elements (HashSet unordered, TreeSet sorted); Map: key to value (HashMap). Choose by access pattern.",
                           "rubric":  [
                                          {
@@ -1094,7 +1095,7 @@
                                        "java",
                                        "collections"
                                    ],
-                          "notes":  "One review (2025-12-20) names collections as a topic; the wording here is original.",
+                          "notes":  "The topic is reported in candidate accounts or guides; this item is an original practice question. Topic context only (no candidate attribution): https://static-pc.glassdoor.de/Interview/HCLTech-Interview-E553909-RVW101912820.htm.",
                           "coding":  null,
                           "mcq":  null,
                           "behavioral":  null
